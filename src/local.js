@@ -12,7 +12,7 @@ function normalize(room,now) {
   for(const p of room.pairs) {
     const free=availableCells(room,p);
     if(free.length){p.pending=0;p.expander=null;p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
-    else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;p.deadline=null;}
+    else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
   }
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
@@ -21,9 +21,9 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   let automatic=false;
   if(action==='tick') {
-    if(p.pending||Date.parse(p.deadline)>now)return original;
-    const choices=availableCells(room,p);if(!choices.length)return original;
-    payload=choices[Math.floor(random()*choices.length)];action='move';automatic=true;
+    if(Date.parse(p.deadline)>now)return original;
+    const choices=p.pending?expansionOptions(terrainOf(room),p.active):availableCells(room,p);if(!choices.length)return original;
+    payload=choices[Math.floor(random()*choices.length)];action=p.pending?'expand':'move';automatic=true;
   }
   if(action==='move') {
     if(p.pending)throw new Error('Primero coloca la ampliación.');
@@ -41,12 +41,14 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!availableCells(room,p).length)p.expander=player.id;
     room.lastEvent={id:cell.id,kind:'move',player:player.id,figures:figures.length,points,bonus,automatic,continuation:!availableCells(room,p).length};
   }else if(action==='expand') {
+    if(!automatic&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se colocará una ampliación automáticamente.');
     if(!p.pending||availableCells(room,p).length)throw new Error('Usa las celdas vacías antes de ampliar.');
     const {x,y}=payload;
     if(!expansionOptions(terrainOf(room),p.active).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio y añadir alguna celda.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy});
     room.blocks.push({x,y});p.active={x,y};p.credits--;p.pending=0;p.expander=null;p.deadline=new Date(now+TURN_SECONDS*1000).toISOString();
+    room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
   }else throw new Error('Acción desconocida.');
   normalize(room,now);room.version++;return room;
 }

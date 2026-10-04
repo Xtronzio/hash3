@@ -1,4 +1,4 @@
-# #3 — R0.5
+# #3 — R0.6
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
@@ -39,17 +39,29 @@ El enlace previsto es `https://xtronzio.github.io/hash3/`; solo estará disponib
 
 ## Reglas
 
-- Online: de 2 a 12 jugadores, número par. El anfitrión inicia y finaliza. Se sortean parejas y símbolos X/O; cada pareja empieza con un 3×3 y alterna turnos independientemente.
+- Online: el límite de admisión es de 200 humanos activos por mundo, todavía sin validación de carga. El anfitrión inicia y finaliza. Se sortean parejas y símbolos X/O; cada pareja empieza con un 3×3 y alterna turnos independientemente.
 - Las fichas son permanentes. Puedes usar **cualquier celda vacía del territorio conectado** a tu pareja, incluidas celdas de bloques anteriores. Territorios que se tocan lateralmente se unen; las islas separadas siguen perteneciendo a sus respectivas parejas.
 - Figuras: líneas rectas de tres o más (también diagonales), L de tres y cuatro, cuadrados 2×2 y cruces ortogonales de cinco. Se reconocen rotaciones y reflejos y se pueden usar fichas de cualquier compañero con el mismo símbolo.
 - Cada figura suma su número de celdas a quien la completa. Cada tercera figura del jugador añade +3 (3.ª, 6.ª, 9.ª…). Una jugada puede completar varias figuras distintas, aunque compartan fichas. Cada geometría exacta y símbolo se cobra una vez. Una línea se evalúa como el tramo completo que contiene la ficha nueva; prolongarla crea una nueva geometría.
 - Una figura acumula una ampliación, **pero no permite ampliar mientras queden movimientos**. Cuando todo el territorio conectado está ocupado, se habilita una ampliación 3×3; si no quedan ampliaciones acumuladas, se concede una para continuar.
 - El último jugador que ocupó una celda coloca la ampliación antes del turno del rival. Se sitúa celda a celda y puede solaparse sobre terreno existente: únicamente añade las celdas nuevas y nunca sustituye fichas. Debe tocar el territorio conectado y añadir al menos una celda. Antes de confirmar, la pantalla muestra el número de celdas nuevas y existentes.
 - Tras una ampliación hay que usar las nuevas celdas antes de colocar otra, incluso con ampliaciones acumuladas. Si une el territorio de otra pareja, también se habilitan sus huecos.
-- Cada turno dura **30 segundos**. Cuando vence, se coloca una ficha del jugador correspondiente en una celda vacía elegida al azar. El contador se pausa durante la colocación del territorio.
-- Online, el reloj lo valida Supabase. El comando `tick` de las pestañas conectadas procesa vencimientos bajo bloqueo de fila; un cliente no puede escoger una jugada después del plazo. Si todas las pestañas se cierran o pierden conexión, el vencimiento pendiente se procesa al reconectar; no hay un proceso autónomo haciendo turnos mientras nadie está conectado.
-- «Finalizar» abre una confirmación dentro de la pantalla y muestra el resultado. Solo el anfitrión puede cerrar una sala online; en modo local está disponible durante cualquier turno.
+- Cada turno dura **30 segundos**. Cuando vence, se coloca una ficha del jugador correspondiente en una celda vacía elegida al azar. La ampliación también dispone de 30 segundos; si vence el plazo, se coloca una ampliación válida al azar.
+- Online, el reloj lo valida Supabase. El comando `tick` de las pestañas conectadas procesa vencimientos bajo bloqueo de fila; un cliente no puede escoger una jugada después del plazo. El trabajo privado `hash3-world-clock` comprueba plazos cada 2 segundos en Supabase; procesa una acción por pareja vencida y continúa sin pestañas abiertas. Las máquinas online juegan al azar en unos 2 segundos. Los sectores sin ningún humano activo no generan jugadas de dos máquinas; el resto del mundo sigue. No se simulan retroactivamente todos los turnos si el servidor se interrumpe.
+- «Finalizar» abre una confirmación dentro de la pantalla y muestra el resultado. Solo el anfitrión puede cerrar una sala online; «Abandonar» únicamente retira al jugador. En modo local la finalización está disponible durante cualquier turno.
 - Ranking individual por puntos; en empate, orden de entrada solo para visualizar. Rojo X, verde O, gris otras parejas. Azul: última jugada del jugador inmediatamente superior. Medallas únicamente en el ranking.
+
+## Mundos, abandono y duelos
+
+Flujo de creación: **Crear sala → Duelo / Mundo**. Los formatos y la duración se eligen dentro de Duelo; el inicio conserva únicamente Crear sala / Entrar en una sala, además de los modos locales.
+
+- Mundo continuo: el anfitrión puede abrirlo con un solo jugador o un número impar; las plazas vacías las ocupa una máquina. Se puede entrar durante la partida.
+- «Abandonar» conserva la identidad, puntos, figuras y fichas del humano y deja su plaza a una máquina con puntuación propia. Las sesiones de invitado requieren el mismo navegador para recuperar esa identidad. Cerrar la pestaña sin abandonar mantiene al jugador activo y sus turnos vencidos se juegan al azar.
+- Al volver se intenta recuperar la plaza anterior si sigue ocupada por una máquina y sin reserva ajena. Si otro humano la ocupa, el regreso busca una plaza del mismo símbolo o abre otra pareja en el mismo mundo, sin desplazar a nadie.
+- «Entrar con un amigo» abre una pareja nueva con una plaza reservada. «Invitar a mi rival» copia un enlace que contiene el código del mundo y una invitación de pareja. Al entrar el amigo, sustituye a la máquina. Las otras parejas no reciben ese token. La invitación se consume al usarla y la reserva se libera si quien invitó abandona.
+- Duelo: 3, 5 o 10 minutos, desde que el anfitrión inicia. Individual exige 2 humanos; equipos exige un número par de al menos 4. Se sortean parejas y símbolos. El resultado usa la suma de puntos de X y O, incluidas las sustituciones por máquina; el ranking humano muestra los puntos personales. El servidor cierra el duelo al vencer el plazo y rechaza nuevas jugadas. Se puede volver si queda una plaza del mismo símbolo; no se añaden nuevas parejas a un duelo en marcha.
+- Los cron privados solo se pueden ejecutar por el servidor. Sus registros propios se limpian a los dos días; no se alteran registros de otros trabajos.
+- La admisión está limitada a 200 humanos activos. Antes de anunciar una mega sala de 200 móviles durante varios días se necesitan pruebas de carga y pasar el estado completo a consultas y almacenamiento por zonas: este piloto todavía guarda cada mundo como JSON y transmite el tablero completo.
 
 ## Modos sin cobertura
 
@@ -63,7 +75,7 @@ El enlace previsto es `https://xtronzio.github.io/hash3/`; solo estará disponib
 
 Supabase: `vyzugvepzylidyxitojo`.
 
-`supabase/schema.sql` es la instalación inicial. **No ejecutarlo de nuevo sobre un proyecto instalado.** La revisión de R0.2 está en `supabase/migrations/20261004_terrain_figures_timer.sql`: convierte coordenadas de bloques a celdas, conserva fichas, puntuaciones, figuras cobradas y miembros, y desbloquea los huecos de las partidas anteriores.
+`supabase/schema.sql` es la instalación inicial. **No ejecutarlo de nuevo sobre un proyecto instalado.** La revisión de R0.6 está en `supabase/migrations/20261004155901_persistent_world.sql`: conserva tableros y puntos, incorpora participación, invitaciones y Cron. Se aplica después del esquema inicial, seguida por las correcciones de ampliaciones y plazos de la misma revisión. La revisión de R0.2 está en `supabase/migrations/20261004_terrain_figures_timer.sql`: convierte coordenadas de bloques a celdas, conserva fichas, puntuaciones, figuras cobradas y miembros, y desbloquea los huecos de las partidas anteriores.
 
 Las tablas están en `hash3_private`, con RLS activado y sin acceso directo para `anon` ni `authenticated`. «RLS enabled, no policy» es intencional. La API `public.hash3_command` comprueba identidad, pertenencia, anfitrión, turno, territorio, figuras y tiempos en una función privada. Los cambios de una sala se serializan mediante bloqueo de fila. Los ayudantes privados no están expuestos a los jugadores.
 
@@ -72,6 +84,7 @@ La sesión invitada se guarda en el dispositivo: borrar los datos del navegador 
 ## Verificación
 
 - `npm test`: geometrías, reutilización de huecos anteriores, expansión parcial de una sola celda, conservación de fichas, bloqueo de ampliaciones prematuras, reloj, máquina, finalización y ranking.
+- `tests/participation.sql`: abandono/regreso, conservación, sustitución por máquina, invitaciones y privacidad, entrada a mundos en curso, número impar, reloj autónomo, duelos individuales y cierre automático. Todos los fixtures se revierten. Incluye duelos por equipos, ampliaciones automáticas y protección del reloj ante reintentos o cambios de rival.
 - `tests/database.sql`: RPC reales como `authenticated`, permisos, figuras, turnos, idempotencia, expansión parcial, reloj y conservación durante la migración. Sus fixtures se revierten con `ROLLBACK`.
 - Compilación de producción y generación de caché offline verificadas. No hubo un navegador compatible disponible para comprobar visualmente esta revisión ni probar la recuperación offline del sitio alojado.
 - WebMCP de consulta se activa si el navegador lo soporta; no fue posible probarlo aquí.

@@ -70,3 +70,15 @@ test('Referencia azul apunta al inmediato superior',()=>{
   const p=[{id:'a',score:4,order:1},{id:'b',score:6,order:2},{id:'c',score:4,order:3}];
   assert.deepEqual(rankedPlayers(p).map(v=>v.id),['b','a','c']);assert.equal(immediateAbove(p,'c').id,'a');assert.equal(immediateAbove(p,'b'),null);
 });
+test('La ampliación también vence: añade terreno al azar y conserva las fichas',()=>{
+  let r=createLocal('local','A','B',0);
+  for(const [x,y] of [[0,0],[0,1],[1,0],[1,1],[2,0],[2,2],[0,2],[2,1],[1,2]])r=localCommand(r,'move',{x,y},0);
+  const before=structuredClone(r.cells);
+  assert.equal(r.pairs[0].pending,1);assert.equal(Date.parse(r.pairs[0].deadline),30000);
+  assert.equal(localCommand(r,'tick',{},29999),r);
+  assert.throws(()=>localCommand(r,'expand',{x:3,y:0},30000),/Tiempo agotado/);
+  r=localCommand(r,'tick',{},30000,()=>0);
+  assert.deepEqual(r.cells,before);assert.ok(r.terrain.length>9);assert.equal(r.pairs[0].pending,0);
+  assert.equal(r.lastEvent.kind,'expand');assert.equal(r.lastEvent.automatic,true);
+  assert.equal(localCommand(r,'tick',{},30000),r);
+});

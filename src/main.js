@@ -12,10 +12,12 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const read = key => {try{return localStorage.getItem(key);}catch{return null;}};
 const save = (key,value) => {try{value===null?localStorage.removeItem(key):localStorage.setItem(key,value);}catch{/* device storage may be disabled */}};
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
-let selectedExpansion=null, finishOpen=false, localSetup=null, machineTimer=null;
+let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null;
 let figureEffect=null,figureTimer,scoreFloatTimer;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
+const urlRival = new URL(location.href).searchParams.get('rival') || '';
+const humans = () => room.players.filter(p=>!p.bot);
 const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice');n.textContent=message; n.classList.add('visible');
@@ -31,8 +33,8 @@ function accept(next) {
   const feedback=scoreFeedback(room,next);
   const changed = room?.id!==next.id;
   if(changed){previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
-  room=next;if(isLocal()){uid=localUid();save('hash3_local',JSON.stringify(room));}else save('hash3_room',room.code);
-  const target=immediateAbove(room.players,uid), targetId=target?.lastMove?.id;
+  room=next;if(isLocal()){uid=localUid();save('hash3_local',JSON.stringify(room));}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
+  const target=immediateAbove(humans(),uid), targetId=target?.lastMove?.id;
   if(!changed&&targetId&&targetId!==previousTarget)blinkId=targetId;
   else blinkId=null;
   previousTarget=targetId||null;
@@ -44,9 +46,10 @@ function render() {
   const previous=document.querySelector('.viewport');
   const scroll=previous?{left:previous.scrollLeft,top:previous.scrollTop}:null;
   if(!room){renderHome();return;}
+  if(!isLocal()&&ownPlayer()?.active===false&&room.status!=='finished'){renderReturn();return;}
   if(room.status==='lobby'||room.status==='finished'){renderLobby();return;}
   if(isLocal())uid=localUid();
-  const own=ownPlayer(), pair=ownPair(), target=immediateAbove(room.players,uid), list=rankedPlayers(room.players);
+  const own=ownPlayer(), pair=ownPair(), target=immediateAbove(humans(),uid), list=rankedPlayers(humans());
   const opponent=room.players.find(p=>p.id===(own.symbol==='X'?pair.o:pair.x));
   const expanding=pair.pending>0, canExpand=expanding&&pair.expander===uid;
   const ready=!expanding&&pair.turn===own.symbol&&!(room.mode==='solo'&&pair.turn==='O');
@@ -55,21 +58,21 @@ function render() {
   const rank=list.findIndex(p=>p.id===uid)+1;
   const title=canExpand?'Amplía tu territorio':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   app.innerHTML=`<section class="game">
-    <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${isLocal()?(room.mode==='solo'?'CONTRA LA MÁQUINA':'DOS EN ESTE DISPOSITIVO'):escape(room.code)}</div>${isLocal()?'':'<button class="ghost small" data-action="share">Invitar</button>'}</div></div>
+    <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${isLocal()?(room.mode==='solo'?'CONTRA LA MÁQUINA':'DOS EN ESTE DISPOSITIVO'):escape(room.code)}</div>${isLocal()?'':`<button class="ghost small" data-action="${opponent.bot?'share-pair':'share'}">${opponent.bot?'Invitar a mi rival':'Invitar al mundo'}</button>`}</div></div>
       <div class="team-score mono"><span class="x">X <strong>${totals.X}</strong></span><span class="o">O <strong>${totals.O}</strong></span></div>
       <div class="toolbar-name"><span class="${own.symbol.toLowerCase()}">${escape(own.name)} · ${own.symbol}</span>${room.host===uid?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
     </header>
     <div class="workspace"><div class="arena">
-      <div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)} · ${canExpand?'Coloca el 3×3; puedes solaparlo.':'Usa cualquier celda vacía de tu territorio.'}</p></div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}">${expanding?'AMPLIACIÓN':`<span class="turn-timer mono" aria-label="Tiempo restante"></span> · ${ready?'JUEGA '+own.symbol:'ESPERANDO'}`}</div></div>
+      <div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando rival humano':''} · ${canExpand?'Coloca el 3×3; puedes solaparlo.':'Usa cualquier celda vacía de tu territorio.'}</p>${room.kind==='duel'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span> · ${expanding?'AMPLIACIÓN':ready?'JUEGA '+own.symbol:'ESPERANDO'}</div></div>
       ${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca una celda para situar la esquina del 3×3.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
       <div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div>
-      <div class="controls"><div class="group"><button class="zoom" data-action="minus" aria-label="Alejar tablero">−</button><button class="zoom" data-action="plus" aria-label="Acercar tablero">+</button><button class="small" data-action="center">Mi territorio</button></div><div class="group">${target?.lastMove?'<button class="small blue" data-action="locate">Mi objetivo</button>':''}${isLocal()||room.host===uid?'<button class="small ghost danger" data-action="finish">Finalizar</button>':''}</div><span class="legend">Gris: otras parejas · Azul: tu objetivo</span><span class="connection">${connected?'Conectado':'Reconectando…'}</span></div>
-    </div><aside class="ranking"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}"><span>RANKING <span class="muted">${rankOpen?room.players.length:'#'+rank}</span></span><span aria-hidden="true">${rankOpen?'−':'+'}</span></button>
+      <div class="controls"><div class="group"><button class="zoom" data-action="minus" aria-label="Alejar tablero">−</button><button class="zoom" data-action="plus" aria-label="Acercar tablero">+</button><button class="small" data-action="center">Mi territorio</button></div><div class="group">${target?.lastMove?'<button class="small blue" data-action="locate">Mi objetivo</button>':''}<button class="small ghost danger" data-action="abandon">Abandonar</button>${isLocal()||room.host===uid?'<button class="small ghost danger" data-action="finish">Finalizar sala</button>':''}</div><span class="legend">Gris: otras parejas · Azul: tu objetivo</span><span class="connection">${connected?'Conectado':'Reconectando…'}</span></div>
+    </div><aside class="ranking"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}"><span>RANKING <span class="muted">${rankOpen?humans().length:'#'+rank}</span></span><span aria-hidden="true">${rankOpen?'−':'+'}</span></button>
       <ol class="ranking-list">${visibleRank.map(p=>{const index=list.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':''}<small>${p.figures} figura${p.figures!==1?'s':''} · ${p.symbol}</small></span><span class="rank-score mono">${p.score}</span></li>`;}).join('')}</ol>
       <div class="goal-panel">${target?`<p class="muted">Tu siguiente objetivo</p><p class="blue">${escape(target.name)} · ${Math.max(0,target.score-own.score)} puntos por delante</p>${target.lastMove?'<button class="small" data-action="locate">Localizar última jugada</button>':'<p class="muted">Todavía no ha jugado.</p>'}`:'<p class="heading" style="font-size:24px;color:#f4c65d">Vas primero</p><p class="muted">Mantén tu posición.</p>'}</div>
       <div class="bonus-progress">${3-(own.figures%3)} figura${3-(own.figures%3)!==1?'s':''} para el bonus +3<div class="bonus-track">${[0,1,2].map(i=>`<i class="${i<own.figures%3?'done':''}"></i>`).join('')}</div></div>
     </aside></div></section>`;
-  drawBoard(canExpand,ready,target);renderFinish();updateTimer();
+  drawBoard(canExpand,ready,target);renderFinish();renderLeave();updateTimer();
   const nowKey=key(pair.active.x,pair.active.y);
   if(!scroll||nowKey!==activeKey)requestAnimationFrame(()=>center(pair.active.x+1,pair.active.y+1));
   else {const v=document.querySelector('.viewport');v.scrollLeft=scroll.left;v.scrollTop=scroll.top;}
@@ -123,8 +126,8 @@ function renderHome() {
   app.innerHTML=`<section class="entry"><div class="entry-inner"><div class="entry-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · PILOTO</span></div>
     <h1 class="heading">Elige cómo jugar</h1>
     <form id="entry-form"><div><label for="name">Tu apodo</label><input id="name" name="name" placeholder="Cómo te llamas" value="${escape(read('hash3_name')||'')}" minlength="2" maxlength="18" autocomplete="nickname" required></div>
-    <button class="primary" type="submit" name="intent" value="create">Crear sala</button><div class="divider"></div><div><label for="code">¿Tienes un código?</label><input id="code" name="code" placeholder="CÓDIGO DE SALA" value="${escape(urlCode)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"></div><button type="submit" name="intent" value="join">Entrar en una sala</button></form>
-    <div class="offline-options"><button data-action="setup-solo">Contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button>${read('hash3_local')?'<button class="ghost" data-action="resume-local">Continuar partida local</button>':''}</div><p class="offline-hint muted" id="offline-status">Los modos locales no necesitan cobertura durante la partida.</p><details class="rules"><summary>Cómo se juega</summary>
+    <button class="primary" type="submit" name="intent" value="create">Crear sala</button><div class="divider"></div><div><label for="code">¿Tienes un código?</label><input id="code" name="code" placeholder="CÓDIGO DE SALA" value="${escape(urlCode)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"></div><label for="preference">Al entrar en un mundo</label><select id="preference" name="preference"><option value="auto">Buscar rival disponible</option><option value="new">Entrar con un amigo · nueva pareja</option></select>${urlRival?'<p class="instructions">Esta invitación te une a la pareja de quien te la envió.</p>':''}<button type="submit" name="intent" value="join">Entrar en una sala</button></form>
+    ${read('hash3_room')?`<button class="return-button" data-action="return-room" data-code="${escape(read('hash3_room'))}">Volver a la sala ${escape(read('hash3_room'))}</button>`:''}<div class="offline-options"><button data-action="setup-solo">Contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button>${read('hash3_local')?'<button class="ghost" data-action="resume-local">Continuar partida local</button>':''}</div><p class="offline-hint muted" id="offline-status">Los modos locales no necesitan cobertura durante la partida.</p><details class="rules"><summary>Cómo se juega</summary>
       <h2 class="heading">Tu turno</h2>
       <p>Coloca una ficha en cualquier celda vacía de vuestro territorio conectado, también en las zonas anteriores. Alternas turnos con tu rival.</p>
       <p>Tienes <strong>30 segundos</strong>. Si no mueves, se coloca tu ficha en una celda vacía al azar.</p>
@@ -144,13 +147,14 @@ function renderHome() {
       <p>Las figuras cobradas se iluminan durante medio segundo y el aviso desglosa los puntos de la jugada.</p>
       <h2 class="heading">Cuándo crece el territorio</h2>
       <p><strong>Primero hay que ocupar todas las celdas vacías.</strong> Cada figura acumula una ampliación, pero solo puedes colocarla cuando ya no quedan movimientos en vuestro territorio conectado. Si no te quedan ampliaciones, recibes una para continuar.</p>
-      <p>Recibes un 3×3 y puedes solaparlo con terreno existente: añade solo las celdas nuevas y conserva las fichas. No tienes que añadir las nueve celdas. El reloj se pausa mientras colocas la ampliación.</p>
+      <p>Recibes un 3×3 y puedes solaparlo con terreno existente: añade solo las celdas nuevas y conserva las fichas. No tienes que añadir las nueve celdas. Tienes 30 segundos para colocarla. Si se agotan, se coloca una ampliación válida al azar.</p>
       <h2 class="heading">Sala y ranking</h2>
-      <p>Online podéis jugar de 2 a 12, siempre un número par. El anfitrión inicia y finaliza. Se sortean las parejas y los símbolos X/O.</p>
-      <p>El ranking se pliega al tocarlo. La última jugada del jugador justo por encima de ti queda en azul.</p>
+      <p>En un mundo continuo puedes entrar y salir mientras la partida sigue. Si no tienes rival humano, juegas contra la máquina. Puedes entrar con un amigo usando una invitación de pareja. El anfitrión abre y cierra el mundo.</p>
+      <p><strong>Abandonar conserva tus puntos.</strong> Tu rival sigue contra la máquina. Al volver recuperas tu hueco si está libre; si está ocupado, se te busca otro rival en el mundo. En un duelo solo puedes volver si queda un hueco de tu símbolo. Los puntos de la máquina son suyos. Cerrar la pestaña no abandona: tus turnos vencidos se juegan automáticamente.</p><p><strong>Duelo:</strong> 1 contra 1 o equipos X contra O durante 3, 5 o 10 minutos. El reloj arranca al iniciar y, cuando llega a cero, se cierra la partida. Gana X u O por la suma de sus puntos, incluidas las sustituciones por máquina. El ranking conserva tus puntos personales.</p><p>El ranking se pliega al tocarlo. La última jugada del jugador justo por encima de ti queda en azul.</p>
     </details>
     <footer>Acceso como invitado. Para volver a tu sala, utiliza este mismo navegador.</footer></div></section>`;
   if(localSetup)renderLocalSetup();
+  if(roomSetup)renderRoomSetup();
   updateOfflineStatus();
   document.querySelector('#entry-form').addEventListener('submit',async e=>{
     e.preventDefault();if(busy)return;
@@ -158,18 +162,23 @@ function renderHome() {
     const name=String(form.get('name')).trim(),code=String(form.get('code')).trim().toUpperCase();
     if(action==='join'&&!/^[A-Z0-9]{8}$/.test(code)){notify('Introduce un código de sala de 8 caracteres.');return;}
     save('hash3_name',name);
-    await run(async()=>{uid=await ensurePlayer();accept(await command(action,{name,code}));});
+    if(action==='create'){roomSetup={name,kind:null,format:'solo',minutes:5};renderRoomSetup();return;}
+    await run(async()=>{uid=await ensurePlayer();accept(await command('join',{name,code,preference:form.get('preference'),rival:code===urlCode.toUpperCase()?urlRival:undefined}));});
   });
 }
 function renderLobby() {
-  const finished=room.status==='finished',host=room.host===uid,list=rankedPlayers(room.players),winner=list[0];
-  const count=room.players.length,canStart=count>=2&&count%2===0;
+  const finished=room.status==='finished',host=room.host===uid,list=rankedPlayers(humans()),winner=list[0];
+  const players=humans().filter(p=>p.active!==false),duel=room.kind==='duel',teams=room.format==='teams';
+  const scores={X:0,O:0};room.players.forEach(p=>{if(p.symbol)scores[p.symbol]+=p.score;});
+  const teamResult=scores.X===scores.O?'Empate':scores.X>scores.O?(teams?'Gana el equipo X':'Gana X'):(teams?'Gana el equipo O':'Gana O');
+  const count=players.length,canStart=duel?(teams?count>=4&&count%2===0:count===2):count>=1;
   app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · PILOTO</span></header><div class="row spread"><h1 class="heading">${finished?'Resultado final':'La sala está abierta'}</h1>${host?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
-    ${finished?`<div class="finished"><h2 class="heading">${escape(winner.name)} · ${winner.score} puntos</h2><p>${list.filter(p=>p.score===winner.score).length>1?'Hay empate en la primera posición.':'Primero en el ranking individual.'}</p></div>`:`<div class="code-panel"><label>Código de la sala</label><div class="code mono">${escape(room.code)}</div><button class="small" data-action="share" style="margin-top:16px">Copiar invitación</button></div>`}
-    <div class="row spread"><span>${count} jugador${count!==1?'es':''}</span><span class="muted">${finished?'Puntos / figuras':'De 2 a 12 · por parejas'}</span></div>
-    <ol class="player-list">${(finished?list:room.players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} / ${p.figures}`:'Listo'}</span></li>`).join('')}</ol>
-    ${!finished?`<p class="instructions">${host?'Al iniciar, se sortearán las parejas y los símbolos. Cada pareja empezará en su propio 3×3.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?'<p class="instructions">Necesitamos un número par de jugadores para formar las parejas.</p>':''}`:''}`:''}
-    <div class="footer-actions"><button class="ghost small" data-action="home">Volver al inicio</button>${!finished?`<button class="ghost small danger" data-action="${host?'finish':'leave'}">${host?'Cerrar sala':'Salir de la sala'}</button>`:''}</div></section>`;
+    ${finished?`<div class="finished"><h2 class="heading">${duel?teamResult:escape(winner?.name||'Sin jugadores')} · ${duel?`X ${scores.X} / O ${scores.O}`:winner?.score||0} puntos</h2><p>${duel?'Resultado por suma de puntos de X y O; incluye las sustituciones por máquina.':list.filter(p=>p.score===winner?.score).length>1?'Hay empate en la primera posición.':'Primero en el ranking individual.'}</p></div>`:`<div class="code-panel"><label>Código de la sala</label><div class="code mono">${escape(room.code)}</div><button class="small" data-action="share" style="margin-top:16px">Copiar invitación</button></div>`}
+    <div class="row spread"><span>${count} jugador${count!==1?'es':''}</span><span class="muted">${finished?'Puntos / figuras':duel?`${teams?'Equipos X/O':'1 contra 1'} · ${room.durationSeconds/60} min`:'Mundo continuo'}</span></div>
+    <ol class="player-list">${(finished?list:players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} / ${p.figures}`:'Listo'}</span></li>`).join('')}</ol>
+    ${!finished?`<p class="instructions">${host?duel?'Al iniciar, se sortean parejas y símbolos y arranca el reloj del duelo.':'Al iniciar se sortean las parejas y los símbolos. Quien no tenga rival juega contra la máquina.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?`<p class="instructions">${teams?'Necesitamos un número par de al menos 4 jugadores.':'Necesitamos exactamente 2 jugadores para el duelo.'}</p>`:''}`:''}`:''}
+    <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button>':'<button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
+  renderFinish();renderLeave();
 }
 async function run(operation) {
   if(busy)return;busy=true;
@@ -180,16 +189,33 @@ async function run(operation) {
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
   const action=b.dataset.action;
+  if(action==='choose-world'||action==='choose-duel'){roomSetup.kind=action==='choose-world'?'world':'duel';renderRoomSetup();return;}
+  if(action==='cancel-room'){roomSetup=null;document.querySelector('.room-dialog')?.remove();return;}
+  if(action==='create-room'){const setup={...roomSetup};await run(async()=>{uid=await ensurePlayer();const next=await command('create',setup);roomSetup=null;accept(next);});return;}
+  if(action==='abandon'){leaveOpen=true;renderLeave();return;}
+  if(action==='cancel-leave'){leaveOpen=false;document.querySelector('.leave-dialog')?.remove();return;}
+  if(action==='return-room'){const code=b.dataset.code||room?.code;await run(async()=>{uid=await ensurePlayer();accept(await command('join',{code,name:read('hash3_name')||ownPlayer()?.name||'Jugador'}));});return;}
   if(action==='ranking'){rankOpen=!rankOpen;blinkId=null;render();return;}
   if(action==='center'){const p=ownPair();center(p.active.x+1,p.active.y+1);return;}
-  if(action==='locate'){const move=immediateAbove(room.players,uid)?.lastMove;if(move)center(move.x,move.y);return;}
+  if(action==='locate'){const move=immediateAbove(humans(),uid)?.lastMove;if(move)center(move.x,move.y);return;}
   if(action==='plus'||action==='minus'){zoom=Math.max(.45,Math.min(1.8,zoom+(action==='plus'?.15:-.15)));blinkId=null;render();const p=ownPair();center(p.active.x+1,p.active.y+1);return;}
-  if(action==='share'){
-    const url=new URL(location.href);url.searchParams.set('sala',room.code);
-    try{await navigator.clipboard.writeText(url.href);notify('Invitación copiada. Compártela con el grupo.');}
-    catch{notify(`Código de sala: ${room.code}`);}return;
+  if(action==='share'||action==='share-pair'){
+    await run(async()=>{
+      if(action==='share-pair')accept(await command('reserve',{code:room.code}));
+      const url=new URL(location.href);url.searchParams.set('sala',room.code);url.searchParams.delete('rival');
+      if(action==='share-pair')url.searchParams.set('rival',ownPair().invite);
+      try{await navigator.clipboard.writeText(url.href);notify(action==='share-pair'?'Invitación a tu pareja copiada. Envíasela a tu rival.':'Invitación al mundo copiada.');}
+      catch{notify('Invitación: '+url.href);}
+    });return;
   }
-  if(action==='home'){if(!isLocal())save('hash3_room',null);clearTimeout(machineTimer);room=null;finishOpen=false;selectedExpansion=null;activeKey=null;history.replaceState(null,'',location.pathname);render();return;}
+  if(action==='confirm-leave'){
+    await run(async()=>{
+      if(!isLocal())await command('leave',{code:room.code});
+      clearTimeout(machineTimer);room=null;leaveOpen=false;finishOpen=false;selectedExpansion=null;activeKey=null;
+      history.replaceState(null,'',location.pathname);render();notify('Has abandonado. Conservas tus puntos y puedes volver desde el inicio.');
+    });return;
+  }
+  if(action==='home'){if(room?.status!=='finished'&&ownPlayer()?.active!==false){leaveOpen=true;renderLeave();return;}clearTimeout(machineTimer);room=null;finishOpen=false;selectedExpansion=null;activeKey=null;history.replaceState(null,'',location.pathname);render();return;}
   if(action==='finish'){finishOpen=true;renderFinish();return;}
   if(action==='cancel-finish'){finishOpen=false;document.querySelector('.dialog-backdrop')?.remove();return;}
   if(action==='confirm-finish'){finishOpen=false;}
@@ -209,7 +235,7 @@ app.addEventListener('click',async e=>{
     if(effectiveAction==='expand'){if(!selectedExpansion)return;Object.assign(payload,selectedExpansion);}
     const next=isLocal()?localCommand(room,effectiveAction,payload):await command(effectiveAction,payload);
     if(effectiveAction==='expand')selectedExpansion=null;
-    if(action==='leave'){save('hash3_room',null);room=null;render();return;}
+    if(action==='leave'){room=null;render();return;}
     accept(next);
     if(action==='move'){
       const ev=next.lastEvent;if(!ev.points&&ev.continuation)notify('No quedan celdas vacías: coloca una ampliación para continuar.');
@@ -242,10 +268,10 @@ async function init(){
   }catch{/* Continue at the start screen if storage is unavailable. */}
   if(!navigator.onLine||!code||(urlCode&&urlCode.toUpperCase()!==code))return;
   const {data:{session}}=await client.auth.getSession();
-  if(room||localSetup||busy)return;
+  if(room||localSetup||roomSetup||busy)return;
   uid=session?.user.id||null;
   if(uid){
-    try{const next=await command('get',{code});if(!room&&!localSetup&&!busy)accept(next);}catch{notify('No se ha podido recuperar la sala. Puedes entrar con su código.');}
+    try{const next=await command('get',{code});if(!room&&!localSetup&&!roomSetup&&!busy)accept(next);}catch{notify('No se ha podido recuperar la sala. Puedes entrar con su código.');}
   }
 }
 init().catch(error=>{renderHome();notify('Puedes jugar en los modos locales. '+(error.message||'No se ha podido conectar.'));});
@@ -269,6 +295,24 @@ if(document.modelContext?.registerTool){
   }catch{/* WebMCP is optional; normal play remains available. */}
 }
 
+function renderRoomSetup() {
+  document.querySelector('.room-dialog')?.remove();
+  const setup=roomSetup;
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear sala</h2><div class="room-modes"><button data-action="choose-duel" aria-pressed="${setup.kind==='duel'}"><strong class="heading">Duelo</strong><span>Partida con tiempo</span></button><button data-action="choose-world" aria-pressed="${setup.kind==='world'}"><strong class="heading">Mundo</strong><span>Tablero sin límite de tiempo</span></button></div>${setup.kind==='duel'?`<label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select><label for="duel-minutes">Duración</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>El reloj empieza al iniciar la partida. Al llegar a cero, se cierra el duelo y gana X u O por puntos.</p>`:setup.kind==='world'?'<p>El mundo sigue abierto hasta que el anfitrión lo cierre. Pueden entrar nuevas parejas mientras jugáis. Si te falta rival, juegas contra la máquina.</p>':'<p>Elige qué tipo de sala quieres abrir.</p>'}<div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room" ${!setup.kind?'disabled':''}>${setup.kind==='duel'?'Crear duelo':setup.kind==='world'?'Crear mundo':'Crear sala'}</button></div></section></div>`);
+  document.querySelector('#duel-format')?.addEventListener('change',e=>{roomSetup.format=e.target.value;});
+  document.querySelector('#duel-minutes')?.addEventListener('change',e=>{roomSetup.minutes=Number(e.target.value);});
+}
+function renderReturn() {
+  const own=ownPlayer();
+  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL}</span></header><h1 class="heading">${room.status==='lobby'?'La sala te espera':'El mundo sigue'}</h1><p class="instructions">Has abandonado ${escape(room.code)}. Conservas tus ${own.score} puntos y ${own.figures} figuras. Tu antiguo rival puede seguir contra una máquina o contra alguien que haya entrado.</p><button class="primary return-button" data-action="return-room">Volver a la partida</button><p class="instructions">Recuperas tu hueco si sigue libre. Si está ocupado, se te busca otro rival; mientras tanto jugarás contra la máquina.</p><button class="ghost" data-action="home">Ir al inicio</button>${room.host===uid?'<button class="ghost danger" data-action="finish">Cerrar sala para todos</button>':''}</section>`;
+  renderFinish();
+}
+function renderLeave() {
+  document.querySelector('.leave-dialog')?.remove();
+  if(!leaveOpen||!room)return;
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop leave-dialog"><section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="leave-title"><h2 class="heading" id="leave-title">¿Abandonar la partida?</h2><p>${isLocal()?'Conservas la partida en este dispositivo para volver desde el inicio.':'Conservas tus puntos. Tu rival sigue contra una máquina y puede emparejarse con otro jugador. La sala continúa y puedes volver cuando quieras.'}</p><div class="row"><button data-action="cancel-leave">Seguir jugando</button><button class="primary" data-action="confirm-leave">Abandonar</button></div></section></div>`);
+  document.querySelector('[data-action="cancel-leave"]').focus();
+}
 function renderFinish() {
   document.querySelector('.finish-dialog')?.remove();
   if(!finishOpen||!room)return;
@@ -283,10 +327,11 @@ function renderLocalSetup() {
 function updateTimer() {
   if(!room||room.status!=='playing')return;
   const p=ownPair(),node=document.querySelector('.turn-timer');
-  if(node&&p.deadline) {
+  const duel=document.querySelector('#duel-time');if(duel&&room.endsAt){const left=Math.max(0,Math.ceil((Date.parse(room.endsAt)-Date.now())/1000));duel.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);}
+  if(node&&p?.deadline) {
     const seconds=Math.max(0,Math.ceil((Date.parse(p.deadline)-Date.now())/1000));
     node.textContent=seconds+' s';node.classList.toggle('urgent',seconds<=5);
-    if(seconds===0)document.querySelectorAll('[data-action="move"]').forEach(b=>b.disabled=true);
+    if(seconds===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
   }
 }
 function scheduleMachine() {
@@ -303,7 +348,7 @@ function scheduleMachine() {
 setInterval(()=>{
   updateTimer();
   if(isLocal()&&room.status==='playing'&&!busy&&!document.hidden) {
-    const next=localCommand(room,'tick');if(next!==room){accept(next);if(!next.lastEvent?.points)notify('Tiempo agotado: jugada automática en una celda vacía.');}
+    const next=localCommand(room,'tick');if(next!==room){accept(next);if(!next.lastEvent?.points)notify(next.lastEvent?.kind==='expand'?'Tiempo agotado: ampliación automática.':'Tiempo agotado: jugada automática en una celda vacía.');}
   }
 },500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleMachine();});
@@ -312,7 +357,7 @@ function updateOfflineStatus() {
   n.textContent=navigator.serviceWorker?.controller?'Preparado para jugar sin conexión.':'Los modos locales no necesitan cobertura durante la partida. Abre esta web una primera vez con internet.';
 }
 startUpdates({
-  canReload:()=>!busy&&!localSetup&&!finishOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
+  canReload:()=>!busy&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
   beforeReload:()=>{
     if(isLocal()){save('hash3_local',JSON.stringify(room));try{sessionStorage.setItem('hash3_restore_local','1');}catch{/* The saved game remains available from the start screen. */}}
   },
