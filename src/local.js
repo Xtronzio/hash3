@@ -1,9 +1,10 @@
 import {key,terrainOf,availableCells,expansionOptions,figureWindows} from './game.js';
 export const TURN_SECONDS=30;
 const id=()=>crypto.randomUUID();
-export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now()) {
+export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(),level='normal') {
+  if(!['normal','advanced'].includes(level))throw new Error('Elige nivel Normal o Avanzado.');
   const x='local-x',o='local-o';
-  return {id:id(),code:'LOCAL',host:x,status:'playing',version:1,ruleVersion:2,mode,turnSeconds:TURN_SECONDS,
+  return {id:id(),code:'LOCAL',host:x,status:'playing',version:1,ruleVersion:2,mode,level,turnSeconds:TURN_SECONDS,
     players:[{id:x,name,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:mode==='solo'?'Máquina':secondName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -32,7 +33,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!availableCells(room,p).some(c=>c.x===x&&c.y===y))throw new Error('Elige una celda vacía de tu territorio conectado.');
     const player=room.players.find(v=>v.symbol===p.turn),cell={id:id(),requestId:payload.requestId||id(),x,y,symbol:p.turn,owner:player.id};
     room.cells.push(cell);
-    const figures=figureWindows(room.cells,x,y,p.turn).filter(f=>!room.forms.includes(f.id));
+    const figures=figureWindows(room.cells,x,y,p.turn,room.level).filter(f=>!room.forms.includes(f.id));
     room.forms.push(...figures.map(f=>f.id));
     const bonus=3*(Math.floor((player.figures+figures.length)/3)-Math.floor(player.figures/3));
     const points=figures.reduce((sum,f)=>sum+f.size,0)+bonus;
@@ -61,7 +62,7 @@ export function machineChoice(room,random=Math.random) {
     return {action:'expand',payload:preferred[Math.floor(random()*preferred.length)].c};
   }
   const free=availableCells(room,p),symbol=p.turn,other=symbol==='X'?'O':'X';
-  const gain=(c,s)=>figureWindows([...room.cells,{...c,symbol:s}],c.x,c.y,s).filter(f=>!room.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0);
+  const gain=(c,s)=>figureWindows([...room.cells,{...c,symbol:s}],c.x,c.y,s,room.level).filter(f=>!room.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0);
   const scored=free.map(c=>({c,value:gain(c,symbol)*2+gain(c,other)})),best=Math.max(...scored.map(v=>v.value));
   const preferred=scored.filter(v=>v.value===best);
   return {action:'move',payload:preferred[Math.floor(random()*preferred.length)].c};

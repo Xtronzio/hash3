@@ -42,7 +42,7 @@ for(const [kind,shape] of [['L',[[0,0],[1,0],[0,1]]],['L',[[0,0],[1,0],[2,0],[0,
   }
 }
 export const shapeTemplates=[...templates.values()];
-export function figureWindows(cells,x,y,symbol) {
+export function figureWindows(cells,x,y,symbol,level='normal') {
   const occupied=new Set(cells.filter(c=>c.symbol===symbol).map(c=>key(c.x,c.y))),found=new Map();
   const add=(kind,points)=>{const id=symbol+':'+kind+':'+canonical(points);found.set(id,{id,kind,size:points.length,points});};
   for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]) {
@@ -53,6 +53,10 @@ export function figureWindows(cells,x,y,symbol) {
   for(const {kind,points} of shapeTemplates)for(const [ax,ay] of points) {
     const translated=points.map(([dx,dy])=>[x+dx-ax,y+dy-ay]);
     if(translated.every(([cx,cy])=>occupied.has(key(cx,cy))))add(kind,translated);
+  }
+  if(level==='advanced') {
+    const points=connectedTerrain(cells.filter(c=>c.symbol===symbol),{x,y}).map(c=>[c.x,c.y]);
+    if(points.length>=4&&!Array.from(found.values()).some(f=>canonical(f.points)===canonical(points)))add('grupo',points);
   }
   return [...found.values()];
 }

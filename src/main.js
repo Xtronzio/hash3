@@ -58,7 +58,7 @@ function render() {
   const rank=list.findIndex(p=>p.id===uid)+1;
   const title=canExpand?'Amplía tu territorio':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   app.innerHTML=`<section class="game">
-    <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${isLocal()?(room.mode==='solo'?'CONTRA LA MÁQUINA':'DOS EN ESTE DISPOSITIVO'):escape(room.code)}</div>${isLocal()?'':`<button class="ghost small" data-action="${opponent.bot?'share-pair':'share'}">${opponent.bot?'Invitar a mi rival':'Invitar al mundo'}</button>`}</div></div>
+    <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${isLocal()?(room.mode==='solo'?'CONTRA LA MÁQUINA':'DOS EN ESTE DISPOSITIVO'):escape(room.code)}</div><span class="muted">Nivel ${room.level==='advanced'?'Avanzado':'Normal'}</span>${isLocal()?'':`<button class="ghost small" data-action="${opponent.bot?'share-pair':'share'}">${opponent.bot?'Invitar a mi rival':'Invitar al mundo'}</button>`}</div></div>
       <div class="team-score mono"><span class="x">X <strong>${totals.X}</strong></span><span class="o">O <strong>${totals.O}</strong></span></div>
       <div class="toolbar-name"><span class="${own.symbol.toLowerCase()}">${escape(own.name)} · ${own.symbol}</span>${room.host===uid?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
     </header>
@@ -133,6 +133,7 @@ function renderHome() {
       <p>Tienes <strong>30 segundos</strong>. Si no mueves, se coloca tu ficha en una celda vacía al azar.</p>
       <h2 class="heading">Cómo sumas puntos</h2>
       <p><strong>Cada figura vale tantos puntos como celdas tiene.</strong> Todas sus fichas deben ser del mismo símbolo: X o bien O. Cuentan todas las orientaciones y también las fichas de tus compañeros con tu símbolo.</p>
+      <p><strong>Normal:</strong> puntúan las figuras de esta tabla. <strong>Avanzado:</strong> además puntúa el grupo completo unido por los lados que contiene tu ficha nueva, cuando tiene al menos 4 celdas y una forma distinta de las básicas. Las diagonales no unen el grupo. Si el grupo es exactamente una línea, L, cuadrado o cruz, no se añade otra puntuación por grupo.</p>
       <table><thead><tr><th scope="col">Figura</th><th scope="col">Puntos</th></tr></thead><tbody>
         <tr><td>Línea de 3, 4, 5…</td><td>+3, +4, +5…</td></tr>
         <tr><td>L de 3 celdas</td><td>+3</td></tr>
@@ -144,6 +145,7 @@ function renderHome() {
       <ul><li><strong>Una ficha puede completar varias figuras.</strong> Sumas los puntos de todas las figuras nuevas, aunque compartan celdas.</li><li><strong>Una figura ya cobrada no se vuelve a cobrar.</strong> Sus fichas sí pueden formar parte de otras figuras nuevas.</li><li><strong>Bonus: +3 por cada tercera figura tuya</strong> (3.ª, 6.ª, 9.ª…). Se cuentan figuras, no turnos: una jugada puede acercarte al bonus o conseguirlo.</li><li>Los puntos se los lleva quien completa la figura y también se añaden a su equipo X/O.</li></ul>
       <div class="rules-example"><strong>Ejemplo del bonus</strong><p>Completas una línea de 3 y es tu tercera figura: <strong>3 de la línea + 3 de bonus = +6 puntos.</strong></p></div>
       <div class="rules-example"><strong>Ejemplo de figuras que se solapan</strong><p>Si una ficha completa un cuadrado y tres L nuevas de 3 celdas, sumas <strong>4 + 3 + 3 + 3 = +13 puntos</strong>, más el bonus que te corresponda.</p></div>
+      <div class="rules-example"><strong>Ejemplo en Avanzado</strong><p>Tres fichas en fila y una cuarta bajo la del medio forman una T. Si esa ficha completa dos L nuevas, sumas <strong>3 + 3 + 4 del grupo = +10 puntos</strong>, más el bonus. En Normal, las dos L suman +6 antes del bonus. Al ampliar o unir un grupo, su nueva geometría puede volver a puntuar.</p></div>
       <p>Las figuras cobradas se iluminan durante medio segundo y el aviso desglosa los puntos de la jugada.</p>
       <h2 class="heading">Cuándo crece el territorio</h2>
       <p><strong>Primero hay que ocupar todas las celdas vacías.</strong> Cada figura acumula una ampliación, pero solo puedes colocarla cuando ya no quedan movimientos en vuestro territorio conectado. Si no te quedan ampliaciones, recibes una para continuar.</p>
@@ -162,7 +164,7 @@ function renderHome() {
     const name=String(form.get('name')).trim(),code=String(form.get('code')).trim().toUpperCase();
     if(action==='join'&&!/^[A-Z0-9]{8}$/.test(code)){notify('Introduce un código de sala de 8 caracteres.');return;}
     save('hash3_name',name);
-    if(action==='create'){roomSetup={name,kind:null,format:'solo',minutes:5};renderRoomSetup();return;}
+    if(action==='create'){roomSetup={name,kind:null,format:'solo',minutes:5,level:'normal'};renderRoomSetup();return;}
     await run(async()=>{uid=await ensurePlayer();accept(await command('join',{name,code,preference:form.get('preference'),rival:code===urlCode.toUpperCase()?urlRival:undefined}));});
   });
 }
@@ -175,6 +177,7 @@ function renderLobby() {
   app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · PILOTO</span></header><div class="row spread"><h1 class="heading">${finished?'Resultado final':'La sala está abierta'}</h1>${host?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
     ${finished?`<div class="finished"><h2 class="heading">${duel?teamResult:escape(winner?.name||'Sin jugadores')} · ${duel?`X ${scores.X} / O ${scores.O}`:winner?.score||0} puntos</h2><p>${duel?'Resultado por suma de puntos de X y O; incluye las sustituciones por máquina.':list.filter(p=>p.score===winner?.score).length>1?'Hay empate en la primera posición.':'Primero en el ranking individual.'}</p></div>`:`<div class="code-panel"><label>Código de la sala</label><div class="code mono">${escape(room.code)}</div><button class="small" data-action="share" style="margin-top:16px">Copiar invitación</button></div>`}
     <div class="row spread"><span>${count} jugador${count!==1?'es':''}</span><span class="muted">${finished?'Puntos / figuras':duel?`${teams?'Equipos X/O':'1 contra 1'} · ${room.durationSeconds/60} min`:'Mundo continuo'}</span></div>
+    <p class="instructions">Nivel <strong>${room.level==='advanced'?'Avanzado':'Normal'}</strong> · ${room.level==='advanced'?'Figuras básicas y grupos unidos por los lados.':'Líneas, L, cruces y cuadrados.'} Todas las figuras nuevas suman.</p>
     <ol class="player-list">${(finished?list:players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} / ${p.figures}`:'Listo'}</span></li>`).join('')}</ol>
     ${!finished?`<p class="instructions">${host?duel?'Al iniciar, se sortean parejas y símbolos y arranca el reloj del duelo.':'Al iniciar se sortean las parejas y los símbolos. Quien no tenga rival juega contra la máquina.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?`<p class="instructions">${teams?'Necesitamos un número par de al menos 4 jugadores.':'Necesitamos exactamente 2 jugadores para el duelo.'}</p>`:''}`:''}`:''}
     <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button>':'<button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
@@ -224,7 +227,8 @@ app.addEventListener('click',async e=>{
   if(action==='cancel-local'){localSetup=null;document.querySelector('.dialog-backdrop')?.remove();return;}
   if(action==='start-local'){
     const name=document.querySelector('#local-name').value.trim()||'Tú',second=document.querySelector('#second-name')?.value.trim()||'Jugador 2';
-    localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('[data-mode]').dataset.mode,name,second));return;
+    const level=document.querySelector('#local-level').value;
+    localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('[data-mode]').dataset.mode,name,second,Date.now(),level));return;
   }
   if(action==='resume-local'){try{const next=JSON.parse(read('hash3_local'));if(!['solo','local'].includes(next.mode))throw new Error();accept(next);}catch{notify('No se ha podido recuperar la partida local.');}return;}
   const payload={code:room.code};
@@ -289,16 +293,20 @@ if(document.modelContext?.registerTool){
       execute(input){
         if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new Error('La consulta no acepta parámetros.');
         if(!room)return {status:'home'};
-        return {code:room.code,status:room.status,ranking:rankedPlayers(room.players).map(p=>({name:p.name,symbol:p.symbol,score:p.score,figures:p.figures})),you:ownPlayer()?.name,pair:ownPair(),cells:room.cells.map(({x,y,symbol})=>({x,y,symbol}))};
+        return {code:room.code,status:room.status,level:room.level||'normal',ranking:rankedPlayers(room.players).map(p=>({name:p.name,symbol:p.symbol,score:p.score,figures:p.figures})),you:ownPlayer()?.name,pair:ownPair(),cells:room.cells.map(({x,y,symbol})=>({x,y,symbol}))};
       }
     },{signal:lifecycle.signal})).catch(()=>{});
   }catch{/* WebMCP is optional; normal play remains available. */}
 }
 
+function levelSelector(id,level='normal') {
+  return `<label for="${id}">Nivel de figuras</label><select id="${id}"><option value="normal" ${level==='normal'?'selected':''}>Normal · líneas, L, cruces y cuadrados</option><option value="advanced" ${level==='advanced'?'selected':''}>Avanzado · también figuras complejas</option></select><p>Ambos niveles suman todas las figuras nuevas de una jugada. En Avanzado también cuenta el grupo completo de fichas del mismo símbolo unido por los lados, si tiene una forma distinta de las básicas. El nivel es común a toda la sala.</p>`;
+}
 function renderRoomSetup() {
   document.querySelector('.room-dialog')?.remove();
   const setup=roomSetup;
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear sala</h2><div class="room-modes"><button data-action="choose-duel" aria-pressed="${setup.kind==='duel'}"><strong class="heading">Duelo</strong><span>Partida con tiempo</span></button><button data-action="choose-world" aria-pressed="${setup.kind==='world'}"><strong class="heading">Mundo</strong><span>Tablero sin límite de tiempo</span></button></div>${setup.kind==='duel'?`<label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select><label for="duel-minutes">Duración</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>El reloj empieza al iniciar la partida. Al llegar a cero, se cierra el duelo y gana X u O por puntos.</p>`:setup.kind==='world'?'<p>El mundo sigue abierto hasta que el anfitrión lo cierre. Pueden entrar nuevas parejas mientras jugáis. Si te falta rival, juegas contra la máquina.</p>':'<p>Elige qué tipo de sala quieres abrir.</p>'}<div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room" ${!setup.kind?'disabled':''}>${setup.kind==='duel'?'Crear duelo':setup.kind==='world'?'Crear mundo':'Crear sala'}</button></div></section></div>`);
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear sala</h2><div class="room-modes"><button data-action="choose-duel" aria-pressed="${setup.kind==='duel'}"><strong class="heading">Duelo</strong><span>Partida con tiempo</span></button><button data-action="choose-world" aria-pressed="${setup.kind==='world'}"><strong class="heading">Mundo</strong><span>Tablero sin límite de tiempo</span></button></div>${setup.kind==='duel'?`<label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select><label for="duel-minutes">Duración</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>El reloj empieza al iniciar la partida. Al llegar a cero, se cierra el duelo y gana X u O por puntos.</p>`:setup.kind==='world'?'<p>El mundo sigue abierto hasta que el anfitrión lo cierre. Pueden entrar nuevas parejas mientras jugáis. Si te falta rival, juegas contra la máquina.</p>':'<p>Elige qué tipo de sala quieres abrir.</p>'}${setup.kind?levelSelector('room-level',setup.level):''}<div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room" ${!setup.kind?'disabled':''}>${setup.kind==='duel'?'Crear duelo':setup.kind==='world'?'Crear mundo':'Crear sala'}</button></div></section></div>`);
+  document.querySelector('#room-level')?.addEventListener('change',e=>{roomSetup.level=e.target.value;});
   document.querySelector('#duel-format')?.addEventListener('change',e=>{roomSetup.format=e.target.value;});
   document.querySelector('#duel-minutes')?.addEventListener('change',e=>{roomSetup.minutes=Number(e.target.value);});
 }
@@ -321,7 +329,7 @@ function renderFinish() {
 }
 function renderLocalSetup() {
   document.querySelector('.local-dialog')?.remove();
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2><label for="local-name">${localSetup==='solo'?'Tu apodo':'Jugador X'}</label><input id="local-name" value="${escape(read('hash3_name')||'')}" placeholder="${localSetup==='solo'?'Tú':'Jugador 1'}" maxlength="18">${localSetup==='local'?'<label for="second-name">Jugador O</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}<p>${localSetup==='solo'?'Juegas con X. La máquina juega con O.':'Pasad el dispositivo después de cada turno.'} Tenéis 30 segundos para mover.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2><label for="local-name">${localSetup==='solo'?'Tu apodo':'Jugador X'}</label><input id="local-name" value="${escape(read('hash3_name')||'')}" placeholder="${localSetup==='solo'?'Tú':'Jugador 1'}" maxlength="18">${localSetup==='local'?'<label for="second-name">Jugador O</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}<p>${localSetup==='solo'?'Juegas con X. La máquina juega con O.':'Pasad el dispositivo después de cada turno.'} Tenéis 30 segundos para mover.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
   document.querySelector('#local-name').focus();
 }
 function updateTimer() {

@@ -1,4 +1,4 @@
-# #3 — R0.6
+# #3 — R0.7
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
@@ -16,6 +16,14 @@ npm run build
 El sitio estático publicable queda en `dist/`, incluido su service worker. `scripts/build-offline.mjs` genera una caché por versión a partir de los archivos compilados. El proyecto usa Sites para alojamiento y Supabase para el juego online. Google y Apple todavía no están configurados.
 
 `src/config.js` contiene exclusivamente la URL y la clave publicable de Supabase; no contiene claves secretas. La autorización online se comprueba en el servidor. Para otro entorno, copia `.env.example` a `.env`.
+
+## Niveles y combinaciones
+
+Al crear Mundo, Duelo o una partida local se elige Normal (por defecto) o Avanzado. Toda la sala comparte ese nivel; no cambia durante la partida. Las salas y partidas guardadas anteriores conservan las reglas normales.
+
+Normal suma todas las figuras básicas nuevas, incluidas las que se solapan. Avanzado añade el componente completo del mismo símbolo conectado por los lados que contiene la ficha recién colocada, con al menos cuatro celdas y una forma distinta de las básicas. No enumera subconjuntos arbitrarios ni enlaza diagonales. Cada geometría se cobra una vez; ampliar o fusionar un grupo crea una geometría nueva. Ambos niveles conservan el bonus por cada tercera figura y el resaltado de todas las figuras cobradas.
+
+Las migraciones de R0.7 son `supabase/migrations/20261004170617_scoring_levels.sql` y `supabase/migrations/20261004170821_scoring_levels_clock.sql`, aplicadas en ese orden. El servidor usa el mismo nivel para jugadas manuales, máquinas y turnos vencidos; los jugadores no pueden cambiarlo mediante el payload de una jugada. `tests/levels.sql` comprueba puntuaciones y permisos dentro de una transacción revertida.
 
 ## Figuras y aviso de puntos
 

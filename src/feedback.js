@@ -7,7 +7,7 @@ export function scoreFeedback(previous,next) {
   const move=next.cells.find(c=>c.id===ev.id),player=next.players.find(p=>p.id===ev.player);
   if(!move||!player)return null;
   const paid=new Set(next.forms||[]),before=new Set(previous.forms||[]);
-  const figures=figureWindows(next.cells,move.x,move.y,move.symbol).filter(f=>paid.has(f.id)&&!before.has(f.id));
+  const figures=figureWindows(next.cells,move.x,move.y,move.symbol,next.level).filter(f=>paid.has(f.id)&&!before.has(f.id));
   const cells=new Map(),groups=new Map();
   for(const f of figures) {
     for(const [x,y] of f.points)cells.set(key(x,y),{x,y});
@@ -18,7 +18,7 @@ export function scoreFeedback(previous,next) {
   return {id:ev.id,player:ev.player,name:player.name,symbol:move.symbol,move,figures,cells:[...cells.values()],groups:[...groups.values()],points:ev.points,bonus:ev.bonus||0,automatic:!!ev.automatic};
 }
 export function scoreBreakdown(feedback) {
-  const names={'línea':['Línea','Líneas'],L:['L','L'],cuadrado:['Cuadrado','Cuadrados'],cruz:['Cruz','Cruces']};
+  const names={'línea':['Línea','Líneas'],L:['L','L'],cuadrado:['Cuadrado','Cuadrados'],cruz:['Cruz','Cruces'],grupo:['Figura compleja','Figuras complejas']};
   const items=feedback.groups.map(g=>`${g.count>1?g.count+' ':''}${names[g.kind]?.[g.count>1?1:0]||g.kind} de ${g.size} · +${g.points}`);
   if(feedback.bonus)items.push(`Bonus · +${feedback.bonus}`);
   return items.join(' / ');
