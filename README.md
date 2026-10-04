@@ -1,4 +1,4 @@
-# #3 — R0.3
+# #3 — R0.4
 
 Juego de figuras y territorio. Código privado: `Xtronzio/hash3`.
 
@@ -16,6 +16,10 @@ npm run build
 El sitio estático publicable queda en `dist/`, incluido su service worker. `scripts/build-offline.mjs` genera una caché por versión a partir de los archivos compilados. El proyecto usa Sites para alojamiento y Supabase para el juego online. Google y Apple todavía no están configurados.
 
 `src/config.js` contiene exclusivamente la URL y la clave publicable de Supabase; no contiene claves secretas. La autorización online se comprueba en el servidor. Para otro entorno, copia `.env.example` a `.env`.
+
+## Figuras y aviso de puntos
+
+Cada jugada que puntúa resalta durante 500 ms las celdas de las figuras realmente cobradas. Si completa varias figuras, se iluminan sus celdas y el aviso desglosa cada tipo de figura y el bonus. Un +puntos aparece junto a la ficha nueva durante 1,4 s. El resaltado usa el color del símbolo y conserva la referencia azul del ranking. El mismo evento no vuelve a animarse al recibirlo de nuevo por polling o al recuperar la partida. Funciona en salas online, modo solo, dos jugadores locales y jugadas por tiempo agotado.
 
 ## Versión y actualización automática
 

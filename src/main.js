@@ -3,6 +3,7 @@ import {client, ensurePlayer, command} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells} from './game.js';
 
 import {createLocal, localCommand, machineChoice} from './local.js';
+import {scoreFeedback,scoreBreakdown} from './feedback.js';
 import {VERSION_LABEL} from './version.js';
 import {startUpdates} from './updates.js';
 
@@ -12,11 +13,12 @@ const read = key => {try{return localStorage.getItem(key);}catch{return null;}};
 const save = (key,value) => {try{value===null?localStorage.removeItem(key):localStorage.setItem(key,value);}catch{/* device storage may be disabled */}};
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
 let selectedExpansion=null, finishOpen=false, localSetup=null, machineTimer=null;
+let figureEffect=null,figureTimer,scoreFloatTimer;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
 const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
-  const n=document.querySelector('#notice'); n.textContent=message; n.classList.add('visible');
+  const n=document.querySelector('#notice'); n.classList.remove('score-notice');n.textContent=message; n.classList.add('visible');
   clearTimeout(noticeTimer); noticeTimer=setTimeout(()=>n.classList.remove('visible'),5000);
 }
 function isLocal(){return !!room?.mode;}
@@ -26,14 +28,17 @@ function ownPair(){const own=ownPlayer();return own?.pair===undefined?null:room.
 function accept(next) {
   if(next.not_modified)return;
   if(room?.id===next.id&&next.version<room.version)return;
+  const feedback=scoreFeedback(room,next);
   const changed = room?.id!==next.id;
-  if(changed){previousTarget=null;activeKey=null;}
+  if(changed){previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   room=next;if(isLocal()){uid=localUid();save('hash3_local',JSON.stringify(room));}else save('hash3_room',room.code);
   const target=immediateAbove(room.players,uid), targetId=target?.lastMove?.id;
   if(!changed&&targetId&&targetId!==previousTarget)blinkId=targetId;
   else blinkId=null;
   previousTarget=targetId||null;
-  render();scheduleMachine();
+  const pair=ownPair(),show=feedback&&pair&&[pair.x,pair.o].includes(feedback.player);
+  if(show)startFigureEffect(feedback);
+  render();if(show)showScore(feedback);scheduleMachine();
 }
 function render() {
   const previous=document.querySelector('.viewport');
@@ -94,9 +99,15 @@ function drawBoard(canExpand,ready,target) {
     const color=c?(myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
     const owner=c?room.players.find(p=>p.id===c.owner)?.name:'';
     const select=canExpand&&choiceKeys.has(key(x,y));
+    const glowing=figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y));
+    const glowStyle=glowing?`--figure-color:${figureEffect.symbol==='X'?'var(--red)':'var(--green)'};--figure-duration:${Math.max(1,figureEffect.until-performance.now())}ms;`:'';
     const label=select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}`;
-    return `<button class="cell terrain-cell ${active?'connected':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)}" data-action="${select?'select-expansion':'move'}" data-x="${x}" data-y="${y}" ${select?'':(!active||!ready||c?'disabled':'')} aria-label="${escape(label)}">${c?mark(c.symbol):''}</button>`;
+    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${select?'select-expansion':'move'}" data-x="${x}" data-y="${y}" ${select?'':(!active||!ready||c?'disabled':'')} aria-label="${escape(label)}">${c?mark(c.symbol):''}</button>`;
   }).join('')+choices.filter(c=>!known.has(key(c.x,c.y))).map(c=>`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`).join('');
+  if(figureEffect&&figureEffect.floatUntil>performance.now()){
+    const e=figureEffect;
+    board.insertAdjacentHTML('beforeend',`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`);
+  }
   if(selectedExpansion) {
     const b=selectedExpansion;
     board.insertAdjacentHTML('beforeend',`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`);
@@ -177,8 +188,7 @@ app.addEventListener('click',async e=>{
     if(action==='leave'){save('hash3_room',null);room=null;render();return;}
     accept(next);
     if(action==='move'){
-      const ev=next.lastEvent;if(ev.points)notify(`+${ev.points} puntos${ev.bonus?' · bonus incluido':''}.${ev.continuation?' Ya puedes ampliar.':' Sigue usando las celdas vacías.'}`);
-      else if(ev.continuation)notify('No quedan celdas vacías: coloca una ampliación para continuar.');
+      const ev=next.lastEvent;if(!ev.points&&ev.continuation)notify('No quedan celdas vacías: coloca una ampliación para continuar.');
     }
   });
 });
@@ -264,12 +274,12 @@ function scheduleMachine() {
   machineTimer=setTimeout(()=>{
     if(room?.id!==expected||room.version!==version||busy||document.hidden)return;
     const choice=machineChoice(room);accept(localCommand(room,choice.action,choice.payload));
-  },650);
+  },room.lastEvent?.points?1500:650);
 }
 setInterval(()=>{
   updateTimer();
   if(isLocal()&&room.status==='playing'&&!busy&&!document.hidden) {
-    const next=localCommand(room,'tick');if(next!==room){accept(next);notify('Tiempo agotado: jugada automática en una celda vacía.');}
+    const next=localCommand(room,'tick');if(next!==room){accept(next);if(!next.lastEvent?.points)notify('Tiempo agotado: jugada automática en una celda vacía.');}
   }
 },500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleMachine();});
@@ -278,9 +288,27 @@ function updateOfflineStatus() {
   n.textContent=navigator.serviceWorker?.controller?'Preparado para jugar sin conexión.':'Los modos locales no necesitan cobertura durante la partida. Abre esta web una primera vez con internet.';
 }
 startUpdates({
-  canReload:()=>!busy&&!localSetup&&!finishOpen&&!document.activeElement?.matches('input,textarea'),
+  canReload:()=>!busy&&!localSetup&&!finishOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
   beforeReload:()=>{
     if(isLocal()){save('hash3_local',JSON.stringify(room));try{sessionStorage.setItem('hash3_restore_local','1');}catch{/* The saved game remains available from the start screen. */}}
   },
   onReady:updateOfflineStatus
 });
+
+function startFigureEffect(feedback) {
+  clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);
+  const now=performance.now();
+  figureEffect={...feedback,cells:new Set(feedback.cells.map(c=>key(c.x,c.y))),until:now+500,floatUntil:now+1400};
+  figureTimer=setTimeout(()=>{
+    document.querySelectorAll('.figure-glow').forEach(c=>c.classList.remove('figure-glow'));
+  },500);
+  scoreFloatTimer=setTimeout(()=>{
+    document.querySelectorAll('.score-float').forEach(c=>c.remove());figureEffect=null;
+  },1400);
+}
+function showScore(feedback) {
+  const n=document.querySelector('#notice');
+  n.innerHTML=`<strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><div class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b></div>`;
+  n.classList.add('visible','score-notice');clearTimeout(noticeTimer);
+  noticeTimer=setTimeout(()=>n.classList.remove('visible'),4500);
+}
