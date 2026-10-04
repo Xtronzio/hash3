@@ -1,4 +1,4 @@
-# #3 — R0.7
+# #3 — R0.8
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
@@ -30,6 +30,12 @@ Las migraciones de R0.7 son `supabase/migrations/20261004170617_scoring_levels.s
 «Cómo se juega» explica los puntos en una tabla, el bonus de la 3.ª, 6.ª, 9.ª figura y la suma de figuras que comparten celdas. Incluye ejemplos: línea de tres con bonus = +6; cuadrado y tres L nuevas de tres = +13 antes del bonus. Los valores y las reglas de puntuación se conservan.
 
 Cada jugada que puntúa resalta durante 500 ms las celdas de las figuras realmente cobradas. Si completa varias figuras, se iluminan sus celdas y el aviso desglosa cada tipo de figura y el bonus. Un +puntos aparece junto a la ficha nueva durante 1,4 s. El resaltado usa el color del símbolo y conserva la referencia azul del ranking. El mismo evento no vuelve a animarse al recibirlo de nuevo por polling o al recuperar la partida. Funciona en salas online, modo solo, dos jugadores locales y jugadas por tiempo agotado.
+
+## Iconos de navegador e iPhone
+
+R0.8 usa el logo #3 blanco sobre negro suministrado por Jorge. `public/icons/hash3-logo.jpg` conserva el original; sus copias PNG se exportan sin cambiar el diseño a 32, 48, 180, 192 y 512 píxeles. Sustituyen el antiguo # con punto verde. El HTML declara favicon PNG y `apple-touch-icon`; `public/manifest.webmanifest` declara los iconos de aplicación, alcance y URL inicial relativos para funcionar tanto bajo `/hash3/` como en la raíz de Sites. Todos se incluyen en la caché offline. Los nombres de icono de R0.8 evitan reutilizar la URL del favicon anterior.
+
+Si un acceso ya instalado en la pantalla de inicio del iPhone conserva el icono antiguo, eliminar ese acceso y añadir de nuevo la web desde Safari. No borrar los datos del navegador: contienen la identidad invitada y las partidas locales. No se ha probado físicamente la instalación en iPhone.
 
 ## Versión y actualización automática
 
