@@ -1,6 +1,6 @@
-# #3 — R0.4
+# #3 — R0.5
 
-Juego de figuras y territorio. Código privado: `Xtronzio/hash3`.
+Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
 ## Ejecutar
 
@@ -19,6 +19,8 @@ El sitio estático publicable queda en `dist/`, incluido su service worker. `scr
 
 ## Figuras y aviso de puntos
 
+«Cómo se juega» explica los puntos en una tabla, el bonus de la 3.ª, 6.ª, 9.ª figura y la suma de figuras que comparten celdas. Incluye ejemplos: línea de tres con bonus = +6; cuadrado y tres L nuevas de tres = +13 antes del bonus. Los valores y las reglas de puntuación se conservan.
+
 Cada jugada que puntúa resalta durante 500 ms las celdas de las figuras realmente cobradas. Si completa varias figuras, se iluminan sus celdas y el aviso desglosa cada tipo de figura y el bonus. Un +puntos aparece junto a la ficha nueva durante 1,4 s. El resaltado usa el color del símbolo y conserva la referencia azul del ranking. El mismo evento no vuelve a animarse al recibirlo de nuevo por polling o al recuperar la partida. Funciona en salas online, modo solo, dos jugadores locales y jugadas por tiempo agotado.
 
 ## Versión y actualización automática
@@ -31,7 +33,7 @@ La web consulta la versión cada 60 segundos y al recuperar foco, conexión o vi
 
 `npm run build:github` compila una copia con base `/hash3/` en `docs/`, crea `.nojekyll` y deja también la compilación habitual para Sites en `dist/`. Los archivos de `docs/` son los que debe servir GitHub Pages; no usar la raíz, cuyo HTML de desarrollo importa código sin compilar.
 
-Configuración necesaria en GitHub: **Settings → Pages → Deploy from a branch → main → /docs → Save**. La conexión usada aquí puede subir archivos, pero no activar esa configuración. Una vez activada, los commits que actualizan `docs/` publican la web. En un repositorio privado, Pages requiere un plan de GitHub que lo admita; no cambiar automáticamente la visibilidad del repositorio.
+Para GitHub Pages gratuito, el repositorio debe ser público: **Settings → General → Danger Zone → Change repository visibility → Make public**. Esto hace visible el código de `hash3`. Después: **Settings → Pages → Deploy from a branch → main → /docs → Save**. La conexión usada aquí puede subir archivos, pero no activar esa configuración. Una vez activada, los commits que actualizan `docs/` publican la web. Un repositorio privado necesita un plan de GitHub que admita Pages; no se cambia automáticamente la visibilidad del repositorio. El número de móviles no exige GitHub Pro.
 
 El enlace previsto es `https://xtronzio.github.io/hash3/`; solo estará disponible una vez que GitHub termine la primera publicación. Todos los dispositivos deben usar ese mismo origen, crear una sala y unirse con su código. Las sesiones y las partidas locales de Sites no se transfieren a GitHub Pages, porque cada origen tiene su propio almacenamiento.
 

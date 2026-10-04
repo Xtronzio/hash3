@@ -124,7 +124,31 @@ function renderHome() {
     <h1 class="heading">Elige cómo jugar</h1>
     <form id="entry-form"><div><label for="name">Tu apodo</label><input id="name" name="name" placeholder="Cómo te llamas" value="${escape(read('hash3_name')||'')}" minlength="2" maxlength="18" autocomplete="nickname" required></div>
     <button class="primary" type="submit" name="intent" value="create">Crear sala</button><div class="divider"></div><div><label for="code">¿Tienes un código?</label><input id="code" name="code" placeholder="CÓDIGO DE SALA" value="${escape(urlCode)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"></div><button type="submit" name="intent" value="join">Entrar en una sala</button></form>
-    <div class="offline-options"><button data-action="setup-solo">Contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button>${read('hash3_local')?'<button class="ghost" data-action="resume-local">Continuar partida local</button>':''}</div><p class="offline-hint muted" id="offline-status">Los modos locales no necesitan cobertura durante la partida.</p><details class="rules"><summary>Cómo se juega</summary><p>El anfitrión inicia con un número par de jugadores. Se sortean las parejas y los símbolos X/O. Alternas turnos con tu rival. Puedes usar todas las celdas vacías de vuestro territorio conectado.</p><p>Las líneas de tres o más, L de tres o cuatro, cuadrados 2×2 y cruces de cinco suman tantos puntos como celdas tienen. Se reconocen en todas las orientaciones. Una jugada puede completar varias figuras, aunque compartan fichas. Cada tercera figura da +3 extra. Las figuras ya cobradas no vuelven a puntuar. Los puntos individuales también suman para el equipo X/O.</p><p>Las figuras acumulan ampliaciones, pero solo puedes colocar un 3×3 cuando ya no queda ninguna celda vacía en vuestro territorio conectado. Puedes solaparlo con terreno existente: solo añade las celdas nuevas, sin borrar fichas. Si no tienes ampliaciones, se concede una para continuar. Cada turno dura 30 segundos; al agotarse, se juega una celda vacía al azar. El anfitrión decide cuándo finalizar este piloto.</p><p>El ranking se pliega al tocarlo. La última jugada del jugador justo por encima de ti queda en azul. Google y Apple se incorporarán más adelante.</p></details>
+    <div class="offline-options"><button data-action="setup-solo">Contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button>${read('hash3_local')?'<button class="ghost" data-action="resume-local">Continuar partida local</button>':''}</div><p class="offline-hint muted" id="offline-status">Los modos locales no necesitan cobertura durante la partida.</p><details class="rules"><summary>Cómo se juega</summary>
+      <h2 class="heading">Tu turno</h2>
+      <p>Coloca una ficha en cualquier celda vacía de vuestro territorio conectado, también en las zonas anteriores. Alternas turnos con tu rival.</p>
+      <p>Tienes <strong>30 segundos</strong>. Si no mueves, se coloca tu ficha en una celda vacía al azar.</p>
+      <h2 class="heading">Cómo sumas puntos</h2>
+      <p><strong>Cada figura vale tantos puntos como celdas tiene.</strong> Todas sus fichas deben ser del mismo símbolo: X o bien O. Cuentan todas las orientaciones y también las fichas de tus compañeros con tu símbolo.</p>
+      <table><thead><tr><th scope="col">Figura</th><th scope="col">Puntos</th></tr></thead><tbody>
+        <tr><td>Línea de 3, 4, 5…</td><td>+3, +4, +5…</td></tr>
+        <tr><td>L de 3 celdas</td><td>+3</td></tr>
+        <tr><td>L de 4 celdas</td><td>+4</td></tr>
+        <tr><td>Cuadrado 2×2</td><td>+4</td></tr>
+        <tr><td>Cruz de 5 celdas</td><td>+5</td></tr>
+      </tbody></table>
+      <p>Las líneas pueden ser horizontales, verticales o diagonales. Se cuenta la línea completa; si la alargas, formas una nueva figura mayor.</p>
+      <ul><li><strong>Una ficha puede completar varias figuras.</strong> Sumas los puntos de todas las figuras nuevas, aunque compartan celdas.</li><li><strong>Una figura ya cobrada no se vuelve a cobrar.</strong> Sus fichas sí pueden formar parte de otras figuras nuevas.</li><li><strong>Bonus: +3 por cada tercera figura tuya</strong> (3.ª, 6.ª, 9.ª…). Se cuentan figuras, no turnos: una jugada puede acercarte al bonus o conseguirlo.</li><li>Los puntos se los lleva quien completa la figura y también se añaden a su equipo X/O.</li></ul>
+      <div class="rules-example"><strong>Ejemplo del bonus</strong><p>Completas una línea de 3 y es tu tercera figura: <strong>3 de la línea + 3 de bonus = +6 puntos.</strong></p></div>
+      <div class="rules-example"><strong>Ejemplo de figuras que se solapan</strong><p>Si una ficha completa un cuadrado y tres L nuevas de 3 celdas, sumas <strong>4 + 3 + 3 + 3 = +13 puntos</strong>, más el bonus que te corresponda.</p></div>
+      <p>Las figuras cobradas se iluminan durante medio segundo y el aviso desglosa los puntos de la jugada.</p>
+      <h2 class="heading">Cuándo crece el territorio</h2>
+      <p><strong>Primero hay que ocupar todas las celdas vacías.</strong> Cada figura acumula una ampliación, pero solo puedes colocarla cuando ya no quedan movimientos en vuestro territorio conectado. Si no te quedan ampliaciones, recibes una para continuar.</p>
+      <p>Recibes un 3×3 y puedes solaparlo con terreno existente: añade solo las celdas nuevas y conserva las fichas. No tienes que añadir las nueve celdas. El reloj se pausa mientras colocas la ampliación.</p>
+      <h2 class="heading">Sala y ranking</h2>
+      <p>Online podéis jugar de 2 a 12, siempre un número par. El anfitrión inicia y finaliza. Se sortean las parejas y los símbolos X/O.</p>
+      <p>El ranking se pliega al tocarlo. La última jugada del jugador justo por encima de ti queda en azul.</p>
+    </details>
     <footer>Acceso como invitado. Para volver a tu sala, utiliza este mismo navegador.</footer></div></section>`;
   if(localSetup)renderLocalSetup();
   updateOfflineStatus();
