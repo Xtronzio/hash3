@@ -1,44 +1,58 @@
 export const key = (x, y) => `${x},${y}`;
-export function rankedPlayers(players) {
-  return [...players].sort((a, b) => b.score - a.score || a.order - b.order);
+export function rankedPlayers(players) { return [...players].sort((a,b)=>b.score-a.score||a.order-b.order); }
+export function immediateAbove(players,uid) { const list=rankedPlayers(players),i=list.findIndex(p=>p.id===uid); return i>0?list[i-1]:null; }
+export function terrainOf(room) {
+  return room.terrain||room.blocks.flatMap(b=>Array.from({length:9},(_,i)=>({x:b.x*3+i%3,y:b.y*3+Math.floor(i/3)})));
 }
-export function immediateAbove(players, uid) {
-  const list = rankedPlayers(players), index = list.findIndex(p => p.id === uid);
-  return index > 0 ? list[index - 1] : null;
+export function connectedTerrain(terrain,active) {
+  const known=new Map(terrain.map(c=>[key(c.x,c.y),c])),visited=new Set(),queue=[active];
+  for(let i=0;i<queue.length;i++) {
+    const c=queue[i],k=key(c.x,c.y);if(!known.has(k)||visited.has(k))continue;
+    visited.add(k);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])queue.push({x:c.x+dx,y:c.y+dy});
+  }
+  return terrain.filter(c=>visited.has(key(c.x,c.y)));
 }
-export function lineWindows(cells, x, y, symbol) {
-  const occupied = new Map(cells.map(c => [key(c.x, c.y), c.symbol]));
-  const lines = [];
-  for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
-    for (let offset = -2; offset <= 0; offset++) {
-      const sx = x + offset * dx, sy = y + offset * dy;
-      if ([0, 1, 2].every(n => occupied.get(key(sx + dx * n, sy + dy * n)) === symbol)) {
-        lines.push(`${symbol}:${sx},${sy}:${dx},${dy}`);
-      }
+export function availableCells(room,pair) {
+  const occupied=new Set(room.cells.map(c=>key(c.x,c.y)));
+  return connectedTerrain(terrainOf(room),pair.active).filter(c=>!occupied.has(key(c.x,c.y)));
+}
+export function expansionOptions(terrain,active) {
+  const connected=connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
+  for(const c of connected)for(let ox=-3;ox<=1;ox++)for(let oy=-3;oy<=1;oy++) {
+    const p={x:c.x+ox,y:c.y+oy};candidates.set(key(p.x,p.y),p);
+  }
+  const linked=new Set(connected.map(c=>key(c.x,c.y)));
+  return [...candidates.values()].filter(p=>{
+    let adds=false,touches=false;
+    for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++) {
+      const x=p.x+dx,y=p.y+dy;if(!known.has(key(x,y)))adds=true;
+      if(linked.has(key(x,y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>linked.has(key(x+a,y+b))))touches=true;
     }
-  }
-  return lines;
+    return adds&&touches;
+  });
 }
-export function connectedBlocks(blocks, active) {
-  const known = new Map(blocks.map(b => [key(b.x, b.y), b])), visited = new Set(), queue = [active];
-  for (let i = 0; i < queue.length; i++) {
-    const b = queue[i], k = key(b.x, b.y);
-    if (!known.has(k) || visited.has(k)) continue;
-    visited.add(k);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) queue.push({x: b.x + dx, y: b.y + dy});
+const canonical=points=>points.map(([x,y])=>`${x},${y}`).sort().join(';');
+const templates=new Map();
+for(const [kind,shape] of [['L',[[0,0],[1,0],[0,1]]],['L',[[0,0],[1,0],[2,0],[0,1]]],['cuadrado',[[0,0],[1,0],[0,1],[1,1]]],['cruz',[[1,0],[0,1],[1,1],[2,1],[1,2]]]]) {
+  for(let mirror=0;mirror<2;mirror++)for(let rotation=0;rotation<4;rotation++) {
+    let points=shape.map(([x,y])=>[mirror?-x:x,y]);
+    for(let i=0;i<rotation;i++)points=points.map(([x,y])=>[-y,x]);
+    const minX=Math.min(...points.map(c=>c[0])),minY=Math.min(...points.map(c=>c[1]));
+    points=points.map(([x,y])=>[x-minX,y-minY]);templates.set(kind+':'+canonical(points),{kind,points});
   }
-  return blocks.filter(b => visited.has(key(b.x, b.y)));
 }
-export function expansionOptions(blocks, active) {
-  const known = new Set(blocks.map(b => key(b.x, b.y))), choices = new Map();
-  for (const b of connectedBlocks(blocks, active)) {
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const p = {x: b.x + dx, y: b.y + dy};
-      if (!known.has(key(p.x, p.y))) choices.set(key(p.x, p.y), p);
-    }
+export const shapeTemplates=[...templates.values()];
+export function figureWindows(cells,x,y,symbol) {
+  const occupied=new Set(cells.filter(c=>c.symbol===symbol).map(c=>key(c.x,c.y))),found=new Map();
+  const add=(kind,points)=>{const id=symbol+':'+kind+':'+canonical(points);found.set(id,{id,kind,size:points.length,points});};
+  for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]) {
+    let sx=x,sy=y;while(occupied.has(key(sx-dx,sy-dy))){sx-=dx;sy-=dy;}
+    const points=[];while(occupied.has(key(sx,sy))){points.push([sx,sy]);sx+=dx;sy+=dy;}
+    if(points.length>=3)add('línea',points);
   }
-  const values = [...choices.values()];
-  const distance = b => Math.abs(b.x - active.x) + Math.abs(b.y - active.y);
-  const nearest = Math.min(...values.map(distance));
-  return values.filter(b => distance(b) === nearest);
+  for(const {kind,points} of shapeTemplates)for(const [ax,ay] of points) {
+    const translated=points.map(([dx,dy])=>[x+dx-ax,y+dy-ay]);
+    if(translated.every(([cx,cy])=>occupied.has(key(cx,cy))))add(kind,translated);
+  }
+  return [...found.values()];
 }

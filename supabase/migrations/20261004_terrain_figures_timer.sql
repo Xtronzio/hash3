@@ -1,27 +1,3 @@
--- R0.1: all authoritative game state is private. The only public API is hash3_command.
-create schema if not exists hash3_private;
-revoke all on schema hash3_private from public, anon;
-grant usage on schema hash3_private to authenticated;
-
-create table hash3_private.rooms (
-  id uuid primary key default gen_random_uuid(),
-  code text not null unique,
-  host_uid uuid not null references auth.users(id),
-  state jsonb not null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-create index hash3_rooms_host on hash3_private.rooms(host_uid);
-create table hash3_private.members (
-  room_id uuid not null references hash3_private.rooms(id) on delete cascade,
-  user_id uuid not null references auth.users(id),
-  primary key(room_id, user_id)
-);
-create index hash3_members_user on hash3_private.members(user_id);
-alter table hash3_private.rooms enable row level security;
-alter table hash3_private.members enable row level security;
-revoke all on all tables in schema hash3_private from public, anon, authenticated;
-
 -- Cell-level terrain; previous pieces, scores and paid lines are retained.
 create or replace function hash3_private.connected_terrain(terrain jsonb, ax int, ay int)
 returns jsonb language sql stable set search_path='' as $$
@@ -94,6 +70,7 @@ s:=jsonb_set(s,array['pairs',idx::text],p);end loop;end if;return s;
 end;
 $$;
 revoke all on function hash3_private.connected_terrain(jsonb,int,int),hash3_private.expansion_options(jsonb,int,int),hash3_private.figure_windows(jsonb,int,int,text),hash3_private.normalize_state(jsonb) from public,anon,authenticated;
+
 create or replace function hash3_private.command(action text, payload jsonb)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -268,16 +245,6 @@ $$;
 revoke all on function hash3_private.command(text,jsonb) from public, anon;
 grant execute on function hash3_private.command(text,jsonb) to authenticated;
 
-create function public.hash3_command(action text, payload jsonb default '{}'::jsonb)
-returns jsonb language sql security invoker set search_path = '' as $$
-  select hash3_private.command(action,payload);
-$$;
-revoke all on function public.hash3_command(text,jsonb) from public, anon;
-grant execute on function public.hash3_command(text,jsonb) to authenticated;
 
--- Auto-RLS is an event trigger, not an app endpoint.
-do $$ begin
-  if to_regprocedure('public.rls_auto_enable()') is not null then
-    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
-  end if;
-end $$;
+-- Upgrade existing rooms without deleting cells, players, figures or scores.
+update hash3_private.rooms set state=jsonb_set(hash3_private.normalize_state(state),'{version}',to_jsonb((state->>'version')::int+1)),updated_at=now() where coalesce((state->>'ruleVersion')::int,1)<2;

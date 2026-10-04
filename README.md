@@ -1,10 +1,10 @@
-# #3 — R0.1
+# #3 — R0.2
 
-Juego de líneas y expansión territorial. Código privado: `Xtronzio/hash3`.
+Juego de figuras y territorio. Código privado: `Xtronzio/hash3`.
 
 ## Ejecutar
 
-Requiere Node.js 22.12 o superior.
+Node.js 22.12 o superior.
 
 ```sh
 npm ci
@@ -13,44 +13,51 @@ npm test
 npm run build
 ```
 
-La compilación publicable queda en `dist/`. Es una web estática con Supabase como servidor del juego. Puede alojarse en Vercel, Netlify o cualquier servidor HTTPS que sirva esos archivos. El repositorio puede permanecer privado. Google y Apple todavía no están configurados.
+El sitio estático publicable queda en `dist/`, incluido su service worker. `scripts/build-offline.mjs` genera una caché por versión a partir de los archivos compilados. El proyecto usa Sites para alojamiento y Supabase para el juego online. Google y Apple todavía no están configurados.
 
-`src/config.js` contiene únicamente la URL y la clave publicable de Supabase. La autorización se comprueba en el servidor. Para otro entorno, copia `.env.example` a `.env` y configura sus dos variables. Nunca pongas claves secretas ni `service_role` en el cliente.
+`src/config.js` contiene exclusivamente la URL y la clave publicable de Supabase; no contiene claves secretas. La autorización online se comprueba en el servidor. Para otro entorno, copia `.env.example` a `.env`.
 
-## Partida del piloto
+## Reglas
 
-- De 2 a 12 jugadores, con número par. El anfitrión inicia y finaliza.
-- Parejas y símbolos sorteados. Cada pareja comienza con un 3×3 propio y alterna turnos independientemente.
-- Un tablero global: las fichas son permanentes. Cada pareja juega en su bloque activo. Los bloques nuevos pueden unir territorios.
-- Líneas horizontales, verticales y diagonales de **exactamente tres posiciones consecutivas**: **+3** para quien las completa. Se pueden aprovechar fichas del mismo símbolo de compañeros cuando los territorios se conectan.
-- Cada línea geométrica se registra una sola vez para el equipo. Las ventanas de tres diferentes pueden compartir fichas; una línea larga contiene ventanas distintas. Una jugada puede completar varias líneas.
-- **+3 extra cada tercera figura** del jugador (3.ª, 6.ª, 9.ª…). Los puntos individuales, incluido el bonus, suman para X/O.
-- Cada figura concede un bloque 3×3. Si hay varias, se colocan sucesivamente. Si se llena el bloque sin figura, se concede uno sin puntos.
-- La expansión usa vecinos laterales libres del bloque activo; si está rodeado, busca los huecos más cercanos en su territorio conectado. No se puede solapar ni saltar a una isla lejana.
-- El jugador que obtiene la expansión la coloca antes del siguiente turno del rival.
-- Ranking ordenado por puntos; en empate conserva el orden de entrada (solo criterio de visualización, no desempate de la victoria).
-- Rojo X, verde O, gris otras parejas. Azul: última jugada del jugador inmediatamente superior en el ranking. Oro/plata/bronce se muestran en las posiciones del ranking.
+- Online: de 2 a 12 jugadores, número par. El anfitrión inicia y finaliza. Se sortean parejas y símbolos X/O; cada pareja empieza con un 3×3 y alterna turnos independientemente.
+- Las fichas son permanentes. Puedes usar **cualquier celda vacía del territorio conectado** a tu pareja, incluidas celdas de bloques anteriores. Territorios que se tocan lateralmente se unen; las islas separadas siguen perteneciendo a sus respectivas parejas.
+- Figuras: líneas rectas de tres o más (también diagonales), L de tres y cuatro, cuadrados 2×2 y cruces ortogonales de cinco. Se reconocen rotaciones y reflejos y se pueden usar fichas de cualquier compañero con el mismo símbolo.
+- Cada figura suma su número de celdas a quien la completa. Cada tercera figura del jugador añade +3 (3.ª, 6.ª, 9.ª…). Una jugada puede completar varias figuras distintas, aunque compartan fichas. Cada geometría exacta y símbolo se cobra una vez. Una línea se evalúa como el tramo completo que contiene la ficha nueva; prolongarla crea una nueva geometría.
+- Una figura acumula una ampliación, **pero no permite ampliar mientras queden movimientos**. Cuando todo el territorio conectado está ocupado, se habilita una ampliación 3×3; si no quedan ampliaciones acumuladas, se concede una para continuar.
+- El último jugador que ocupó una celda coloca la ampliación antes del turno del rival. Se sitúa celda a celda y puede solaparse sobre terreno existente: únicamente añade las celdas nuevas y nunca sustituye fichas. Debe tocar el territorio conectado y añadir al menos una celda. Antes de confirmar, la pantalla muestra el número de celdas nuevas y existentes.
+- Tras una ampliación hay que usar las nuevas celdas antes de colocar otra, incluso con ampliaciones acumuladas. Si une el territorio de otra pareja, también se habilitan sus huecos.
+- Cada turno dura **30 segundos**. Cuando vence, se coloca una ficha del jugador correspondiente en una celda vacía elegida al azar. El contador se pausa durante la colocación del territorio.
+- Online, el reloj lo valida Supabase. El comando `tick` de las pestañas conectadas procesa vencimientos bajo bloqueo de fila; un cliente no puede escoger una jugada después del plazo. Si todas las pestañas se cierran o pierden conexión, el vencimiento pendiente se procesa al reconectar; no hay un proceso autónomo haciendo turnos mientras nadie está conectado.
+- «Finalizar» abre una confirmación dentro de la pantalla y muestra el resultado. Solo el anfitrión puede cerrar una sala online; en modo local está disponible durante cualquier turno.
+- Ranking individual por puntos; en empate, orden de entrada solo para visualizar. Rojo X, verde O, gris otras parejas. Azul: última jugada del jugador inmediatamente superior. Medallas únicamente en el ranking.
 
-Las figuras adicionales (cuadrados, L, etc.), límites de duración, cambio de parejas, entrenamiento y PISTA quedan fuera de R0.1 y requieren definición antes de activarse.
+## Modos sin cobertura
+
+- **Contra la máquina:** el humano usa X y la máquina O. La máquina busca completar figuras y bloquear las del rival; desempata al azar. El movimiento por tiempo agotado es siempre aleatorio, también para el humano.
+- **Dos en este dispositivo:** se pasa el dispositivo en cada turno; ambos jugadores comparten pantalla.
+- La partida local se guarda en ese navegador y puede retomarse desde el inicio. No se envía a Supabase ni se incorpora al ranking online.
+- Para reabrir la web sin conexión, debe haberse cargado con internet y aparecer «Preparado para jugar sin conexión». Es necesario un navegador que permita service workers; algunas vistas embebidas restringen su uso. No se ha verificado aún la instalación y recuperación offline en un teléfono real.
+- Si se oculta la pestaña, los callbacks se suspenden; al volver se procesa un turno vencido, no todos los turnos del tiempo transcurrido. Para dos móviles distintos sin internet haría falta una conexión local adicional, todavía no implementada.
 
 ## Datos y permisos
 
-Supabase: `hash3`, referencia `vyzugvepzylidyxitojo`.
+Supabase: `vyzugvepzylidyxitojo`.
 
-`supabase/schema.sql` es el esquema de instalación inicial; no lo vuelvas a ejecutar sobre un proyecto ya instalado. Las revisiones aplicadas quedan en el historial de migraciones de Supabase.
+`supabase/schema.sql` es la instalación inicial. **No ejecutarlo de nuevo sobre un proyecto instalado.** La revisión de R0.2 está en `supabase/migrations/20261004_terrain_figures_timer.sql`: convierte coordenadas de bloques a celdas, conserva fichas, puntuaciones, figuras cobradas y miembros, y desbloquea los huecos de las partidas anteriores.
 
-Las tablas están en `hash3_private`, con RLS activado y sin acceso directo para `anon` ni `authenticated`. Por eso el aviso informativo «RLS enabled, no policy» es intencional en estas dos tablas. La única API expuesta es `public.hash3_command`, que utiliza una función privada con comprobación de `auth.uid()`, pertenencia a la sala, permisos de anfitrión y reglas de juego. Un bloqueo de fila serializa los cambios de cada sala y evita carreras de jugadas o puntuación.
+Las tablas están en `hash3_private`, con RLS activado y sin acceso directo para `anon` ni `authenticated`. «RLS enabled, no policy» es intencional. La API `public.hash3_command` comprueba identidad, pertenencia, anfitrión, turno, territorio, figuras y tiempos en una función privada. Los cambios de una sala se serializan mediante bloqueo de fila. Los ayudantes privados no están expuestos a los jugadores.
 
-El cliente consulta versiones cada 1,8 segundos, detiene consultas al ocultar la pestaña y actualiza al volver. Guarda la sesión de invitado en el dispositivo; borrar los datos del navegador elimina esa identidad. Las cuentas Google/Apple y el vínculo con la identidad invitada se añadirán después.
+La sesión invitada se guarda en el dispositivo: borrar los datos del navegador elimina esa identidad. Las cuentas Google/Apple y su vínculo con el invitado se incorporarán después.
 
 ## Verificación
 
-- `npm test`: geometría de líneas, expansión conectada, límites de bloques y referencia de ranking.
-- `tests/database.sql`: pruebas transaccionales de comandos reales como `authenticated`: permisos, turnos, jugadas idempotentes, líneas, bonus, expansión, empate y finalización. Todo se revierte con `ROLLBACK`.
-- Acceso anónimo real probado con la biblioteca cliente y la clave publicable. La consulta opcional WebMCP se activa solo si el navegador la soporta; no hubo contexto WebMCP disponible para validarla en este entorno.
+- `npm test`: geometrías, reutilización de huecos anteriores, expansión parcial de una sola celda, conservación de fichas, bloqueo de ampliaciones prematuras, reloj, máquina, finalización y ranking.
+- `tests/database.sql`: RPC reales como `authenticated`, permisos, figuras, turnos, idempotencia, expansión parcial, reloj y conservación durante la migración. Sus fixtures se revierten con `ROLLBACK`.
+- Compilación de producción y generación de caché offline verificadas. No hubo un navegador compatible disponible para comprobar visualmente esta revisión ni probar la recuperación offline del sitio alojado.
+- WebMCP de consulta se activa si el navegador lo soporta; no fue posible probarlo aquí.
 
-El asesor de Supabase informa de que la protección de contraseñas filtradas está desactivada. R0.1 usa invitados sin contraseña; antes de añadir acceso por contraseña, revisar [protección de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+La protección de contraseñas filtradas de Supabase está desactivada; el juego usa invitados sin contraseña. Revisar [protección de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) antes de añadir acceso por contraseña.
 
-## Evolución a móvil
+## Móvil
 
-Motor autoritativo en Supabase, funciones de geometría independientes de la interfaz, controles táctiles y diseño adaptable. Esta web puede empaquetarse con Capacitor para iOS/Android; publicar en las tiendas requerirá empaquetado, pruebas nativas, configuración de cuentas y requisitos de cada tienda. La arquitectura no garantiza por sí sola la aceptación de una tienda.
+La web se puede empaquetar con Capacitor para iOS/Android. Publicarla en las tiendas requerirá empaquetado, pruebas nativas, cuentas de desarrollador y los requisitos de cada tienda. Los modos locales usan un motor independiente de la red, mientras las salas online siguen siendo autoritativas en Supabase.
