@@ -3,6 +3,8 @@ import {client, ensurePlayer, command} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells} from './game.js';
 
 import {createLocal, localCommand, machineChoice} from './local.js';
+import {VERSION_LABEL} from './version.js';
+import {startUpdates} from './updates.js';
 
 const app = document.querySelector('#app');
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -107,7 +109,7 @@ function center(x,y) {
   v.scrollTop=(y-minY+.5)*size+padding-v.clientHeight/2;
 }
 function renderHome() {
-  app.innerHTML=`<section class="entry"><div class="entry-inner"><div class="entry-header"><span class="brand heading">#3</span><span class="tag">R0.2 · PILOTO</span></div>
+  app.innerHTML=`<section class="entry"><div class="entry-inner"><div class="entry-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · PILOTO</span></div>
     <h1 class="heading">Elige cómo jugar</h1>
     <form id="entry-form"><div><label for="name">Tu apodo</label><input id="name" name="name" placeholder="Cómo te llamas" value="${escape(read('hash3_name')||'')}" minlength="2" maxlength="18" autocomplete="nickname" required></div>
     <button class="primary" type="submit" name="intent" value="create">Crear sala</button><div class="divider"></div><div><label for="code">¿Tienes un código?</label><input id="code" name="code" placeholder="CÓDIGO DE SALA" value="${escape(urlCode)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"></div><button type="submit" name="intent" value="join">Entrar en una sala</button></form>
@@ -127,7 +129,7 @@ function renderHome() {
 function renderLobby() {
   const finished=room.status==='finished',host=room.host===uid,list=rankedPlayers(room.players),winner=list[0];
   const count=room.players.length,canStart=count>=2&&count%2===0;
-  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">R0.2 · PILOTO</span></header><div class="row spread"><h1 class="heading">${finished?'Resultado final':'La sala está abierta'}</h1>${host?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
+  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · PILOTO</span></header><div class="row spread"><h1 class="heading">${finished?'Resultado final':'La sala está abierta'}</h1>${host?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
     ${finished?`<div class="finished"><h2 class="heading">${escape(winner.name)} · ${winner.score} puntos</h2><p>${list.filter(p=>p.score===winner.score).length>1?'Hay empate en la primera posición.':'Primero en el ranking individual.'}</p></div>`:`<div class="code-panel"><label>Código de la sala</label><div class="code mono">${escape(room.code)}</div><button class="small" data-action="share" style="margin-top:16px">Copiar invitación</button></div>`}
     <div class="row spread"><span>${count} jugador${count!==1?'es':''}</span><span class="muted">${finished?'Puntos / figuras':'De 2 a 12 · por parejas'}</span></div>
     <ol class="player-list">${(finished?list:room.players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} / ${p.figures}`:'Listo'}</span></li>`).join('')}</ol>
@@ -197,6 +199,13 @@ setInterval(poll,1800);
 async function init(){
   const code=read('hash3_room');
   renderHome();
+  try{
+    if(sessionStorage.getItem('hash3_restore_local')==='1'){
+      sessionStorage.removeItem('hash3_restore_local');
+      const saved=JSON.parse(read('hash3_local'));
+      if(saved&&['solo','local'].includes(saved.mode)){accept(saved);return;}
+    }
+  }catch{/* Continue at the start screen if storage is unavailable. */}
   if(!navigator.onLine||!code||(urlCode&&urlCode.toUpperCase()!==code))return;
   const {data:{session}}=await client.auth.getSession();
   if(room||localSetup||busy)return;
@@ -268,7 +277,10 @@ function updateOfflineStatus() {
   const n=document.querySelector('#offline-status');if(!n)return;
   n.textContent=navigator.serviceWorker?.controller?'Preparado para jugar sin conexión.':'Los modos locales no necesitan cobertura durante la partida. Abre esta web una primera vez con internet.';
 }
-if('serviceWorker' in navigator) {
-  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').then(()=>navigator.serviceWorker.ready).then(updateOfflineStatus).catch(()=>{}));
-  navigator.serviceWorker.addEventListener('controllerchange',updateOfflineStatus);
-}
+startUpdates({
+  canReload:()=>!busy&&!localSetup&&!finishOpen&&!document.activeElement?.matches('input,textarea'),
+  beforeReload:()=>{
+    if(isLocal()){save('hash3_local',JSON.stringify(room));try{sessionStorage.setItem('hash3_restore_local','1');}catch{/* The saved game remains available from the start screen. */}}
+  },
+  onReady:updateOfflineStatus
+});

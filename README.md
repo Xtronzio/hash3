@@ -1,4 +1,4 @@
-# #3 — R0.2
+# #3 — R0.3
 
 Juego de figuras y territorio. Código privado: `Xtronzio/hash3`.
 
@@ -16,6 +16,20 @@ npm run build
 El sitio estático publicable queda en `dist/`, incluido su service worker. `scripts/build-offline.mjs` genera una caché por versión a partir de los archivos compilados. El proyecto usa Sites para alojamiento y Supabase para el juego online. Google y Apple todavía no están configurados.
 
 `src/config.js` contiene exclusivamente la URL y la clave publicable de Supabase; no contiene claves secretas. La autorización online se comprueba en el servidor. Para otro entorno, copia `.env.example` a `.env`.
+
+## Versión y actualización automática
+
+La versión aparece al pie en todas las pantallas. `src/version.js` es la fuente de la etiqueta y del identificador de publicación. Incrementar ambos al publicar una revisión; las correcciones de R0.3 deben usar una etiqueta nueva (R0.3.1, etc.). La compilación genera `version.json`, que queda fuera de la caché offline.
+
+La web consulta la versión cada 60 segundos y al recuperar foco, conexión o visibilidad. Si cambia, actualiza el service worker y recarga. Espera mientras hay un comando, un formulario o una confirmación abiertos. Conserva la sala online y restaura automáticamente la partida local de ese dispositivo. Sin conexión sigue usando la versión guardada.
+
+## Publicación en GitHub Pages
+
+`npm run build:github` compila una copia con base `/hash3/` en `docs/`, crea `.nojekyll` y deja también la compilación habitual para Sites en `dist/`. Los archivos de `docs/` son los que debe servir GitHub Pages; no usar la raíz, cuyo HTML de desarrollo importa código sin compilar.
+
+Configuración necesaria en GitHub: **Settings → Pages → Deploy from a branch → main → /docs → Save**. La conexión usada aquí puede subir archivos, pero no activar esa configuración. Una vez activada, los commits que actualizan `docs/` publican la web. En un repositorio privado, Pages requiere un plan de GitHub que lo admita; no cambiar automáticamente la visibilidad del repositorio.
+
+El enlace previsto es `https://xtronzio.github.io/hash3/`; solo estará disponible una vez que GitHub termine la primera publicación. Todos los dispositivos deben usar ese mismo origen, crear una sala y unirse con su código. Las sesiones y las partidas locales de Sites no se transfieren a GitHub Pages, porque cada origen tiene su propio almacenamiento.
 
 ## Reglas
 
