@@ -11,3 +11,7 @@
 @media(max-width:600px){.game{padding:0 12px 10px}.game .topbar{padding:14px 0 12px}.game .topbar .brand{font-size:36px}.game .toolbar-name{display:none}.game .viewport{height:clamp(260px,38dvh,400px)}.game .rank-columns,.game .rank-row{grid-template-columns:24px minmax(0,1fr) 54px 81px;gap:6px}.game .rank-name{font-size:12px}.game .rank-score{font-size:12px}.game .team-score-bottom{padding:14px 10px;gap:8px}.game .score-side{gap:8px}.game .score-side strong{font-size:26px}.game .turnbar h1{font-size:24px}}
 /* Fit the navigation and bottom scores into the available screen. */
 .game{overflow:auto}.game .topbar{flex-shrink:0}.game .ranking{flex:0 0 auto;overflow:visible;max-height:none}.game .arena{flex:1;flex-shrink:0}.game .turnbar,.game .controls,.game .jump-controls,.game .team-score-bottom,.game .game-bottom,.game .expansion-controls{flex-shrink:0}.game .turn-chip{display:block}.game .map-wrap{flex:1;min-height:160px}.game .viewport{position:absolute;inset:0;height:100%;min-height:0;width:100%}.game .connection{display:inline}.game .rank-extra{max-height:min(18dvh,170px);scrollbar-color:#343943 transparent}
+
+.pair-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+.pair-share-actions button{min-height:48px;padding-inline:10px}
+.pair-code,.code-panel .code{user-select:text;-webkit-user-select:text}

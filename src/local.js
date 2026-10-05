@@ -1,13 +1,15 @@
 import {key,terrainOf,availableCells,expansionOptions,figureWindows} from './game.js';
 import {recordMax} from './max.js';
+import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 export const TURN_SECONDS=30;
 const id=()=>crypto.randomUUID();
-export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(),level='normal',timeMode='timed') {
+export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(),level='normal',timeMode='timed',difficulty='medium') {
   if(!['normal','advanced'].includes(level))throw new Error('Elige nivel Normal o Avanzado.');
   if(!['timed','untimed'].includes(timeMode))throw new Error('Elige Con reloj o Sin reloj.');
+  if(!machineLevels.some(l=>l.id===difficulty))throw new Error('Elige nivel Básico, Medio, Alto o Pro.');
   const x='local-x',o='local-o';
-  return {id:id(),code:'LOCAL',host:x,status:'playing',version:1,ruleVersion:2,mode,level,timeMode,createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,
-    players:[{id:x,name,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:mode==='solo'?'Máquina':secondName,symbol:'O',pair:0,order:2,score:0,figures:0}],
+  return {id:id(),code:'LOCAL',host:x,status:'playing',version:1,ruleVersion:2,mode,level,timeMode,...(mode==='solo'?{difficulty}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,
+    players:[{id:x,name,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
 }
@@ -69,17 +71,6 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   }else throw new Error('Acción desconocida.');
   delete room.practiceHint;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
 }
-export function machineChoice(room,random=Math.random) {
-  const p=room.pairs[0];
-  if(p.pending) {
-    const choices=expansionOptions(room.terrain,p.active),known=new Set(room.terrain.map(c=>key(c.x,c.y)));
-    const scored=choices.map(c=>({c,n:Array.from({length:9},(_,i)=>key(c.x+i%3,c.y+Math.floor(i/3))).filter(k=>!known.has(k)).length}));
-    const best=Math.max(...scored.map(v=>v.n));const preferred=scored.filter(v=>v.n===best);
-    return {action:'expand',payload:preferred[Math.floor(random()*preferred.length)].c};
-  }
-  const free=availableCells(room,p),symbol=p.turn,other=symbol==='X'?'O':'X';
-  const gain=(c,s)=>figureWindows([...room.cells,{...c,symbol:s}],c.x,c.y,s,room.level).filter(f=>!room.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0);
-  const scored=free.map(c=>({c,value:gain(c,symbol)*2+gain(c,other)})),best=Math.max(...scored.map(v=>v.value));
-  const preferred=scored.filter(v=>v.value===best);
-  return {action:'move',payload:preferred[Math.floor(random()*preferred.length)].c};
+export function machineChoice(room,random=Math.random,options={}) {
+  return chooseMachineMove(room,random,options);
 }
