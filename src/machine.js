@@ -12,6 +12,7 @@ const settings={
 const directions=[[1,0],[0,1],[1,1],[1,-1]];
 const STOP=Symbol('search-budget');
 const symbolNumber=s=>s==='X'?1:2;
+const formId=(symbol,kind,indices,cells)=>`${symbol===1?'X':'O'}:${kind}:`+indices.map(i=>key(cells[i].x,cells[i].y)).sort().join(';');
 
 // Compile the legal terrain once. Search updates pattern counts in place and
 // undoes each move, rather than cloning a growing game for every branch.
@@ -38,16 +39,17 @@ class Position {
     this.figures=[0,...['X','O'].map(s=>room.players.find(p=>p.symbol===s)?.figures||0)];
     this.diff=(room.players.find(p=>p.symbol==='X')?.score||0)-(room.players.find(p=>p.symbol==='O')?.score||0);
     this.advanced=room.level==='advanced';this.patterns=[];this.at=this.cells.map(()=>[]);
+    this.paid=new Set(room.forms||[]);
     const known=new Set();
-    const add=(indices,line=false)=>{
+    const add=(indices,line=false,kind='línea')=>{
       if(indices.some(i=>i===undefined))return;
       const id=(line?'line:':'shape:')+[...indices].sort((a,b)=>a-b).join(',');if(known.has(id))return;known.add(id);
-      const p={indices,line,frontier:indices.some(i=>i>=this.legalSize),size:indices.length,x:0,o:0};for(const i of indices){if(this.board[i]===1)p.x++;else if(this.board[i]===2)p.o++;}
+      const p={indices,line,paid:[false,...[1,2].map(s=>this.paid.has(formId(s,kind,indices,this.cells)))],frontier:indices.some(i=>i>=this.legalSize),size:indices.length,x:0,o:0};for(const i of indices){if(this.board[i]===1)p.x++;else if(this.board[i]===2)p.o++;}
       this.patterns.push(p);for(const i of indices)this.at[i].push(p);
     };
     for(const i of [...this.free,...this.cells.map((_,i)=>i).slice(this.legalSize)]){
       const c=this.cells[i];
-      for(const {points} of shapeTemplates)for(const [ax,ay] of points)add(points.map(([x,y])=>this.index.get(key(c.x+x-ax,c.y+y-ay))));
+      for(const {points,kind} of shapeTemplates)for(const [ax,ay] of points)add(points.map(([x,y])=>this.index.get(key(c.x+x-ax,c.y+y-ay))),false,kind);
       for(const [dx,dy] of directions)for(let anchor=0;anchor<3;anchor++)add([0,1,2].map(n=>this.index.get(key(c.x+(n-anchor)*dx,c.y+(n-anchor)*dy))),true);
     }
     this.rays=this.cells.map(c=>directions.map(([dx,dy])=>[-1,1].map(sign=>this.index.get(key(c.x+sign*dx,c.y+sign*dy))??-1)));
@@ -61,23 +63,24 @@ class Position {
     if(p.x&&p.o)return 0;
     const count=p.x||p.o,missing=p.size-count;
     if(!count||!missing)return 0;
+    if(p.paid[p.x?1:2])return 0;
     const value=missing===1?p.size*0.7:missing===2&&count>=2?p.size*0.25:count*0.04;
     return (p.x?value:-value)*(p.frontier?this.futureWeight:1);
   }
   gain(i,s){
     let points=0,figures=0;const completed=[];
     for(const p of this.at[i])if(!p.line&&(s===1?p.x:p.o)===p.size-1&&!(s===1?p.o:p.x)){
-      points+=p.size;figures++;if(this.advanced)completed.push(p.indices);
+      if(!p.paid[s]){points+=p.size;figures++;}if(this.advanced)completed.push(p.indices);
     }
     for(let d=0;d<4;d++){
       const line=[i];
       for(let side=0;side<2;side++){let j=this.rays[i][d][side];while(j!==-1&&this.board[j]===s){line.push(j);j=this.rays[j][d][side];}}
-      if(line.length>=3){points+=line.length;figures++;if(this.advanced)completed.push(line);}
+      if(line.length>=3){if(!this.paid.has(formId(s,'línea',line,this.cells))){points+=line.length;figures++;}if(this.advanced)completed.push(line);}
     }
     if(this.advanced){
       const visited=new Set([i]),queue=[i];
       for(let k=0;k<queue.length;k++)for(const j of this.neighbors[queue[k]])if(this.board[j]===s&&!visited.has(j)){visited.add(j);queue.push(j);}
-      if(queue.length>=4&&!completed.some(indices=>indices.length===queue.length&&indices.every(j=>visited.has(j)))){points+=queue.length;figures++;}
+      if(queue.length>=4&&!this.paid.has(formId(s,'grupo',queue,this.cells))&&!completed.some(indices=>indices.length===queue.length&&indices.every(j=>visited.has(j)))){points+=queue.length;figures++;}
     }
     const bonus=3*(Math.floor((this.figures[s]+figures)/3)-Math.floor(this.figures[s]/3));
     return {points:points+bonus,figures};
