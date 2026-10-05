@@ -1,4 +1,5 @@
 import {key,terrainOf,availableCells,expansionOptions,figureWindows} from './game.js';
+import {recordMax} from './max.js';
 export const TURN_SECONDS=30;
 const id=()=>crypto.randomUUID();
 export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(),level='normal') {
@@ -38,6 +39,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const bonus=3*(Math.floor((player.figures+figures.length)/3)-Math.floor(player.figures/3));
     const points=figures.reduce((sum,f)=>sum+f.size,0)+bonus;
     player.score+=points;player.figures+=figures.length;player.lastMove=cell;
+    recordMax(player,points-bonus,figures.length,automatic);
     p.credits+=figures.length;p.turn=p.turn==='X'?'O':'X';p.deadline=new Date(now+TURN_SECONDS*1000).toISOString();
     if(!availableCells(room,p).length)p.expander=player.id;
     room.lastEvent={id:cell.id,kind:'move',player:player.id,figures:figures.length,points,bonus,automatic,continuation:!availableCells(room,p).length};

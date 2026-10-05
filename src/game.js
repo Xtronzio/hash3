@@ -1,6 +1,6 @@
 export const key = (x, y) => `${x},${y}`;
-export function rankedPlayers(players) { return [...players].sort((a,b)=>b.score-a.score||a.order-b.order); }
-export function immediateAbove(players,uid) { const list=rankedPlayers(players),i=list.findIndex(p=>p.id===uid); return i>0?list[i-1]:null; }
+export function rankedPlayers(players,byMax=false) { return [...players].sort((a,b)=>(byMax?((b.max?.value??-1)-(a.max?.value??-1)):b.score-a.score)||a.order-b.order); }
+export function immediateAbove(players,uid,byMax=false) { const list=rankedPlayers(players,byMax),i=list.findIndex(p=>p.id===uid); return i>0?list[i-1]:null; }
 export function terrainOf(room) {
   return room.terrain||room.blocks.flatMap(b=>Array.from({length:9},(_,i)=>({x:b.x*3+i%3,y:b.y*3+Math.floor(i/3)})));
 }

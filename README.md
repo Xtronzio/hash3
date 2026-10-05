@@ -114,3 +114,14 @@ La web se puede empaquetar con Capacitor para iOS/Android. Publicarla en las tie
 Hall plano con tarjetas centradas, iconos destacados, ayuda visual de figuras y navegación de vuelta al diálogo anterior. El menú no duplica el modo sin conexión. Mundo entra en un único tablero compartido en nivel Normal; su primera entrada inicializa el tablero y arranca con un rival de máquina. Las siguientes entradas reutilizan su identidad de sala. La invitación de pareja funciona dentro de Mundo. Ningún jugador puede cerrarlo. Las salas de Duelo y las salas libres existentes siguen siendo independientes. Mundos privados de pago quedan pendientes de decisión.
 
 `supabase/common-world.sql` corresponde a la migración aplicada `single_common_world_gateway`. El gateway interno verifica la sesión, serializa la primera entrada con bloqueo transaccional y un índice único garantiza un único Mundo común. La función de sala queda inaccesible directamente al rol authenticated.
+
+
+## R0.10: tablero y antesala de pareja
+
+Mundo → Crear pareja genera un código de antesala. El segundo jugador elige Unirme a una pareja o abre el enlace. Nadie se incorpora al Mundo durante la espera. Solo el creador puede pulsar Entrar al Mundo cuando el compañero está presente (actividad de los últimos 30 segundos). Ambas incorporaciones y el reloj compartido se confirman en una sola transacción; repetir el inicio no crea otra pareja. Una sesión no puede ocupar dos antesalas.
+
+El tablero mantiene sus figuras. Añade desplazamiento por arrastre y pellizco, minimapa con salto, tres niveles de zoom y accesos a Mi territorio y Rival superior. Los puntos X/O pasan debajo. El ranking conserva líder, rival inmediatamente superior y jugador visibles; los demás se despliegan con desplazamiento interno.
+
+#MAX v1: ventana móvil de 100 jugadas; sin historial muestra — y hasta 100 es provisional. Mundo ordena por el valor con seis decimales; la pantalla muestra dos. Otros modos lo muestran como referencia y siguen ordenados por puntos. Cada jugada humana cuenta una acción; un turno automático por tiempo cuenta con rendimiento cero; no se incluyen bonos ni jugadas de bots en el índice oficial. La escala operativa es 100 × puntos medios por acción × (0,8 + 0,1 × regularidad + 0,1 × combos). Regularidad = 1/(1 + desviación/ media), sobre bloques de diez acciones; combos = proporción de jugadas puntuadas que forman varias figuras. Esta concreción de la ponderación 80/10/10 queda abierta a calibración durante las pruebas; no hay inventario consumible en esta versión.
+
+Migración aplicada: `supabase/pair-lobby-max.sql`. La antesala es privada con RLS, RPC autenticada y comprobación de pertenencia. #MAX se calcula en servidor, incluye turnos automáticos, deduplica eventos y preserva la ventana al abandonar/reentrar. Pruebas en `tests/pair-max.sql` revierten todos sus datos.
