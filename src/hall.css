@@ -111,3 +111,20 @@
 @media(max-width:600px){.hall .hall-mode{min-height:142px}.hall .hall-play{padding-bottom:28px}.hall-play small{right:auto;bottom:7px;font-size:12px}.hall-play svg{left:18px}.hall-dialog-options button{grid-template-columns:38px 1fr 38px}}
 
 .hall-dialog h2,.hall-dialog h3{color:#e3e5e9}
+
+/* Mode colors match the board symbols; labels stay white. */
+.hall .mode-green{--mode-color:var(--green)}
+.hall .mode-red{--mode-color:var(--red)}
+.hall .mode-cyan{--mode-color:#00e5ff}
+.hall .mode-silver{--mode-color:#c9ced8}
+.hall .hall-mode strong,.hall .hall-mode.is-selected strong{color:#f2f3f4}
+.hall .hall-mode:hover,.hall .hall-mode:active,.hall .hall-mode:focus-visible{border-color:var(--mode-color);background:color-mix(in srgb,var(--mode-color) 6%,#08090b)}
+.hall .hall-play{--mode-color:#f2f3f4;border-left-width:1px;border-color:var(--mode-color);background:#101114}
+.hall .hall-play.mode-green{--mode-color:var(--green)}
+.hall .hall-play.mode-red{--mode-color:var(--red)}
+.hall .hall-play.mode-cyan{--mode-color:#00e5ff}
+.hall .hall-play.mode-silver{--mode-color:#c9ced8}
+.hall .hall-play span,.hall .hall-play svg{color:#f2f3f4}
+.hall .hall-play small{color:var(--mode-color)}
+.hall .hall-play:hover,.hall .hall-play:active,.hall .hall-play:focus-visible{border-color:var(--mode-color);box-shadow:inset 0 0 0 2px var(--mode-color);background:color-mix(in srgb,var(--mode-color) 7%,#101114)}
+.hall .hall-secondary button:not(:disabled):hover,.hall .hall-secondary button:not(:disabled):active,.hall .hall-secondary button:not(:disabled):focus-visible,.hall .hall-icon-button:hover,.hall .hall-icon-button:active{border-color:#f2f3f4}

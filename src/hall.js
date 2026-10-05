@@ -3,8 +3,8 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 export const hallModes=[
   {id:'world',label:'Mundo',description:'Un tablero para todos',icon:'world',color:'green'},
   {id:'duel',label:'Duelo',description:'1 vs 1 o equipos',icon:'duel',color:'red'},
-  {id:'solo',label:'VS máquina',description:'Partida individual',icon:'robot',color:'white'},
-  {id:'offline',label:'Sin conexión',description:'En este dispositivo',icon:'offline',color:'white'}
+  {id:'solo',label:'VS máquina',description:'Partida individual',icon:'robot',color:'cyan'},
+  {id:'offline',label:'Sin conexión',description:'En este dispositivo',icon:'offline',color:'silver'}
 ];
 const paths={
   menu:'<path d="M6 8h20M6 16h20M6 24h20"/>',
@@ -34,12 +34,12 @@ function hallBoard(){
   ];
   return `<div class="hall-board" aria-hidden="true"><div class="hall-board-cells">${tiles.map(([x,y,symbol,style])=>`<span class="hall-cell ${style}" style="--cx:${x+4};--cy:${y+2}">${boardMark(symbol)}</span>`).join('')}<span class="hall-territory"></span></div></div>`;
 }
-export function hallMarkup({name='',mode='world',lastCode='',hasLocal=false}={}){
+export function hallMarkup({name='',mode='world',modeSelected=true,lastCode='',hasLocal=false}={}){
   const selected=hallModes.find(m=>m.id===mode)||hallModes[0];
   return `<section class="hall" aria-labelledby="hall-title"><header class="hall-header"><button class="hall-icon-button" data-action="hall-menu" aria-label="Abrir menú">${hallIcon('menu')}</button><span class="brand heading hall-brand">#3</span><button class="hall-profile" data-action="hall-profile" aria-label="Perfil y estadísticas">${hallIcon('profile')}<span>${escape(name||'Invitado')}</span></button></header>
   <div class="hall-main"><h1 id="hall-title" class="sr-only">Elige cómo jugar a #3</h1>${hallBoard()}
-  <button class="hall-play heading" data-action="hall-play" aria-label="Jugar: ${selected.label}">${hallIcon('play')}<span>Jugar</span><small>${selected.label}</small></button>
-  <div class="hall-modes" role="radiogroup" aria-label="Modo de juego">${hallModes.map(m=>`<button class="hall-mode mode-${m.color} ${selected.id===m.id?'is-selected':''}" role="radio" aria-checked="${selected.id===m.id}" tabindex="${selected.id===m.id?'0':'-1'}" data-action="hall-mode" data-mode="${m.id}">${hallIcon(m.icon)}<strong class="heading">${m.label}</strong><span>${m.description}</span></button>`).join('')}</div>
+  <button class="hall-play heading mode-${modeSelected?selected.color:'white'}" data-action="hall-play" aria-label="Jugar: ${selected.label}">${hallIcon('play')}<span>Jugar</span><small>${modeSelected?selected.label:''}</small></button>
+  <div class="hall-modes" role="radiogroup" aria-label="Modo de juego">${hallModes.map(m=>`<button class="hall-mode mode-${m.color} ${modeSelected&&selected.id===m.id?'is-selected':''}" role="radio" aria-checked="${modeSelected&&selected.id===m.id}" tabindex="${selected.id===m.id?'0':'-1'}" data-action="hall-mode" data-mode="${m.id}">${hallIcon(m.icon)}<strong class="heading">${m.label}</strong><span>${m.description}</span></button>`).join('')}</div>
   <div class="hall-more"><span>Más</span></div><nav class="hall-secondary" aria-label="Más opciones"><button data-action="hall-games">${hallIcon('games')}<strong class="heading">Mis partidas</strong><span>Abrir o retomar</span></button><button data-action="hall-ranking">${hallIcon('ranking')}<strong class="heading">Ranking</strong><span>Mundo y periodos</span></button><button data-action="hall-inventory">${hallIcon('inventory')}<strong class="heading">Inventario</strong><span>Practicar ayudas</span></button><button disabled>${hallIcon('achievements')}<strong class="heading">Logros</strong><span>Próximamente</span></button></nav>
   <div class="hall-bottom"><button class="ghost small" data-action="hall-help">${hallIcon('help')}Cómo se juega</button><span id="offline-status" class="sr-only" role="status"></span><span class="hall-guest">Acceso como invitado</span></div></div></section>`;
 }

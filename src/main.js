@@ -28,7 +28,7 @@ let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, l
 let figureEffect=null,figureTimer,scoreFloatTimer;
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,inventoryOpen=false;
 const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-let hallMode='world',hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
+let hallMode='world',hallModeSelected=false,hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
 const urlRival = new URL(location.href).searchParams.get('rival') || '';
@@ -159,7 +159,7 @@ function changeMapZoom(value,inGesture=false){
 }
 function savedLocal(){return localGames()[0]||null;}
 function renderHome() {
-  app.innerHTML=hallMarkup({name:read('hash3_name')||'',mode:hallMode,lastCode:read('hash3_room')||'',hasLocal:!!savedLocal()});
+  app.innerHTML=hallMarkup({name:read('hash3_name')||'',mode:hallMode,modeSelected:hallModeSelected,lastCode:read('hash3_room')||'',hasLocal:!!savedLocal()});
   if(hallDialog)renderHallDialog();
   if(localSetup)renderLocalSetup();
   if(roomSetup)renderRoomSetup();
@@ -325,7 +325,7 @@ app.addEventListener('click',async e=>{
   if(action==='pair-share'){const url=new URL(location.href);url.search='';url.searchParams.set('pareja',pairLobby.code);try{await navigator.clipboard.writeText(url.href);notify('Invitación de pareja copiada.');}catch{notify('Código de pareja: '+pairLobby.code);}return;}
 
   if(action==='hall-mode'){
-    if(!hallModes.some(m=>m.id===b.dataset.mode))return;hallMode=b.dataset.mode;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
+    if(!hallModes.some(m=>m.id===b.dataset.mode))return;hallMode=b.dataset.mode;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
   }
   if(action==='hall-play'){playHallMode();return;}
   if(action==='hall-close'){if(!pendingDelete)closeHallDialog();return;}
@@ -392,7 +392,7 @@ document.addEventListener('keydown',e=>{
   if(radio&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
     e.preventDefault();const i=hallModes.findIndex(m=>m.id===radio.dataset.mode),step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
     const next=e.key==='Home'?0:e.key==='End'?hallModes.length-1:(i+step+hallModes.length)%hallModes.length;
-    hallMode=hallModes[next].id;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
+    hallMode=hallModes[next].id;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
   }
   if(pendingDelete||inventoryOpen){
     if(e.key==='Escape'){e.preventDefault();if(pendingDelete){pendingDelete=null;document.querySelector('.delete-dialog')?.remove();}else{inventoryOpen=false;document.querySelector('.inventory-dialog')?.remove();}return;}
