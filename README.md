@@ -103,7 +103,7 @@ Flujo de creación: **Crear sala → Duelo / Mundo**. Los formatos y la duració
 
 ## Modos sin cobertura
 
-- **Contra la máquina:** el humano usa X y la máquina O. La máquina busca completar figuras y bloquear las del rival; desempata al azar. El movimiento por tiempo agotado es siempre aleatorio, también para el humano.
+- **Contra la máquina:** el humano elige X u O; X siempre empieza. Hay cuatro dificultades: Básico, Medio, Alto y Pro. Pro usa búsqueda nativa en un Worker, amplía el análisis tras completar el bloque y puede encadenar dos ampliaciones simuladas. Analiza más candidatos al ampliar, conserva solo profundidades completadas para todos y reutiliza resultados de búsqueda. Su presupuesto es de 420 000 nodos y unos 3 segundos por decisión; la profundidad real depende del tablero y del dispositivo. Las segundas ampliaciones se limitan a opciones legales del borde ya compilado. No garantiza ganar todas las posiciones. El movimiento por tiempo agotado es siempre aleatorio, también para el humano.
 - **Dos en este dispositivo:** se pasa el dispositivo en cada turno; ambos jugadores comparten pantalla.
 - La partida local se guarda en ese navegador y puede retomarse desde el inicio. No se envía a Supabase ni se incorpora al ranking online.
 - Para reabrir la web sin conexión, debe haberse cargado con internet y aparecer «Preparado para jugar sin conexión». Es necesario un navegador que permita service workers; algunas vistas embebidas restringen su uso. No se ha verificado aún la instalación y recuperación offline en un teléfono real.

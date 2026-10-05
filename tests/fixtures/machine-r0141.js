@@ -1,4 +1,5 @@
-import {key,terrainOf,connectedTerrain,expansionOptions,shapeTemplates} from './game.js';
+// Frozen R0.14.1 opponent for repeatable strength comparisons.
+import {key,terrainOf,connectedTerrain,expansionOptions,shapeTemplates} from '../../src/game.js';
 
 export const machineLevels=[
   {id:'basic',label:'Básico'}, {id:'medium',label:'Medio'},
@@ -7,7 +8,7 @@ export const machineLevels=[
 export const machineLevelLabel=level=>machineLevels.find(l=>l.id===level)?.label||'Medio';
 const settings={
   basic:{depth:1,nodes:0,time:0},medium:{depth:1,nodes:0,time:0},
-  high:{depth:4,nodes:5000,time:180},pro:{depth:12,nodes:420000,time:3000,continuation:8,futureLayers:2}
+  high:{depth:4,nodes:5000,time:180},pro:{depth:9,nodes:42000,time:1100}
 };
 const directions=[[1,0],[0,1],[1,1],[1,-1]];
 const STOP=Symbol('search-budget');
@@ -20,7 +21,7 @@ class Position {
     this.cells=connectedTerrain(terrainOf(room),room.pairs[0].active);
     this.legalSize=this.cells.length;this.futureWeight=futureWeight;
     const existing=new Set(this.cells.map(c=>key(c.x,c.y))),frontier=new Map();
-    if(futureWeight)for(const c of this.cells)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    for(const c of this.cells)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);if(!existing.has(k))frontier.set(k,point);
     }
     this.expansionPoints=futureWeight?expansionOptions(this.cells,room.pairs[0].active):[];
@@ -31,7 +32,7 @@ class Position {
     this.index=new Map(this.cells.map((c,i)=>[key(c.x,c.y),i]));
     const sets=new Set();this.expansions=this.expansionPoints.map(c=>Array.from({length:9},(_,n)=>this.index.get(key(c.x+n%3,c.y+Math.floor(n/3)))).filter(i=>i>=this.legalSize)).filter(indices=>{
       const id=[...indices].sort((a,b)=>a-b).join(',');if(sets.has(id))return false;sets.add(id);return true;
-    });this.extensionLayers=0;this.extensionKey='root';
+    });this.extended=false;this.extensionKey='root';
     this.board=new Uint8Array(this.cells.length);
     for(const c of room.cells){const i=this.index.get(key(c.x,c.y));if(i!==undefined)this.board[i]=symbolNumber(c.symbol);}
     this.free=this.cells.slice(0,this.legalSize).map((_,i)=>i).filter(i=>!this.board[i]);
@@ -116,38 +117,31 @@ export function machineMoveScore(room,point,symbol=room.pairs[0].turn){
 }
 
 function searchPosition(position,turn,config,budget){
-  const table=config.table||new Map();let completedDepth=0,completedContinuation=0,extensionDepth=2,best=null,bestValue=position.evaluation();
+  const table=new Map();let completedDepth=0,best=null,bestValue=position.evaluation();
   const check=()=>{if(++budget.nodes>budget.maxNodes||(budget.nodes%32===0&&performance.now()>=budget.deadline))throw STOP;};
   function search(depth,s,alpha,beta,ply){
     check();
-    const k=`${extensionDepth}:${position.hash}:${position.hash2}:${position.extensionLayers}:${position.extensionKey}:${position.figures[1]%3}:${position.figures[2]%3}:${position.diff}:${s}`;
+    const startAlpha=alpha,startBeta=beta,k=`${position.hash}:${position.hash2}:${position.extensionKey}:${position.figures[1]%3}:${position.figures[2]%3}:${position.diff}:${s}`;
     const cached=table.get(k);
     if(cached&&cached.depth===depth){if(cached.bound==='exact')return cached.value;if(cached.bound==='lower')alpha=Math.max(alpha,cached.value);else beta=Math.min(beta,cached.value);if(alpha>=beta)return cached.value;}
-    // Cache bounds must describe the window after a prior bound narrowed it.
-    const startAlpha=alpha,startBeta=beta;
     let moves=position.moves(s);
     if(!moves.length){
-      if(!config.continuation||!position.futureWeight||position.extensionLayers>=(config.futureLayers||1)||(position.extensionLayers&&depth<=0)||!position.expansions.length)return position.evaluation();
+      if(config.depth<=4||!position.futureWeight||position.extended||!position.expansions.length)return position.evaluation();
       // Completing a block is not the end of #3. Its last mover chooses the
       // expansion, but the other symbol places the first mark afterwards.
-      const actor=3-s,originalFree=position.free,originalKey=position.extensionKey,originalLayers=position.extensionLayers,remaining=originalLayers?depth:extensionDepth;
-      const seen=new Set();
-      // A second layer explores a legal subset of connected tiles already in
-      // the compiled frontier. It never invents marks outside the terrain.
-      const candidates=position.expansions.map(indices=>indices.filter(i=>!position.board[i])).filter(indices=>{const key=indices.join(',');if(!indices.length||seen.has(key))return false;seen.add(key);return true;}).map(indices=>({indices,value:Math.max(...indices.map(i=>position.gain(i,s).points))*(s===1?1:-1)}))
-        .sort((a,b)=>actor===1?b.value-a.value:a.value-b.value).slice(0,config.continuation>2?14:6);
-      if(!candidates.length)return position.evaluation();
-      let value=actor===1?-Infinity:Infinity;position.extensionLayers++;
+      const actor=3-s,originalFree=position.free;
+      const candidates=position.expansions.map(indices=>({indices,value:Math.max(...indices.map(i=>position.gain(i,s).points))*(s===1?1:-1)}))
+        .sort((a,b)=>actor===1?b.value-a.value:a.value-b.value).slice(0,6);
+      let value=actor===1?-Infinity:Infinity;position.extended=true;
       try{
         for(const c of candidates){
           position.free=c.indices;position.extensionKey=c.indices.join(',');
-          const next=search(remaining,s,alpha,beta,ply+1);
+          const next=search(2,s,alpha,beta,ply+1);
           if(actor===1)value=Math.max(value,next);else value=Math.min(value,next);
           if(actor===1)alpha=Math.max(alpha,value);else beta=Math.min(beta,value);
           if(alpha>=beta)break;
         }
-      }finally{position.free=originalFree;position.extensionLayers=originalLayers;position.extensionKey=originalKey;}
-      table.set(k,{depth,value,move:null,bound:value<=startAlpha?'upper':value>=startBeta?'lower':'exact'});
+      }finally{position.free=originalFree;position.extended=false;position.extensionKey='root';}
       return value;
     }
     if(depth<=0){
@@ -168,12 +162,8 @@ function searchPosition(position,turn,config,budget){
   }
   const roots=position.moves(turn);
   if(!roots.length)return {best:null,value:bestValue,depth:0};
-  best=config.best??roots[0].i;
-  const coreDepth=Math.min(config.depth,roots.length);
-  const stages=config.singleDepth?[{depth:coreDepth,continuation:config.continuation||2}]:Array.from({length:coreDepth},(_,i)=>({depth:i+1,continuation:2}));
-  if(!config.singleDepth&&config.continuation&&coreDepth===roots.length)for(let continuation=4;continuation<=config.continuation;continuation+=2)stages.push({depth:coreDepth,continuation});
-  for(const {depth,continuation} of stages){
-    extensionDepth=continuation;
+  best=roots[0].i;
+  for(let depth=1;depth<=Math.min(config.depth,position.free.length);depth++){
     let value=turn===1?-Infinity:Infinity,move=best,alpha=-Infinity,beta=Infinity;
     const ordered=[...roots].sort((a,b)=>(a.i===best?-1:b.i===best?1:0));
     try{
@@ -183,11 +173,11 @@ function searchPosition(position,turn,config,budget){
         if(turn===1?next>value:next<value){value=next;move=m.i;}
         if(turn===1)alpha=Math.max(alpha,value);else beta=Math.min(beta,value);
       }
-      best=move;bestValue=value;completedDepth=depth;completedContinuation=config.continuation?continuation:0;
+      best=move;bestValue=value;completedDepth=depth;
     }catch(error){if(error!==STOP)throw error;break;}
     if(performance.now()>=budget.deadline||budget.nodes>=budget.maxNodes)break;
   }
-  return {best,value:bestValue,depth:completedDepth,continuation:completedContinuation};
+  return {best,value:bestValue,depth:completedDepth};
 }
 
 function chooseExpansion(room,level,random,config,budget){
@@ -214,29 +204,25 @@ function chooseExpansion(room,level,random,config,budget){
     }
   }
   candidates.sort((a,b)=>b.promise-a.promise);
-  const evaluated=candidates.slice(0,level==='pro'?72:20).map(c=>{
-    const position=new Position({...room,terrain:[...terrainOf(room),...c.added],pairs:[{...pair,active:c.point}]},level==='pro'?0:1),moves=position.moves(turn);
+  const evaluated=candidates.slice(0,level==='pro'?36:20).map(c=>{
+    const position=new Position({...room,terrain:[...terrainOf(room),...c.added],pairs:[{...pair,active:c.point}]}),moves=position.moves(turn);
     const immediate=Math.max(0,...moves.map(m=>m.g.points));
     return {...c,position,value:position.evaluation()+(turn===1?1:-1)*immediate*0.9};
   }).sort((a,b)=>actor===1?b.value-a.value:a.value-b.value);
   if(level==='medium')return evaluated[0].point;
   let best=evaluated[0];
-  const shortlist=evaluated.slice(0,level==='pro'?16:5);
-  if(level==='pro')for(const c of shortlist){c.table=new Map();c.position=new Position({...room,terrain:[...terrainOf(room),...c.added],pairs:[{...pair,active:c.point}]});}
+  const shortlist=evaluated.slice(0,level==='pro'?10:5);
   // Every shortlisted expansion gets the same completed search depth before
   // moving deeper, so a late budget expiry cannot favor an unsearched choice.
-  const maxDepth=Math.min(config.depth,level==='pro'?9:4),phases=Array.from({length:maxDepth},(_,i)=>({depth:i+1,continuation:config.continuation?2:0}));
-  if(config.continuation)for(let continuation=4;continuation<=config.continuation;continuation+=2)phases.push({depth:maxDepth,continuation});
-  for(const {depth,continuation} of phases){
+  for(let depth=1;depth<=Math.min(config.depth,level==='pro'?6:4);depth++){
     let nextBest=best,nextValue=actor===1?-Infinity:Infinity,complete=true;
     for(const c of shortlist){
       if(performance.now()>=budget.deadline||budget.nodes>=budget.maxNodes){complete=false;break;}
-      const result=searchPosition(c.position,turn,level==='pro'?{...config,depth,continuation,singleDepth:true,table:c.table,best:c.best}:{...config,depth},budget);
-      c.best=result.best;
+      const result=searchPosition(c.position,turn,{...config,depth},budget);
       if(result.depth<Math.min(depth,c.position.free.length)){complete=false;break;}
       if(actor===1?result.value>nextValue:result.value<nextValue){nextValue=result.value;nextBest=c;}
     }
-    if(!complete)break;best=nextBest;budget.expansionDepth=depth;budget.expansionContinuation=continuation;
+    if(!complete)break;best=nextBest;
   }
   return best.point;
 }
@@ -244,8 +230,8 @@ function chooseExpansion(room,level,random,config,budget){
 export function chooseMachineMove(room,random=Math.random,options={}){
   const level=settings[room.difficulty]?room.difficulty:'medium',config=settings[level],start=performance.now();
   const budget={nodes:0,maxNodes:options.maxNodes??config.nodes,deadline:start+(options.maxTimeMs??config.time)};
-  const pair=room.pairs[0];let choice,depth=0,continuation=0;
-  if(pair.pending){choice={action:'expand',payload:chooseExpansion(room,level,random,config,budget)};depth=budget.expansionDepth||0;continuation=budget.expansionContinuation||0;}
+  const pair=room.pairs[0];let choice,depth=0;
+  if(pair.pending){choice={action:'expand',payload:chooseExpansion(room,level,random,config,budget)};}
   else{
     const position=new Position(room,options.futureWeight??1),turn=symbolNumber(pair.turn),moves=position.moves(turn);
     if(!moves.length)throw new Error('No hay jugadas legales.');
@@ -257,10 +243,10 @@ export function chooseMachineMove(room,random=Math.random,options={}){
       const rated=moves.map(m=>({...m,value:m.g.points*2+m.threat+m.future*0.08})),best=Math.max(...rated.map(m=>m.value));
       const preferred=rated.filter(m=>Math.abs(m.value-best)<1e-8);i=preferred[Math.floor(random()*preferred.length)].i;
     }else{
-      const result=searchPosition(position,turn,config,budget);i=result.best;depth=result.depth;continuation=result.continuation||0;
+      const result=searchPosition(position,turn,config,budget);i=result.best;depth=result.depth;
     }
     choice={action:'move',payload:position.cells[i]};
   }
-  options.onAnalysis?.({level,depth,continuation,nodes:budget.nodes,elapsedMs:performance.now()-start});
+  options.onAnalysis?.({level,depth,nodes:budget.nodes,elapsedMs:performance.now()-start});
   return choice;
 }

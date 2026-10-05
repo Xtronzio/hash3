@@ -13,7 +13,7 @@ export function hallNameField(name,{id='name',label='Tu apodo',placeholder='Cóm
   if(saved)return `<input type="hidden" id="${id}" name="name" value="${escape(value)}"><p class="setup-identity">Juegas como <strong>${escape(value)}</strong></p>`;
   return `<label for="${id}">${label}</label><input id="${id}" name="name" value="${escape(value)}" placeholder="${placeholder}" minlength="2" maxlength="18" autocomplete="nickname" required>`;
 }
-export const machineLevelHints={basic:'Para aprender y probar jugadas.',medium:'Puntúa y bloquea amenazas claras.',high:'Anticipa respuestas y prepara combinaciones.',pro:'Máxima exigencia. Busca trampas, combos y tus puntos débiles.'};
+export const machineLevelHints={basic:'Para aprender y probar jugadas.',medium:'Puntúa y bloquea amenazas claras.',high:'Anticipa respuestas y prepara combinaciones.',pro:'Máxima exigencia. Encadena trampas y anticipa las siguientes ampliaciones.'};
 export function machineDifficultySelector(difficulty='medium'){
   const selected=machineLevels.some(l=>l.id===difficulty)?difficulty:'medium';
   return `<fieldset class="machine-difficulty"><legend>Nivel del rival</legend><div class="machine-scale">${machineLevels.map((l,index)=>`<label class="machine-level"><input type="radio" name="machine-difficulty" value="${l.id}" ${l.id===selected?'checked':''} aria-describedby="machine-level-hint"><span class="machine-level-content"><span class="machine-intensity" aria-hidden="true">${[0,1,2,3].map(n=>`<i class="${n<=index?'filled':''}" style="--bar-height:${8+n*5}px"></i>`).join('')}</span><strong>${l.label}</strong></span></label>`).join('')}</div><p id="machine-level-hint" class="machine-level-hint" role="status">${machineLevelHints[selected]}</p></fieldset>`;

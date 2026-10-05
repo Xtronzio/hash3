@@ -1,0 +1,56 @@
+{
+  "version": "R0.14.2",
+  "date": "2026-10-05",
+  "command": "node scripts/benchmark-machine.mjs --games=8 --moves=36 --opponents=previous-pro,high",
+  "method": "Paired X/O, Normal/Advanced, empty opening and a seeded four-mark opening. Untimed games stop after 36 marks: favorable scores, not guaranteed final victories.",
+  "reference": "Frozen published R0.14.1 engine, without weakening its settings.",
+  "results": [
+    {
+      "opponent": "previous-pro",
+      "games": 8,
+      "wins": 4,
+      "draws": 0,
+      "losses": 4,
+      "averageMargin": 11.4,
+      "averageThinkMs": 1440,
+      "maxThinkMs": 3009,
+      "margins": [
+        11,
+        94,
+        -8,
+        -95,
+        48,
+        118,
+        -7,
+        -70
+      ]
+    },
+    {
+      "opponent": "high",
+      "games": 8,
+      "wins": 6,
+      "draws": 0,
+      "losses": 2,
+      "averageMargin": 45,
+      "averageThinkMs": 1577,
+      "maxThinkMs": 3005,
+      "margins": [
+        81,
+        79,
+        -13,
+        -23,
+        54,
+        101,
+        4,
+        77
+      ]
+    }
+  ],
+  "limitations": [
+    "Small sample; X always opens and has a strong advantage.",
+    "Timing and search completion depend on hardware.",
+    "Comparison ran before removing unused zero-weight frontier compilation in the cheap expansion ranking; evaluation and full search logic are unchanged.",
+    "The running benchmark used the former wins-only exit check and exited 1 on the 4-4 reference tie. The revised check requires a positive paired score margin against the old Pro and more wins than losses against other levels."
+  ],
+  "verification": "45 native tests pass, including exact scoring against the referee, optimal finite-block continuation, legal expansions, search budgets, save/pause, and X/O ownership."
+}
