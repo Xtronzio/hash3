@@ -2,10 +2,12 @@ import './style.css';
 import './hall.css';
 import './board.css';
 import {bindMap} from './map.js';
+import {bindGestures} from './gestures.js';
 import {maxLabel} from './max.js';
 import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion} from './sessions.js';
 import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
 import './sessions.css';
+import './mobile-game.css';
 import {inventoryMarkup,usePracticeHint} from './inventory.js';
 import {hallModes,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
@@ -35,7 +37,11 @@ if(urlCode||pairUrlCode)hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
 const above=()=>immediateAbove(humans(),uid,!!room.commonWorld);
-const navIcon=(kind)=>kind==='center'?'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 19 14-14M5 5h14v14"/></svg>';
+const iconPaths={center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
+const navIcon=kind=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${iconPaths[kind]||''}</svg>`;
+const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
+function setRankingOpen(open){rankOpen=open;blinkId=null;render();document.querySelector('.ranking-toggle')?.focus({preventScroll:true});}
+bindGestures(app,{setRankingOpen});
 const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice');n.textContent=message; n.classList.add('visible');
@@ -50,7 +56,7 @@ function accept(next) {
   if(room?.id===next.id&&next.version<room.version)return;
   const feedback=scoreFeedback(room,next);
   const changed = room?.id!==next.id;
-  if(changed){inventoryOpen=false;worldMapOpen=false;gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
+  if(changed){rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
   const target=above(), targetId=target?.lastMove?.id;
@@ -75,20 +81,20 @@ function render() {
   const expanding=pair.pending>0, canExpand=expanding&&pair.expander===uid;
   const ready=!expanding&&pair.turn===own.symbol&&!(room.mode==='solo'&&pair.turn==='O');
   const totals={X:0,O:0};room.players.forEach(p=>totals[p.symbol]+=p.score);
-  const pinned=list.filter(p=>p.id===uid||p.id===target?.id||p.id===list[0]?.id),others=list.filter(p=>!pinned.includes(p));
+  const compact=list.filter(p=>p.id===uid||p.id===target?.id);
+  const targetAvailable=!!(target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair)));
+  const jumpButtons=`${iconButton('center','center','Mi territorio')}${iconButton('locate','above','Rival superior',`class="blue" ${targetAvailable?'':'disabled'}`)}`;
   const rankRows=players=>players.map(p=>{const index=list.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}</span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
-  const rank=list.findIndex(p=>p.id===uid)+1;
   const title=canExpand?'Amplía tu territorio':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
   app.innerHTML=`<section class="game">
     <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${modeLabel}</div><span class="muted">${room.level==='advanced'?'Avanzado':'Normal'} · ${escape(own.name)} · ${own.symbol}</span></div></div><button class="game-menu-toggle" data-action="game-menu" aria-label="Opciones de partida">⋯</button></header>
-    <div class="workspace"><aside class="ranking"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}"><span>${room.commonWorld?'RANKING MUNDO':'MARCADOR'} <span class="muted">${room.commonWorld?'':'· #MAX de referencia'}</span></span><span>${rankOpen?'Plegar −':'Ver todos +'}</span></button><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div>${rankOpen?`<ol class="ranking-list rank-extra">${rankRows(others)}</ol>`:''}<ol class="ranking-list rank-pinned">${rankRows(pinned)}</ol><div class="max-note">${own.max?.value==null?'#MAX se calcula desde tu próxima jugada.':own.max.provisional?`Tu #MAX es provisional · ${own.max.actions}/100 acciones`:'#MAX · últimas 100 acciones'}${own.practiceHints?' · Partida con ayudas':''}</div></aside>
+    <div class="workspace"><aside class="ranking ${rankOpen?'is-open':''}" aria-label="${room.commonWorld?'Ranking de Mundo':'Marcador de la partida'}"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}" aria-controls="ranking-panel" aria-label="${rankOpen?'Plegar':'Desplegar'} ${room.commonWorld?'ranking de Mundo':'marcador'}"><span class="compact-rank">${compact.map(p=>`<span class="compact-player ${p.id===uid?own.symbol.toLowerCase():'blue'}"><b class="rank-position ${list.indexOf(p)===0?'gold':''}">${list.indexOf(p)+1}</b><span>${p.id===uid?'Tú':escape(p.name)}</span><strong>${p.score.toLocaleString('es-ES')}</strong></span>`).join('')}</span>${navIcon('chevron')}</button><section id="ranking-panel" class="ranking-panel" ${rankOpen?'':'hidden'}><h2 class="heading">${room.commonWorld?'RANKING MUNDO':'MARCADOR'}</h2><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(list)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}${own.practiceHints?' · Partida con ayudas':''}</div><nav class="ranking-navigation" aria-label="Navegación del tablero"><button data-action="center">${navIcon('center')}Mi territorio</button><button class="blue" data-action="locate" ${targetAvailable?'':'disabled'}>${navIcon('above')}Rival superior</button><button data-action="map">${navIcon('map')}Mapa</button></nav></section></aside>
     <div class="arena">${voteMarkup(room.vote,uid)}<div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando duelista':''}${room.timeMode==='untimed'?' · sin reloj':''}</p>${room.kind==='duel'&&room.timeMode!=='untimed'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+own.symbol:'ESPERANDO'}</div></div>
     ${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
-    <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general"><svg aria-hidden="true"></svg></button><div class="world-map" ${worldMapOpen?'':'hidden'}><div class="map-heading"><span>MAPA GENERAL</span><button data-action="close-map" aria-label="Cerrar mapa">×</button></div><svg role="img" aria-label="Toca una zona para desplazarte"></svg><div class="map-legend"><span class="${own.symbol.toLowerCase()}">● Tú</span><span class="blue">● Rival superior</span><span>□ Vista actual</span></div></div></div>
-    <div class="controls"><button class="zoom" data-action="minus" aria-label="Alejar tablero">−</button><button class="zoom" data-action="plus" aria-label="Acercar tablero">+</button><button class="zoom-label" data-action="zoom-level">ZOOM ${zoom<.75?'LEJANO':zoom>1.3?'CERCANO':'MEDIO'} · ${Math.round(zoom*100)}%</button></div><div class="jump-controls"><button data-action="center">${navIcon('center')}MI TERRITORIO</button><button class="blue" data-action="locate" ${target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair))?'':'disabled'}>${navIcon('above')}RIVAL SUPERIOR</button></div>
-    <section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><div><strong>${totals.X.toLocaleString('es-ES')}</strong><small>PUNTOS</small></div></div><span class="score-center">${modeLabel}</span><div class="score-side o"><span class="score-symbol">O</span><div><strong>${totals.O.toLocaleString('es-ES')}</strong><small>PUNTOS</small></div></div></section><div class="game-bottom"><span class="connection">${isLocal()?'En este dispositivo':connected?'Conectado':'Reconectando…'}</span><span>${3-(own.figures%3)} figuras → bonus +3</span>${!room.commonWorld?`<button data-action="pause">${isLocal()?'Pausar':'Solicitar pausa'}</button>`:'<button data-action="abandon">Salir de Mundo</button>'}${isLocal()?'<button data-action="inventory">Inventario</button>':''}<button data-action="go-games">Mis partidas</button></div></div></div>
-    <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="share">Compartir acceso</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="go-games">Mis partidas</button><button class="danger" data-action="abandon">Abandonar</button><button data-action="close-game-menu">Volver a la partida</button></section></div>
+    <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button></div><div class="map-jumps">${jumpButtons}</div></nav><div class="world-map" ${worldMapOpen?'':'hidden'}><div class="map-heading"><span>MAPA GENERAL</span><button data-action="close-map" aria-label="Cerrar mapa">×</button></div><svg role="img" aria-label="Toca una zona para desplazarte"></svg><div class="map-legend"><span class="${own.symbol.toLowerCase()}">● Tú</span><span class="blue">● Rival superior</span><span>□ Vista actual</span></div></div></div>
+    <footer class="game-dock"><section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></section><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?iconButton('inventory','inventory','Inventario'):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
+    <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2><p class="menu-version">#3 · ${VERSION_LABEL} · ${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'} · ${3-(own.figures%3)} figuras para bonus +3</p>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="share">Compartir acceso</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="go-games">Mis partidas</button><button class="danger" data-action="abandon">Abandonar</button><button data-action="close-game-menu">Volver a la partida</button></section></div>
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();updateTimer();
   const nowKey=key(pair.active.x,pair.active.y);
@@ -312,7 +318,7 @@ app.addEventListener('click',async e=>{
     await run(async()=>{const vote=action.startsWith('vote-');gameMenuOpen=false;const next=isLocal()?localCommand(room,action):await command(vote?'vote':action,{code:room.code,voteId:room.vote?.id,yes:action==='vote-yes'});accept(next);});return;
   }
   if(action==='game-menu'||action==='close-game-menu'){gameMenuOpen=action==='game-menu';document.querySelector('.game-menu').hidden=!gameMenuOpen;return;}
-  if(action==='map'||action==='close-map'){worldMapOpen=action==='map';document.querySelector('.world-map').hidden=!worldMapOpen;return;}
+  if(action==='map'||action==='close-map'){worldMapOpen=action==='map';if(worldMapOpen&&rankOpen){rankOpen=false;render();}document.querySelector('.world-map').hidden=!worldMapOpen;return;}
   if(action==='pair-start'){await run(async()=>{acceptPair(await command('pair_start',{code:pairLobby.code}));});return;}
   if(action==='pair-leave'){await run(async()=>{await command('pair_leave',{code:pairLobby.code});pairLobby=null;save('hash3_pair',null);renderHome();});return;}
   if(action==='pair-share'){const url=new URL(location.href);url.search='';url.searchParams.set('pareja',pairLobby.code);try{await navigator.clipboard.writeText(url.href);notify('Invitación de pareja copiada.');}catch{notify('Código de pareja: '+pairLobby.code);}return;}
@@ -332,9 +338,9 @@ app.addEventListener('click',async e=>{
   if(action==='abandon'){leaveOpen=true;renderLeave();return;}
   if(action==='cancel-leave'){leaveOpen=false;document.querySelector('.leave-dialog')?.remove();return;}
   if(action==='return-room'){const code=b.dataset.code||room?.code;await run(async()=>{uid=await ensurePlayer();const next=await command('join',{code,name:read('hash3_name')||ownPlayer()?.name||'Jugador'});closeHallDialog(false);accept(next);});return;}
-  if(action==='ranking'){rankOpen=!rankOpen;blinkId=null;render();return;}
-  if(action==='center'){zoom=1;render();const p=ownPair();center(p.active.x+1,p.active.y+1);return;}
-  if(action==='locate'){const target=above(),move=target?.lastMove||room.pairs.find(p=>p.id===target?.pair)?.active;if(move){zoom=1;render();center(move.x,move.y);}return;}
+  if(action==='ranking'){setRankingOpen(!rankOpen);return;}
+  if(action==='center'){rankOpen=false;zoom=1;render();const p=ownPair();center(p.active.x+1,p.active.y+1);return;}
+  if(action==='locate'){const target=above(),move=target?.lastMove||room.pairs.find(p=>p.id===target?.pair)?.active;if(move){rankOpen=false;zoom=1;render();center(move.x,move.y);}return;}
   if(action==='plus'||action==='minus'||action==='zoom-level'){changeMapZoom(action==='zoom-level'?(zoom<.75?1:zoom<1.3?1.6:.55):zoom*(action==='plus'?1.25:.8));return;}
   if(action==='share'||action==='share-pair'){
     await run(async()=>{
@@ -392,6 +398,7 @@ document.addEventListener('keydown',e=>{
     if(e.key==='Tab'){const selector=pendingDelete?'.delete-dialog':'.inventory-dialog',nodes=[...document.querySelectorAll(selector+' button:not(:disabled)')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
     return;
   }
+  if(e.key==='Escape'&&rankOpen){e.preventDefault();setRankingOpen(false);return;}
   if(!hallDialog)return;
   if(e.key==='Escape'){e.preventDefault();closeHallDialog();return;}
   if(e.key==='Tab'){
