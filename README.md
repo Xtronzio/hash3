@@ -1,4 +1,4 @@
-# #3 — R0.8
+# #3 — R0.9
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
@@ -108,3 +108,9 @@ La protección de contraseñas filtradas de Supabase está desactivada; el juego
 ## Móvil
 
 La web se puede empaquetar con Capacitor para iOS/Android. Publicarla en las tiendas requerirá empaquetado, pruebas nativas, cuentas de desarrollador y los requisitos de cada tienda. Los modos locales usan un motor independiente de la red, mientras las salas online siguen siendo autoritativas en Supabase.
+
+## R0.9: hall y Mundo común
+
+Hall plano con tarjetas centradas, iconos destacados, ayuda visual de figuras y navegación de vuelta al diálogo anterior. El menú no duplica el modo sin conexión. Mundo entra en un único tablero compartido en nivel Normal; su primera entrada inicializa el tablero y arranca con un rival de máquina. Las siguientes entradas reutilizan su identidad de sala. La invitación de pareja funciona dentro de Mundo. Ningún jugador puede cerrarlo. Las salas de Duelo y las salas libres existentes siguen siendo independientes. Mundos privados de pago quedan pendientes de decisión.
+
+`supabase/common-world.sql` corresponde a la migración aplicada `single_common_world_gateway`. El gateway interno verifica la sesión, serializa la primera entrada con bloqueo transaccional y un índice único garantiza un único Mundo común. La función de sala queda inaccesible directamente al rol authenticated.

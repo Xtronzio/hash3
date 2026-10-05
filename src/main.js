@@ -1,4 +1,6 @@
 import './style.css';
+import './hall.css';
+import {hallModes,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells} from './game.js';
 
@@ -14,9 +16,12 @@ const save = (key,value) => {try{value===null?localStorage.removeItem(key):local
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
 let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null;
 let figureEffect=null,figureTimer,scoreFloatTimer;
+let hallHistory=[],localReturnDialog=null;
+let hallMode='world',hallDialog=null,hallReturnAction='hall-play',hallRanking=null,hallRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
 const urlRival = new URL(location.href).searchParams.get('rival') || '';
+if(urlCode)hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
@@ -60,13 +65,13 @@ function render() {
   app.innerHTML=`<section class="game">
     <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${isLocal()?(room.mode==='solo'?'CONTRA LA MÁQUINA':'DOS EN ESTE DISPOSITIVO'):escape(room.code)}</div><span class="muted">Nivel ${room.level==='advanced'?'Avanzado':'Normal'}</span>${isLocal()?'':`<button class="ghost small" data-action="${opponent.bot?'share-pair':'share'}">${opponent.bot?'Invitar a mi rival':'Invitar al mundo'}</button>`}</div></div>
       <div class="team-score mono"><span class="x">X <strong>${totals.X}</strong></span><span class="o">O <strong>${totals.O}</strong></span></div>
-      <div class="toolbar-name"><span class="${own.symbol.toLowerCase()}">${escape(own.name)} · ${own.symbol}</span>${room.host===uid?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
+      <div class="toolbar-name"><span class="${own.symbol.toLowerCase()}">${escape(own.name)} · ${own.symbol}</span>${room.host===uid&&!room.commonWorld?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
     </header>
     <div class="workspace"><div class="arena">
       <div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando rival humano':''} · ${canExpand?'Coloca el 3×3; puedes solaparlo.':'Usa cualquier celda vacía de tu territorio.'}</p>${room.kind==='duel'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span> · ${expanding?'AMPLIACIÓN':ready?'JUEGA '+own.symbol:'ESPERANDO'}</div></div>
       ${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca una celda para situar la esquina del 3×3.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
       <div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div>
-      <div class="controls"><div class="group"><button class="zoom" data-action="minus" aria-label="Alejar tablero">−</button><button class="zoom" data-action="plus" aria-label="Acercar tablero">+</button><button class="small" data-action="center">Mi territorio</button></div><div class="group">${target?.lastMove?'<button class="small blue" data-action="locate">Mi objetivo</button>':''}<button class="small ghost danger" data-action="abandon">Abandonar</button>${isLocal()||room.host===uid?'<button class="small ghost danger" data-action="finish">Finalizar sala</button>':''}</div><span class="legend">Gris: otras parejas · Azul: tu objetivo</span><span class="connection">${connected?'Conectado':'Reconectando…'}</span></div>
+      <div class="controls"><div class="group"><button class="zoom" data-action="minus" aria-label="Alejar tablero">−</button><button class="zoom" data-action="plus" aria-label="Acercar tablero">+</button><button class="small" data-action="center">Mi territorio</button></div><div class="group">${target?.lastMove?'<button class="small blue" data-action="locate">Mi objetivo</button>':''}<button class="small ghost danger" data-action="abandon">Abandonar</button>${isLocal()||room.host===uid&&!room.commonWorld?'<button class="small ghost danger" data-action="finish">Finalizar sala</button>':''}</div><span class="legend">Gris: otras parejas · Azul: tu objetivo</span><span class="connection">${connected?'Conectado':'Reconectando…'}</span></div>
     </div><aside class="ranking"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}"><span>RANKING <span class="muted">${rankOpen?humans().length:'#'+rank}</span></span><span aria-hidden="true">${rankOpen?'−':'+'}</span></button>
       <ol class="ranking-list">${visibleRank.map(p=>{const index=list.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':''}<small>${p.figures} figura${p.figures!==1?'s':''} · ${p.symbol}</small></span><span class="rank-score mono">${p.score}</span></li>`;}).join('')}</ol>
       <div class="goal-panel">${target?`<p class="muted">Tu siguiente objetivo</p><p class="blue">${escape(target.name)} · ${Math.max(0,target.score-own.score)} puntos por delante</p>${target.lastMove?'<button class="small" data-action="locate">Localizar última jugada</button>':'<p class="muted">Todavía no ha jugado.</p>'}`:'<p class="heading" style="font-size:24px;color:#f4c65d">Vas primero</p><p class="muted">Mantén tu posición.</p>'}</div>
@@ -122,51 +127,78 @@ function center(x,y) {
   v.scrollLeft=(x-minX+.5)*size+padding-v.clientWidth/2;
   v.scrollTop=(y-minY+.5)*size+padding-v.clientHeight/2;
 }
+function savedLocal() {
+  try{const saved=JSON.parse(read('hash3_local'));return saved&&['solo','local'].includes(saved.mode)&&Array.isArray(saved.players)?saved:null;}catch{return null;}
+}
 function renderHome() {
-  app.innerHTML=`<section class="entry"><div class="entry-inner"><div class="entry-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · PILOTO</span></div>
-    <h1 class="heading">Elige cómo jugar</h1>
-    <form id="entry-form"><div><label for="name">Tu apodo</label><input id="name" name="name" placeholder="Cómo te llamas" value="${escape(read('hash3_name')||'')}" minlength="2" maxlength="18" autocomplete="nickname" required></div>
-    <button class="primary" type="submit" name="intent" value="create">Crear sala</button><div class="divider"></div><div><label for="code">¿Tienes un código?</label><input id="code" name="code" placeholder="CÓDIGO DE SALA" value="${escape(urlCode)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"></div><label for="preference">Al entrar en un mundo</label><select id="preference" name="preference"><option value="auto">Buscar rival disponible</option><option value="new">Entrar con un amigo · nueva pareja</option></select>${urlRival?'<p class="instructions">Esta invitación te une a la pareja de quien te la envió.</p>':''}<button type="submit" name="intent" value="join">Entrar en una sala</button></form>
-    ${read('hash3_room')?`<button class="return-button" data-action="return-room" data-code="${escape(read('hash3_room'))}">Volver a la sala ${escape(read('hash3_room'))}</button>`:''}<div class="offline-options"><button data-action="setup-solo">Contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button>${read('hash3_local')?'<button class="ghost" data-action="resume-local">Continuar partida local</button>':''}</div><p class="offline-hint muted" id="offline-status">Los modos locales no necesitan cobertura durante la partida.</p><details class="rules"><summary>Cómo se juega</summary>
-      <h2 class="heading">Tu turno</h2>
-      <p>Coloca una ficha en cualquier celda vacía de vuestro territorio conectado, también en las zonas anteriores. Alternas turnos con tu rival.</p>
-      <p>Tienes <strong>30 segundos</strong>. Si no mueves, se coloca tu ficha en una celda vacía al azar.</p>
-      <h2 class="heading">Cómo sumas puntos</h2>
-      <p><strong>Cada figura vale tantos puntos como celdas tiene.</strong> Todas sus fichas deben ser del mismo símbolo: X o bien O. Cuentan todas las orientaciones y también las fichas de tus compañeros con tu símbolo.</p>
-      <p><strong>Normal:</strong> puntúan las figuras de esta tabla. <strong>Avanzado:</strong> además puntúa el grupo completo unido por los lados que contiene tu ficha nueva, cuando tiene al menos 4 celdas y una forma distinta de las básicas. Las diagonales no unen el grupo. Si el grupo es exactamente una línea, L, cuadrado o cruz, no se añade otra puntuación por grupo.</p>
-      <table><thead><tr><th scope="col">Figura</th><th scope="col">Puntos</th></tr></thead><tbody>
-        <tr><td>Línea de 3, 4, 5…</td><td>+3, +4, +5…</td></tr>
-        <tr><td>L de 3 celdas</td><td>+3</td></tr>
-        <tr><td>L de 4 celdas</td><td>+4</td></tr>
-        <tr><td>Cuadrado 2×2</td><td>+4</td></tr>
-        <tr><td>Cruz de 5 celdas</td><td>+5</td></tr>
-      </tbody></table>
-      <p>Las líneas pueden ser horizontales, verticales o diagonales. Se cuenta la línea completa; si la alargas, formas una nueva figura mayor.</p>
-      <ul><li><strong>Una ficha puede completar varias figuras.</strong> Sumas los puntos de todas las figuras nuevas, aunque compartan celdas.</li><li><strong>Una figura ya cobrada no se vuelve a cobrar.</strong> Sus fichas sí pueden formar parte de otras figuras nuevas.</li><li><strong>Bonus: +3 por cada tercera figura tuya</strong> (3.ª, 6.ª, 9.ª…). Se cuentan figuras, no turnos: una jugada puede acercarte al bonus o conseguirlo.</li><li>Los puntos se los lleva quien completa la figura y también se añaden a su equipo X/O.</li></ul>
-      <div class="rules-example"><strong>Ejemplo del bonus</strong><p>Completas una línea de 3 y es tu tercera figura: <strong>3 de la línea + 3 de bonus = +6 puntos.</strong></p></div>
-      <div class="rules-example"><strong>Ejemplo de figuras que se solapan</strong><p>Si una ficha completa un cuadrado y tres L nuevas de 3 celdas, sumas <strong>4 + 3 + 3 + 3 = +13 puntos</strong>, más el bonus que te corresponda.</p></div>
-      <div class="rules-example"><strong>Ejemplo en Avanzado</strong><p>Tres fichas en fila y una cuarta bajo la del medio forman una T. Si esa ficha completa dos L nuevas, sumas <strong>3 + 3 + 4 del grupo = +10 puntos</strong>, más el bonus. En Normal, las dos L suman +6 antes del bonus. Al ampliar o unir un grupo, su nueva geometría puede volver a puntuar.</p></div>
-      <p>Las figuras cobradas se iluminan durante medio segundo y el aviso desglosa los puntos de la jugada.</p>
-      <h2 class="heading">Cuándo crece el territorio</h2>
-      <p><strong>Primero hay que ocupar todas las celdas vacías.</strong> Cada figura acumula una ampliación, pero solo puedes colocarla cuando ya no quedan movimientos en vuestro territorio conectado. Si no te quedan ampliaciones, recibes una para continuar.</p>
-      <p>Recibes un 3×3 y puedes solaparlo con terreno existente: añade solo las celdas nuevas y conserva las fichas. No tienes que añadir las nueve celdas. Tienes 30 segundos para colocarla. Si se agotan, se coloca una ampliación válida al azar.</p>
-      <h2 class="heading">Sala y ranking</h2>
-      <p>En un mundo continuo puedes entrar y salir mientras la partida sigue. Si no tienes rival humano, juegas contra la máquina. Puedes entrar con un amigo usando una invitación de pareja. El anfitrión abre y cierra el mundo.</p>
-      <p><strong>Abandonar conserva tus puntos.</strong> Tu rival sigue contra la máquina. Al volver recuperas tu hueco si está libre; si está ocupado, se te busca otro rival en el mundo. En un duelo solo puedes volver si queda un hueco de tu símbolo. Los puntos de la máquina son suyos. Cerrar la pestaña no abandona: tus turnos vencidos se juegan automáticamente.</p><p><strong>Duelo:</strong> 1 contra 1 o equipos X contra O durante 3, 5 o 10 minutos. El reloj arranca al iniciar y, cuando llega a cero, se cierra la partida. Gana X u O por la suma de sus puntos, incluidas las sustituciones por máquina. El ranking conserva tus puntos personales.</p><p>El ranking se pliega al tocarlo. La última jugada del jugador justo por encima de ti queda en azul.</p>
-    </details>
-    <footer>Acceso como invitado. Para volver a tu sala, utiliza este mismo navegador.</footer></div></section>`;
+  app.innerHTML=hallMarkup({name:read('hash3_name')||'',mode:hallMode,lastCode:read('hash3_room')||'',hasLocal:!!savedLocal()});
+  if(hallDialog)renderHallDialog();
   if(localSetup)renderLocalSetup();
   if(roomSetup)renderRoomSetup();
   updateOfflineStatus();
-  document.querySelector('#entry-form').addEventListener('submit',async e=>{
+}
+function closeHallDialog(restoreFocus=true) {
+  hallDialog=hallHistory.pop()||null;document.querySelector('.hall-dialog')?.remove();
+  if(hallDialog){renderHallDialog();return;}
+  if(restoreFocus)document.querySelector(`[data-action="${hallReturnAction}"]`)?.focus();
+}
+function openHallDialog(kind,returnAction='hall-play') {
+  if(hallDialog&&hallDialog!==kind)hallHistory.push(hallDialog);hallReturnAction=returnAction;hallDialog=kind;renderHallDialog();
+}
+function hallDialogFrame(title,body) {
+  return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer"><button data-action="hall-close">Volver</button></div></section></div>`;
+}
+function rankingRows(players) {
+  return `<ol class="hall-ranking-list">${rankedPlayers(players.filter(p=>!p.bot)).map((p,i)=>`<li><span class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</span><span>${escape(p.name)}<small>${p.figures} figuras · ${p.symbol||'—'}</small></span><strong class="mono">${p.score}</strong></li>`).join('')}</ol>`;
+}
+function renderHallDialog() {
+  document.querySelector('.hall-dialog')?.remove();
+  const local=savedLocal();let markup;
+  if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
+  else if(hallDialog==='ranking') {
+    const r=hallRanking;let body='';
+    if(r?.loading)body+='<p role="status">Consultando tu última sala…</p>';
+    if(r?.online)body+=`<h3 class="heading">Sala ${escape(r.online.code)}</h3>${rankingRows(r.online.players)}<button class="small" data-action="return-room" data-code="${escape(r.online.code)}">Volver a esta sala</button>`;
+    if(local)body+=`<h3 class="heading hall-ranking-subtitle">Última partida local</h3>${rankingRows(local.players)}<button class="small" data-action="resume-local">Continuar partida local</button>`;
+    if(r?.error)body+=`<p class="muted">${escape(r.error)}</p>`;
+    if(!r?.loading&&!r?.online&&!local)body+='<p>Todavía no hay resultados en este dispositivo. Juega una partida para consultar su ranking.</p>';
+    body+='<p class="muted">Cada sala tiene su propio ranking por puntos.</p>';markup=hallDialogFrame('Ranking',body);
+  }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local});
+  app.insertAdjacentHTML('beforeend',markup);
+  const form=document.querySelector('#entry-form');
+  form?.addEventListener('submit',async e=>{
     e.preventDefault();if(busy)return;
-    const form=new FormData(e.currentTarget),action=e.submitter?.value||'create';
-    const name=String(form.get('name')).trim(),code=String(form.get('code')).trim().toUpperCase();
+    const values=new FormData(e.currentTarget),action=e.submitter?.value||'create';
+    const name=String(values.get('name')||'').trim(),code=String(values.get('code')||'').trim().toUpperCase();
+    if(name.length<2||name.length>18){notify('El apodo debe tener entre 2 y 18 caracteres.');return;}
     if(action==='join'&&!/^[A-Z0-9]{8}$/.test(code)){notify('Introduce un código de sala de 8 caracteres.');return;}
     save('hash3_name',name);
-    if(action==='create'){roomSetup={name,kind:null,format:'solo',minutes:5,level:'normal'};renderRoomSetup();return;}
-    await run(async()=>{uid=await ensurePlayer();accept(await command('join',{name,code,preference:form.get('preference'),rival:code===urlCode.toUpperCase()?urlRival:undefined}));});
+    if(action==='world'){await run(async()=>{uid=await ensurePlayer();const next=await command('world',{name,preference:values.get('preference')});hallHistory=[];closeHallDialog(false);accept(next);});return;}
+    if(action==='create'){closeHallDialog(false);roomSetup={name,kind:hallMode==='duel'?'duel':'world',format:'solo',minutes:5,level:'normal'};renderRoomSetup();return;}
+    await run(async()=>{uid=await ensurePlayer();const next=await command('join',{name,code,preference:values.get('preference'),rival:code===urlCode.toUpperCase()?urlRival:undefined});closeHallDialog(false);accept(next);});
   });
+  document.querySelector('#profile-form')?.addEventListener('submit',e=>{
+    e.preventDefault();const name=document.querySelector('#profile-name').value.trim();
+    if(name.length<2||name.length>18){notify('El apodo debe tener entre 2 y 18 caracteres.');return;}
+    save('hash3_name',name);closeHallDialog(false);renderHome();document.querySelector('[data-action="hall-profile"]')?.focus();notify('Apodo guardado.');
+  });
+  const dialog=document.querySelector('.hall-dialog');
+  dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
+  (document.querySelector('#name')||document.querySelector('#profile-name')||dialog.querySelector('[data-action="hall-close"]')).focus();
+  updateOfflineStatus();
+}
+async function openHallRanking() {
+  const request=++hallRequest;hallRanking={online:null,loading:!!read('hash3_room')&&navigator.onLine,error:''};
+  openHallDialog('ranking','hall-ranking');
+  const code=read('hash3_room');if(!code)return;
+  if(!navigator.onLine){hallRanking.error='Sin conexión: el ranking de tu sala online estará disponible cuando vuelvas a conectarte.';renderHallDialog();return;}
+  try{uid=await ensurePlayer();const next=await command('get',{code});if(hallDialog!=='ranking'||request!==hallRequest)return;hallRanking.online=next;}
+  catch{if(hallDialog!=='ranking'||request!==hallRequest)return;hallRanking.error='No se ha podido consultar tu última sala. Puedes volver a entrar con su código.';}
+  if(hallDialog==='ranking'&&request===hallRequest){hallRanking.loading=false;renderHallDialog();}
+}
+function playHallMode() {
+  if(hallMode==='solo'){localSetup='solo';renderLocalSetup();}
+  else openHallDialog(hallMode==='offline'?'offline':'online');
 }
 function renderLobby() {
   const finished=room.status==='finished',host=room.host===uid,list=rankedPlayers(humans()),winner=list[0];
@@ -180,7 +212,7 @@ function renderLobby() {
     <p class="instructions">Nivel <strong>${room.level==='advanced'?'Avanzado':'Normal'}</strong> · ${room.level==='advanced'?'Figuras básicas y grupos unidos por los lados.':'Líneas, L, cruces y cuadrados.'} Todas las figuras nuevas suman.</p>
     <ol class="player-list">${(finished?list:players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} / ${p.figures}`:'Listo'}</span></li>`).join('')}</ol>
     ${!finished?`<p class="instructions">${host?duel?'Al iniciar, se sortean parejas y símbolos y arranca el reloj del duelo.':'Al iniciar se sortean las parejas y los símbolos. Quien no tenga rival juega contra la máquina.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?`<p class="instructions">${teams?'Necesitamos un número par de al menos 4 jugadores.':'Necesitamos exactamente 2 jugadores para el duelo.'}</p>`:''}`:''}`:''}
-    <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button>':'<button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
+    <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button>':'<button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host&&!room.commonWorld?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
   renderFinish();renderLeave();
 }
 async function run(operation) {
@@ -192,12 +224,21 @@ async function run(operation) {
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
   const action=b.dataset.action;
-  if(action==='choose-world'||action==='choose-duel'){roomSetup.kind=action==='choose-world'?'world':'duel';renderRoomSetup();return;}
-  if(action==='cancel-room'){roomSetup=null;document.querySelector('.room-dialog')?.remove();return;}
+  if(action==='hall-mode'){
+    if(!hallModes.some(m=>m.id===b.dataset.mode))return;hallMode=b.dataset.mode;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
+  }
+  if(action==='hall-play'){playHallMode();return;}
+  if(action==='hall-close'){closeHallDialog();return;}
+  if(action==='hall-ranking'){await openHallRanking();return;}
+  if(action==='hall-menu'||action==='hall-profile'||action==='hall-help'||action==='hall-offline'){
+    openHallDialog(action.replace('hall-','')==='menu'?'menu':action.replace('hall-','')==='profile'?'profile':action.replace('hall-','')==='help'?'help':'offline',action);return;
+  }
+  if(action==='choose-world' ||action==='choose-duel'){roomSetup.kind=action==='choose-world'?'world':'duel';renderRoomSetup();return;}
+  if(action==='cancel-room'){roomSetup=null;document.querySelector('.room-dialog')?.remove();openHallDialog('online');return;}
   if(action==='create-room'){const setup={...roomSetup};await run(async()=>{uid=await ensurePlayer();const next=await command('create',setup);roomSetup=null;accept(next);});return;}
   if(action==='abandon'){leaveOpen=true;renderLeave();return;}
   if(action==='cancel-leave'){leaveOpen=false;document.querySelector('.leave-dialog')?.remove();return;}
-  if(action==='return-room'){const code=b.dataset.code||room?.code;await run(async()=>{uid=await ensurePlayer();accept(await command('join',{code,name:read('hash3_name')||ownPlayer()?.name||'Jugador'}));});return;}
+  if(action==='return-room'){const code=b.dataset.code||room?.code;await run(async()=>{uid=await ensurePlayer();const next=await command('join',{code,name:read('hash3_name')||ownPlayer()?.name||'Jugador'});closeHallDialog(false);accept(next);});return;}
   if(action==='ranking'){rankOpen=!rankOpen;blinkId=null;render();return;}
   if(action==='center'){const p=ownPair();center(p.active.x+1,p.active.y+1);return;}
   if(action==='locate'){const move=immediateAbove(humans(),uid)?.lastMove;if(move)center(move.x,move.y);return;}
@@ -223,14 +264,14 @@ app.addEventListener('click',async e=>{
   if(action==='cancel-finish'){finishOpen=false;document.querySelector('.dialog-backdrop')?.remove();return;}
   if(action==='confirm-finish'){finishOpen=false;}
   if(action==='select-expansion'){selectedExpansion={x:Number(b.dataset.x),y:Number(b.dataset.y)};render();return;}
-  if(action==='setup-solo'||action==='setup-local'){localSetup=action==='setup-solo'?'solo':'local';renderLocalSetup();return;}
-  if(action==='cancel-local'){localSetup=null;document.querySelector('.dialog-backdrop')?.remove();return;}
+  if(action==='setup-solo'||action==='setup-local'){localReturnDialog=hallDialog;hallHistory=[];closeHallDialog(false);localSetup=action==='setup-solo'?'solo':'local';renderLocalSetup();return;}
+  if(action==='cancel-local'){localSetup=null;document.querySelector('.local-dialog')?.remove();if(localReturnDialog){openHallDialog(localReturnDialog);localReturnDialog=null;}return;}
   if(action==='start-local'){
     const name=document.querySelector('#local-name').value.trim()||'Tú',second=document.querySelector('#second-name')?.value.trim()||'Jugador 2';
-    const level=document.querySelector('#local-level').value;
-    localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('[data-mode]').dataset.mode,name,second,Date.now(),level));return;
+    const level=document.querySelector('#local-level').value;save('hash3_name',name);
+    localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('.local-dialog [data-mode]').dataset.mode,name,second,Date.now(),level));return;
   }
-  if(action==='resume-local'){try{const next=JSON.parse(read('hash3_local'));if(!['solo','local'].includes(next.mode))throw new Error();accept(next);}catch{notify('No se ha podido recuperar la partida local.');}return;}
+  if(action==='resume-local'){closeHallDialog(false);try{const next=JSON.parse(read('hash3_local'));if(!['solo','local'].includes(next.mode))throw new Error();accept(next);}catch{notify('No se ha podido recuperar la partida local.');}return;}
   const payload={code:room.code};
   if(action==='move'||action==='expand'){payload.x=Number(b.dataset.x);payload.y=Number(b.dataset.y);}
   if(action==='move')payload.requestId=crypto.randomUUID();
@@ -245,6 +286,20 @@ app.addEventListener('click',async e=>{
       const ev=next.lastEvent;if(!ev.points&&ev.continuation)notify('No quedan celdas vacías: coloca una ampliación para continuar.');
     }
   });
+});
+document.addEventListener('keydown',e=>{
+  const radio=e.target.closest?.('.hall-modes [role="radio"]');
+  if(radio&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
+    e.preventDefault();const i=hallModes.findIndex(m=>m.id===radio.dataset.mode),step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
+    const next=e.key==='Home'?0:e.key==='End'?hallModes.length-1:(i+step+hallModes.length)%hallModes.length;
+    hallMode=hallModes[next].id;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
+  }
+  if(!hallDialog)return;
+  if(e.key==='Escape'){e.preventDefault();closeHallDialog();return;}
+  if(e.key==='Tab'){
+    const nodes=[...document.querySelectorAll('.hall-dialog button:not(:disabled),.hall-dialog input,.hall-dialog select')];
+    const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+  }
 });
 async function poll() {
   if(!room||isLocal()||room.status==='finished'||polling||busy||document.hidden)return;
@@ -272,10 +327,10 @@ async function init(){
   }catch{/* Continue at the start screen if storage is unavailable. */}
   if(!navigator.onLine||!code||(urlCode&&urlCode.toUpperCase()!==code))return;
   const {data:{session}}=await client.auth.getSession();
-  if(room||localSetup||roomSetup||busy)return;
+  if(room||localSetup||roomSetup||hallDialog||busy)return;
   uid=session?.user.id||null;
   if(uid){
-    try{const next=await command('get',{code});if(!room&&!localSetup&&!roomSetup&&!busy)accept(next);}catch{notify('No se ha podido recuperar la sala. Puedes entrar con su código.');}
+    try{const next=await command('get',{code});if(!room&&!localSetup&&!roomSetup&&!hallDialog&&!busy)accept(next);}catch{notify('No se ha podido recuperar la sala. Puedes entrar con su código.');}
   }
 }
 init().catch(error=>{renderHome();notify('Puedes jugar en los modos locales. '+(error.message||'No se ha podido conectar.'));});
@@ -305,14 +360,14 @@ function levelSelector(id,level='normal') {
 function renderRoomSetup() {
   document.querySelector('.room-dialog')?.remove();
   const setup=roomSetup;
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear sala</h2><div class="room-modes"><button data-action="choose-duel" aria-pressed="${setup.kind==='duel'}"><strong class="heading">Duelo</strong><span>Partida con tiempo</span></button><button data-action="choose-world" aria-pressed="${setup.kind==='world'}"><strong class="heading">Mundo</strong><span>Tablero sin límite de tiempo</span></button></div>${setup.kind==='duel'?`<label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select><label for="duel-minutes">Duración</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>El reloj empieza al iniciar la partida. Al llegar a cero, se cierra el duelo y gana X u O por puntos.</p>`:setup.kind==='world'?'<p>El mundo sigue abierto hasta que el anfitrión lo cierre. Pueden entrar nuevas parejas mientras jugáis. Si te falta rival, juegas contra la máquina.</p>':'<p>Elige qué tipo de sala quieres abrir.</p>'}${setup.kind?levelSelector('room-level',setup.level):''}<div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room" ${!setup.kind?'disabled':''}>${setup.kind==='duel'?'Crear duelo':setup.kind==='world'?'Crear mundo':'Crear sala'}</button></div></section></div>`);
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear sala</h2><div class="room-modes"><button data-action="choose-duel" aria-pressed="${setup.kind==='duel'}"><strong class="heading">Duelo</strong><span>Partida con tiempo</span></button><button data-action="choose-world" aria-pressed="${setup.kind==='world'}"><strong class="heading">Sala libre</strong><span>Partida propia sin reloj final</span></button></div>${setup.kind==='duel'?`<label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select><label for="duel-minutes">Duración</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>El reloj empieza al iniciar la partida. Al llegar a cero, se cierra el duelo y gana X u O por puntos.</p>`:setup.kind==='world'?'<p>La sala sigue abierta hasta que el anfitrión la cierre. No forma parte del Mundo común. Pueden entrar nuevas parejas mientras jugáis. Si te falta rival, juegas contra la máquina.</p>':'<p>Elige qué tipo de sala quieres abrir.</p>'}${setup.kind?levelSelector('room-level',setup.level):''}<div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room" ${!setup.kind?'disabled':''}>${setup.kind==='duel'?'Crear duelo':setup.kind==='world'?'Crear sala libre':'Crear sala'}</button></div></section></div>`);
   document.querySelector('#room-level')?.addEventListener('change',e=>{roomSetup.level=e.target.value;});
   document.querySelector('#duel-format')?.addEventListener('change',e=>{roomSetup.format=e.target.value;});
   document.querySelector('#duel-minutes')?.addEventListener('change',e=>{roomSetup.minutes=Number(e.target.value);});
 }
 function renderReturn() {
   const own=ownPlayer();
-  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL}</span></header><h1 class="heading">${room.status==='lobby'?'La sala te espera':'El mundo sigue'}</h1><p class="instructions">Has abandonado ${escape(room.code)}. Conservas tus ${own.score} puntos y ${own.figures} figuras. Tu antiguo rival puede seguir contra una máquina o contra alguien que haya entrado.</p><button class="primary return-button" data-action="return-room">Volver a la partida</button><p class="instructions">Recuperas tu hueco si sigue libre. Si está ocupado, se te busca otro rival; mientras tanto jugarás contra la máquina.</p><button class="ghost" data-action="home">Ir al inicio</button>${room.host===uid?'<button class="ghost danger" data-action="finish">Cerrar sala para todos</button>':''}</section>`;
+  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL}</span></header><h1 class="heading">${room.status==='lobby'?'La sala te espera':'El mundo sigue'}</h1><p class="instructions">Has abandonado ${escape(room.code)}. Conservas tus ${own.score} puntos y ${own.figures} figuras. Tu antiguo rival puede seguir contra una máquina o contra alguien que haya entrado.</p><button class="primary return-button" data-action="return-room">Volver a la partida</button><p class="instructions">Recuperas tu hueco si sigue libre. Si está ocupado, se te busca otro rival; mientras tanto jugarás contra la máquina.</p><button class="ghost" data-action="home">Ir al inicio</button>${room.host===uid&&!room.commonWorld?'<button class="ghost danger" data-action="finish">Cerrar sala para todos</button>':''}</section>`;
   renderFinish();
 }
 function renderLeave() {
@@ -365,7 +420,7 @@ function updateOfflineStatus() {
   n.textContent=navigator.serviceWorker?.controller?'Preparado para jugar sin conexión.':'Los modos locales no necesitan cobertura durante la partida. Abre esta web una primera vez con internet.';
 }
 startUpdates({
-  canReload:()=>!busy&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
+  canReload:()=>!busy&&!hallDialog&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
   beforeReload:()=>{
     if(isLocal()){save('hash3_local',JSON.stringify(room));try{sessionStorage.setItem('hash3_restore_local','1');}catch{/* The saved game remains available from the start screen. */}}
   },

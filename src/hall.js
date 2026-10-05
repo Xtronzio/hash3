@@ -1,0 +1,91 @@
+const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const hallModes=[
+  {id:'world',label:'Mundo',description:'Un tablero para todos',icon:'world',color:'green'},
+  {id:'duel',label:'Duelo',description:'1 vs 1 o equipos',icon:'duel',color:'red'},
+  {id:'solo',label:'VS máquina',description:'Partida individual',icon:'robot',color:'white'},
+  {id:'offline',label:'Sin conexión',description:'En este dispositivo',icon:'offline',color:'white'}
+];
+const paths={
+  menu:'<path d="M6 8h20M6 16h20M6 24h20"/>',
+  profile:'<circle cx="16" cy="10" r="5"/><path d="M6 27v-3c0-5 4-8 10-8s10 3 10 8v3"/>',
+  world:'<circle cx="16" cy="16" r="12"/><ellipse cx="16" cy="16" rx="5" ry="12"/><path d="M4 16h24M6 10h20M6 22h20"/>',
+  duel:'<path d="m7 4 18 18-4 4L3 8V4h4Zm18 0L7 22l4 4L29 8V4h-4ZM3 23l6 6m-4-2-3 3m21-7 6 6m-2-2 3 3"/>',
+  robot:'<rect x="6" y="10" width="20" height="17" rx="5"/><path d="M16 5v5M3 15v7m26-7v7"/><circle cx="16" cy="4" r="1"/><path d="M12 16v2m8-2v2m-7 5h6"/>',
+  offline:'<path d="M3 10a21 21 0 0 1 22-1M7 15a14 14 0 0 1 13-2M12 20a6 6 0 0 1 5-1M5 28 28 5"/><circle cx="16" cy="26" r="1"/>',
+  ranking:'<path d="M4 27V16h7v11m0 0V6h9v21m0 0V20h8v7H4"/>',
+  inventory:'<rect x="6" y="8" width="20" height="21" rx="4"/><path d="M11 8V5a5 5 0 0 1 10 0v3M6 16h20m-14 6h8M3 16v8m26-8v8"/>',
+  achievements:'<path d="M9 4h14v9a7 7 0 0 1-14 0V4Zm0 3H4v5a6 6 0 0 0 6 6M23 7h5v5a6 6 0 0 1-6 6M16 20v7m-6 1h12"/>',
+  play:'<path d="m12 7 14 9-14 9Z" fill="currentColor" stroke="none"/>',
+  help:'<circle cx="16" cy="16" r="12"/><path d="M12 12a4 4 0 0 1 8 0c0 3-4 3-4 6m0 5v.1"/>'
+};
+export function hallIcon(name){return `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${paths[name]||paths.profile}</svg>`;}
+function boardMark(symbol){return symbol==='X'?'<svg viewBox="0 0 64 64"><path d="M14 14 50 50M50 14 14 50"/></svg>':symbol==='O'?'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="21"/></svg>':'';}
+function hallBoard(){
+  const tiles=[
+    [-4,-2,'X','dim'],[-3,-2,'O','dim'],[-2,-2,'','dim'],[3,-2,'O','dim'],[4,-2,'X','dim'],
+    [-4,-1,'O','dim'],[-3,-1,'','dim'],[-2,-1,'X','dim'],[-1,-1,'O','dim'],[0,-1,'','dim'],[1,-1,'X','dim'],[2,-1,'','dim'],[3,-1,'X','dim'],[4,-1,'O','dim'],
+    [-4,0,'X','dim'],[-3,0,'','dim'],[-2,0,'O','dim'],[-1,0,'X','active x'],[0,0,'O','active o'],[1,0,'','active'],[2,0,'O','dim'],[3,0,'','dim'],[4,0,'X','dim'],
+    [-3,1,'X','dim'],[-2,1,'','dim'],[-1,1,'O','active o'],[0,1,'X','active x'],[1,1,'O','active o'],[2,1,'X','dim'],[3,1,'O','target'],[4,1,'','dim'],
+    [-4,2,'','dim'],[-3,2,'O','dim'],[-2,2,'X','dim'],[-1,2,'','active'],[0,2,'O','active o'],[1,2,'X','active x'],[2,2,'','dim'],[3,2,'X','dim'],
+    [-4,3,'X','dim'],[-3,3,'','dim'],[-2,3,'O','dim'],[0,3,'X','dim'],[1,3,'','dim'],[2,3,'O','dim'],[3,3,'X','dim'],
+    [-2,4,'','dim'],[0,4,'O','dim'],[1,4,'X','dim'],[2,4,'','dim']
+  ];
+  return `<div class="hall-board" aria-hidden="true"><div class="hall-board-cells">${tiles.map(([x,y,symbol,style])=>`<span class="hall-cell ${style}" style="--cx:${x+4};--cy:${y+2}">${boardMark(symbol)}</span>`).join('')}<span class="hall-territory"></span></div></div>`;
+}
+export function hallMarkup({name='',mode='world',lastCode='',hasLocal=false}={}){
+  const selected=hallModes.find(m=>m.id===mode)||hallModes[0];
+  return `<section class="hall" aria-labelledby="hall-title"><header class="hall-header"><button class="hall-icon-button" data-action="hall-menu" aria-label="Abrir menú">${hallIcon('menu')}</button><span class="brand heading hall-brand">#3</span><button class="hall-profile" data-action="hall-profile" aria-label="Perfil y estadísticas">${hallIcon('profile')}<span>${escape(name||'Invitado')}</span></button></header>
+  <div class="hall-main"><h1 id="hall-title" class="sr-only">Elige cómo jugar a #3</h1>${hallBoard()}
+  <button class="hall-play heading" data-action="hall-play" aria-label="Jugar: ${selected.label}">${hallIcon('play')}<span>Jugar</span><small>${selected.label}</small></button>
+  <div class="hall-modes" role="radiogroup" aria-label="Modo de juego">${hallModes.map(m=>`<button class="hall-mode mode-${m.color} ${selected.id===m.id?'is-selected':''}" role="radio" aria-checked="${selected.id===m.id}" tabindex="${selected.id===m.id?'0':'-1'}" data-action="hall-mode" data-mode="${m.id}">${hallIcon(m.icon)}<strong class="heading">${m.label}</strong><span>${m.description}</span></button>`).join('')}</div>
+  <div class="hall-resume">${lastCode?`<button class="ghost small" data-action="return-room" data-code="${escape(lastCode)}">Volver a sala <span class="mono">${escape(lastCode)}</span></button>`:''}${hasLocal?'<button class="ghost small" data-action="resume-local">Continuar partida local</button>':''}</div>
+  <div class="hall-more"><span>Más</span></div><nav class="hall-secondary" aria-label="Más opciones"><button data-action="hall-ranking">${hallIcon('ranking')}<strong class="heading">Ranking</strong><span>Tus partidas</span></button><button disabled>${hallIcon('inventory')}<strong class="heading">Inventario</strong><span>Próximamente</span></button><button disabled>${hallIcon('achievements')}<strong class="heading">Logros</strong><span>Próximamente</span></button></nav>
+  <div class="hall-bottom"><button class="ghost small" data-action="hall-help">${hallIcon('help')}Cómo se juega</button><span id="offline-status" class="sr-only" role="status"></span><span class="hall-guest">Acceso como invitado</span></div></div></section>`;
+}
+export function hallDialogMarkup(kind,{name='',mode='world',code='',friendInvite=false,local=null}={}){
+  const duel=mode==='duel';
+  let title,body;
+  if(kind==='online'){
+    title=duel?'Duelo':'Mundo';
+    body=`<form id="entry-form" class="hall-form"><label for="name">Tu apodo</label><input id="name" name="name" value="${escape(name)}" placeholder="Cómo te llamas" minlength="2" maxlength="18" autocomplete="nickname" required><button class="primary" type="submit" name="intent" value="create">Crear ${duel?'sala':'sala libre'}</button><div class="hall-or"><span>o entra en una sala</span></div><label for="code">Código de sala</label><input id="code" name="code" placeholder="8 CARACTERES" value="${escape(code)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"><label for="preference">Al entrar en un mundo</label><select id="preference" name="preference"><option value="auto">Buscar rival disponible</option><option value="new">Entrar con un amigo · nueva pareja</option></select>${friendInvite?'<p class="instructions">Esta invitación te une a la pareja de quien te la envió.</p>':''}<button type="submit" name="intent" value="join">Entrar en la sala</button></form>`;
+    if(!duel&&!code){body=`<p>Un único tablero común, persistente. Cada pareja juega a su ritmo y contribuye al mismo Mundo.</p><form id="entry-form" class="hall-form"><label for="name">Tu apodo</label><input id="name" name="name" value="${escape(name)}" minlength="2" maxlength="18" required autocomplete="nickname"><label for="preference">Cómo quieres entrar</label><select id="preference" name="preference"><option value="auto">Buscar rival disponible</option><option value="new">Entrar con un amigo</option></select><p>Sin rival humano, juegas contra la máquina. Puedes invitar a tu amigo desde la partida. Nivel común: Normal.</p><button class="primary" type="submit" name="intent" value="world">Entrar en Mundo</button></form>`;}
+  }else if(kind==='offline'){
+    title='Sin conexión';body=`<p>Juega contra la máquina o comparte el dispositivo con otra persona. No necesitas cobertura durante la partida.</p><div class="hall-dialog-options"><button data-action="setup-solo">${hallIcon('robot')}Contra la máquina</button><button data-action="setup-local">${boardMark('X')}Dos en este dispositivo</button>${local?'<button class="ghost" data-action="resume-local">Continuar partida local</button>':''}</div><p id="offline-status" class="muted"></p>`;
+  }else if(kind==='profile'){
+    title='Perfil';body=`<form id="profile-form" class="hall-form"><label for="profile-name">Tu apodo</label><input id="profile-name" value="${escape(name)}" placeholder="Cómo te llamas" minlength="2" maxlength="18" autocomplete="nickname" required><p>Tu identidad de invitado se guarda en este navegador. El apodo se usará al crear o entrar en una sala nueva.</p><button type="submit" class="primary">Guardar apodo</button></form>${local?`<div class="hall-stat"><span>Última partida local · ${local.level==='advanced'?'Avanzado':'Normal'}</span><strong>${escape(local.players?.[0]?.score??0)} <small>puntos de X</small></strong><span>${escape(local.players?.[0]?.figures??0)} figuras</span></div>`:''}`;
+  }else{
+    title='Menú';body=`<div class="hall-dialog-options"><button data-action="hall-profile">${hallIcon('profile')}Perfil</button><button data-action="hall-ranking">${hallIcon('ranking')}Ranking de tus partidas</button><button data-action="hall-help">${hallIcon('help')}Cómo se juega</button></div>`;
+  }
+  return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer"><button data-action="hall-close">Volver</button></div></section></div>`;
+}
+
+export const rulesMarkup=`<div class="rules hall-rules">
+      <h2 class="heading">Elige cómo jugar</h2><p><strong>Mundo:</strong> entra en el tablero común, sin final por tiempo. <strong>Duelo:</strong> crea o entra en una sala para competir durante un tiempo fijo. <strong>VS máquina:</strong> juega solo. <strong>Sin conexión:</strong> juega contra la máquina o con alguien pasando el mismo dispositivo. Carga la web con internet una primera vez y espera a que esté preparada para el uso sin conexión.</p>
+<h2 class="heading">Colores y orientación</h2><p><span class="rule-x">X roja</span> y <span class="rule-o">O verde</span> son los dos equipos. Para formar una figura importa el símbolo, incluso cuando una ficha se ve azul. <span class="rule-blue">Azul</span> señala la última jugada de quien está justo por encima de ti en el ranking: parpadea y luego queda marcada. El líder aparece en oro en el ranking.</p><p>El botón de tu zona te lleva a tu territorio activo. Usa + y − para acercar o alejar el tablero, y la referencia del rival superior para localizar su última jugada.</p>
+<h2 class="heading">Tu turno</h2>
+      <p>Coloca una ficha en cualquier celda vacía de vuestro territorio conectado, también en las zonas anteriores. Alternas turnos con tu rival.</p>
+      <p>Tienes <strong>30 segundos</strong>. Si no mueves, se coloca tu ficha en una celda vacía al azar.</p>
+      <h2 class="heading">Cómo sumas puntos</h2>
+      <p><strong>Cada figura vale tantos puntos como celdas tiene.</strong> Todas sus fichas deben ser del mismo símbolo: X o bien O. Cuentan todas las orientaciones y también las fichas de tus compañeros con tu símbolo.</p>
+      <p><strong>Normal:</strong> puntúan las figuras de esta tabla. <strong>Avanzado:</strong> además puntúa el grupo completo unido por los lados que contiene tu ficha nueva, cuando tiene al menos 4 celdas y una forma distinta de las básicas. Las diagonales no unen el grupo. Si el grupo es exactamente una línea, L, cuadrado o cruz, no se añade otra puntuación por grupo.</p>
+<div class="rule-figures"><figure><div class="rule-grid"><span class="rule-x">X</span><span class="rule-x">X</span><span class="rule-x">X</span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div><figcaption>Línea · +3</figcaption></figure><figure><div class="rule-grid"><span class="rule-x">X</span><span class=""></span><span class=""></span><span class="rule-x">X</span><span class="rule-x">X</span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div><figcaption>L · +3</figcaption></figure><figure><div class="rule-grid"><span class="rule-o">O</span><span class="rule-o">O</span><span class=""></span><span class="rule-o">O</span><span class="rule-o">O</span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div><figcaption>Cuadrado · +4</figcaption></figure><figure><div class="rule-grid"><span class=""></span><span class="rule-x">X</span><span class=""></span><span class="rule-x">X</span><span class="rule-x">X</span><span class="rule-x">X</span><span class=""></span><span class="rule-x">X</span><span class=""></span></div><figcaption>Cruz · +5</figcaption></figure></div>
+      <table><thead><tr><th scope="col">Figura</th><th scope="col">Puntos</th></tr></thead><tbody>
+        <tr><td>Línea de 3, 4, 5…</td><td>+3, +4, +5…</td></tr>
+        <tr><td>L de 3 celdas</td><td>+3</td></tr>
+        <tr><td>L de 4 celdas</td><td>+4</td></tr>
+        <tr><td>Cuadrado 2×2</td><td>+4</td></tr>
+        <tr><td>Cruz de 5 celdas</td><td>+5</td></tr>
+      </tbody></table>
+      <p>Las líneas pueden ser horizontales, verticales o diagonales. Se cuenta la línea completa; si la alargas, formas una nueva figura mayor.</p>
+      <ul><li><strong>Una ficha puede completar varias figuras.</strong> Sumas los puntos de todas las figuras nuevas, aunque compartan celdas.</li><li><strong>Una figura ya cobrada no se vuelve a cobrar.</strong> Sus fichas sí pueden formar parte de otras figuras nuevas.</li><li><strong>Bonus: +3 por cada tercera figura tuya</strong> (3.ª, 6.ª, 9.ª…). Se cuentan figuras, no turnos: una jugada puede acercarte al bonus o conseguirlo.</li><li>Los puntos se los lleva quien completa la figura y también se añaden a su equipo X/O.</li></ul>
+      <div class="rules-example"><strong>Ejemplo del bonus</strong><p>Completas una línea de 3 y es tu tercera figura: <strong>3 de la línea + 3 de bonus = +6 puntos.</strong></p></div>
+      <div class="rules-example"><strong>Ejemplo de figuras que se solapan</strong><p>Si una ficha completa un cuadrado y tres L nuevas de 3 celdas, sumas <strong>4 + 3 + 3 + 3 = +13 puntos</strong>, más el bonus que te corresponda.</p></div>
+      <div class="rules-example"><strong>Ejemplo en Avanzado</strong><p>Tres fichas en fila y una cuarta bajo la del medio forman una T. Si esa ficha completa dos L nuevas, sumas <strong>3 + 3 + 4 del grupo = +10 puntos</strong>, más el bonus. En Normal, las dos L suman +6 antes del bonus. Al ampliar o unir un grupo, su nueva geometría puede volver a puntuar.</p></div>
+      <p>Las figuras cobradas se iluminan durante medio segundo y el aviso desglosa los puntos de la jugada.</p>
+      <h2 class="heading">Cuándo crece el territorio</h2>
+      <p><strong>Primero hay que ocupar todas las celdas vacías.</strong> Cada figura acumula una ampliación, pero solo puedes colocarla cuando ya no quedan movimientos en vuestro territorio conectado. Si no te quedan ampliaciones, recibes una para continuar.</p>
+      <p>Recibes un 3×3 y puedes solaparlo con terreno existente: añade solo las celdas nuevas y conserva las fichas. No tienes que añadir las nueve celdas. Tienes 30 segundos para colocarla. Si se agotan, se coloca una ampliación válida al azar.</p>
+      <h2 class="heading">Sala y ranking</h2>
+      <p>En un mundo continuo puedes entrar y salir mientras la partida sigue. Si no tienes rival humano, juegas contra la máquina. Puedes entrar con un amigo usando una invitación de pareja. Mundo es un único tablero común: nadie lo crea ni lo cierra desde el juego. Todas las parejas contribuyen a él. Las salas de duelo son partidas independientes.</p>
+      <p><strong>Abandonar conserva tus puntos.</strong> Tu rival sigue contra la máquina. Al volver recuperas tu hueco si está libre; si está ocupado, se te busca otro rival en el mundo. En un duelo solo puedes volver si queda un hueco de tu símbolo. Los puntos de la máquina son suyos. Cerrar la pestaña no abandona: tus turnos vencidos se juegan automáticamente.</p><p><strong>Duelo:</strong> 1 contra 1 o equipos X contra O durante 3, 5 o 10 minutos. El reloj arranca al iniciar y, cuando llega a cero, se cierra la partida. Gana X u O por la suma de sus puntos, incluidas las sustituciones por máquina. El ranking conserva tus puntos personales.</p><p>El ranking se pliega al tocarlo. La última jugada del jugador justo por encima de ti queda en azul.</p>
+    </div>`;
