@@ -113,10 +113,10 @@
 .hall-dialog h2,.hall-dialog h3{color:#e3e5e9}
 
 /* Mode colors match the board symbols; labels stay white. */
-.hall .mode-green{--mode-color:var(--green)}
-.hall .mode-red{--mode-color:var(--red)}
-.hall .mode-cyan{--mode-color:#00e5ff}
-.hall .mode-silver{--mode-color:#c9ced8}
+.hall .mode-green,.game-mode-dialog.mode-green{--mode-color:var(--green)}
+.hall .mode-red,.game-mode-dialog.mode-red{--mode-color:var(--red)}
+.hall .mode-cyan,.game-mode-dialog.mode-cyan{--mode-color:#00e5ff}
+.hall .mode-silver,.game-mode-dialog.mode-silver{--mode-color:#c9ced8}
 .hall .hall-mode strong,.hall .hall-mode.is-selected strong{color:#f2f3f4}
 .hall .hall-mode:hover,.hall .hall-mode:active,.hall .hall-mode:focus-visible{border-color:var(--mode-color);background:color-mix(in srgb,var(--mode-color) 6%,#08090b)}
 .hall .hall-play{--mode-color:#f2f3f4;border-left-width:1px;border-color:var(--mode-color);background:#101114}
@@ -128,3 +128,8 @@
 .hall .hall-play small{color:var(--mode-color)}
 .hall .hall-play:hover,.hall .hall-play:active,.hall .hall-play:focus-visible{border-color:var(--mode-color);box-shadow:inset 0 0 0 2px var(--mode-color);background:color-mix(in srgb,var(--mode-color) 7%,#101114)}
 .hall .hall-secondary button:not(:disabled):hover,.hall .hall-secondary button:not(:disabled):active,.hall .hall-secondary button:not(:disabled):focus-visible,.hall .hall-icon-button:hover,.hall .hall-icon-button:active{border-color:#f2f3f4}
+
+.game-mode-dialog{border:1px solid var(--mode-color)}
+.game-mode-dialog input:focus-visible,.game-mode-dialog select:focus-visible,.game-mode-dialog button:focus-visible{outline-color:var(--mode-color)}
+.dialog .setup-identity{margin:0 0 16px;color:#b4b8c0}
+.dialog .setup-identity strong{color:#f2f3f4;overflow-wrap:anywhere}

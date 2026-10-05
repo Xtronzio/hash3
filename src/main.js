@@ -9,7 +9,7 @@ import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
 import './sessions.css';
 import './mobile-game.css';
 import {inventoryMarkup,usePracticeHint} from './inventory.js';
-import {hallModes,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
+import {hallModes,hallModeClass,hallNameField,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells} from './game.js';
 
@@ -212,7 +212,7 @@ function renderHallDialog() {
   });
   const dialog=document.querySelector('.hall-dialog');
   dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
-  (document.querySelector('#name')||document.querySelector('#profile-name')||dialog.querySelector('[data-action="hall-close"]')).focus();
+  (document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]')).focus();
   updateOfflineStatus();renderDeleteGame();
 }
 function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}}
@@ -367,7 +367,8 @@ app.addEventListener('click',async e=>{
   if(action==='setup-solo'||action==='setup-local'){localReturnDialog=hallDialog;hallHistory=[];closeHallDialog(false);localSetup=action==='setup-solo'?'solo':'local';renderLocalSetup();return;}
   if(action==='cancel-local'){localSetup=null;document.querySelector('.local-dialog')?.remove();if(localReturnDialog){openHallDialog(localReturnDialog);localReturnDialog=null;}return;}
   if(action==='start-local'){
-    const name=document.querySelector('#local-name').value.trim()||'Tú',second=document.querySelector('#second-name')?.value.trim()||'Jugador 2';
+    const name=document.querySelector('#local-name').value.trim(),second=document.querySelector('#second-name')?.value.trim()||'Jugador 2';
+    if(name.length<2||name.length>18){notify('El apodo debe tener entre 2 y 18 caracteres.');document.querySelector('#local-name').focus();return;}
     const level=document.querySelector('#local-level').value,timeMode=document.querySelector('#local-time-mode').value;save('hash3_name',name);
     localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('.local-dialog [data-mode]').dataset.mode,name,second,Date.now(),level,timeMode));return;
   }
@@ -459,7 +460,7 @@ function levelSelector(id,level='normal') {
 }
 function renderRoomSetup(){
  document.querySelector('.room-dialog')?.remove();const setup=roomSetup;
- app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>30 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
+ app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog game-mode-dialog ${hallModeClass(setup.kind)}" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>30 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
  document.querySelector('#room-level').addEventListener('change',e=>{roomSetup.level=e.target.value;});
  document.querySelector('#duel-format').addEventListener('change',e=>{roomSetup.format=e.target.value;});
  document.querySelector('#duel-minutes')?.addEventListener('change',e=>{roomSetup.minutes=Number(e.target.value);});
@@ -493,8 +494,8 @@ function renderFinish() {
 }
 function renderLocalSetup() {
   document.querySelector('.local-dialog')?.remove();
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2><label for="local-name">${localSetup==='solo'?'Tu apodo':'Jugador X'}</label><input id="local-name" value="${escape(read('hash3_name')||'')}" placeholder="${localSetup==='solo'?'Tú':'Jugador 1'}" maxlength="18">${localSetup==='local'?'<label for="second-name">Jugador O</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}${timeModeSelector('local-time-mode')}<p>${localSetup==='solo'?'Juegas con X. La máquina juega con O.':'Pasad el dispositivo después de cada turno.'} Con reloj tenéis 30 segundos por turno. Sin reloj podéis mover cuando queráis. Puedes pausar y guardar varias partidas.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
-  document.querySelector('#local-name').focus();
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog game-mode-dialog ${hallModeClass(hallMode==='offline'?'offline':'solo')}" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2>${hallNameField(read('hash3_name'),{id:'local-name',label:localSetup==='solo'?'Tu apodo':'Jugador X',placeholder:localSetup==='solo'?'Tú':'Jugador 1'})}${localSetup==='local'?'<label for="second-name">Jugador O</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}${timeModeSelector('local-time-mode')}<p>${localSetup==='solo'?'Juegas con X. La máquina juega con O.':'Pasad el dispositivo después de cada turno.'} Con reloj tenéis 30 segundos por turno. Sin reloj podéis mover cuando queráis. Puedes pausar y guardar varias partidas.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
+  (document.querySelector('#local-name:not([type="hidden"])')||document.querySelector('#second-name')||document.querySelector('#local-level')).focus();
 }
 function updateTimer() {
   if(!room||room.status!=='playing')return;
