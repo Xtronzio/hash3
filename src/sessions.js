@@ -1,8 +1,8 @@
 import {localCommand} from './local.js';
 const valid=g=>g&&typeof g.id==='string'&&['solo','local'].includes(g.mode)&&Array.isArray(g.players)&&Array.isArray(g.pairs)&&['playing','paused','finished'].includes(g.status);
 export function loadLocalGames(storage,now=Date.now()){
-  let games=[];try{const list=JSON.parse(storage.getItem('hash3_locals'));if(Array.isArray(list))games=list.filter(valid);}catch{}
-  try{const old=JSON.parse(storage.getItem('hash3_local'));if(valid(old)&&!games.some(g=>g.id===old.id)){
+  let games=[],canonical=false;try{const list=JSON.parse(storage.getItem('hash3_locals'));if(Array.isArray(list)){games=list.filter(valid);canonical=true;}}catch{}
+  try{const old=JSON.parse(storage.getItem('hash3_local'));if(!canonical&&valid(old)&&!games.some(g=>g.id===old.id)){
     // Existing single saves become paused; no elapsed offline moves are replayed.
     let imported={...old,updatedAt:old.updatedAt||new Date(now).toISOString()};
     if(imported.status==='playing'){const at=Date.parse(imported.updatedAt);imported=localCommand(imported,'pause',{},Number.isFinite(at)&&old.updatedAt?at:Date.parse(imported.pairs[0].deadline)-30000||now);}
@@ -23,4 +23,13 @@ export function selectExpansion(selected,point){return selected&&selected.x===po
 export function voteCounts(vote){
  const total=vote?.eligible?.length||0,values=Object.values(vote?.votes||{});
  return {total,required:Math.floor(total/2)+1,yes:values.filter(x=>x===true).length,no:values.filter(x=>x===false).length};
+}
+
+export function deleteLocalGame(storage,gameId){
+ const games=loadLocalGames(storage);if(!games.some(g=>g.id===gameId))throw new Error('Esta partida ya no está guardada.');
+ const remaining=games.filter(g=>g.id!==gameId);
+ storage.setItem('hash3_locals',JSON.stringify(remaining));
+ // The collection is authoritative; a failed legacy pointer write cannot resurrect a save.
+ try{const old=JSON.parse(storage.getItem('hash3_local'));if(old?.id===gameId)storage.setItem('hash3_local',JSON.stringify(remaining[0]||null));}catch{}
+ return remaining;
 }

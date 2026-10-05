@@ -1,6 +1,16 @@
-# #3 — R0.11
+# #3 — R0.12
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
+
+## Borrado, salida de Mundo e inventario de práctica · R0.12
+
+Cada entrada de Mis partidas tiene papelera y confirmación. Los guardados locales se borran de este navegador; la colección es la fuente principal para impedir que el antiguo guardado único reaparezca después de borrar. Las salas online se quitan solo de la lista del invitado: si sigue activo, también sale usando la misma lógica de abandono existente. No se borra la sala compartida, su resultado ni el #MAX oficial de Mundo. Abrir de nuevo una sala por su código o volver a Mundo recupera la entrada en Mis partidas. El servidor comprueba pertenencia y limita el cambio al usuario autenticado.
+
+Mundo muestra **Salir de Mundo** en la botonera inferior. Conserva puntos, figuras y territorio; la plaza queda disponible y la sala continúa.
+
+Inventario está disponible desde el hall y dentro de las partidas locales. Su primera herramienta es **Ayuda**, gratuita y sin límite para practicar contra la máquina o con dos jugadores en el mismo dispositivo. Analiza puntuación inmediata y bloqueo del rival, resalta en amarillo un punto vacío legal y no coloca fichas. Solo funciona en el propio turno, con la partida en marcha y sin ampliación pendiente. No modifica turno, plazo ni puntuación; registra usos por jugador y conserva la sugerencia al guardar. Cualquier jugada o ampliación elimina la sugerencia. El #MAX mostrado sigue siendo de referencia y la partida indica si se han usado ayudas. El inventario online y otras herramientas todavía no están activos.
+
+`supabase/session-removal.sql` añade visibilidad personal de salas. `tests/session-removal.sql` comprueba retirada, reentrada, permisos y conservación de resultados dentro de una transacción revertida. `tests/inventory.test.js` comprueba sugerencias legales, relojes, restricciones y borrado sin resurrección del guardado anterior.
 
 ## Partidas, pausas y turnos sin reloj · R0.11
 

@@ -20,7 +20,7 @@ function normalize(room,now) {
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
   const room=structuredClone(original),p=room.pairs[0];
-  if(action==='finish'){room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
+  if(action==='finish'){delete room.practiceHint;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
     if(room.status!=='playing')throw new Error('La partida no está en curso.');
@@ -67,7 +67,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     room.blocks.push({x,y});p.active={x,y};p.credits--;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
   }else throw new Error('Acción desconocida.');
-  normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
+  delete room.practiceHint;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
 }
 export function machineChoice(room,random=Math.random) {
   const p=room.pairs[0];
