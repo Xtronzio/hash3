@@ -116,7 +116,8 @@ function drawBoard(canExpand,ready,target) {
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
   const all=[...terrain,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2}))];
   const minX=Math.min(...all.map(c=>c.x)),minY=Math.min(...all.map(c=>c.y)),maxX=Math.max(...all.map(c=>c.x)),maxY=Math.max(...all.map(c=>c.y));
-  const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,innerWidth*.12);Object.assign(layout,{minX,minY,size,padding});
+  const viewport=document.querySelector('.viewport');
+  const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,viewport.clientWidth/2,viewport.clientHeight/2);Object.assign(layout,{minX,minY,size,padding});
   const board=document.querySelector('.board');
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(connectedTerrain(terrain,pair.active).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
