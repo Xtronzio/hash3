@@ -3,6 +3,9 @@ import './hall.css';
 import './board.css';
 import {bindMap} from './map.js';
 import {maxLabel} from './max.js';
+import {loadLocalGames,saveLocalGame,selectExpansion} from './sessions.js';
+import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
+import './sessions.css';
 import {hallModes,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells} from './game.js';
@@ -21,7 +24,8 @@ let room = null, uid = null, busy = false, polling = false, rankOpen = false, zo
 let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null;
 let figureEffect=null,figureTimer,scoreFloatTimer;
 let hallHistory=[],localReturnDialog=null;
-let hallMode='world',hallDialog=null,hallReturnAction='hall-play',hallRanking=null,hallRequest=0;
+const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+let hallMode='world',hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
 const urlRival = new URL(location.href).searchParams.get('rival') || '';
@@ -46,7 +50,8 @@ function accept(next) {
   const feedback=scoreFeedback(room,next);
   const changed = room?.id!==next.id;
   if(changed){worldMapOpen=false;gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
-  room=next;if(isLocal()){uid=localUid();save('hash3_local',JSON.stringify(room));}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
+  if(next.mode)next=persistLocal(next);
+  room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
   const target=above(), targetId=target?.lastMove?.id;
   if(!changed&&targetId&&targetId!==previousTarget)blinkId=targetId;
   else blinkId=null;
@@ -62,6 +67,7 @@ function render() {
   if(!room){renderHome();return;}
   if(!isLocal()&&ownPlayer()?.active===false&&room.status!=='finished'){renderReturn();return;}
   if(room.status==='lobby'||room.status==='finished'){renderLobby();return;}
+  if(room.status==='paused'){renderPaused();return;}
   if(isLocal())uid=localUid();
   const own=ownPlayer(), pair=ownPair(), target=above(), list=gameRank();
   const opponent=room.players.find(p=>p.id===(own.symbol==='X'?pair.o:pair.x));
@@ -75,13 +81,13 @@ function render() {
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
   app.innerHTML=`<section class="game">
     <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${modeLabel}</div><span class="muted">${room.level==='advanced'?'Avanzado':'Normal'} · ${escape(own.name)} · ${own.symbol}</span></div></div><button class="game-menu-toggle" data-action="game-menu" aria-label="Opciones de partida">⋯</button></header>
-    <div class="workspace"><aside class="ranking"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}"><span>RANKING ${room.commonWorld?'MUNDO':''} <span class="muted">${room.commonWorld?'':'· #MAX de referencia'}</span></span><span>${rankOpen?'Plegar −':'Ver todos +'}</span></button><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div>${rankOpen?`<ol class="ranking-list rank-extra">${rankRows(others)}</ol>`:''}<ol class="ranking-list rank-pinned">${rankRows(pinned)}</ol><div class="max-note">${own.max?.value==null?'#MAX se calcula desde tu próxima jugada.':own.max.provisional?`Tu #MAX es provisional · ${own.max.actions}/100 acciones`:'#MAX · últimas 100 acciones'}</div></aside>
-    <div class="arena"><div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando duelista':''}</p>${room.kind==='duel'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+own.symbol:'ESPERANDO'}</div></div>
+    <div class="workspace"><aside class="ranking"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}"><span>${room.commonWorld?'RANKING MUNDO':'MARCADOR'} <span class="muted">${room.commonWorld?'':'· #MAX de referencia'}</span></span><span>${rankOpen?'Plegar −':'Ver todos +'}</span></button><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div>${rankOpen?`<ol class="ranking-list rank-extra">${rankRows(others)}</ol>`:''}<ol class="ranking-list rank-pinned">${rankRows(pinned)}</ol><div class="max-note">${own.max?.value==null?'#MAX se calcula desde tu próxima jugada.':own.max.provisional?`Tu #MAX es provisional · ${own.max.actions}/100 acciones`:'#MAX · últimas 100 acciones'}</div></aside>
+    <div class="arena">${voteMarkup(room.vote,uid)}<div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando duelista':''}${room.timeMode==='untimed'?' · sin reloj':''}</p>${room.kind==='duel'&&room.timeMode!=='untimed'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+own.symbol:'ESPERANDO'}</div></div>
     ${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
     <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general"><svg aria-hidden="true"></svg></button><div class="world-map" ${worldMapOpen?'':'hidden'}><div class="map-heading"><span>MAPA GENERAL</span><button data-action="close-map" aria-label="Cerrar mapa">×</button></div><svg role="img" aria-label="Toca una zona para desplazarte"></svg><div class="map-legend"><span class="${own.symbol.toLowerCase()}">● Tú</span><span class="blue">● Rival superior</span><span>□ Vista actual</span></div></div></div>
     <div class="controls"><button class="zoom" data-action="minus" aria-label="Alejar tablero">−</button><button class="zoom" data-action="plus" aria-label="Acercar tablero">+</button><button class="zoom-label" data-action="zoom-level">ZOOM ${zoom<.75?'LEJANO':zoom>1.3?'CERCANO':'MEDIO'} · ${Math.round(zoom*100)}%</button></div><div class="jump-controls"><button data-action="center">${navIcon('center')}MI TERRITORIO</button><button class="blue" data-action="locate" ${target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair))?'':'disabled'}>${navIcon('above')}RIVAL SUPERIOR</button></div>
-    <section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><div><strong>${totals.X.toLocaleString('es-ES')}</strong><small>PUNTOS</small></div></div><span class="score-center">${modeLabel}</span><div class="score-side o"><span class="score-symbol">O</span><div><strong>${totals.O.toLocaleString('es-ES')}</strong><small>PUNTOS</small></div></div></section><div class="game-bottom"><span class="connection">${isLocal()?'En este dispositivo':connected?'Conectado':'Reconectando…'}</span><span>${3-(own.figures%3)} figuras → bonus +3</span><button class="danger" data-action="abandon">Abandonar</button></div></div></div>
-    <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="share">Compartir acceso</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="close-game-menu">Volver a la partida</button></section></div>
+    <section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><div><strong>${totals.X.toLocaleString('es-ES')}</strong><small>PUNTOS</small></div></div><span class="score-center">${modeLabel}</span><div class="score-side o"><span class="score-symbol">O</span><div><strong>${totals.O.toLocaleString('es-ES')}</strong><small>PUNTOS</small></div></div></section><div class="game-bottom"><span class="connection">${isLocal()?'En este dispositivo':connected?'Conectado':'Reconectando…'}</span><span>${3-(own.figures%3)} figuras → bonus +3</span>${!room.commonWorld?`<button data-action="pause">${isLocal()?'Pausar':'Solicitar pausa'}</button>`:''}<button data-action="go-games">Mis partidas</button></div></div></div>
+    <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="share">Compartir acceso</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="go-games">Mis partidas</button><button class="danger" data-action="abandon">Abandonar</button><button data-action="close-game-menu">Volver a la partida</button></section></div>
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();updateTimer();
   const nowKey=key(pair.active.x,pair.active.y);
@@ -117,7 +123,7 @@ function drawBoard(canExpand,ready,target) {
     const glowing=figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y));
     const glowStyle=glowing?`--figure-color:${figureEffect.symbol==='X'?'var(--red)':'var(--green)'};--figure-duration:${Math.max(1,figureEffect.until-performance.now())}ms;`:'';
     const label=select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}`;
-    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${select?'select-expansion':'move'}" data-x="${x}" data-y="${y}" ${select?'':(!active||!ready||c?'disabled':'')} aria-label="${escape(label)}">${c?mark(c.symbol):''}</button>`;
+    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${active&&ready&&!c?'available':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${select?'select-expansion':active&&ready&&!c?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${select?'':!ready?'disabled':''} aria-disabled="${!select&&(!active||!ready||!!c)}" aria-label="${escape(label)}">${c?mark(c.symbol):''}</button>`;
   }).join('')+choices.filter(c=>!known.has(key(c.x,c.y))).map(c=>`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`).join('');
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
@@ -142,9 +148,7 @@ function changeMapZoom(value,inGesture=false){
  if(inGesture){const p=ownPair(),o=ownPlayer(),ready=!p.pending&&p.turn===o.symbol&&!(room.mode==='solo'&&p.turn==='O');drawBoard(p.pending&&p.expander===uid,ready,above());center(x,y);const n=document.querySelector('.zoom-label');if(n)n.textContent='ZOOM · '+Math.round(zoom*100)+'%';}
  else{render();center(x,y);}
 }
-function savedLocal() {
-  try{const saved=JSON.parse(read('hash3_local'));return saved&&['solo','local'].includes(saved.mode)&&Array.isArray(saved.players)?saved:null;}catch{return null;}
-}
+function savedLocal(){return localGames()[0]||null;}
 function renderHome() {
   app.innerHTML=hallMarkup({name:read('hash3_name')||'',mode:hallMode,lastCode:read('hash3_room')||'',hasLocal:!!savedLocal()});
   if(hallDialog)renderHallDialog();
@@ -170,16 +174,12 @@ function renderHallDialog() {
   document.querySelector('.hall-dialog')?.remove();
   const local=savedLocal();let markup;
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
-  else if(hallDialog==='ranking') {
-    const r=hallRanking;let body='';
-    if(r?.loading)body+='<p role="status">Consultando tu última sala…</p>';
-    if(r?.online)body+=`<h3 class="heading">Sala ${escape(r.online.code)}</h3>${rankingRows(r.online.players,!!r.online.commonWorld)}<button class="small" data-action="return-room" data-code="${escape(r.online.code)}">Volver a esta sala</button>`;
-    if(local)body+=`<h3 class="heading hall-ranking-subtitle">Última partida local</h3>${rankingRows(local.players)}<button class="small" data-action="resume-local">Continuar partida local</button>`;
-    if(r?.error)body+=`<p class="muted">${escape(r.error)}</p>`;
-    if(!r?.loading&&!r?.online&&!local)body+='<p>Todavía no hay resultados en este dispositivo. Juega una partida para consultar su ranking.</p>';
-    body+='<p class="muted">Mundo se ordena por #MAX. En otras partidas, el ranking se ordena por puntos.</p>';markup=hallDialogFrame('Ranking',body);
+  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking de Mundo',worldRankMarkup(hallRanking,uid));
+  }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames()}));
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local});
   app.insertAdjacentHTML('beforeend',markup);
+  document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
+  document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
   const form=document.querySelector('#entry-form');
   form?.addEventListener('submit',async e=>{
     e.preventDefault();if(busy)return;
@@ -190,7 +190,7 @@ function renderHallDialog() {
     save('hash3_name',name);
     if(action==='world'&&values.get('preference')!=='auto'){const intent=values.get('preference')==='pair'?'pair_join':'pair_create',pairCode=String(values.get('pairCode')||'').trim().toUpperCase();if(intent==='pair_join'&&!/^[A-Z0-9]{8}$/.test(pairCode)){notify('Introduce el código de pareja.');return;}await run(async()=>{uid=await ensurePlayer();acceptPair(await command(intent,{name,code:pairCode}));});return;}
     if(action==='world'){await run(async()=>{uid=await ensurePlayer();const next=await command('world',{name,preference:values.get('preference')});hallHistory=[];closeHallDialog(false);accept(next);});return;}
-    if(action==='create'){closeHallDialog(false);roomSetup={name,kind:hallMode==='duel'?'duel':'world',format:'solo',minutes:5,level:'normal'};renderRoomSetup();return;}
+    if(action==='create'){closeHallDialog(false);roomSetup={name,kind:'duel',format:'solo',minutes:5,level:'normal',timeMode:'timed'};renderRoomSetup();return;}
     await run(async()=>{uid=await ensurePlayer();const next=await command('join',{name,code,preference:values.get('preference'),rival:code===urlCode.toUpperCase()?urlRival:undefined});closeHallDialog(false);accept(next);});
   });
   const preference=document.querySelector('#preference'),pairField=document.querySelector('#pair-code-field');
@@ -205,15 +205,48 @@ function renderHallDialog() {
   (document.querySelector('#name')||document.querySelector('#profile-name')||dialog.querySelector('[data-action="hall-close"]')).focus();
   updateOfflineStatus();
 }
-async function openHallRanking() {
-  const request=++hallRequest;hallRanking={online:null,loading:!!read('hash3_room')&&navigator.onLine,error:''};
-  openHallDialog('ranking','hall-ranking');
-  const code=read('hash3_room');if(!code)return;
-  if(!navigator.onLine){hallRanking.error='Sin conexión: el ranking de tu sala online estará disponible cuando vuelvas a conectarte.';renderHallDialog();return;}
-  try{uid=await ensurePlayer();const next=await command('get',{code});if(hallDialog!=='ranking'||request!==hallRequest)return;hallRanking.online=next;}
-  catch{if(hallDialog!=='ranking'||request!==hallRequest)return;hallRanking.error='No se ha podido consultar tu última sala. Puedes volver a entrar con su código.';}
-  if(hallDialog==='ranking'&&request===hallRequest){hallRanking.loading=false;renderHallDialog();}
+function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}}
+function persistLocal(next){
+ try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
+function clearGameView(){clearTimeout(machineTimer);room=null;gameMenuOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+async function goToGames(){
+ if(isLocal()&&room.status==='playing')accept(localCommand(room,'pause'));
+ const timed=room&&!isLocal()&&room.status==='playing'&&room.timeMode!=='untimed';
+ clearGameView();hallDialog=null;hallHistory=[];renderHome();await openMyGames();
+ if(timed)notify('La sala sigue jugando. En Mundo no hay pausa; en Duelo puedes solicitarla por votación.');
+}
+async function openMyGames(){
+ const request=++gamesRequest;myGames={online:[],loading:navigator.onLine,error:''};
+ openHallDialog('games','hall-games');
+ if(!navigator.onLine){myGames.error='Sin conexión: puedes abrir tus partidas locales. Las salas online se mostrarán al reconectar.';renderHallDialog();return;}
+ try{uid=await ensurePlayer();const next=await command('my_games');if(hallDialog!=='games'||request!==gamesRequest)return;myGames.online=next.games;}
+ catch(error){if(hallDialog!=='games'||request!==gamesRequest)return;myGames.error=error.message||'No se han podido consultar tus salas.';}
+ if(hallDialog==='games'&&request===gamesRequest){myGames.loading=false;renderHallDialog();}
+}
+async function refreshWorldRank(){
+ const request=++rankRequest;hallRanking.loading=true;hallRanking.error='';if(hallDialog==='ranking')renderHallDialog();
+ if(!navigator.onLine){hallRanking.loading=false;hallRanking.error='El Ranking de Mundo necesita conexión.';if(hallDialog==='ranking')renderHallDialog();return;}
+ try{uid=await ensurePlayer();const next=await command('world_rank',{period:hallRanking.period,date:hallRanking.date,hour:Number(hallRanking.hour),offset:hallRanking.offset});if(request!==rankRequest)return;hallRanking.data=next;}
+ catch(error){if(request!==rankRequest)return;hallRanking.error=error.message||'No se ha podido consultar el ranking.';}
+ if(request===rankRequest){hallRanking.loading=false;if(hallDialog==='ranking')renderHallDialog();}
+}
+async function openHallRanking(){openHallDialog('ranking','hall-ranking');await refreshWorldRank();}
+function renderPaused(){
+ const own=ownPlayer(),totals={X:0,O:0};room.players.forEach(p=>{if(p.symbol)totals[p.symbol]+=p.score;});
+ const mode=isLocal()?(room.mode==='solo'?'VS máquina':'Sin conexión'):room.kind==='duel'?'Duelo':'Sala libre';
+ const timer=room.pauseDuelMs==null?'':`${Math.floor(room.pauseDuelMs/60000)}:${String(Math.floor(room.pauseDuelMs/1000)%60).padStart(2,'0')} de duelo conservados`;
+ app.innerHTML=`<section class="lobby paused-game"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · ${mode}</span></header><h1 class="heading">Partida pausada</h1><p class="instructions">Tablero, puntos y turno guardados. ${isLocal()?'Ni tú ni la máquina jugáis durante la pausa.':`Pausa compartida aprobada por mayoría. ${escape(timer)}`}</p><section class="paused-scores"><strong class="x">X ${totals.X}</strong><strong class="o">O ${totals.O}</strong></section><p class="muted">${escape(own.name)} · ${own.score} puntos · ${room.timeMode==='untimed'?'Sin reloj':'Con reloj'}</p>${voteMarkup(room.vote,uid)}<div class="paused-actions"><button class="primary" data-action="resume">${isLocal()?'Retomar partida':'Solicitar reanudación'}</button><button data-action="go-games">Mis partidas</button>${isLocal()||room.host===uid?'<button class="ghost danger" data-action="finish">Finalizar partida</button>':''}</div></section>`;
+ renderFinish();renderLeave();
+}
+function suspendLocal(){
+ if(!isLocal()||room.status!=='playing'||busy)return;
+ try{clearTimeout(machineTimer);accept(localCommand(room,'pause'));}catch{}
+}
+function timeModeSelector(id,value='timed'){
+ return `<label for="${id}">Ritmo de la partida</label><select id="${id}"><option value="timed" ${value==='timed'?'selected':''}>Con reloj · 30 segundos por turno</option><option value="untimed" ${value==='untimed'?'selected':''}>Por turnos · sin reloj</option></select>`;
+}
+
 function playHallMode() {
   if(hallMode==='solo'){localSetup='solo';renderLocalSetup();}
   else openHallDialog(hallMode==='offline'?'offline':'online');
@@ -229,8 +262,8 @@ function renderLobby() {
     <div class="row spread"><span>${count} jugador${count!==1?'es':''}</span><span class="muted">${finished?'Puntos / figuras':duel?`${teams?'Equipos X/O':'1 contra 1'} · ${room.durationSeconds/60} min`:'Mundo continuo'}</span></div>
     <p class="instructions">Nivel <strong>${room.level==='advanced'?'Avanzado':'Normal'}</strong> · ${room.level==='advanced'?'Figuras básicas y grupos unidos por los lados.':'Líneas, L, cruces y cuadrados.'} Todas las figuras nuevas suman.</p>
     <ol class="player-list">${(finished?list:players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} / ${p.figures}`:'Listo'}</span></li>`).join('')}</ol>
-    ${!finished?`<p class="instructions">${host?duel?'Al iniciar, se sortean parejas y símbolos y arranca el reloj del duelo.':'Al iniciar se sortean las parejas y los símbolos. Quien no tenga rival juega contra la máquina.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?`<p class="instructions">${teams?'Necesitamos un número par de al menos 4 jugadores.':'Necesitamos exactamente 2 jugadores para el duelo.'}</p>`:''}`:''}`:''}
-    <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button>':'<button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host&&!room.commonWorld?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
+    ${!finished?`<p class="instructions">${host?duel?room.timeMode==='untimed'?'Al iniciar, se sortean parejas y símbolos. Cada uno mueve cuando pueda.':'Al iniciar, se sortean parejas y símbolos y arranca el reloj del duelo.':'Al iniciar se sortean las parejas y los símbolos. Quien no tenga rival juega contra la máquina.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?`<p class="instructions">${teams?'Necesitamos un número par de al menos 4 jugadores.':'Necesitamos exactamente 2 jugadores para el duelo.'}</p>`:''}`:''}`:''}
+    <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button><button class="ghost small" data-action="go-games">Mis partidas</button>':'<button class="ghost small" data-action="go-games">Mis partidas</button><button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host&&!room.commonWorld?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
   renderFinish();renderLeave();
 }
 async function run(operation) {
@@ -241,7 +274,21 @@ async function run(operation) {
 }
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
-  const action=b.dataset.action;
+  let action=b.dataset.action;
+  if(action==='invalid-cell'){if(!busy&&room?.status==='playing'&&ownPair()?.turn===ownPlayer()?.symbol&&!ownPair()?.pending){b.classList.remove('invalid-flash');void b.offsetWidth;b.classList.add('invalid-flash');setTimeout(()=>b.classList.remove('invalid-flash'),360);}return;}
+  if(action==='hall-games'){await openMyGames();return;}
+  if(action==='go-games'){await goToGames();return;}
+  if(action==='rank-period'){hallRanking.period=b.dataset.period;hallRanking.offset=0;await refreshWorldRank();return;}
+  if(action==='rank-page'){hallRanking.offset=Number(b.dataset.offset);await refreshWorldRank();return;}
+  if(action==='refresh-rank'){await refreshWorldRank();return;}
+  if(action==='load-game'){
+    await run(async()=>{let next;if(b.dataset.local==='true'){next=localGames().find(g=>g.id===b.dataset.id);if(!next)throw new Error('Esta partida no está disponible.');}
+    else{uid=await ensurePlayer();next=await command('get',{code:b.dataset.code});const me=next.players.find(p=>p.id===uid);if(me?.active===false&&next.status!=='finished')next=await command('join',{code:b.dataset.code,name:me.name});}
+    hallHistory=[];hallDialog=null;selectedExpansion=null;accept(next);});return;
+  }
+  if(action==='pause'||action==='resume'||action==='vote-yes'||action==='vote-no'){
+    await run(async()=>{const vote=action.startsWith('vote-');gameMenuOpen=false;const next=isLocal()?localCommand(room,action):await command(vote?'vote':action,{code:room.code,voteId:room.vote?.id,yes:action==='vote-yes'});accept(next);});return;
+  }
   if(action==='game-menu'||action==='close-game-menu'){gameMenuOpen=action==='game-menu';document.querySelector('.game-menu').hidden=!gameMenuOpen;return;}
   if(action==='map'||action==='close-map'){worldMapOpen=action==='map';document.querySelector('.world-map').hidden=!worldMapOpen;return;}
   if(action==='pair-start'){await run(async()=>{acceptPair(await command('pair_start',{code:pairLobby.code}));});return;}
@@ -278,7 +325,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='confirm-leave'){
     await run(async()=>{
-      if(!isLocal())await command('leave',{code:room.code});
+      if(!isLocal())await command('leave',{code:room.code});else accept(localCommand(room,'pause'));
       clearTimeout(machineTimer);room=null;leaveOpen=false;finishOpen=false;selectedExpansion=null;activeKey=null;
       history.replaceState(null,'',location.pathname);render();notify('Has abandonado. Conservas tus puntos y puedes volver desde el inicio.');
     });return;
@@ -287,15 +334,15 @@ app.addEventListener('click',async e=>{
   if(action==='finish'){gameMenuOpen=false;document.querySelector('.game-menu')?.setAttribute('hidden','');finishOpen=true;renderFinish();return;}
   if(action==='cancel-finish'){finishOpen=false;document.querySelector('.finish-dialog')?.remove();return;}
   if(action==='confirm-finish'){finishOpen=false;}
-  if(action==='select-expansion'){selectedExpansion={x:Number(b.dataset.x),y:Number(b.dataset.y)};render();return;}
+  if(action==='select-expansion'){const choice=selectExpansion(selectedExpansion,{x:Number(b.dataset.x),y:Number(b.dataset.y)});selectedExpansion=choice.selected;if(choice.confirm)action='confirm-expansion';else{render();return;}}
   if(action==='setup-solo'||action==='setup-local'){localReturnDialog=hallDialog;hallHistory=[];closeHallDialog(false);localSetup=action==='setup-solo'?'solo':'local';renderLocalSetup();return;}
   if(action==='cancel-local'){localSetup=null;document.querySelector('.local-dialog')?.remove();if(localReturnDialog){openHallDialog(localReturnDialog);localReturnDialog=null;}return;}
   if(action==='start-local'){
     const name=document.querySelector('#local-name').value.trim()||'Tú',second=document.querySelector('#second-name')?.value.trim()||'Jugador 2';
-    const level=document.querySelector('#local-level').value;save('hash3_name',name);
-    localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('.local-dialog [data-mode]').dataset.mode,name,second,Date.now(),level));return;
+    const level=document.querySelector('#local-level').value,timeMode=document.querySelector('#local-time-mode').value;save('hash3_name',name);
+    localSetup=null;selectedExpansion=null;accept(createLocal(document.querySelector('.local-dialog [data-mode]').dataset.mode,name,second,Date.now(),level,timeMode));return;
   }
-  if(action==='resume-local'){closeHallDialog(false);try{const next=JSON.parse(read('hash3_local'));if(!['solo','local'].includes(next.mode))throw new Error();accept(next);}catch{notify('No se ha podido recuperar la partida local.');}return;}
+  if(action==='resume-local'){closeHallDialog(false);try{const next=savedLocal();if(!['solo','local'].includes(next.mode))throw new Error();accept(next);}catch{notify('No se ha podido recuperar la partida local.');}return;}
   const payload={code:room.code};
   if(action==='move'||action==='expand'){payload.x=Number(b.dataset.x);payload.y=Number(b.dataset.y);}
   if(action==='move')payload.requestId=crypto.randomUUID();
@@ -341,7 +388,6 @@ window.addEventListener('online',poll);
 window.addEventListener('resize',()=>{if(room?.status==='playing'){blinkId=null;render();}});
 setInterval(poll,1800);
 async function init(){
-  const code=read('hash3_room');
   renderHome();
   const pendingPair=read('hash3_pair');if(pendingPair&&navigator.onLine){try{uid=await ensurePlayer();acceptPair(await command('pair_get',{code:pendingPair}));return;}catch{save('hash3_pair',null);}}
   try{
@@ -351,13 +397,6 @@ async function init(){
       if(saved&&['solo','local'].includes(saved.mode)){accept(saved);return;}
     }
   }catch{/* Continue at the start screen if storage is unavailable. */}
-  if(!navigator.onLine||!code||(urlCode&&urlCode.toUpperCase()!==code))return;
-  const {data:{session}}=await client.auth.getSession();
-  if(room||localSetup||roomSetup||hallDialog||busy)return;
-  uid=session?.user.id||null;
-  if(uid){
-    try{const next=await command('get',{code});if(!room&&!localSetup&&!roomSetup&&!hallDialog&&!busy)accept(next);}catch{notify('No se ha podido recuperar la sala. Puedes entrar con su código.');}
-  }
 }
 init().catch(error=>{renderHome();notify('Puedes jugar en los modos locales. '+(error.message||'No se ha podido conectar.'));});
 
@@ -383,13 +422,13 @@ if(document.modelContext?.registerTool){
 function levelSelector(id,level='normal') {
   return `<label for="${id}">Nivel de figuras</label><select id="${id}"><option value="normal" ${level==='normal'?'selected':''}>Normal · líneas, L, cruces y cuadrados</option><option value="advanced" ${level==='advanced'?'selected':''}>Avanzado · también figuras complejas</option></select><p>Ambos niveles suman todas las figuras nuevas de una jugada. En Avanzado también cuenta el grupo completo de fichas del mismo símbolo unido por los lados, si tiene una forma distinta de las básicas. El nivel es común a toda la sala.</p>`;
 }
-function renderRoomSetup() {
-  document.querySelector('.room-dialog')?.remove();
-  const setup=roomSetup;
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear sala</h2><div class="room-modes"><button data-action="choose-duel" aria-pressed="${setup.kind==='duel'}"><strong class="heading">Duelo</strong><span>Partida con tiempo</span></button><button data-action="choose-world" aria-pressed="${setup.kind==='world'}"><strong class="heading">Sala libre</strong><span>Partida propia sin reloj final</span></button></div>${setup.kind==='duel'?`<label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select><label for="duel-minutes">Duración</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>El reloj empieza al iniciar la partida. Al llegar a cero, se cierra el duelo y gana X u O por puntos.</p>`:setup.kind==='world'?'<p>La sala sigue abierta hasta que el anfitrión la cierre. No forma parte del Mundo común. Pueden entrar nuevas parejas mientras jugáis. Si te falta rival, juegas contra la máquina.</p>':'<p>Elige qué tipo de sala quieres abrir.</p>'}${setup.kind?levelSelector('room-level',setup.level):''}<div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room" ${!setup.kind?'disabled':''}>${setup.kind==='duel'?'Crear duelo':setup.kind==='world'?'Crear sala libre':'Crear sala'}</button></div></section></div>`);
-  document.querySelector('#room-level')?.addEventListener('change',e=>{roomSetup.level=e.target.value;});
-  document.querySelector('#duel-format')?.addEventListener('change',e=>{roomSetup.format=e.target.value;});
-  document.querySelector('#duel-minutes')?.addEventListener('change',e=>{roomSetup.minutes=Number(e.target.value);});
+function renderRoomSetup(){
+ document.querySelector('.room-dialog')?.remove();const setup=roomSetup;
+ app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>30 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
+ document.querySelector('#room-level').addEventListener('change',e=>{roomSetup.level=e.target.value;});
+ document.querySelector('#duel-format').addEventListener('change',e=>{roomSetup.format=e.target.value;});
+ document.querySelector('#duel-minutes')?.addEventListener('change',e=>{roomSetup.minutes=Number(e.target.value);});
+ document.querySelector('#room-time-mode').addEventListener('change',e=>{roomSetup.timeMode=e.target.value;renderRoomSetup();});
 }
 function acceptPair(next){
  if(!next.pairLobby){pairLobby=null;hallDialog=null;hallHistory=[];save('hash3_pair',null);accept(next);return;}
@@ -402,13 +441,13 @@ function renderPairLobby(){
 }
 function renderReturn() {
   const own=ownPlayer();
-  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL}</span></header><h1 class="heading">${room.status==='lobby'?'La sala te espera':'El mundo sigue'}</h1><p class="instructions">Has abandonado ${escape(room.code)}. Conservas tus ${own.score} puntos y ${own.figures} figuras. Tu antiguo rival puede seguir contra una máquina o contra alguien que haya entrado.</p><button class="primary return-button" data-action="return-room">Volver a la partida</button><p class="instructions">Recuperas tu hueco si sigue libre. Si está ocupado, se te busca otro rival; mientras tanto jugarás contra la máquina.</p><button class="ghost" data-action="home">Ir al inicio</button>${room.host===uid&&!room.commonWorld?'<button class="ghost danger" data-action="finish">Cerrar sala para todos</button>':''}</section>`;
+  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL}</span></header><h1 class="heading">${room.status==='lobby'?'La sala te espera':'El mundo sigue'}</h1><p class="instructions">Has abandonado ${escape(room.code)}. Conservas tus ${own.score} puntos y ${own.figures} figuras. Tu antiguo rival puede seguir contra una máquina o contra alguien que haya entrado.</p><button class="primary return-button" data-action="return-room">Volver a la partida</button><p class="instructions">Recuperas tu hueco si sigue libre. Si está ocupado, se te busca otro rival; mientras tanto jugarás contra la máquina.</p><button class="ghost" data-action="go-games">Mis partidas</button>${room.host===uid&&!room.commonWorld?'<button class="ghost danger" data-action="finish">Cerrar sala para todos</button>':''}</section>`;
   renderFinish();
 }
 function renderLeave() {
   document.querySelector('.leave-dialog')?.remove();
   if(!leaveOpen||!room)return;
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop leave-dialog"><section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="leave-title"><h2 class="heading" id="leave-title">¿Abandonar la partida?</h2><p>${isLocal()?'Conservas la partida en este dispositivo para volver desde el inicio.':'Conservas tus puntos. Tu rival sigue contra una máquina y puede emparejarse con otro jugador. La sala continúa y puedes volver cuando quieras.'}</p><div class="row"><button data-action="cancel-leave">Seguir jugando</button><button class="primary" data-action="confirm-leave">Abandonar</button></div></section></div>`);
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop leave-dialog"><section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="leave-title"><h2 class="heading" id="leave-title">¿Abandonar la partida?</h2><p>${isLocal()?'La partida queda pausada en este dispositivo. Puedes retomarla desde Mis partidas.':'Conservas tus puntos. Tu rival sigue contra una máquina y puede emparejarse con otro jugador. La sala continúa y puedes volver cuando quieras.'}</p><div class="row"><button data-action="cancel-leave">Seguir jugando</button><button class="primary" data-action="confirm-leave">Abandonar</button></div></section></div>`);
   document.querySelector('[data-action="cancel-leave"]').focus();
 }
 function renderFinish() {
@@ -419,13 +458,14 @@ function renderFinish() {
 }
 function renderLocalSetup() {
   document.querySelector('.local-dialog')?.remove();
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2><label for="local-name">${localSetup==='solo'?'Tu apodo':'Jugador X'}</label><input id="local-name" value="${escape(read('hash3_name')||'')}" placeholder="${localSetup==='solo'?'Tú':'Jugador 1'}" maxlength="18">${localSetup==='local'?'<label for="second-name">Jugador O</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}<p>${localSetup==='solo'?'Juegas con X. La máquina juega con O.':'Pasad el dispositivo después de cada turno.'} Tenéis 30 segundos para mover.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2><label for="local-name">${localSetup==='solo'?'Tu apodo':'Jugador X'}</label><input id="local-name" value="${escape(read('hash3_name')||'')}" placeholder="${localSetup==='solo'?'Tú':'Jugador 1'}" maxlength="18">${localSetup==='local'?'<label for="second-name">Jugador O</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}${timeModeSelector('local-time-mode')}<p>${localSetup==='solo'?'Juegas con X. La máquina juega con O.':'Pasad el dispositivo después de cada turno.'} Con reloj tenéis 30 segundos por turno. Sin reloj podéis mover cuando queráis. Puedes pausar y guardar varias partidas.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
   document.querySelector('#local-name').focus();
 }
 function updateTimer() {
   if(!room||room.status!=='playing')return;
   const p=ownPair(),node=document.querySelector('.turn-timer');
   const duel=document.querySelector('#duel-time');if(duel&&room.endsAt){const left=Math.max(0,Math.ceil((Date.parse(room.endsAt)-Date.now())/1000));duel.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);}
+  if(node&&room.timeMode==='untimed'&&!p?.deadline){node.textContent='Sin reloj';node.classList.remove('urgent');}
   if(node&&p?.deadline) {
     const seconds=Math.max(0,Math.ceil((Date.parse(p.deadline)-Date.now())/1000));
     node.textContent=seconds+' s';node.classList.toggle('urgent',seconds<=5);
@@ -449,13 +489,14 @@ setInterval(()=>{
     const next=localCommand(room,'tick');if(next!==room){accept(next);if(!next.lastEvent?.points)notify(next.lastEvent?.kind==='expand'?'Tiempo agotado: ampliación automática.':'Tiempo agotado: jugada automática en una celda vacía.');}
   }
 },500);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleMachine();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)suspendLocal();else scheduleMachine();});
+window.addEventListener('pagehide',suspendLocal);
 function updateOfflineStatus() {
   const n=document.querySelector('#offline-status');if(!n)return;
   n.textContent=navigator.serviceWorker?.controller?'Preparado para jugar sin conexión.':'Los modos locales no necesitan cobertura durante la partida. Abre esta web una primera vez con internet.';
 }
 startUpdates({
-  canReload:()=>!pairLobby&&!worldMapOpen&&!gameMenuOpen&&!mapInteracting&&!busy&&!hallDialog&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
+  canReload:()=>(!room||room.status!=='playing')&&!pairLobby&&!worldMapOpen&&!gameMenuOpen&&!mapInteracting&&!busy&&!hallDialog&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
   beforeReload:()=>{
     if(isLocal()){save('hash3_local',JSON.stringify(room));try{sessionStorage.setItem('hash3_restore_local','1');}catch{/* The saved game remains available from the start screen. */}}
   },

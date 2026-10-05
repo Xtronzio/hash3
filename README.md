@@ -1,6 +1,20 @@
-# #3 — R0.9
+# #3 — R0.11
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
+
+## Partidas, pausas y turnos sin reloj · R0.11
+
+**Mis partidas** reúne todas las salas del invitado y las partidas locales de este navegador. En curso y pausadas se muestran por separado; cerradas se conservan dentro de un bloque plegado. Abrir una partida pausada no la reanuda sin pulsar Retomar.
+
+En máquina y sin conexión, pausar conserva tablero, puntos, turno y milisegundos restantes. Ir a Mis partidas u ocultar la página pausa la partida local. En Duelo se abre una votación de 60 segundos entre los humanos activos: hace falta mayoría absoluta (6 de 10; 2 de 2); el solicitante aporta su voto a favor. La sala continúa durante la solicitud de pausa. Reanudar exige la misma mayoría y recupera ambos relojes. Un cambio de participantes cancela la votación vigente. Mundo nunca se pausa.
+
+Duelo y modos locales ofrecen **Por turnos · sin reloj**: no hay límite por turno ni duración total. Cada movimiento se guarda y queda esperando al siguiente jugador; ningún humano recibe una jugada por tiempo agotado. La máquina responde cuando le toca y vuelve a esperar. Estos modos también admiten pausa manual.
+
+Las celdas vacías utilizables muestran un punto blanco durante el propio turno. Tocar una celda no utilizable solo produce un destello rojo de 320 ms; en el turno del rival, tocar el tablero no hace nada. Una ampliación se previsualiza al primer toque y se confirma con el segundo toque en la misma posición; el botón Colocar sigue disponible.
+
+El Ranking de Mundo ofrece General, Anual, Mensual, Semanal, Diario y Por horas, con fecha elegible y hora peninsular (Europe/Madrid). Ordena por #MAX exacto y presenta tu posición y el rival inmediatamente superior incluso fuera de la página de resultados visible. General conserva el #MAX oficial de las últimas 100 acciones; los periodos calculan las últimas 100 acciones registradas dentro del intervalo elegido. El historial comienza en R0.11: no se reconstruyen periodos anteriores. Las salas Duelo y las partidas locales no aportan acciones a este ranking.
+
+`supabase/session-management.sql` actualiza relojes, votaciones, consultas de sesiones e historial privado de Mundo. `tests/sessions.sql` verifica estas operaciones con usuarios reales simulados en una transacción revertida; `tests/sessions.test.js` comprueba conservación local, almacenamiento múltiple y expansión en dos toques.
 
 ## Ejecutar
 
@@ -41,7 +55,7 @@ Si un acceso ya instalado en la pantalla de inicio del iPhone conserva el icono 
 
 La versión aparece al pie en todas las pantallas. `src/version.js` es la fuente de la etiqueta y del identificador de publicación. Incrementar ambos al publicar una revisión; las correcciones de R0.3 deben usar una etiqueta nueva (R0.3.1, etc.). La compilación genera `version.json`, que queda fuera de la caché offline.
 
-La web consulta la versión cada 60 segundos y al recuperar foco, conexión o visibilidad. Si cambia, actualiza el service worker y recarga. Espera mientras hay un comando, un formulario o una confirmación abiertos. Conserva la sala online y restaura automáticamente la partida local de ese dispositivo. Sin conexión sigue usando la versión guardada.
+La web consulta la versión cada 60 segundos y al recuperar foco, conexión o visibilidad. Si cambia, actualiza el service worker y recarga. Espera mientras hay una partida en curso, un comando, un formulario o una confirmación abiertos. Conserva la sala online y restaura automáticamente la partida local de ese dispositivo. Sin conexión sigue usando la versión guardada.
 
 ## Publicación en GitHub Pages
 
