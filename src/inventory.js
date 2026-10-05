@@ -1,8 +1,8 @@
-import {machineChoice} from './local.js';
+import {machineChoice,localHumanId} from './local.js';
 export const hintIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 21c0-3-4-5-4-10a10 10 0 0 1 20 0c0 5-4 7-4 10M11 25h10m-9 4h8M16 5v5m-5 4 5-4 5 4M16 10v11"/></svg>';
 export function canUsePracticeHint(game,playerId,now=Date.now()){
  const p=game?.pairs?.[0];
- return !!(game&&['solo','local'].includes(game.mode)&&game.status==='playing'&&p&&!p.pending&&p[p.turn.toLowerCase()]===playerId&&!(game.mode==='solo'&&playerId===p.o)&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now));
+ return !!(game&&['solo','local'].includes(game.mode)&&game.status==='playing'&&p&&!p.pending&&p[p.turn.toLowerCase()]===playerId&&!(game.mode==='solo'&&playerId!==localHumanId(game))&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now));
 }
 export function usePracticeHint(original,playerId,now=Date.now()){
  if(!canUsePracticeHint(original,playerId,now))throw new Error('La ayuda está disponible durante tu turno en una partida local.');

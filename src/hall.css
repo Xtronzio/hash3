@@ -150,3 +150,16 @@
 .machine-level:hover .machine-level-content{border-color:var(--mode-color)}
 .dialog .machine-level-hint{font-size:12px;line-height:1.5;min-height:36px;margin:10px 0 0}
 .hall-dialog-options button:not(:has(svg)){grid-template-columns:1fr;white-space:nowrap}
+.symbol-choice{border:0;padding:0;margin:16px 0;min-width:0}
+.symbol-choice legend{font-size:14px;color:#b4b8c0;margin-bottom:8px}
+.symbol-scale{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dialog .symbol-option,.symbol-option{display:block;margin:0;position:relative;cursor:pointer;min-width:0}
+.symbol-option input{position:absolute;width:1px;height:1px;opacity:0;padding:0}
+.symbol-option-face{display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid var(--line);border-radius:8px;padding:12px 8px;min-height:68px;background:#111319}
+.symbol-option-face i{display:flex;flex-shrink:0}
+.symbol-option-face svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:6;stroke-linecap:round}
+.symbol-option-face strong{display:block;color:#f2f3f4;font-size:16px}
+.symbol-option-face small{display:block;font-size:11px;color:#b4b8c0;margin-top:3px}
+.symbol-option input:checked+.symbol-option-face{border-color:var(--mode-color,#e3e5e9);box-shadow:inset 0 0 0 1px var(--mode-color,#e3e5e9);background:color-mix(in srgb,var(--mode-color,#e3e5e9) 7%,#111319)}
+.symbol-option input:focus-visible+.symbol-option-face{outline:2px solid var(--mode-color,#e3e5e9);outline-offset:3px}
+.lobby .symbol-choice{margin:24px 0;--mode-color:#ff4a58}
