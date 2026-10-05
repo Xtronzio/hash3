@@ -1,16 +1,21 @@
-import {terrainOf} from './game.js';
+import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
 export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onClose}){
-  const viewport=document.querySelector('.viewport'),mini=null,big=document.querySelector('.world-map svg');
-  const terrain=terrainOf(room);if(!viewport||!terrain.length)return;
-  const minX=Math.min(...terrain.map(c=>c.x))-2,minY=Math.min(...terrain.map(c=>c.y))-2;
-  const width=Math.max(...terrain.map(c=>c.x))-minX+3,height=Math.max(...terrain.map(c=>c.y))-minY+3;
-  const targetPair=room.pairs.find(p=>p.id===target?.pair),myPair=room.pairs.find(p=>p.id===own?.pair);
-  const position=target?.lastMove||targetPair?.active;
-  const contents=terrain.map(p=>`<rect x="${p.x}" y="${p.y}" width=".85" height=".85" fill="#454d5a"/>`).join('')+(myPair?`<circle cx="${myPair.active.x+1}" cy="${myPair.active.y+1}" r="1" fill="${own.symbol==='X'?'#ff4a58':'#24d393'}"/>`:'')+(position?`<circle cx="${position.x+.5}" cy="${position.y+.5}" r="1" fill="#58a6ff"/>`:'');
-  for(const svg of [mini,big])if(svg){svg.setAttribute('viewBox',`${minX} ${minY} ${width} ${height}`);svg.innerHTML=contents+'<rect class="map-view" fill="#ffffff0a" stroke="#e3e5e9" stroke-width=".2"/>';}
-  const update=()=>{const x=(viewport.scrollLeft-layout.padding)/layout.size+layout.minX,y=(viewport.scrollTop-layout.padding)/layout.size+layout.minY;for(const svg of [mini,big]){const box=svg?.querySelector('.map-view');if(box){box.setAttribute('x',x);box.setAttribute('y',y);box.setAttribute('width',viewport.clientWidth/layout.size);box.setAttribute('height',viewport.clientHeight/layout.size);}}};
+  const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('svg');
+  const model=overviewModel(room,own,target);if(!viewport||!big||!model)return;
+  const {bounds,terrain,active,ownColor}=model;
+  big.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
+  big.innerHTML=terrain.map(p=>`<rect x="${p.x+.07}" y="${p.y+.07}" width=".86" height=".86" rx=".06" fill="${p.fill}"/>`).join('')+'<rect class="map-view" fill="#ffffff06" stroke="#e3e5e9" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>'+(active?`<rect x="${active.x}" y="${active.y}" width="3" height="3" rx=".08" fill="${ownColor}" fill-opacity=".12" stroke="${ownColor}" stroke-width="2.5" vector-effect="non-scaling-stroke"/><g class="map-own-pin" transform="translate(${active.x+1.5} ${active.y+1.5})"><circle r="7" fill="${ownColor}" stroke="#090d12" stroke-width="3"/><circle r="2" fill="#fff"/></g>`:'')+(model.target?`<g class="map-rival-pin" transform="translate(${model.target.x} ${model.target.y})"><path d="M0 -9 9 0 0 9 -9 0Z" fill="var(--blue)" stroke="#090d12" stroke-width="3"/></g>`:'');
+  panel.querySelector('.map-summary').textContent=`${terrain.length.toLocaleString('es-ES')} casillas · ${bounds.width-4} × ${bounds.height-4}`;
+  const update=()=>{
+    if(!big.isConnected){observer.disconnect();return;}
+    const view=overviewView(bounds,{x:(viewport.scrollLeft-layout.padding)/layout.size+layout.minX,y:(viewport.scrollTop-layout.padding)/layout.size+layout.minY,width:viewport.clientWidth/layout.size,height:viewport.clientHeight/layout.size});
+    const box=big.querySelector('.map-view');for(const [k,v] of Object.entries(view))box.setAttribute(k,v);
+    const rect=big.getBoundingClientRect(),scale=Math.min(rect.width/bounds.width,rect.height/bounds.height);
+    if(scale>0){for(const [selector,position] of [['.map-own-pin',active?{x:active.x+1.5,y:active.y+1.5}:null],['.map-rival-pin',model.target]]){const pin=big.querySelector(selector);if(pin&&position)pin.setAttribute('transform',`translate(${position.x} ${position.y}) scale(${1/scale})`);}}
+  };
+  const observer=new ResizeObserver(update);observer.observe(big);
   viewport.addEventListener('scroll',update,{passive:true});requestAnimationFrame(update);
-  big?.addEventListener('click',e=>{const r=big.getBoundingClientRect(),scale=Math.min(r.width/width,r.height/height),ox=(r.width-width*scale)/2,oy=(r.height-height*scale)/2;const x=minX+(e.clientX-r.left-ox)/scale,y=minY+(e.clientY-r.top-oy)/scale;if(x<minX||x>minX+width||y<minY||y>minY+height)return;viewport.scrollLeft=(x-layout.minX)*layout.size+layout.padding-viewport.clientWidth/2;viewport.scrollTop=(y-layout.minY)*layout.size+layout.padding-viewport.clientHeight/2;document.querySelector('.world-map').hidden=true;onClose?.();update();});
+  big.addEventListener('click',e=>{const point=overviewPoint(bounds,big.getBoundingClientRect(),e.clientX,e.clientY);if(!point)return;viewport.scrollLeft=(point.x-layout.minX)*layout.size+layout.padding-viewport.clientWidth/2;viewport.scrollTop=(point.y-layout.minY)*layout.size+layout.padding-viewport.clientHeight/2;panel.hidden=true;onClose?.();document.querySelector('.game-minimap')?.focus({preventScroll:true});update();});
   let drag=null,pinch=null,suppress=false;const pointers=new Map();
   viewport.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('.game-minimap,.world-map'))return;interacting(true);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)drag={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};if(pointers.size===2){const a=[...pointers.values()];pinch={distance:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom};drag=null;suppress=true;interacting(true);for(const id of pointers.keys())viewport.setPointerCapture(id);}});
   viewport.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size===2){const a=[...pointers.values()];const requested=Math.max(.3,Math.min(2.2,pinch.zoom*Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)/pinch.distance));zoom=requested;changeZoom(requested,true);update();return;}if(drag&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>6){suppress=true;interacting(true);viewport.setPointerCapture(e.pointerId);viewport.scrollLeft=drag.left+drag.x-e.clientX;viewport.scrollTop=drag.top+drag.y-e.clientY;update();}});

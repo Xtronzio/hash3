@@ -1,0 +1,20 @@
+.game .world-map{inset:6px;padding:16px;border:1px solid #475263;border-radius:14px;background:#11161d;box-shadow:0 12px 32px #0008;gap:8px;overflow:hidden}
+.game .world-map[hidden]{display:none}
+.game .map-heading{gap:12px;align-items:center;flex-shrink:0}
+.game .map-heading strong{font-size:14px;letter-spacing:.06em}
+.game .map-heading p{font-size:11px;color:#a5afbf;letter-spacing:0;margin-top:4px}
+.game .map-heading button{width:44px;height:44px;padding:0;font-size:25px;flex-shrink:0;background:#1b232e}
+.game .map-instruction{font-size:12px;color:#c0cad8;flex-shrink:0}
+.game .world-map>svg{background:#090d12;border:1px solid #283241;border-radius:8px;cursor:crosshair;min-height:50px;flex:1 1 0;width:100%}
+.game .map-legend{gap:8px 14px;flex-wrap:wrap;font-size:11px;color:#c0cad8;flex-shrink:0}
+.game .map-legend span{display:flex;align-items:center;gap:6px}
+.game .map-key{width:10px;height:10px;display:inline-block;flex-shrink:0}
+.game .map-key.own{border:2px solid currentColor;background:currentColor;box-shadow:inset 0 0 0 2px #11161d}
+.game .map-key.own.x{color:var(--red)}.game .map-key.own.o{color:var(--green)}
+.game .map-key.rival{background:var(--blue);transform:rotate(45deg);width:8px;height:8px;margin:1px}
+.game .map-key.view{border:1px dashed white;border-radius:1px}
+.game .map-shortcuts{display:flex;gap:8px;flex-shrink:0}
+.game .map-shortcuts button{flex:1;min-height:44px;padding:8px;font-size:12px;background:#1b232e;border-color:#3d495a}
+.game .map-shortcuts button.blue{border-color:#3c6c99;background:#142333}
+@media(max-width:600px){.game .world-map{padding:10px;inset:4px;gap:7px}.game .map-legend{font-size:10px;gap:7px 11px}}
+@media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:8px;gap:4px}.game .map-heading p,.game .map-instruction{display:none}.game .map-heading strong{font-size:12px}.game .map-legend{font-size:10px}.game .map-shortcuts button{padding:5px}.game .world-map>svg{min-height:20px}}
