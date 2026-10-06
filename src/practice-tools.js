@@ -8,11 +8,14 @@ export const practiceTools=[
   {id:'shift',label:'Desplazar',description:'Mueve una ficha rival a una celda vacía. Conserva su símbolo y dueño; las figuras nuevas puntúan para ese símbolo.',button:'Mover ficha rival'},
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
   {id:'shield',label:'Escudo',description:'Protege una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger ficha'},
-  {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'}
+  {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
+  {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
-const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,1]));
+// Keep the eight starting tools; Combo is earned through the normal refill draw.
+const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,t.id==='combo'?0:1]));
 export function initializeInventory(game){
-  if(!game.inventoryVersion){if(game.practiceTurn)delete game.practiceTurn.nextSymbol;game.inventoryVersion=1;}
+  if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
+  game.inventoryVersion=2;
   for(const player of game.players){
     player.inventory||={cards:initialCards(),turns:0};
     for(const t of practiceTools)player.inventory.cards[t.id]??=0;
@@ -22,6 +25,11 @@ export function initializeInventory(game){
 }
 export function inventoryFor(game,playerId){return game?.players?.find(p=>p.id===playerId)?.inventory||{cards:initialCards(),turns:0};}
 export function practiceTurn(game,playerId){return game.practiceTurn?.player===playerId?game.practiceTurn:{player:playerId,used:[],remaining:1};}
+export function toolAllowance(game,playerId){
+  const state=practiceTurn(game,playerId),combo=state.used.includes('combo');
+  const limit=combo?2:1,used=state.used.filter(id=>id!=='combo').length;
+  return {combo,limit,used,remaining:Math.max(0,limit-used)};
+}
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell));}
 export function toolCells(game,playerId,tool){
@@ -38,7 +46,9 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now))return false;
   if(!practiceTools.some(t=>t.id===tool)||(inventoryFor(game,playerId).cards[tool]||0)<=0)return false;
   const state=practiceTurn(game,playerId);
-  if(state.used.length>=2||state.used.includes(tool))return false;
+  if(state.used.includes(tool))return false;
+  if(tool==='combo')return state.used.length===0&&availableCells(game,p).length>0&&practiceTools.filter(t=>t.id!=='combo'&&(inventoryFor(game,playerId).cards[t.id]||0)>0).length>=2;
+  if(!toolAllowance(game,playerId).remaining)return false;
   if(tool==='double')return availableCells(game,p).length>=2;
   if(tool==='rival')return !game.inventoryEffects?.forced?.some(e=>e.player!==playerId);
   if(tool==='hint')return availableCells(game,p).length>0;

@@ -47,11 +47,11 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='inventory'){
     const {tool,playerId}=payload;
     if(tool==='hint')throw new Error('Activa Ayuda desde el inventario.');
-    if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: úsala en tu turno, antes de agotar el reloj; máximo dos por turno.');
+    if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
-    if(tool==='double'||tool==='rival'){
+    if(['double','rival','combo'].includes(tool)){
       spendCard(room,playerId,tool);
-      if(tool==='double')room.practiceTurn.remaining=2;else room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
+      if(tool==='double')room.practiceTurn.remaining=2;else if(tool==='rival')room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;

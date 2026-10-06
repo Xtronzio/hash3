@@ -62,7 +62,7 @@ test('Una geometría ya cobrada no vuelve a puntuar tras borrar y reconstruir; l
  }
 });
 
-test('El inventario respeta reloj, pausa, modo, territorio, turno y máximo dos herramientas',()=>{
+test('El inventario respeta reloj, pausa, modo, territorio, turno y una herramienta, salvo Combo',()=>{
  let room=play(game(),[[0,0],[1,1]]);
  assert.equal(canUsePracticeTool(room,'local-o','erase',now),false);
  assert.equal(canUsePracticeTool({...room,mode:undefined},'local-x','double',now),false);
@@ -70,7 +70,7 @@ test('El inventario respeta reloj, pausa, modo, territorio, turno y máximo dos 
  assert.equal(canUsePracticeTool(localCommand(room,'pause',{},now+1000),'local-x','double',now+1000),false);
  const island={...room,terrain:[...room.terrain,{x:100,y:100}],cells:[...room.cells,{id:'island',owner:'local-o',symbol:'O',x:100,y:100}]};
  assert.throws(()=>tool(island,'erase','local-x',{x:100,y:100}),/territorio conectado/);
- room=tool(room,'double');room=tool(room,'rival');assert.equal(canUsePracticeTool(room,'local-x','erase',now+1000),false);assert.throws(()=>tool(room,'erase','local-x',{x:1,y:1}),/máximo dos/);
+ room.players[0].inventory.cards.combo=1;room.players[0].inventory.cards.hint=0;room=tool(room,'combo');room=tool(room,'double');room=tool(room,'rival');assert.equal(canUsePracticeTool(room,'local-x','erase',now+1000),false);assert.throws(()=>tool(room,'erase','local-x',{x:1,y:1}),/una por turno/);
  room=localCommand(room,'move',{x:2,y:0},now+1000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.pairs[0].turn,'X');
  room=localCommand(room,'move',{x:0,y:1},now+1000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.pairs[0].turn,'O');
  assert.equal(canUsePracticeTool(room,'local-o','double',now+1000),true);

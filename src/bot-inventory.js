@@ -10,6 +10,7 @@ export function chooseMachineCard(room,now=Date.now()){
   const player=room.players.find(p=>p.id===actor),level=room.difficulty||'medium';
   const usable=tool=>canUsePracticeTool(room,actor,tool,now);
   const command=(tool,point,extra={})=>({action:'inventory',payload:{tool,playerId:actor,...point,...extra}});
+  if(level!=='basic'&&usable('combo')&&usable('double')&&usable('rival'))return command('combo',{});
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
   const neighbors=(point,symbol)=>[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>cells.get(key(point.x+dx,point.y+dy))?.symbol===symbol).length;
   if(usable('opposite')){

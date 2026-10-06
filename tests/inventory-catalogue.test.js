@@ -12,7 +12,7 @@ const move=(r,x,y,t=now)=>localCommand(r,'move',{x,y},t,()=>0);
 const card=(r,tool,point={})=>localCommand(r,'inventory',{tool,playerId:r.pairs[0][r.pairs[0].turn.toLowerCase()],...point},now);
 
 test('Ambos jugadores empiezan con ocho cartas iguales; gastar no recarga inmediatamente',()=>{
- let r=start();assert.equal(practiceTools.length,8);assert.deepEqual(r.players[0].inventory,r.players[1].inventory);
+ let r=start();assert.equal(practiceTools.length,9);assert.deepEqual(r.players[0].inventory,r.players[1].inventory);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((a,b)=>a+b),8);
  r=card(r,'double');assert.equal(r.players[0].inventory.cards.double,0);r=move(r,0,0);assert.equal(r.players[0].inventory.turns,0);
  r=move(r,1,0);assert.equal(r.players[0].inventory.turns,1);assert.equal(r.players[0].inventory.cards.double,0);
@@ -52,7 +52,7 @@ test('Ficha rival sobrevive a pausa y afecta al rival incluso si su reloj vence;
  r=localCommand(r,'tick',{},Date.parse(r.pairs[0].deadline),()=>0);
  assert.equal(r.cells.at(-1).symbol,'O');assert.equal(r.cells.at(-1).owner,'local-x');assert.equal(r.inventoryEffects.forced.length,0);assert.equal(r.lastEvent.automatic,true);
 });
-test('La ayuda respeta el símbolo impuesto y consume una carta dentro del máximo de dos',()=>{
+test('La ayuda respeta el símbolo impuesto y consume la herramienta de ese turno',()=>{
  let r=card(start(),'rival');r=move(r,0,0);r=move(r,1,0);r=move(r,0,1);
  r=card(r,'rival');r=move(r,2,2); // X juega ahora con O por orden de O.
  const h=usePracticeHint(r,'local-x',now);assert(availableCells(r,r.pairs[0]).some(c=>c.x===h.practiceHint.x&&c.y===h.practiceHint.y));
@@ -63,10 +63,10 @@ test('Las partidas antiguas reciben el catálogo y no conservan la antigua inter
  let r=start();delete r.inventoryVersion;delete r.inventoryEffects;for(const p of r.players)delete p.inventory;
  r.practiceTurn={player:'local-x',used:['opposite'],remaining:1,nextSymbol:'O'};initializeInventory(r);
  assert.equal(r.practiceTurn.nextSymbol,undefined);assert.equal(r.players[0].inventory.cards.rival,1);
- r=card(r,'rival');const copy=structuredClone(r);initializeInventory(copy);assert.deepEqual(copy.inventoryEffects.forced,r.inventoryEffects.forced);
+ assert.equal(r.players[0].inventory.cards.combo,0);assert.throws(()=>card(r,'rival'));r=move(r,0,0);r=card(r,'rival');const copy=structuredClone(r);initializeInventory(copy);assert.deepEqual(copy.inventoryEffects.forced,r.inventoryEffects.forced);
 });
 test('La máquina usa el mismo stock y respeta bloqueos e imposiciones en Alto y Pro',()=>{
- let r=createLocal('solo','A','',now,'normal','timed','pro','X',true);r=card(r,'rival');r=card(r,'block',{x:1,y:1});r=move(r,0,0);
+ let r=createLocal('solo','A','',now,'normal','timed','pro','X',true);r.players[0].inventory.cards.combo=1;r.players[0].inventory.cards.hint=0;r=card(r,'combo');r=card(r,'rival');r=card(r,'block',{x:1,y:1});r=move(r,0,0);
  const action=chooseMachineCard(r,now);assert(action);r=localCommand(r,action.action,action.payload,now);assert.equal(r.players[1].inventory.cards.double,0);
  for(const difficulty of ['high','pro']){
    const room={...r,difficulty},choice=chooseMachineMove(room,()=>0,{maxTimeMs:50,maxNodes:3000});

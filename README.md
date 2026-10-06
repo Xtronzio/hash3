@@ -2,6 +2,10 @@
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
+## Una herramienta por turno y Combo · R0.16.7
+
+El límite normal es una herramienta por turno, incluida Ayuda. La nueva carta Combo se obtiene en las recargas y debe activarse primero: consume una carta y permite otras dos herramientas distintas en ese turno. Doble mantiene sus dos colocaciones. Las ocho cartas iniciales y el máximo de ocho se mantienen; los guardados antiguos incorporan Combo con cero unidades, sin alterar sus cartas ni efectos ya utilizados. La máquina respeta el mismo límite y solo puede ampliarlo gastando Combo.
+
 ## Contador y aviso de recarga · R0.16.6
 
 La bolsa del tablero muestra el total de cartas restantes, contando también unidades repetidas. El número baja al consumir una herramienta y se actualiza con cada recarga real. El contador, la bolsa y el aviso conservan el color del modo: cian en VS máquina, rojo en Duelo y blanco en Sin conexión. La recarga resalta el contador durante 3,5 segundos y muestra la carta recibida, sin abrir el inventario ni tapar el aviso de puntos. En dos jugadores en el mismo dispositivo, el aviso espera al siguiente turno del dueño de la carta. Abrir un guardado o reanudar una pausa no repite recargas antiguas. Se respeta la preferencia de movimiento reducido.
@@ -159,7 +163,7 @@ Migración aplicada: `supabase/pair-lobby-max.sql`. La antesala es privada con R
 
 ## R0.16: cartas y navegación
 
-Inventario de pruebas en VS máquina y Sin conexión, desplegable desde abajo con el tablero visible: Doble, Ficha contraria (convierte una ficha rival puesta), Ficha rival (obliga al adversario a colocar tu símbolo una vez), Borrar, Desplazar, Bloqueo, Escudo y Ayuda. Ambos jugadores empiezan con una de cada carta; se sortean reposiciones cada cuatro turnos propios completados, con máximo ocho cartas y dos de cada tipo. Hasta dos cartas diferentes por turno, además de la colocación normal. Los turnos automáticos y los pases no dan recarga; Doble cuenta como un turno.
+Inventario de pruebas en VS máquina y Sin conexión, desplegable desde abajo con el tablero visible: Doble, Ficha contraria (convierte una ficha rival puesta), Ficha rival (obliga al adversario a colocar tu símbolo una vez), Borrar, Desplazar, Bloqueo, Escudo y Ayuda. Ambos jugadores empiezan con una de cada carta; se sortean reposiciones cada cuatro turnos propios completados, con máximo ocho cartas y dos de cada tipo. Una herramienta por turno, además de la colocación normal. Combo, que entra en el sorteo de recarga, permite usar otras dos herramientas distintas tras activarla primero. Combo se consume y no cuenta dentro de esas dos; el permiso termina con el turno y no reinicia el reloj. Los turnos automáticos y los pases no dan recarga; Doble cuenta como un turno.
 
 Bloqueo reserva una celda durante dos turnos rivales: el creador no puede ocuparla ese mismo turno, pero sí en el siguiente. Escudo protege una ficha propia durante dos turnos rivales. Desplazar conserva símbolo y dueño. Ficha rival se consume en la siguiente colocación del adversario, también si vence el reloj o usa Doble, y sobrevive a pausa/guardado. Nunca se restan puntos; las geometrías ya cobradas siguen registradas. La máquina usa el mismo stock y valida sus cartas con el mismo árbitro. El inventario online sigue pendiente.
 
