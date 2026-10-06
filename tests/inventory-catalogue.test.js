@@ -87,3 +87,15 @@ test('Inventario de máquina desactivado por defecto y validado también por el 
  const enabled=createLocal('solo','A','',now,'normal','timed','medium','O',true);assert.equal(canUsePracticeTool(enabled,'local-x','double',now),true);
  const legacy=structuredClone(enabled);delete legacy.machineInventory;assert.equal(chooseMachineCard(legacy,now),null);
 });
+
+
+test('Dificultad, figuras, reloj e inventario son independientes y sobreviven a la pausa',()=>{
+ for(const difficulty of ['basic','medium','high','pro'])for(const level of ['normal','advanced'])for(const timeMode of ['timed','untimed'])for(const enabled of [false,true]){
+  let r=createLocal('solo','A','',now,level,timeMode,difficulty,'O',enabled);
+  assert.equal(r.difficulty,difficulty);assert.equal(r.level,level);assert.equal(r.timeMode,timeMode);assert.equal(!!chooseMachineCard(r,now),enabled);
+  if(timeMode==='untimed'){assert.equal(r.pairs[0].deadline,null);assert.equal(localCommand(r,'tick',{},now+86400000),r);}
+  r=localCommand(r,'pause',{},now+1000);r=localCommand(r,'resume',{},now+86400000);
+  assert.equal(r.machineInventory,enabled);assert.equal(r.timeMode,timeMode);assert.equal(r.difficulty,difficulty);assert.equal(r.level,level);
+  if(timeMode==='untimed')assert.equal(r.pairs[0].deadline,null);else assert.equal(Date.parse(r.pairs[0].deadline),now+86400000+29000);
+ }
+});

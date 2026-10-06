@@ -163,3 +163,6 @@ El mapa general admite arrastre, pellizco y rueda sobre su propia vista, con bot
 
 
 R0.16.2 permite elegir de forma independiente la dificultad del rival, figuras sencillas/complejas y el permiso de inventario para la máquina. Este permiso está desactivado por defecto; se recuerda la elección para partidas nuevas y se conserva en cada guardado. Sin permiso, el árbitro rechaza cartas de la máquina y el jugador mantiene las suyas. Los guardados anteriores sin esa opción se interpretan como máquina sin inventario.
+
+
+R0.16.3 devuelve la elección Con reloj / Sin reloj a la creación de partidas locales. Sin reloj no hay jugadas por timeout; la máquina responde cuando le toca y espera la siguiente jugada humana. La elección se recuerda y es independiente del nivel de figuras, dificultad e inventario rival. La pausa funciona en ambos ritmos.
