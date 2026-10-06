@@ -26,5 +26,5 @@ export function overviewView(bounds,view){
 }
 
 export function overviewMarkup({open,jumpButtons='',rodentButton=''}){
-  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><p class="map-summary"></p><nav class="map-controls" aria-label="Controles del mapa"><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">⤢</button>${jumpButtons}${rodentButton}<button data-action="close-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button></nav><svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg></section>`;
+  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><nav class="map-controls" aria-label="Controles del mapa"><p class="map-summary"></p><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">⤢</button>${jumpButtons}${rodentButton}<button data-action="close-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button></nav><svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg></section>`;
 }

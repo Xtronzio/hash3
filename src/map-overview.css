@@ -1,6 +1,6 @@
 .game .world-map{inset:6px;padding:8px;border:1px solid #475263;border-radius:12px;background:#11161d;box-shadow:0 12px 32px #0008;gap:6px;overflow:hidden;touch-action:none}
 .game .world-map[hidden]{display:none}
-.game .map-summary{margin:0;font-size:11px;color:#a5afbf;font-variant-numeric:tabular-nums;flex-shrink:0}
+.game .map-summary{margin:0;font-size:11px;color:#a5afbf;font-variant-numeric:tabular-nums;flex:1;min-width:0;line-height:1.3;overflow-wrap:anywhere}
 .game .map-controls button{width:44px;height:44px;min-height:44px;padding:0;flex:none;background:#1b232e;font-size:22px}
 .game .map-controls{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-shrink:0}
 .game .map-controls button.blue{color:var(--blue);border-color:#3c6c99;background:#142333}
@@ -16,3 +16,7 @@ body:has(.world-map:not([hidden])) #notice.score-notice{visibility:hidden}
 /* A real miniature uses cell fills, rather than the navigation icon's stroke. */
 .game .game-minimap{width:72px;height:48px;padding:4px;touch-action:none}
 .game .game-minimap svg{stroke:none;stroke-width:0}
+
+@media(max-width:360px){.game .map-controls{gap:2px}.game .map-controls button{width:40px}}
+
+.game .map-summary .map-dimensions{display:inline-block;white-space:nowrap}
