@@ -1,4 +1,4 @@
-import {canUsePracticeTool,toolCells,moveDestination} from './practice-tools.js';
+import {canUsePracticeTool,toolCells,moveDestination,placementSymbol} from './practice-tools.js';
 import {availableCells,figureWindows,key,isBlockedCell} from './game.js';
 
 // Card decisions stay in the Worker alongside search. The same referee and
@@ -25,6 +25,13 @@ export function chooseMachineCard(room,now=Date.now()){
     if(best&&points>=(level==='basic'?4:3))return command('opposite',best);
   }
   if(usable('double'))return command('double',{});
+  if(usable('activate')){
+    const symbol=placementSymbol(room,actor),targets=toolCells(room,actor,'activate').sort((a,b)=>neighbors(b,symbol)-neighbors(a,symbol)).slice(0,24);
+    for(const point of targets){
+      const figures=figureWindows([...room.cells,{...point,symbol}],point.x,point.y,symbol,room.level);
+      if(figures.some(f=>!room.forms.includes(f.id)))return command('activate',point);
+    }
+  }
   if(level==='basic')return null;
   if(usable('rival'))return command('rival',{});
   if(usable('erase')){

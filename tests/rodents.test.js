@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {initializeRodents,stepRodent,rodentSleeping} from '../src/rodents.js';
+import {initializeRodents,stepRodent,rodentSleeping,rodentLabel,rodentStatus} from '../src/rodents.js';
 import {figureWindows} from '../src/game.js';
 import {recordCombo} from '../src/records.js';
 function fixture(){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:120},(_,x)=>({x,y:0}));r.cells=r.terrain.map(c=>({...c,id:`food-${c.x}`,symbol:'X',owner:'local-x'}));return r;}
@@ -21,6 +21,21 @@ test('Birth at each 333 actual placements, one per player, first meal announced 
  const r=fixture();r.players[0].placements=332;stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);assert.equal(r.rodents[0].eaten,0);assert.equal(r.cells.length,120);
  r.players[0].placements=665;stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);assert.equal(r.rodents[0].eaten,1);
  r.players[1].placements=332;stepRodent(r,'local-o',{placed:true});assert.equal(r.rodents.length,2);assert.notEqual(r.rodents[0].x,r.rodents[1].x);
+});
+test('A birth with no available food is retried, not lost until the next 333 milestone',()=>{
+ const r=createLocal('local','A','B',1000,'normal','untimed');r.players[0].placements=332;
+ stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,0);assert.equal(r.players[0].rodentNextSpawn,333);
+ r.cells.push({id:'food',x:0,y:0,symbol:'X',owner:'local-x'});
+ stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);assert.equal(r.rodents[0].eaten,0);assert.equal(r.players[0].rodentNextSpawn,666);
+});
+test('Rodents find their pair by membership, including old saves with a string pair identifier',()=>{
+ const r=fixture();r.players[0].pair='0';r.players[0].placements=332;stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);
+ stepRodent(r,'local-x');assert.equal(r.rodents[0].eaten,1);
+});
+test('Progress distinguishes map size, own placements, active animals and the next 666 milestone',()=>{
+ const r=fixture();r.players[0].placements=410;r.players[0].rodentNextSpawn=666;
+ assert.match(rodentLabel(r,'local-x'),/410\/666 fichas propias/);assert.equal(rodentStatus(r,'local-x').remaining,256);
+ r.rodents=[{id:'rat',player:'local-x',x:0,y:0,phase:3,eaten:12}];assert.match(rodentLabel(r,'local-x'),/12\/33 comidas · dormido/);
 });
 test('1+1+1 then three sleeps: 18 meals after 33 steps, 33 meals and retirement after 63',()=>{
  const r=fixture();r.rodents=[{id:'rat',player:'local-x',x:0,y:0,phase:0,eaten:0,age:0}];

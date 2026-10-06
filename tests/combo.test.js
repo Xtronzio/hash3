@@ -11,7 +11,7 @@ const move=(r,x,y,t=now)=>localCommand(r,'move',{x,y},t,()=>0);
 const earnCombo=r=>{r.players[0].inventory.cards.hint=0;for(let i=0;i<4;i++)completeInventoryTurn(r,'local-x',{random:()=>.999});return r;};
 
 test('Combo entra en la recarga; mantiene ocho cartas iniciales y el contador suma la nueva carta',()=>{
- const r=start();assert.equal(practiceTools.length,9);assert.equal(inventoryTotal(r,'local-x'),8);
+ const r=start();assert.equal(practiceTools.length,10);assert.equal(inventoryTotal(r,'local-x'),8);
  assert.equal(r.players[0].inventory.cards.combo,0);assert.equal(canUsePracticeTool(r,'local-x','combo',now),false);
  earnCombo(r);assert.equal(r.players[0].inventory.cards.combo,1);assert.equal(inventoryTotal(r,'local-x'),8);
  assert.equal(r.players[0].inventory.lastDraw,'combo');assert.match(inventoryMarkup(r,'local-x'),/data-tool="combo"/);

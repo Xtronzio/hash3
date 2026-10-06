@@ -59,10 +59,11 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;
-      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error('Elige una ficha rival en tu territorio conectado, sin escudo; tus colocaciones no se pueden borrar.');
+      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error(tool==='activate'?'Elige un hueco sin ampliar que toque tu territorio conectado.':'Elige una ficha rival en tu territorio conectado, sin escudo; tus colocaciones no se pueden borrar.');
       const index=room.cells.findIndex(c=>c.x===x&&c.y===y);
       const old=index>=0?room.cells[index]:null;
       let changed=null;
+      if(tool==='activate')room.terrain=[...terrainOf(room),{x,y}];
       if(tool==='erase')room.cells.splice(index,1);
       if(tool==='opposite'){changed={...old,id:id(),symbol:actor.symbol,owner:playerId};room.cells[index]=changed;}
       if(tool==='shift'){

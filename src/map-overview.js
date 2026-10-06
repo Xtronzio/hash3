@@ -25,6 +25,6 @@ export function overviewView(bounds,view){
   return {x,y,width:Math.max(0,Math.min(bounds.x+bounds.width,view.x+view.width)-x),height:Math.max(0,Math.min(bounds.y+bounds.height,view.y+view.height)-y)};
 }
 
-export function overviewMarkup({open,jumpButtons=''}){
-  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><div class="map-heading"><p class="map-summary"></p><button data-action="close-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button></div><nav class="map-controls" aria-label="Controles del mapa"><button data-map-action="minus" aria-label="Alejar mapa" title="Alejar mapa">−</button><span class="map-scale" aria-live="off">100%</span><button data-map-action="plus" aria-label="Acercar mapa" title="Acercar mapa">+</button><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">⤢</button>${jumpButtons}</nav><svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg></section>`;
+export function overviewMarkup({open,jumpButtons='',rodentButton=''}){
+  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><p class="map-summary"></p><nav class="map-controls" aria-label="Controles del mapa"><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">⤢</button>${jumpButtons}${rodentButton}<button data-action="close-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button></nav><svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg></section>`;
 }

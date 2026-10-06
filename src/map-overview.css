@@ -1,17 +1,18 @@
 .game .world-map{inset:6px;padding:8px;border:1px solid #475263;border-radius:12px;background:#11161d;box-shadow:0 12px 32px #0008;gap:6px;overflow:hidden;touch-action:none}
 .game .world-map[hidden]{display:none}
-.game .map-heading{gap:8px;align-items:center;flex-shrink:0;letter-spacing:0}
-.game .map-summary{margin:0;font-size:11px;color:#a5afbf;font-variant-numeric:tabular-nums}
-.game .map-heading button,.game .map-controls button{width:44px;height:44px;min-height:44px;padding:0;flex:none;background:#1b232e;font-size:22px}
-.game .map-heading button{font-size:25px}
+.game .map-summary{margin:0;font-size:11px;color:#a5afbf;font-variant-numeric:tabular-nums;flex-shrink:0}
+.game .map-controls button{width:44px;height:44px;min-height:44px;padding:0;flex:none;background:#1b232e;font-size:22px}
 .game .map-controls{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-shrink:0}
 .game .map-controls button.blue{color:var(--blue);border-color:#3c6c99;background:#142333}
 .game .map-controls button svg{width:22px;height:22px;min-height:0;flex:none;margin:auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.game .map-scale{font-size:11px;min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
+.game .map-controls button.yellow{color:var(--yellow);border-color:var(--yellow)}
+.game .world-map .map-rodent-pin>svg{width:22px;height:22px;flex:none}
+.game:has(.world-map:not([hidden])) .score-float{display:none}
+body:has(.world-map:not([hidden])) #notice.score-notice{visibility:hidden}
 .game .world-map>.map-canvas{display:block;background:#090d12;border:1px solid #283241;border-radius:8px;cursor:grab;min-height:50px;flex:1 1 0;width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
 .game .world-map>.map-canvas:active{cursor:grabbing}
 @media(max-width:600px){.game .world-map{inset:4px;padding:6px;gap:4px}}
-@media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:6px}.game .map-heading{position:relative;padding-right:48px;min-height:24px}.game .map-heading button{position:absolute;right:0;top:0}.game .map-controls{padding-right:48px}.game .world-map>.map-canvas{min-height:20px}}
+@media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:6px}.game .world-map>.map-canvas{min-height:20px}}
 /* A real miniature uses cell fills, rather than the navigation icon's stroke. */
 .game .game-minimap{width:72px;height:48px;padding:4px;touch-action:none}
 .game .game-minimap svg{stroke:none;stroke-width:0}

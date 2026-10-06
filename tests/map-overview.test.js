@@ -1,9 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {overviewModel,overviewPoint,overviewView} from '../src/map-overview.js';
+import {overviewModel,overviewPoint,overviewView,overviewMarkup} from '../src/map-overview.js';
 
 const room={terrain:[{x:-4,y:-2},{x:-3,y:-2},{x:8,y:5}],cells:[{x:-4,y:-2,symbol:'X',owner:'me'},{x:8,y:5,symbol:'O',owner:'other'}],pairs:[{id:'mine',x:'me',o:'rival',active:{x:-4,y:-2}},{id:'other-pair',x:'other',o:'fourth',active:{x:8,y:5}}]};
 const own={id:'me',pair:'mine',symbol:'X'};
+test('Map has a single controls row, no +/- or scale, and keeps fit, accessible jumps and close',()=>{
+ const html=overviewMarkup({open:true,jumpButtons:'<button data-action="center" aria-label="Mi territorio"></button><button data-action="locate" aria-label="Rival superior"></button>'});
+ assert.doesNotMatch(html,/map-heading|map-scale|data-map-action="plus"|data-map-action="minus"|MAPA GENERAL|map-legend/);
+ assert.match(html,/<nav class="map-controls"[^>]*>.*data-map-action="fit".*data-action="center".*data-action="locate".*data-action="close-map".*<\/nav>/);
+});
 test('overview keeps negative coordinates, symbol colours and precise active-zone centres',()=>{
   const model=overviewModel(room,own,{pair:'other-pair'});
   assert.deepEqual(model.bounds,{x:-6,y:-4,width:17,height:12});

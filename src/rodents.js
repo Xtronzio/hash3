@@ -18,7 +18,7 @@ export function initializeRodents(room){
 }
 export function rodentSleeping(r){return r.phase>=3;}
 function pickFood(room,r,exclude){
-  const player=room.players.find(p=>p.id===r.player),pair=room.pairs.find(p=>p.id===player?.pair);
+  const player=room.players.find(p=>p.id===r.player),pair=room.pairs.find(p=>p.x===player?.id||p.o===player?.id);
   if(!pair)return null;
   const area=new Set(connectedTerrain(terrainOf(room),pair.active).map(c=>key(c.x,c.y)));
   const reserved=new Set(room.rodents.filter(v=>v.id!==r.id&&!rodentSleeping(v)).map(v=>key(v.x,v.y)));
@@ -37,12 +37,12 @@ export function stepRodent(room,playerId,{placed=false,completed=true,exclude=ro
   if(placed){player.placements++;room.eatenCells=room.eatenCells.filter(c=>!room.cells.some(v=>v.x===c.x&&v.y===c.y));}
   let r=room.rodents.find(v=>v.player===playerId);
   const reached=placed&&player.placements>=player.rodentNextSpawn;
-  if(reached)player.rodentNextSpawn=(Math.floor(player.placements/RODENT_SPAWN)+1)*RODENT_SPAWN;
+  if(reached&&r)player.rodentNextSpawn=(Math.floor(player.placements/RODENT_SPAWN)+1)*RODENT_SPAWN;
   if(reached&&!r){
-    const pair=room.pairs.find(p=>p.id===player.pair);
+    const pair=room.pairs.find(p=>p.x===player.id||p.o===player.id);if(!pair)return;
     r={id:crypto.randomUUID(),player:playerId,x:pair.active.x,y:pair.active.y,phase:0,eaten:0,age:0};
     const food=pickFood(room,r,exclude);
-    if(food){r.x=food.x;r.y=food.y;room.rodents.push(r);}
+    if(food){r.x=food.x;r.y=food.y;room.rodents.push(r);player.rodentNextSpawn=(Math.floor(player.placements/RODENT_SPAWN)+1)*RODENT_SPAWN;}
     return;
   }
   if(!r||!completed)return;
@@ -63,6 +63,17 @@ export function stepRodent(room,playerId,{placed=false,completed=true,exclude=ro
   if(r.eaten>=RODENT_MEALS){room.rodents=room.rodents.filter(v=>v.id!==r.id);return;}
   r.phase=(r.phase+1)%6;
   if(!rodentSleeping(r)){const food=pickFood(room,r,exclude);if(food){r.x=food.x;r.y=food.y;}}
+}
+
+export function rodentStatus(room,playerId){
+  const p=room.players.find(v=>v.id===playerId),animal=room.rodents?.find(r=>r.player===playerId)||null;
+  const placements=p?.placements??room.cells.filter(c=>c.owner===playerId).length;
+  const next=p?.rodentNextSpawn??(Math.floor(placements/RODENT_SPAWN)+1)*RODENT_SPAWN;
+  return {placements,next,remaining:Math.max(0,next-placements),animal};
+}
+export function rodentLabel(room,playerId){
+  const s=rodentStatus(room,playerId);
+  return s.animal?`Roedor · ${s.animal.eaten}/33 comidas · ${rodentSleeping(s.animal)?'dormido':'comiendo'}`:`Roedor · ${s.placements}/${s.next} fichas propias${s.remaining?'':' · aparición pendiente'}`;
 }
 
 // One compact line icon, distinct from cards; SVG numbers stay legible on the board.

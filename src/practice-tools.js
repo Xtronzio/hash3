@@ -10,12 +10,13 @@ export const practiceTools=[
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
   {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
+  {id:'activate',label:'Activar celda',description:'Activa un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege todo tu territorio durante una ronda. Cada 3, 33 y 333 combos de al menos 33 puntos ganas 1, 3 y 33 protecciones; las guardas y activas de una en una.',button:'Activar 1 ronda'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
-// Keep the eight starting tools; Combo is earned through the normal refill draw.
-const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,t.id==='combo'?0:1]));
+// Keep eight starting cards; Combo and Activate enter through the refill draw.
+const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,['combo','activate'].includes(t.id)?0:1]));
 export function initializeInventory(game){
   if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
   game.inventoryVersion=2;
@@ -40,6 +41,14 @@ export function canErasePracticeCell(game,playerId,cell){return !!(game?.players
 export function toolCells(game,playerId,tool){
   const p=game?.pairs?.[0];if(!p)return [];
   const linked=new Set(connectedTerrain(terrainOf(game),p.active).map(c=>key(c.x,c.y)));
+  if(tool==='activate'){
+    const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),holes=new Map();
+    for(const c of connectedTerrain(terrainOf(game),p.active))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);
+      if(!known.has(k))holes.set(k,point);
+    }
+    return [...holes.values()];
+  }
   if(tool==='block')return game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))?[]:availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
   return game.cells.filter(c=>linked.has(key(c.x,c.y))&&canErasePracticeCell(game,playerId,c));
