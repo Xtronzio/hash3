@@ -23,7 +23,7 @@
 .player-list li{gap:12px}.player-list li>span:last-child{text-align:right}.player-list li>span:first-child{min-width:0;overflow-wrap:anywhere}
 .game .cell.rodent-eating{background:#ffce332b;border-color:var(--yellow)}
 .game .cell.rodent-cleared{border-color:var(--yellow)}
-.game .activation-hole{background:#00e5ff12;border:2px dashed var(--mode-color,#00e5ff);color:var(--mode-color,#00e5ff)}
+.game .activation-hole{position:absolute;background:#00e5ff12;border:2px dashed var(--mode-color,#00e5ff);color:var(--mode-color,#00e5ff)}
 .game .activation-hole svg{width:55%;height:55%;fill:none;stroke:currentColor;stroke-width:1.8}
 .game .map-jumps button.yellow{color:var(--yellow)}
 .game .rank-rodent{display:block;font-size:10px;font-weight:400;color:#c4af61;line-height:1.4}

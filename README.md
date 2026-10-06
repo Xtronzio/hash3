@@ -232,3 +232,10 @@ La inmunidad activa muestra su icono junto a la bolsa, en rojo para X o verde pa
 Tocar la información de una partida guardada la resalta brevemente y la abre directamente. Ya no hay un botón separado «Ver y retomar»; el control de apertura sigue siendo accesible por teclado. El menú de papelera, el deslizamiento horizontal y la confirmación de borrado se conservan como acciones independientes. Abrir una partida pausada mantiene la pausa.
 
 La pantalla de pausa reúne retomar, hall, mis partidas y finalizar en una fila de iconos con nombres accesibles. Añade el marcador de la partida con puntos, #MAX, combo máximo y estado del roedor, más una vista del mapa guardado con casillas y dimensiones. El mapa es informativo; la partida permanece detenida hasta retomar (o reanudación compartida en salas online). Finalizar conserva su confirmación.
+
+
+## Corrección de los objetivos de Activar celda — R0.17.6
+
+Los botones de huecos de ACTIVAR CELDA usan posición absoluta, igual que las celdas del tablero. Antes heredaban posición relativa y se desplazaban en el flujo de la página, pudiendo aparecer sobre fichas aunque sus coordenadas lógicas fueran huecos. Los marcadores y sus zonas de toque coinciden ahora con las coordenadas que activan, también al alejar el tablero.
+
+El árbitro descarta además cualquier hueco que contenga una ficha guardada aunque falte su entrada en el terreno. La carta sigue añadiendo una sola celda vacía adyacente al territorio conectado, conserva las fichas y el turno y permite puntuar con la colocación normal posterior. Verificado en navegador a 320 y 390 px con varios niveles de zoom, además de 124 pruebas de reglas.

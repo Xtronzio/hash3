@@ -49,3 +49,10 @@ test('Machine with inventory can activate a scoring hole using the same referee'
  const choice=chooseMachineCard(r,now);assert.equal(choice.payload.tool,'activate');const applied=localCommand(r,choice.action,choice.payload,now);assert.equal(applied.terrain.length,r.terrain.length+1);
  r.machineInventory=false;assert.equal(chooseMachineCard(r,now),null);
 });
+
+test('A missing terrain entry containing a saved token is never an activation target',()=>{
+ const r=start();r.cells=[{id:'legacy-occupied',x:1,y:1,symbol:'O',owner:'local-o'}];
+ const before=structuredClone(r);assert.ok(!toolCells(r,'local-x','activate').some(c=>c.x===1&&c.y===1));
+ assert.throws(()=>card(r,1,1));assert.deepEqual(r,before);
+ assert.ok(toolCells(r,'local-x','activate').some(c=>c.x===-1&&c.y===0));
+});

@@ -42,10 +42,10 @@ export function toolCells(game,playerId,tool){
   const p=game?.pairs?.[0];if(!p)return [];
   const linked=new Set(connectedTerrain(terrainOf(game),p.active).map(c=>key(c.x,c.y)));
   if(tool==='activate'){
-    const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),holes=new Map();
+    const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),occupied=new Set(game.cells.map(c=>key(c.x,c.y))),holes=new Map();
     for(const c of connectedTerrain(terrainOf(game),p.active))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);
-      if(!known.has(k))holes.set(k,point);
+      if(!known.has(k)&&!occupied.has(k))holes.set(k,point);
     }
     return [...holes.values()];
   }
