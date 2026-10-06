@@ -1,4 +1,5 @@
 import {availableCells,connectedTerrain,terrainOf,key,isBlockedCell} from './game.js';
+import {immunityGoals,immunityFor,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
 export const REFILL_TURNS=4,MAX_CARDS=8,MAX_PER_CARD=2;
 export const practiceTools=[
   {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
@@ -11,6 +12,8 @@ export const practiceTools=[
   {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
+export const immunityTools=immunityGoals.map(g=>({...g,label:`Inmunidad · ${g.rounds} ronda${g.rounds===1?'':'s'}`,description:`Gana una carta cada ${g.combos} combos de 33 puntos o más. Al activarla, te protege de ataques de inventario durante ${g.rounds} ronda${g.rounds===1?'':'s'} rival${g.rounds===1?'':'es'}.`,button:'Activar inmunidad'}));
+export const inventoryTools=[...practiceTools,...immunityTools];
 // Keep the eight starting tools; Combo is earned through the normal refill draw.
 const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,t.id==='combo'?0:1]));
 export function initializeInventory(game){
@@ -22,8 +25,10 @@ export function initializeInventory(game){
   }
   game.inventoryEffects||={blocks:[],shields:[]};
   game.inventoryEffects.blocks||=[];game.inventoryEffects.shields||=[];game.inventoryEffects.forced||=[];
+  initializeImmunity(game);
 }
 export function inventoryFor(game,playerId){return game?.players?.find(p=>p.id===playerId)?.inventory||{cards:initialCards(),turns:0};}
+export function toolStock(game,playerId,tool){return (immunityGoals.some(g=>g.id===tool)?immunityFor(game,playerId).cards:inventoryFor(game,playerId).cards)[tool]||0;}
 export function practiceTurn(game,playerId){return game.practiceTurn?.player===playerId?game.practiceTurn:{player:playerId,used:[],remaining:1};}
 export function toolAllowance(game,playerId){
   const state=practiceTurn(game,playerId),combo=state.used.includes('combo');
@@ -31,11 +36,11 @@ export function toolAllowance(game,playerId){
   return {combo,limit,used,remaining:Math.max(0,limit-used)};
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
-export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell));}
+export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
 export function toolCells(game,playerId,tool){
   const p=game?.pairs?.[0];if(!p)return [];
   const linked=new Set(connectedTerrain(terrainOf(game),p.active).map(c=>key(c.x,c.y)));
-  if(tool==='block')return availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
+  if(tool==='block')return game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))?[]:availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
   return game.cells.filter(c=>linked.has(key(c.x,c.y))&&canErasePracticeCell(game,playerId,c));
 }
@@ -44,13 +49,18 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p||p.pending||p[p.turn.toLowerCase()]!==playerId)return false;
   if(game.mode==='solo'&&playerId!==(game.humanId||p.x)&&game.machineInventory!==true)return false;
   if(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now))return false;
-  if(!practiceTools.some(t=>t.id===tool)||(inventoryFor(game,playerId).cards[tool]||0)<=0)return false;
+  if(!inventoryTools.some(t=>t.id===tool)||toolStock(game,playerId,tool)<=0)return false;
   const state=practiceTurn(game,playerId);
   if(state.used.includes(tool))return false;
-  if(tool==='combo')return state.used.length===0&&availableCells(game,p).length>0&&practiceTools.filter(t=>t.id!=='combo'&&(inventoryFor(game,playerId).cards[t.id]||0)>0).length>=2;
+  if(tool==='combo'){
+    const ordinary=practiceTools.filter(t=>t.id!=='combo'&&toolStock(game,playerId,t.id)>0).length;
+    const immunity=!isImmune(game,playerId)&&immunityTools.some(t=>toolStock(game,playerId,t.id)>0)?1:0;
+    return state.used.length===0&&availableCells(game,p).length>0&&ordinary+immunity>=2;
+  }
   if(!toolAllowance(game,playerId).remaining)return false;
+  if(immunityGoals.some(g=>g.id===tool))return !isImmune(game,playerId)&&availableCells(game,p,{ignoreBlocks:true}).length>0;
   if(tool==='double')return availableCells(game,p).length>=2;
-  if(tool==='rival')return !game.inventoryEffects?.forced?.some(e=>e.player!==playerId);
+  if(tool==='rival')return !game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))&&!game.inventoryEffects?.forced?.some(e=>e.player!==playerId);
   if(tool==='hint')return availableCells(game,p).length>0;
   if(tool==='shift'&&!availableCells(game,p).length)return false;
   if(tool==='block'&&availableCells(game,p).length<2)return false;
@@ -58,11 +68,13 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
 }
 export function spendCard(game,playerId,tool){
   initializeInventory(game);const player=game.players.find(p=>p.id===playerId);
-  player.inventory.cards[tool]--;player.practiceTools=(player.practiceTools||0)+1;
+  const cards=immunityGoals.some(g=>g.id===tool)?player.inventory.immunity.cards:player.inventory.cards;
+  cards[tool]--;player.practiceTools=(player.practiceTools||0)+1;
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
 export function completeInventoryTurn(game,playerId,{automatic=false,placed=true,random=Math.random}={}){
   initializeInventory(game);
+  completeImmunityRound(game,playerId);
   for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
   game.inventoryEffects.blocks=game.inventoryEffects.blocks.filter(e=>e.remaining>0&&!game.cells.some(c=>c.x===e.x&&c.y===e.y));
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));

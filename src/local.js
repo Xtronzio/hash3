@@ -2,6 +2,7 @@ import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWin
 import {recordMax} from './max.js';
 import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
+import {immunityGoals,activateImmunity,recordImmunityCombo} from './immunity.js';
 export const TURN_SECONDS=30;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
@@ -49,9 +50,10 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(tool==='hint')throw new Error('Activa Ayuda desde el inventario.');
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
-    if(['double','rival','combo'].includes(tool)){
+    if(['double','rival','combo'].includes(tool)||immunityGoals.some(g=>g.id===tool)){
       spendCard(room,playerId,tool);
       if(tool==='double')room.practiceTurn.remaining=2;else if(tool==='rival')room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
+      else if(immunityGoals.some(g=>g.id===tool))activateImmunity(room,playerId,tool);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;
@@ -105,6 +107,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const cell={id:id(),requestId:payload.requestId||id(),x,y,symbol,owner:player.id};
     room.cells.push(cell);room.inventoryEffects.forced=room.inventoryEffects.forced.filter(e=>e.player!==player.id);
     const {points,bonus,figures}=scoreCell(room,cell,scorer);player.lastMove=cell;
+    recordImmunityCombo(room,player.id,points,{automatic,scorer:scorer.id});
     recordMax(player,scorer===player?points-bonus:0,scorer===player?figures:0,automatic);
     const full=!availableCells(room,p,{ignoreBlocks:true}).length;
     if(!automatic&&state.remaining>1&&!full&&availableCells(room,p).length){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}

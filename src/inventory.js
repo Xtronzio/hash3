@@ -1,22 +1,43 @@
 import {machineChoice,localHumanId} from './local.js';
 import {availableCells,figureWindows} from './game.js';
 import {practiceTools,practiceTurn,canUsePracticeTool,inventoryFor,initializeInventory,spendCard,placementSymbol,REFILL_TURNS,MAX_CARDS,toolAllowance} from './practice-tools.js';
+import {immunityFor,immunityProgress,immunityRemaining} from './immunity.js';
 export const hintIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 21c0-3-4-5-4-10a10 10 0 0 1 20 0c0 5-4 7-4 10M11 25h10m-9 4h8M16 5v5m-5 4 5-4 5 4M16 10v11"/></svg>';
 export function inventoryTotal(game,playerId){
- return Object.values(inventoryFor(game,playerId).cards).reduce((sum,count)=>sum+count,0);
+ return Object.values(inventoryFor(game,playerId).cards).reduce((sum,count)=>sum+count,0)+Object.values(immunityFor(game,playerId).cards).reduce((sum,count)=>sum+count,0);
 }
 export function inventoryRefill(previous,next,playerId){
  if(!previous||previous.id!==next?.id||!['solo','local'].includes(next.mode))return null;
  const before=inventoryFor(previous,playerId),after=inventoryFor(next,playerId);
- const added=(after.draws||0)-(before.draws||0);
+ const drawn=(after.draws||0)-(before.draws||0),merit=immunityFor(next,playerId),earned=(merit.earned||0)-(immunityFor(previous,playerId).earned||0),added=drawn+earned;
  if(added<=0)return null;
- return {player:playerId,added,tool:practiceTools.find(t=>t.id===after.lastDraw)?.label||'Carta',total:inventoryTotal(next,playerId)};
+ const refill={player:playerId,added,tool:practiceTools.find(t=>t.id===after.lastDraw)?.label||'Carta',total:inventoryTotal(next,playerId)};
+ if(earned>0){
+   const rewards=immunityProgress(next,playerId).filter(g=>merit.lastEarned?.includes(g.id));
+   refill.message=`Inmunidad disponible · ${rewards.map(g=>`${g.rounds} ronda${g.rounds===1?'':'s'}`).join(' + ')}${drawn>0?` · +${drawn} ${refill.tool}`:''}`;
+ }
+ return refill;
 }
 export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null}={}){
  const total=inventoryTotal(game,playerId),inv=inventoryFor(game,playerId),turns=REFILL_TURNS-inv.turns;
  const label=`Inventario · ${total} carta${total===1?'':'s'} · ${turns<=0?'Recarga lista cuando haya hueco':`Recarga en ${turns} turno${turns===1?'':'s'} propio${turns===1?'':'s'}`}`;
  const active=refill?.player===playerId;
- return `<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-icon">${icon}<span class="inventory-badge ${total?'':'is-empty'}" aria-hidden="true">${total}</span></span></button>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">Inventario recargado · +${refill.added} ${refill.tool}</span>`:''}`;
+ return `<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-icon">${icon}<span class="inventory-badge ${total?'':'is-empty'}" aria-hidden="true">${total}</span></span></button>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">${refill.message||`Inventario recargado · +${refill.added} ${refill.tool}`}</span>`:''}`;
+}
+export function immunityStatusMarkup(game,playerId){
+ const own=immunityRemaining(game,playerId),rival=game?.players?.find(p=>p.id!==playerId),other=immunityRemaining(game,rival?.id);
+ return `${own?`<span class="immunity-active">Tu inmunidad · ${own} ronda${own===1?'':'s'} restante${own===1?'':'s'}</span>`:''}${other?`<span class="immunity-active">Rival inmune · ${other} ronda${other===1?'':'s'}</span>`:''}`;
+}
+export function immunityBoardMarkup(game,playerId){
+ const goals=immunityProgress(game,playerId),total=goals.reduce((s,g)=>s+g.count,0),status=immunityStatusMarkup(game,playerId);
+ return `<div class="immunity-board"><button class="immunity-summary ${total?'has-immunity':''}" data-action="inventory" aria-label="Inmunidad: ${total} cartas disponibles. ${goals.map(g=>`${g.rounds} ronda${g.rounds===1?'':'s'}: faltan ${g.missing} combos`).join('. ')}"><span class="immunity-summary-title">Inmunidad<small>${total?`${total} disponible${total===1?'':'s'}`:'Combos ≥33 pts'}</small></span>${goals.map(g=>`<span class="immunity-summary-goal"><span>${g.rounds} ronda${g.rounds===1?'':'s'}${g.count?` · ×${g.count}`:''}</span><b>Faltan ${g.missing}</b></span>`).join('')}</button>${status?`<div class="immunity-board-status" role="status">${status}</div>`:''}</div>`;
+}
+export function immunityMarkup(game,playerId){
+ const local=game&&['solo','local'].includes(game.mode),goals=immunityProgress(game,playerId),merit=immunityFor(game,playerId),status=immunityStatusMarkup(game,playerId),allowance=local?toolAllowance(game,playerId):null;
+ return `<section class="immunity-section" aria-labelledby="immunity-title"><h3 id="immunity-title">Inmunidad por buen juego</h3><p class="immunity-explanation">Cada colocación manual de 33 puntos o más cuenta como un combo, incluidos sus bonus. Las cartas no suman combos. ${local?`${merit.combos} conseguido${merit.combos===1?'':'s'}. `:''}Los tres objetivos avanzan juntos y se repiten; gastar una carta conserva todo el progreso.</p>${status?`<p class="immunity-inventory-status" role="status">${status}</p>`:''}<div class="immunity-cards">${goals.map(g=>{
+   const enabled=local&&canUsePracticeTool(game,playerId,g.id),rounds=`${g.rounds} ronda${g.rounds===1?'':'s'}`,action=!g.count?'Por conseguir':immunityRemaining(game,playerId)?'Ya estás protegido':local&&!allowance.remaining?'Límite alcanzado':enabled?'Activar':'Espera tu turno';
+   return `<article class="immunity-card ${g.count?'has-immunity':''}" data-immunity="${g.id}"><div class="immunity-card-top"><strong>${rounds}</strong><span class="immunity-stock" aria-label="${g.count} cartas disponibles">×${g.count}</span></div><span class="immunity-available">${g.count?`${g.count} disponible${g.count===1?'':'s'}`:'Sin cartas'}</span><progress max="${g.combos}" value="${g.progress}" aria-label="${g.progress} de ${g.combos} combos para otra inmunidad de ${rounds}"></progress><b class="immunity-missing">Faltan ${g.missing} combo${g.missing===1?'':'s'}</b><small>${g.progress}/${g.combos} de ≥33 pts para la siguiente</small><button class="immunity-use" data-action="practice-tool" data-tool="${g.id}" aria-label="Activar inmunidad de ${rounds}, ${g.count} disponibles" ${enabled?'':'disabled'}>${action}</button></article>`;
+ }).join('')}</div><p class="immunity-explanation">Elige qué duración gastar. Protege de Borrar, Ficha contraria, Desplazar, Bloqueo y Ficha rival. Una ronda termina al completar el turno rival; Doble cuenta una, ampliar no cuenta. Las cartas ganadas se guardan aparte de las ocho de recarga.</p></section>`;
 }
 export function canUsePracticeHint(game,playerId,now=Date.now()){
  const p=game?.pairs?.[0];
@@ -48,6 +69,6 @@ export function inventoryMarkup(game,playerId){
    const count=local?(inv.cards[t.id]||0):1,enabled=local&&(t.id==='hint'?canUsePracticeHint(game,playerId):canUsePracticeTool(game,playerId,t.id));
    return `<button class="inventory-card" data-action="${t.id==='hint'?'practice-hint':'practice-tool'}" data-tool="${t.id}" aria-label="Usar ${t.label}, ${count} carta${count===1?'':'s'}" title="${t.description}" ${enabled?'':'disabled'}><span class="inventory-card-top"><span class="inventory-icon">${svg(t.id)}</span><span class="inventory-count">×${count}</span></span><strong>${t.label}</strong><small>${t.description}</small><span class="inventory-card-action">${state?.used.includes(t.id)?'Usada este turno':!count?'Agotada':local&&t.id==='combo'&&state.used.length?'Activar primero':local&&t.id!=='combo'&&!allowance.remaining?'Límite alcanzado':'Usar'}</span></button>`;
  }).join('');
- const total=inventoryTotal(game,playerId),last=practiceTools.find(t=>t.id===inv.lastDraw)?.label;
- return `<p class="inventory-status">${local?`${game.mode==='solo'?`Máquina ${game.machineInventory?'con':'sin'} inventario · `:''}${total}/${MAX_CARDS} cartas · ${inv.turns>=REFILL_TURNS?'Recarga lista cuando haya hueco':`Recarga en ${REFILL_TURNS-inv.turns} turno${REFILL_TURNS-inv.turns===1?'':'s'} propio${REFILL_TURNS-inv.turns===1?'':'s'}`}`:'Catálogo de pruebas · VS máquina y Sin conexión'}${last?` · Última: ${last}`:''}</p><div class="inventory-cards">${cards}</div><p class="inventory-rules">Una herramienta por turno, además de tu ficha. Activa Combo primero para usar otras dos herramientas distintas. Combo se obtiene en la recarga. ${game?.timeMode==='untimed'?'Sin límite de tiempo.':'Las cartas no reinician el reloj.'} Nunca se restan puntos; las figuras ya cobradas no se pagan otra vez.</p>${local?'':game?'<p class="muted">El inventario online todavía está en preparación.</p>':'<div class="inventory-start"><button data-action="setup-solo">Practicar contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button><button data-action="hall-games">Abrir una partida guardada</button></div>'}`;
+ const total=Object.values(inv.cards).reduce((s,n)=>s+n,0),last=practiceTools.find(t=>t.id===inv.lastDraw)?.label;
+ return `${immunityMarkup(game,playerId)}<p class="inventory-status">${local?`${game.mode==='solo'?`Máquina ${game.machineInventory?'con':'sin'} inventario · `:''}${total}/${MAX_CARDS} cartas de recarga · ${inv.turns>=REFILL_TURNS?'Recarga lista cuando haya hueco':`Recarga en ${REFILL_TURNS-inv.turns} turno${REFILL_TURNS-inv.turns===1?'':'s'} propio${REFILL_TURNS-inv.turns===1?'':'s'}`}`:'Catálogo de pruebas · VS máquina y Sin conexión'}${last?` · Última: ${last}`:''}</p><div class="inventory-cards">${cards}</div><p class="inventory-rules">Una herramienta por turno, incluida Inmunidad, además de tu ficha. Activa Combo primero para usar otras dos herramientas distintas. Combo se obtiene en la recarga. ${game?.timeMode==='untimed'?'Sin límite de tiempo.':'Las cartas no reinician el reloj.'} Nunca se restan puntos; las figuras ya cobradas no se pagan otra vez.</p>${local?'':game?'<p class="muted">El inventario online todavía está en preparación.</p>':'<div class="inventory-start"><button data-action="setup-solo">Practicar contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button><button data-action="hall-games">Abrir una partida guardada</button></div>'}`;
 }

@@ -12,10 +12,12 @@ Idea para valorar en pruebas: liberar casillas sin quitar los puntos ya ganados,
 
 ## Inventario online
 
-Equilibrar y extender las herramientas de práctica a Duelo y después a Mundo. R0.16.7 mantiene ocho cartas iniciales iguales, una herramienta por turno y una reposición cada cuatro turnos propios. La carta Combo, que se obtiene en las recargas, permite usar otras dos herramientas distintas tras activarla primero. En la herramienta Borrar, las colocaciones propias están protegidas: solo elimina fichas rivales del territorio conectado.
+Equilibrar y extender las herramientas de práctica a Duelo y después a Mundo. R0.16.8 mantiene ocho cartas iniciales iguales, una herramienta por turno y una reposición cada cuatro turnos propios. La carta Combo, que se obtiene en las recargas, permite usar otras dos herramientas distintas tras activarla primero. En la herramienta Borrar, las colocaciones propias están protegidas: solo elimina fichas rivales del territorio conectado.
 
 ## Inmunidad ganada por buen juego
 
-Idea de Jorge del 6 de octubre de 2026, pendiente de concretar objetivos e implementar. Ganar una carta de inmunidad mediante objetivos de calidad de las jugadas, por ejemplo completar cierto número de jugadas por encima de un umbral de puntos o de tamaño de figura. Cada nivel tiene un objetivo independiente: inmunidad de una, dos o tres rondas.
+Implementada en R0.16.8 para VS máquina y Sin conexión: cada 3 / 33 / 333 colocaciones manuales de al menos 33 puntos entrega una carta de 1 / 3 / 33 rondas rivales. Los objetivos avanzan juntos, se repiten sin antigüedad mínima y conservan el progreso al gastar cartas. Las tres duraciones tienen existencias independientes, aparte de las ocho cartas de recarga. Cada carta indica existencias y combos restantes; el tablero resume progreso y protección. Ganar inmunidad anuncia el premio y resalta la bolsa en el color del modo. Pendiente: extensión a Duelo y Mundo junto con el resto del inventario.
 
-La carta se guarda hasta que el jugador decida activarla. Si conserva el nivel uno y completa el siguiente objetivo, mejora a nivel dos; puede continuar hasta nivel tres. La progresión mejora la duración de una misma carta, no suma tres cartas de una, dos y tres rondas. Durante la inmunidad activa no pueden atacarle con inventario. Quedan por definir los umbrales, qué cuenta como ronda y el alcance exacto de los ataques bloqueados; no hay parámetros ni recompensas automáticas implementados todavía.
+## Espía
+
+Idea de Jorge del 6 de octubre de 2026: avisar de ataques de inventario antes de resolverlos para elegir defensa o una jugada diferente. Pendiente de definir y desarrollar; no está activo.

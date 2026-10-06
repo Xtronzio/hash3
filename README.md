@@ -1,10 +1,24 @@
-# #3 — R0.12
+# #3 — R0.16.8
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
+## Inmunidad por combos de 33 puntos · R0.16.8
+
+En VS máquina y Sin conexión, una colocación manual de al menos 33 puntos cuenta como un combo, incluidos sus bonus. Los puntos logrados usando cartas, las colocaciones automáticas y el símbolo propio colocado por el rival no avanzan objetivos. No se exige número de turnos ni antigüedad; dos colocaciones de Doble se evalúan por separado, sin sumar jugadas menores.
+
+| Objetivo repetible | Carta ganada |
+| --- | --- |
+| Cada 3 combos de ≥33 puntos | Inmunidad de 1 ronda |
+| Cada 33 combos de ≥33 puntos | Inmunidad de 3 rondas |
+| Cada 333 combos de ≥33 puntos | Inmunidad de 33 rondas |
+
+Una misma colocación avanza los tres contadores. Cada objetivo entrega su propia carta, acumulable y elegible; gastar cualquier duración conserva todos los contadores y cartas restantes. Las recompensas se guardan aparte del máximo de ocho cartas de recarga y no entran en el sorteo. El número de la bolsa suma todas las cartas. Ganar inmunidad resalta la bolsa y anuncia las duraciones disponibles con el color del modo, sin repetir premios al cargar o retomar. En un dispositivo compartido, el aviso espera al turno del dueño.
+
+Cada carta muestra existencias, progreso y combos que faltan para la siguiente. El tablero ofrece el resumen sin abrir el inventario y muestra las rondas activas de ambos jugadores. Activar inmunidad consume una herramienta según el límite normal o Combo; no permite apilar ni sustituir una protección activa. Protege todas las fichas propias de borrar, convertir y desplazar, evita el bloqueo rival y cancela Ficha rival pendiente. Los rivales siguen colocando fichas normalmente. Se descuenta una ronda por turno rival completado (también automático o pase); Doble cuenta uno, ampliar y pausar no cuentan. La máquina usa las mismas reglas solo si tiene el inventario permitido. Los guardados previos empiezan con cero combos y cero inmunidades, sin reconstruir premios desde el marcador. El Espía continúa pendiente.
+
 ## Una herramienta por turno y Combo · R0.16.7
 
-El límite normal es una herramienta por turno, incluida Ayuda. La nueva carta Combo se obtiene en las recargas y debe activarse primero: consume una carta y permite otras dos herramientas distintas en ese turno. Doble mantiene sus dos colocaciones. Las ocho cartas iniciales y el máximo de ocho se mantienen; los guardados antiguos incorporan Combo con cero unidades, sin alterar sus cartas ni efectos ya utilizados. La máquina respeta el mismo límite y solo puede ampliarlo gastando Combo.
+El límite normal es una herramienta por turno, incluida Ayuda. La nueva carta Combo se obtiene en las recargas y debe activarse primero: consume una carta y permite otras dos herramientas distintas en ese turno. Doble mantiene sus dos colocaciones. Las ocho cartas iniciales y el máximo de ocho cartas de recarga se mantienen; los guardados antiguos incorporan Combo con cero unidades, sin alterar sus cartas ni efectos ya utilizados. La máquina respeta el mismo límite y solo puede ampliarlo gastando Combo.
 
 ## Contador y aviso de recarga · R0.16.6
 

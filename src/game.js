@@ -1,3 +1,4 @@
+import {isImmune} from './immunity.js';
 export const key = (x, y) => `${x},${y}`;
 export function rankedPlayers(players,byMax=false) { return [...players].sort((a,b)=>(byMax?((b.max?.value??-1)-(a.max?.value??-1)):b.score-a.score)||a.order-b.order); }
 export function immediateAbove(players,uid,byMax=false) { const list=rankedPlayers(players,byMax),i=list.findIndex(p=>p.id===uid); return i>0?list[i-1]:null; }
@@ -12,7 +13,7 @@ export function connectedTerrain(terrain,active) {
   }
   return terrain.filter(c=>visited.has(key(c.x,c.y)));
 }
-export function isBlockedCell(room,playerId,x,y){return !!room.inventoryEffects?.blocks?.some(e=>e.x===x&&e.y===y&&(e.by!==playerId||e.fresh)&&e.remaining>0);}
+export function isBlockedCell(room,playerId,x,y){return !!room.inventoryEffects?.blocks?.some(e=>e.x===x&&e.y===y&&(e.by===playerId?e.fresh:!isImmune(room,playerId))&&e.remaining>0);}
 export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   const occupied=new Set(room.cells.map(c=>key(c.x,c.y)));
   const playerId=pair[pair.turn.toLowerCase()];
