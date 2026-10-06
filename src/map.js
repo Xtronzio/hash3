@@ -2,7 +2,7 @@ import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 export function overviewCells(terrain){return terrain.map(p=>`<rect x="${p.x+.07}" y="${p.y+.07}" width=".86" height=".86" rx=".06" fill="${p.fill}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".09"':''}/>${p.rodent?`<text x="${p.x+.5}" y="${p.y+.64}" text-anchor="middle" font-size=".45" fill="${p.rodent.phase>=3?'var(--yellow)':'#08090b'}" font-weight="700">${p.rodent.eaten}</text>`:''}`).join('');}
 export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onClose,mapState={}}){
-  const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('svg');
+  const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('.map-canvas');
   const model=overviewModel(room,own,target);if(!viewport||!big||!model)return;
   const {bounds,terrain,active,ownColor}=model;
   const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(terrain);}

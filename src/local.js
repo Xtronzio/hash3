@@ -31,7 +31,7 @@ function normalize(room,now) {
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
   const room=structuredClone(original),p=room.pairs[0];
-  initializeInventory(room);
+  initializeInventory(room);initializeRodents(room);
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;

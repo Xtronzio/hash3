@@ -4,6 +4,19 @@ import {initializeRodents,stepRodent,rodentSleeping} from '../src/rodents.js';
 import {figureWindows} from '../src/game.js';
 import {recordCombo} from '../src/records.js';
 function fixture(){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:120},(_,x)=>({x,y:0}));r.cells=r.terrain.map(c=>({...c,id:`food-${c.x}`,symbol:'X',owner:'local-x'}));return r;}
+test('Legacy saves recover surviving own placements once and spawn after crossing an overdue milestone',()=>{
+ const r=fixture();r.terrain=Array.from({length:703},(_,x)=>({x,y:0}));r.cells=r.terrain.map((c,i)=>({...c,id:`food-${i}`,symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));
+ for(const p of r.players){delete p.rodentNextSpawn;p.placements=12;}
+ initializeRodents(r);assert.equal(r.players[0].placements,352);assert.equal(r.players[1].placements,351);assert.equal(r.rodents.length,0);
+ stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);assert.equal(r.players[0].rodentNextSpawn,666);assert.equal(r.rodents[0].eaten,0);
+ const saved=JSON.parse(JSON.stringify(r));initializeRodents(saved);assert.equal(saved.players[0].placements,353);stepRodent(saved,'local-o',{placed:true});assert.equal(saved.rodents.length,2);
+});
+test('Terrain size does not trigger births; existing counters never regress or repeat past milestones',()=>{
+ const r=fixture();r.terrain=Array.from({length:703},(_,x)=>({x,y:0}));stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,0);
+ delete r.players[0].rodentNextSpawn;r.players[0].placements=400;initializeRodents(r);assert.equal(r.players[0].placements,400);assert.equal(r.players[0].rodentNextSpawn,666);
+ stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,0);
+ r.players[0].placements=665;stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);
+});
 test('Birth at each 333 actual placements, one per player, first meal announced before consumption',()=>{
  const r=fixture();r.players[0].placements=332;stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);assert.equal(r.rodents[0].eaten,0);assert.equal(r.cells.length,120);
  r.players[0].placements=665;stepRodent(r,'local-x',{placed:true});assert.equal(r.rodents.length,1);assert.equal(r.rodents[0].eaten,1);

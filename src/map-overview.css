@@ -1,25 +1,17 @@
-.game .world-map{inset:6px;padding:16px;border:1px solid #475263;border-radius:14px;background:#11161d;box-shadow:0 12px 32px #0008;gap:8px;overflow:hidden;touch-action:none}
+.game .world-map{inset:6px;padding:8px;border:1px solid #475263;border-radius:12px;background:#11161d;box-shadow:0 12px 32px #0008;gap:6px;overflow:hidden;touch-action:none}
 .game .world-map[hidden]{display:none}
-.game .map-heading{gap:12px;align-items:center;flex-shrink:0}
-.game .map-heading strong{font-size:14px;letter-spacing:.06em}
-.game .map-heading p{font-size:11px;color:#a5afbf;letter-spacing:0;margin-top:4px}
-.game .map-heading button{width:44px;height:44px;padding:0;font-size:25px;flex-shrink:0;background:#1b232e}
-.game .map-instruction{font-size:12px;color:#c0cad8;flex-shrink:0}
-.game .world-map>svg{background:#090d12;border:1px solid #283241;border-radius:8px;cursor:grab;min-height:50px;flex:1 1 0;width:100%;touch-action:none;user-select:none;-webkit-user-select:none}.game .world-map>svg:active{cursor:grabbing}
-.game .map-explore{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}.game .map-explore nav{display:flex;align-items:center;gap:4px}.game .map-explore button{width:44px;height:44px;padding:0;font-size:22px;background:#1b232e}.game .map-scale{font-size:11px;min-width:45px;text-align:center;font-variant-numeric:tabular-nums}.game .game-minimap{touch-action:none}
-.game .map-legend{gap:8px 14px;flex-wrap:wrap;font-size:11px;color:#c0cad8;flex-shrink:0}
-.game .map-legend span{display:flex;align-items:center;gap:6px}
-.game .map-key{width:10px;height:10px;display:inline-block;flex-shrink:0}
-.game .map-key.own{border:2px solid currentColor;background:currentColor;box-shadow:inset 0 0 0 2px #11161d}
-.game .map-key.own.x{color:var(--red)}.game .map-key.own.o{color:var(--green)}
-.game .map-key.rival{background:var(--blue);transform:rotate(45deg);width:8px;height:8px;margin:1px}
-.game .map-key.view{border:1px dashed white;border-radius:1px}
-.game .map-shortcuts{display:flex;gap:8px;flex-shrink:0}
-.game .map-shortcuts button{flex:1;min-height:44px;padding:8px;font-size:12px;background:#1b232e;border-color:#3d495a}
-.game .map-shortcuts button.blue{border-color:#3c6c99;background:#142333}
-@media(max-width:600px){.game .world-map{padding:10px;inset:4px;gap:7px}.game .map-legend{font-size:10px;gap:7px 11px}}
-@media(max-width:600px){.game .map-explore{flex-wrap:wrap}.game .map-explore .map-instruction{font-size:10px}.game .map-explore nav{margin-left:auto}.game .map-explore button{width:40px;height:40px}.game .map-scale{min-width:40px}}
-@media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:8px;gap:4px}.game .map-heading p,.game .map-instruction{display:none}.game .map-heading strong{font-size:12px}.game .map-legend{font-size:10px}.game .map-shortcuts button{padding:5px}.game .world-map>svg{min-height:20px}}
-/* A real miniature uses cell fills, rather than the navigation icon's thick stroke. */
-.game .game-minimap{width:72px;height:48px;padding:4px}
+.game .map-heading{gap:8px;align-items:center;flex-shrink:0;letter-spacing:0}
+.game .map-summary{margin:0;font-size:11px;color:#a5afbf;font-variant-numeric:tabular-nums}
+.game .map-heading button,.game .map-controls button{width:44px;height:44px;min-height:44px;padding:0;flex:none;background:#1b232e;font-size:22px}
+.game .map-heading button{font-size:25px}
+.game .map-controls{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-shrink:0}
+.game .map-controls button.blue{color:var(--blue);border-color:#3c6c99;background:#142333}
+.game .map-controls button svg{width:22px;height:22px;min-height:0;flex:none;margin:auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.game .map-scale{font-size:11px;min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
+.game .world-map>.map-canvas{display:block;background:#090d12;border:1px solid #283241;border-radius:8px;cursor:grab;min-height:50px;flex:1 1 0;width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+.game .world-map>.map-canvas:active{cursor:grabbing}
+@media(max-width:600px){.game .world-map{inset:4px;padding:6px;gap:4px}}
+@media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:6px}.game .map-heading{position:relative;padding-right:48px;min-height:24px}.game .map-heading button{position:absolute;right:0;top:0}.game .map-controls{padding-right:48px}.game .world-map>.map-canvas{min-height:20px}}
+/* A real miniature uses cell fills, rather than the navigation icon's stroke. */
+.game .game-minimap{width:72px;height:48px;padding:4px;touch-action:none}
 .game .game-minimap svg{stroke:none;stroke-width:0}

@@ -4,7 +4,17 @@ export const RODENT_SPAWN=333;
 export const RODENT_MEALS=33;
 export function initializeRodents(room){
   room.rodents||=[];room.eatenCells||=[];
-  for(const p of room.players)p.placements??=0;
+  // Older saves started counting at the update. Recover a conservative baseline
+  // from surviving placements once, without recounting eaten or converted cells.
+  const surviving=new Map();
+  if(room.players.some(p=>p.rodentNextSpawn==null))for(const c of room.cells||[])surviving.set(c.owner,(surviving.get(c.owner)||0)+1);
+  for(const p of room.players){
+    p.placements??=0;
+    if(p.rodentNextSpawn==null){
+      p.rodentNextSpawn=(Math.floor(p.placements/RODENT_SPAWN)+1)*RODENT_SPAWN;
+      p.placements=Math.max(p.placements,surviving.get(p.id)||0);
+    }
+  }
 }
 export function rodentSleeping(r){return r.phase>=3;}
 function pickFood(room,r,exclude){
@@ -26,7 +36,9 @@ export function stepRodent(room,playerId,{placed=false,completed=true,exclude=ro
   const player=room.players.find(p=>p.id===playerId);if(!player)return;
   if(placed){player.placements++;room.eatenCells=room.eatenCells.filter(c=>!room.cells.some(v=>v.x===c.x&&v.y===c.y));}
   let r=room.rodents.find(v=>v.player===playerId);
-  if(placed&&player.placements%RODENT_SPAWN===0&&!r){
+  const reached=placed&&player.placements>=player.rodentNextSpawn;
+  if(reached)player.rodentNextSpawn=(Math.floor(player.placements/RODENT_SPAWN)+1)*RODENT_SPAWN;
+  if(reached&&!r){
     const pair=room.pairs.find(p=>p.id===player.pair);
     r={id:crypto.randomUUID(),player:playerId,x:pair.active.x,y:pair.active.y,phase:0,eaten:0,age:0};
     const food=pickFood(room,r,exclude);

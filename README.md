@@ -204,3 +204,9 @@ En Duelo y modos locales el #MAX es una referencia calculada con la misma fórmu
 La migración `supabase/migrations/20261006171644_rodents_and_combo_records.sql` junto con `20261006172126_optimize_rodent_search.sql` se aplica al servidor existente, conservando permisos, salas, turnos y puntuaciones. `tests/rodents.sql` verifica el ciclo completo mediante RPC en un duelo de cuatro dentro de una transacción revertida.
 
 Corrección de servidor de R0.17.0: `20261006182139_fix_world_entry_terrain_performance.sql` evita el timeout al entrar en MUNDO con miles de celdas. El recorrido conectado usa uniones por coordenadas adyacentes y la normalización materializa las fichas ocupadas; conserva conectividad, tablero, puntos y reglas de ampliación. `tests/terrain-performance.sql` comprueba islas, coordenadas negativas, una zona de 5.151 celdas y la entrada real de una pareja, con límite de ocho segundos y rollback.
+
+## Mapa compacto y partidas guardadas — R0.17.1
+
+El mapa general muestra únicamente casillas y dimensiones, cierre, zoom, extensión y los mismos iconos del tablero para ir al territorio propio o al rival superior. Se eliminan título, instrucciones, leyenda y botones con texto; se conserva navegación por arrastre, pellizco y toque.
+
+En partidas locales guardadas antes de esta versión se recupera una sola vez un mínimo de colocaciones propias a partir de las fichas que siguen en el tablero, sin reducir el contador existente. Si esa recuperación supera un hito pendiente de 333, el roedor aparece en la siguiente colocación válida del jugador. Los hitos siguientes siguen siendo 666, 999, etc.; no se repiten los ya registrados. El tamaño del terreno no cuenta como fichas colocadas. Los contadores y el ciclo del servidor online conservan la lógica de R0.17.0.
