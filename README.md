@@ -225,3 +225,10 @@ El árbitro local busca la pareja del roedor por sus integrantes y reintenta un 
 El ranking desplegado comparte iconos, botones circulares, tamaño y colores con el tablero para ir al territorio propio, al rival superior y a los roedores. El acceso al mapa usa su mismo icono, sin etiquetas visibles; todos los botones conservan nombres accesibles.
 
 La inmunidad activa muestra su icono junto a la bolsa, en rojo para X o verde para O. Se conserva durante el turno propio y desaparece al completar el turno rival, según las reglas existentes. La señal permanece visible con el inventario cerrado y no se confunde con el contador de cartas disponibles.
+
+
+## Mis partidas y pausa compacta — R0.17.5
+
+Tocar la información de una partida guardada la resalta brevemente y la abre directamente. Ya no hay un botón separado «Ver y retomar»; el control de apertura sigue siendo accesible por teclado. El menú de papelera, el deslizamiento horizontal y la confirmación de borrado se conservan como acciones independientes. Abrir una partida pausada mantiene la pausa.
+
+La pantalla de pausa reúne retomar, hall, mis partidas y finalizar en una fila de iconos con nombres accesibles. Añade el marcador de la partida con puntos, #MAX, combo máximo y estado del roedor, más una vista del mapa guardado con casillas y dimensiones. El mapa es informativo; la partida permanece detenida hasta retomar (o reanudación compartida en salas online). Finalizar conserva su confirmación.

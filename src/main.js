@@ -1,7 +1,7 @@
 import './style.css';
 import './hall.css';
 import './board.css';
-import {bindMap} from './map.js';
+import {bindMap,overviewCells} from './map.js';
 import {bindGestures} from './gestures.js';
 import {maxLabel} from './max.js';
 import {comboLabel} from './records.js';
@@ -12,7 +12,7 @@ import './sessions.css';
 import './mobile-game.css';
 import './map-overview.css';
 import './inventory-sheet.css';
-import {overviewMarkup} from './map-overview.js';
+import {overviewMarkup,overviewModel} from './map-overview.js';
 import {extensionView} from './map-camera.js';
 import {inventoryMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded,toolAllowance} from './practice-tools.js';
@@ -48,7 +48,7 @@ if(urlCode||pairUrlCode)hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
 const above=()=>immediateAbove(humans(),uid,!!room.commonWorld);
-const iconPaths={rodent:rodentIcon,activate:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8m-4-4h8"/>',fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
+const iconPaths={play:'<path d="m8 4 12 8-12 8V4Z"/>',home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3V10Z"/>',rodent:rodentIcon,activate:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8m-4-4h8"/>',fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
 const navIcon=kind=>`<svg viewBox="0 0 ${kind==='rodent'?'32 32':'24 24'}" aria-hidden="true" focusable="false">${iconPaths[kind]||''}</svg>`;
 const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
 function setRankingOpen(open){rankOpen=open;blinkId=null;render();document.querySelector('.ranking-toggle')?.focus({preventScroll:true});}
@@ -301,7 +301,10 @@ function renderPaused(){
  const own=ownPlayer(),totals={X:0,O:0};room.players.forEach(p=>{if(p.symbol)totals[p.symbol]+=p.score;});
  const mode=isLocal()?(room.mode==='solo'?'VS máquina':'Sin conexión'):room.kind==='duel'?'Duelo':'Sala libre';
  const timer=room.pauseDuelMs==null?'':`${Math.floor(room.pauseDuelMs/60000)}:${String(Math.floor(room.pauseDuelMs/1000)%60).padStart(2,'0')} de duelo conservados`;
- app.innerHTML=`<section class="lobby paused-game"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · ${mode}</span></header><h1 class="heading">Partida pausada</h1><p class="instructions">Tablero, puntos y turno guardados. ${isLocal()?'Ni tú ni la máquina jugáis durante la pausa.':`Pausa compartida aprobada por mayoría. ${escape(timer)}`}</p><section class="paused-scores"><strong class="x">X ${totals.X}</strong><strong class="o">O ${totals.O}</strong></section><p class="muted">${escape(own.name)} · ${own.score} puntos · ${room.timeMode==='untimed'?'Sin reloj':'Con reloj'}</p>${voteMarkup(room.vote,uid)}<div class="paused-actions"><button class="primary" data-action="resume">${isLocal()?'Retomar partida':'Solicitar reanudación'}</button><button data-action="go-hall">Volver al hall</button><button data-action="go-games">Mis partidas</button>${isLocal()||room.host===uid?'<button class="ghost danger" data-action="finish">Finalizar partida</button>':''}</div></section>`;
+ const list=gameRank(),target=above(),model=overviewModel(room,own,target);
+ const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
+ const minimap=model?`<figure class="paused-minimap" aria-label="Mapa de la partida pausada"><figcaption>${model.terrain.length.toLocaleString('es-ES')} casillas · ${model.bounds.width-4} × ${model.bounds.height-4}</figcaption><svg viewBox="${model.bounds.x} ${model.bounds.y} ${model.bounds.width} ${model.bounds.height}" role="img" aria-label="Vista del tablero guardado">${overviewCells(model.terrain)}${model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="${model.ownColor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`:''}</svg></figure>`:'';
+ app.innerHTML=`<section class="lobby paused-game"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · ${mode}</span></header><h1 class="heading">Partida pausada</h1><p class="instructions">Tablero, puntos y turno guardados.${!isLocal()?` Pausa compartida. ${escape(timer)}`:''}</p><section class="paused-scores" aria-label="Puntuación de los equipos"><strong class="x">X ${totals.X}</strong><strong class="o">O ${totals.O}</strong></section><nav class="paused-actions" aria-label="Acciones de partida pausada">${iconButton('resume','play',isLocal()?'Retomar partida':'Solicitar reanudación','class="primary"')}${iconButton('go-hall','home','Volver al hall')}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav>${voteMarkup(room.vote,uid)}<div class="paused-details">${ranking}${minimap}</div><p class="paused-turn muted">${room.timeMode==='untimed'?'Sin reloj':'Con reloj'} · ${ownPair()?.pending?'Ampliación pendiente':'Turno '+(ownPair()?.turn||'')} · ${room.level==='advanced'?'Avanzado':'Normal'}</p></section>`;
  renderFinish();renderLeave();renderInventory();
 }
 function suspendLocal(){
@@ -386,9 +389,9 @@ app.addEventListener('click',async e=>{
   if(action==='rank-page'){hallRanking.offset=Number(b.dataset.offset);await refreshWorldRank();return;}
   if(action==='refresh-rank'){await refreshWorldRank();return;}
   if(action==='load-game'){
-    await run(async()=>{let next;if(b.dataset.local==='true'){next=localGames().find(g=>g.id===b.dataset.id);if(!next)throw new Error('Esta partida no está disponible.');}
+    await run(async()=>{const row=b.closest('.saved-game');row?.classList.add('is-opening');await new Promise(resolve=>setTimeout(resolve,110));let next;if(b.dataset.local==='true'){next=localGames().find(g=>g.id===b.dataset.id);if(!next)throw new Error('Esta partida no está disponible.');}
     else{uid=await ensurePlayer();next=await command('get',{code:b.dataset.code});const me=next.players.find(p=>p.id===uid);if(me?.active===false&&next.status!=='finished')next=await command('join',{code:b.dataset.code,name:me.name});}
-    hallHistory=[];hallDialog=null;selectedExpansion=null;accept(next);});return;
+    hallHistory=[];hallDialog=null;selectedExpansion=null;accept(next);});b.closest('.saved-game')?.classList.remove('is-opening');return;
   }
   if(action==='pause'||action==='resume'||action==='vote-yes'||action==='vote-no'){
     await run(async()=>{const vote=action.startsWith('vote-');gameMenuOpen=false;const next=isLocal()?localCommand(room,action):await command(vote?'vote':action,{code:room.code,voteId:room.vote?.id,yes:action==='vote-yes'});accept(next);});return;

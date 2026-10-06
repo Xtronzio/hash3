@@ -7,3 +7,26 @@
 @media(max-width:600px){.saved-game-actions{gap:5px}.saved-game .delete-game-button{min-width:34px;padding:7px}.saved-game{align-items:flex-start}.saved-game-actions>button:first-child{max-width:110px}.game .game-bottom button{font-size:11px}.inventory-item{gap:12px}}
 .practice-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #00e5ff;border-radius:8px;padding:9px 12px;margin:0 0 10px;font-size:12px;line-height:1.5;flex-shrink:0}.practice-banner button{flex-shrink:0}.cell.removable{outline:2px solid #f4c65d;outline-offset:-4px;cursor:pointer}.cell.removable:hover,.cell.removable:focus-visible{background:#f4c65d18;outline-width:3px}.inventory-item p{font-size:13px}.inventory-item{margin:14px 0;padding:16px 0}.inventory-item h3{font-size:23px}
 .game .game-bottom button[data-action="abandon"]{border:1px solid #494e59;background:#15171c;color:#f1f2f4;min-height:44px;padding:9px 12px;font-weight:700}body:has(.game) #notice{bottom:calc(104px + env(safe-area-inset-bottom));pointer-events:none}
+
+/* Open a saved game by tapping its information, with deletion kept separate. */
+.saved-game .saved-game-info.saved-game-open{display:grid;flex:1;max-width:none;min-width:0;padding:14px 8px;border:0;border-radius:0;background:transparent;text-align:left;color:var(--text,#e3e5e9);font-weight:400;cursor:pointer}
+.saved-game .saved-game-open:hover,.saved-game .saved-game-open:active,.saved-game.is-opening .saved-game-front{background:#58a6ff18}
+.saved-game .saved-game-open:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;background:#58a6ff18}
+.saved-game .saved-game-front{padding-block:0}
+.saved-game .saved-game-actions .saved-game-more{width:44px;max-width:none;min-height:44px;padding:6px;font-size:22px}
+/* Pause is a compact summary of the saved position. */
+.paused-game{width:min(100%,760px);padding:16px 18px;min-height:100dvh}
+.paused-game .lobby-header{margin-bottom:18px;gap:12px}.paused-game .lobby-header .brand{font-size:40px}.paused-game .tag{font-size:11px;white-space:normal;text-align:right}
+.paused-game h1{font-size:30px;margin:0 0 8px}.paused-game .instructions{font-size:12px;line-height:1.5;margin:0 0 12px}
+.paused-game .paused-scores{font-size:29px;padding:10px 0;margin-bottom:12px;gap:12px}
+.paused-game .paused-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.paused-game .paused-actions button{width:48px;height:48px;min-height:48px;padding:10px;display:grid;place-items:center}
+.paused-actions svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.paused-details{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+.paused-ranking{min-width:0}.paused-ranking h2{font-size:22px;margin:0 0 8px}.paused-ranking ol{list-style:none;padding:0;margin:0;max-height:250px;overflow:auto}
+.paused-ranking li{display:flex;gap:10px;padding:10px 8px;border-left:3px solid transparent;border-bottom:1px solid var(--line)}.paused-ranking li.me{border-left-color:var(--red);background:#ff4a580b}.paused-ranking li.me.o{border-left-color:var(--green);background:#24d3930b}
+.paused-ranking li>div{min-width:0;flex:1}.paused-ranking strong{display:block;font-size:13px;overflow-wrap:anywhere}.paused-ranking span{display:block;font-size:12px;color:#b4b8c0;margin-top:4px;font-variant-numeric:tabular-nums}.paused-ranking small{display:block;font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5}
+.paused-minimap{margin:0;min-width:0}.paused-minimap figcaption{font-size:11px;color:var(--muted);margin-bottom:8px}.paused-minimap svg{display:block;width:100%;height:clamp(160px,30dvh,260px);background:#090d12;border:1px solid #283241;border-radius:8px;fill:none}
+.paused-game .paused-turn{font-size:11px;line-height:1.5;margin-top:12px}
+@media(max-width:600px){.paused-details{grid-template-columns:minmax(0,1fr)}.paused-game{padding:14px 12px}.paused-game .lobby-header{margin-bottom:12px}.paused-game .paused-actions{margin-bottom:12px}.paused-ranking ol{max-height:180px}}
+@media(max-height:450px) and (orientation:landscape){.paused-game .lobby-header{margin-bottom:6px}.paused-game h1{font-size:24px}.paused-game .paused-scores{padding:6px 0}.paused-details{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}.paused-minimap svg{height:160px}}
