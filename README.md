@@ -2,6 +2,10 @@
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
+## Contador y aviso de recarga · R0.16.5
+
+La bolsa del tablero muestra el total de cartas restantes, contando también unidades repetidas. El número baja al consumir una herramienta y se actualiza con cada recarga real. La recarga resalta el contador en dorado durante 3,5 segundos y muestra la carta recibida, sin abrir el inventario ni tapar el aviso de puntos. En dos jugadores en el mismo dispositivo, el aviso espera al siguiente turno del dueño de la carta. Abrir un guardado o reanudar una pausa no repite recargas antiguas. Se respeta la preferencia de movimiento reducido.
+
 ## Borrado, salida de Mundo e inventario de práctica · R0.12
 
 Cada entrada de Mis partidas tiene papelera y confirmación. Los guardados locales se borran de este navegador; la colección es la fuente principal para impedir que el antiguo guardado único reaparezca después de borrar. Las salas online se quitan solo de la lista del invitado: si sigue activo, también sale usando la misma lógica de abandono existente. No se borra la sala compartida, su resultado ni el #MAX oficial de Mundo. Abrir de nuevo una sala por su código o volver a Mundo recupera la entrada en Mis partidas. El servidor comprueba pertenencia y limita el cambio al usuario autenticado.

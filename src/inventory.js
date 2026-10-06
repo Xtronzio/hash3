@@ -2,6 +2,22 @@ import {machineChoice,localHumanId} from './local.js';
 import {availableCells,figureWindows} from './game.js';
 import {practiceTools,practiceTurn,canUsePracticeTool,inventoryFor,initializeInventory,spendCard,placementSymbol,REFILL_TURNS,MAX_CARDS} from './practice-tools.js';
 export const hintIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 21c0-3-4-5-4-10a10 10 0 0 1 20 0c0 5-4 7-4 10M11 25h10m-9 4h8M16 5v5m-5 4 5-4 5 4M16 10v11"/></svg>';
+export function inventoryTotal(game,playerId){
+ return Object.values(inventoryFor(game,playerId).cards).reduce((sum,count)=>sum+count,0);
+}
+export function inventoryRefill(previous,next,playerId){
+ if(!previous||previous.id!==next?.id||!['solo','local'].includes(next.mode))return null;
+ const before=inventoryFor(previous,playerId),after=inventoryFor(next,playerId);
+ const added=(after.draws||0)-(before.draws||0);
+ if(added<=0)return null;
+ return {player:playerId,added,tool:practiceTools.find(t=>t.id===after.lastDraw)?.label||'Carta',total:inventoryTotal(next,playerId)};
+}
+export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null}={}){
+ const total=inventoryTotal(game,playerId),inv=inventoryFor(game,playerId),turns=REFILL_TURNS-inv.turns;
+ const label=`Inventario · ${total} carta${total===1?'':'s'} · ${turns<=0?'Recarga lista cuando haya hueco':`Recarga en ${turns} turno${turns===1?'':'s'} propio${turns===1?'':'s'}`}`;
+ const active=refill?.player===playerId;
+ return `<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-icon">${icon}<span class="inventory-badge ${total?'':'is-empty'}" aria-hidden="true">${total}</span></span></button>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">Inventario recargado · +${refill.added} ${refill.tool}</span>`:''}`;
+}
 export function canUsePracticeHint(game,playerId,now=Date.now()){
  const p=game?.pairs?.[0];
  return !!(canUsePracticeTool(game,playerId,'hint',now)&&!(game.mode==='solo'&&playerId!==localHumanId(game)));
@@ -31,6 +47,6 @@ export function inventoryMarkup(game,playerId){
    const count=local?(inv.cards[t.id]||0):1,enabled=local&&(t.id==='hint'?canUsePracticeHint(game,playerId):canUsePracticeTool(game,playerId,t.id));
    return `<button class="inventory-card" data-action="${t.id==='hint'?'practice-hint':'practice-tool'}" data-tool="${t.id}" aria-label="Usar ${t.label}, ${count} carta${count===1?'':'s'}" title="${t.description}" ${enabled?'':'disabled'}><span class="inventory-card-top"><span class="inventory-icon">${svg(t.id)}</span><span class="inventory-count">×${count}</span></span><strong>${t.label}</strong><small>${t.description}</small><span class="inventory-card-action">${state?.used.includes(t.id)?'Usada este turno':count?'Usar':'Agotada'}</span></button>`;
  }).join('');
- const total=Object.values(inv.cards).reduce((a,b)=>a+b,0),last=practiceTools.find(t=>t.id===inv.lastDraw)?.label;
+ const total=inventoryTotal(game,playerId),last=practiceTools.find(t=>t.id===inv.lastDraw)?.label;
  return `<p class="inventory-status">${local?`${game.mode==='solo'?`Máquina ${game.machineInventory?'con':'sin'} inventario · `:''}${total}/${MAX_CARDS} cartas · ${inv.turns>=REFILL_TURNS?'Recarga lista cuando haya hueco':`Recarga en ${REFILL_TURNS-inv.turns} turno${REFILL_TURNS-inv.turns===1?'':'s'} propio${REFILL_TURNS-inv.turns===1?'':'s'}`}`:'Catálogo de pruebas · VS máquina y Sin conexión'}${last?` · Última: ${last}`:''}</p><div class="inventory-cards">${cards}</div><p class="inventory-rules">Hasta dos cartas por turno, además de tu ficha. ${game?.timeMode==='untimed'?'Sin límite de tiempo.':'Las cartas no reinician el reloj.'} Nunca se restan puntos; las figuras ya cobradas no se pagan otra vez.</p>${local?'':game?'<p class="muted">El inventario online todavía está en preparación.</p>':'<div class="inventory-start"><button data-action="setup-solo">Practicar contra la máquina</button><button data-action="setup-local">Dos en este dispositivo</button><button data-action="hall-games">Abrir una partida guardada</button></div>'}`;
 }
