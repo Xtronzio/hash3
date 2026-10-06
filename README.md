@@ -2,9 +2,9 @@
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
-## Contador y aviso de recarga · R0.16.5
+## Contador y aviso de recarga · R0.16.6
 
-La bolsa del tablero muestra el total de cartas restantes, contando también unidades repetidas. El número baja al consumir una herramienta y se actualiza con cada recarga real. La recarga resalta el contador en dorado durante 3,5 segundos y muestra la carta recibida, sin abrir el inventario ni tapar el aviso de puntos. En dos jugadores en el mismo dispositivo, el aviso espera al siguiente turno del dueño de la carta. Abrir un guardado o reanudar una pausa no repite recargas antiguas. Se respeta la preferencia de movimiento reducido.
+La bolsa del tablero muestra el total de cartas restantes, contando también unidades repetidas. El número baja al consumir una herramienta y se actualiza con cada recarga real. El contador, la bolsa y el aviso conservan el color del modo: cian en VS máquina, rojo en Duelo y blanco en Sin conexión. La recarga resalta el contador durante 3,5 segundos y muestra la carta recibida, sin abrir el inventario ni tapar el aviso de puntos. En dos jugadores en el mismo dispositivo, el aviso espera al siguiente turno del dueño de la carta. Abrir un guardado o reanudar una pausa no repite recargas antiguas. Se respeta la preferencia de movimiento reducido.
 
 ## Borrado, salida de Mundo e inventario de práctica · R0.12
 

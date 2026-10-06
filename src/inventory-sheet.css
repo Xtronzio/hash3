@@ -5,17 +5,20 @@
 .inventory-status{font-size:11px;line-height:1.5;color:#b8c5d8;margin:0 0 10px}
 .inventory-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .inventory-card{padding:10px;display:flex;flex-direction:column;align-items:stretch;gap:5px;min-height:146px;background:#1a232e;border:1px solid #435167;border-radius:10px;text-align:left;color:#f0f4f9}
-.inventory-card-top{display:flex;align-items:center;justify-content:space-between}.inventory-count{font-size:18px;font-variant-numeric:tabular-nums;color:#d9e5f4}.inventory-card .inventory-icon svg{width:29px;height:29px;stroke-width:1.7}.inventory-card strong{font-size:14px}.inventory-card small{font-size:10px;line-height:1.35;font-weight:400;color:#b4c0d0;flex:1}.inventory-card-action{font-size:10px;color:#00e5ff;margin-top:3px}.inventory-card:disabled{opacity:.42}.inventory-card:hover:not(:disabled),.inventory-card:focus-visible{border-color:#00e5ff;background:#182e3d}
+.inventory-card-top{display:flex;align-items:center;justify-content:space-between}.inventory-count{font-size:18px;font-variant-numeric:tabular-nums;color:#d9e5f4}.inventory-card .inventory-icon svg{width:29px;height:29px;stroke-width:1.7}.inventory-card strong{font-size:14px}.inventory-card small{font-size:10px;line-height:1.35;font-weight:400;color:#b4c0d0;flex:1}.inventory-card-action{font-size:10px;color:var(--mode-color,#00e5ff);margin-top:3px}.inventory-card:disabled{opacity:.42}.inventory-card:hover:not(:disabled),.inventory-card:focus-visible{border-color:var(--mode-color,#00e5ff);background:color-mix(in srgb,var(--mode-color,#00e5ff) 10%,#1a232e)}
 .inventory-rules{font-size:10px;line-height:1.5;color:#b5becc;margin:10px 0 0}
-.game .game-bottom button[aria-expanded="true"]{color:#00e5ff;background:#00e5ff10;border-top:2px solid #00e5ff}
+.game{--mode-color:#f2f3f4}
+.game.mode-cyan{--mode-color:#00e5ff}.game.mode-red{--mode-color:var(--red)}.game.mode-green{--mode-color:var(--green)}.game.mode-silver{--mode-color:#f2f3f4}
+.game .game-bottom .inventory-dock-button{color:var(--mode-color)}
+.game .game-bottom button[aria-expanded="true"]{color:var(--mode-color);background:color-mix(in srgb,var(--mode-color) 6%,transparent);border-top:2px solid var(--mode-color)}
 .game .game-bottom{position:relative}
 .inventory-dock-icon{position:relative;display:inline-flex}
-.inventory-badge{position:absolute;top:-7px;right:-13px;min-width:20px;height:20px;padding:0 4px;display:grid;place-items:center;background:#00e5ff;color:#071116;border:2px solid #101216;border-radius:20px;font-size:11px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-.inventory-badge.is-empty{background:#465364;color:#e3e5e9}
-.game .game-bottom .inventory-dock-button.is-refilled{color:#f4c65d;background:#f4c65d0d}
-.is-refilled .inventory-badge{background:#f4c65d;color:#171208;animation:inventory-refill-pulse .65s ease-in-out 4}
-.inventory-refill-toast{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:7px 11px;background:#201b0d;border:1px solid #f4c65d;border-radius:8px;color:#f4c65d;font-size:11px;line-height:1.35;text-align:center;box-shadow:0 3px 14px #0008;pointer-events:none;z-index:15}
-@keyframes inventory-refill-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 #f4c65d00}50%{transform:scale(1.22);box-shadow:0 0 0 5px #f4c65d30}}
+.inventory-badge{position:absolute;top:-7px;right:-13px;min-width:20px;height:20px;padding:0 4px;display:grid;place-items:center;background:var(--mode-color);color:#071116;border:2px solid #101216;border-radius:20px;font-size:11px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.inventory-badge.is-empty{opacity:.55}
+.game .game-bottom .inventory-dock-button.is-refilled{background:color-mix(in srgb,var(--mode-color) 6%,transparent)}
+.is-refilled .inventory-badge{animation:inventory-refill-pulse .65s ease-in-out 4}
+.inventory-refill-toast{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:7px 11px;background:color-mix(in srgb,var(--mode-color) 9%,#101216);border:1px solid var(--mode-color);border-radius:8px;color:var(--mode-color);font-size:11px;line-height:1.35;text-align:center;box-shadow:0 3px 14px #0008;pointer-events:none;z-index:15}
+@keyframes inventory-refill-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 transparent}50%{transform:scale(1.22);box-shadow:0 0 0 5px color-mix(in srgb,var(--mode-color) 20%,transparent)}}
 @media(prefers-reduced-motion:reduce){.is-refilled .inventory-badge{animation:none}}
 .cell.blocked::after,.cell.reserved::after{content:'×';position:absolute;inset:0;display:grid;place-items:center;color:#f4c65d;font-size:24px;border:2px dashed #f4c65d80;pointer-events:none;background:#f4c65d12}.cell.reserved::after{content:'◇';color:#00e5ff;border-color:#00e5ff70;background:#00e5ff0b}.cell.shielded::before{content:'◆';position:absolute;right:4px;bottom:2px;font-size:12px;color:#f4c65d;z-index:2}.cell.tool-target{outline:2px solid #f4c65d;outline-offset:-4px}.cell.tool-source{outline:3px solid #00e5ff;outline-offset:-5px}.inventory-target-banner{font-size:11px;line-height:1.35}.inventory-sheet .inventory-start{margin-top:10px}
 @media(max-width:600px){.inventory-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.inventory-sheet{max-height:46dvh;padding:0 10px 8px}.inventory-card{min-height:138px}.inventory-card small{font-size:10px}.inventory-sheet-heading{min-height:46px}}
