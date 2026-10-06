@@ -1,5 +1,7 @@
 import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows,isBlockedCell} from './game.js';
 import {recordMax} from './max.js';
+import {recordCombo} from './records.js';
+import {initializeRodents,stepRodent} from './rodents.js';
 import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 import {activateImmunity,recordImmunityCombo} from './immunity.js';
@@ -18,7 +20,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
-  initializeInventory(room);return room;
+  initializeInventory(room);initializeRodents(room);return room;
 }
 function normalize(room,now) {
   for(const p of room.pairs) {
@@ -75,6 +77,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
         const scorer=room.players.find(v=>v.symbol===changed.symbol),result=scoreCell(room,changed,scorer);
         room.players.find(v=>v.id===changed.owner).lastMove=changed;
         recordMax(actor,scorer.id===actor.id?result.points-result.bonus:0,scorer.id===actor.id?result.figures:0);
+        recordCombo(scorer,{...result,moveId:changed.id});
         room.lastEvent={id:changed.id,kind:'move',tool,player:scorer.id,actor:playerId,...result};
       }else{
         recordMax(actor,0,0);room.lastEvent={id:id(),kind:'inventory',tool,player:playerId,x,y};
@@ -92,7 +95,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   }
   if(action==='pass'){
     if(p.pending||availableCells(room,p).length||!availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Solo se puede pasar cuando todas las celdas vacías están bloqueadas.');
-    const actor=p[p.turn.toLowerCase()];completeInventoryTurn(room,actor,{automatic,placed:false,random});delete room.practiceTurn;
+    const actor=p[p.turn.toLowerCase()];stepRodent(room,actor,{placed:false});completeInventoryTurn(room,actor,{automatic,placed:false,random});delete room.practiceTurn;
     p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'pass',player:actor,automatic};
     normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
@@ -106,14 +109,18 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const symbol=placementSymbol(room,player.id),scorer=room.players.find(v=>v.symbol===symbol);
     const cell={id:id(),requestId:payload.requestId||id(),x,y,symbol,owner:player.id};
     room.cells.push(cell);room.inventoryEffects.forced=room.inventoryEffects.forced.filter(e=>e.player!==player.id);
-    const {points,bonus,figures}=scoreCell(room,cell,scorer);player.lastMove=cell;
+    const {points,bonus,figures,paidFigures}=scoreCell(room,cell,scorer);player.lastMove=cell;
+    recordCombo(scorer,{points,figures,automatic,moveId:cell.id});
     recordImmunityCombo(room,player.id,points,{automatic,scorer:scorer.id});
     recordMax(player,scorer===player?points-bonus:0,scorer===player?figures:0,automatic);
-    const full=!availableCells(room,p,{ignoreBlocks:true}).length;
-    if(!automatic&&state.remaining>1&&!full&&availableCells(room,p).length){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}
+    let full=!availableCells(room,p,{ignoreBlocks:true}).length;
+    const completed=automatic||state.remaining<=1||full||!availableCells(room,p).length;
+    stepRodent(room,player.id,{placed:true,completed,exclude:cell.id});
+    full=!availableCells(room,p,{ignoreBlocks:true}).length;
+    if(!completed&&state.remaining>1&&!full&&availableCells(room,p).length){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}
     else{completeInventoryTurn(room,player.id,{automatic,random});delete room.practiceTurn;p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();}
     if(full)p.expander=player.id;
-    room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:player.id,figures,points,bonus,automatic,continuation:full};
+    room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:player.id,figures,points,bonus,paidFigures,automatic,continuation:full};
   }else if(action==='expand') {
     if(!automatic&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se colocará una ampliación automáticamente.');
     if(!p.pending||availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Usa las celdas vacías antes de ampliar.');
@@ -134,5 +141,5 @@ function scoreCell(room,cell,scorer){
   room.forms.push(...figures.map(f=>f.id));
   const bonus=3*(Math.floor((scorer.figures+figures.length)/3)-Math.floor(scorer.figures/3)),points=figures.reduce((sum,f)=>sum+f.size,0)+bonus;
   scorer.score+=points;scorer.figures+=figures.length;room.pairs[0].credits+=figures.length;
-  return {figures:figures.length,points,bonus};
+  return {figures:figures.length,points,bonus,paidFigures:figures};
 }

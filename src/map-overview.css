@@ -20,3 +20,6 @@
 @media(max-width:600px){.game .world-map{padding:10px;inset:4px;gap:7px}.game .map-legend{font-size:10px;gap:7px 11px}}
 @media(max-width:600px){.game .map-explore{flex-wrap:wrap}.game .map-explore .map-instruction{font-size:10px}.game .map-explore nav{margin-left:auto}.game .map-explore button{width:40px;height:40px}.game .map-scale{min-width:40px}}
 @media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:8px;gap:4px}.game .map-heading p,.game .map-instruction{display:none}.game .map-heading strong{font-size:12px}.game .map-legend{font-size:10px}.game .map-shortcuts button{padding:5px}.game .world-map>svg{min-height:20px}}
+/* A real miniature uses cell fills, rather than the navigation icon's thick stroke. */
+.game .game-minimap{width:72px;height:48px;padding:4px}
+.game .game-minimap svg{stroke:none;stroke-width:0}

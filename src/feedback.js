@@ -5,9 +5,10 @@ export function scoreFeedback(previous,next) {
   const ev=next.lastEvent;
   if(!previous||previous.id!==next.id||ev?.kind!=='move'||!(ev.points>0)||previous.lastEvent?.id===ev.id)return null;
   const move=next.cells.find(c=>c.id===ev.id),player=next.players.find(p=>p.id===ev.player);
-  if(!move||!player)return null;
+  if(!player)return null;
+  const scoredMove=move||ev.move;if(!scoredMove)return null;
   const paid=new Set(next.forms||[]),before=new Set(previous.forms||[]);
-  const figures=figureWindows(next.cells,move.x,move.y,move.symbol,next.level).filter(f=>paid.has(f.id)&&!before.has(f.id));
+  const figures=ev.paidFigures||figureWindows(next.cells,scoredMove.x,scoredMove.y,scoredMove.symbol,next.level).filter(f=>paid.has(f.id)&&!before.has(f.id));
   const cells=new Map(),groups=new Map();
   for(const f of figures) {
     for(const [x,y] of f.points)cells.set(key(x,y),{x,y});
@@ -15,7 +16,7 @@ export function scoreFeedback(previous,next) {
     if(!groups.has(groupKey))groups.set(groupKey,{kind:f.kind,size:f.size,count:0,points:0});
     const group=groups.get(groupKey);group.count++;group.points+=f.size;
   }
-  return {id:ev.id,player:ev.player,name:player.name,symbol:move.symbol,move,figures,cells:[...cells.values()],groups:[...groups.values()],points:ev.points,bonus:ev.bonus||0,automatic:!!ev.automatic};
+  return {id:ev.id,player:ev.player,name:player.name,symbol:scoredMove.symbol,move:scoredMove,figures,cells:[...cells.values()],groups:[...groups.values()],points:ev.points,bonus:ev.bonus||0,automatic:!!ev.automatic};
 }
 export function scoreBreakdown(feedback) {
   const names={'línea':['Línea','Líneas'],L:['L','L'],cuadrado:['Cuadrado','Cuadrados'],cruz:['Cruz','Cruces'],grupo:['Figura compleja','Figuras complejas']};

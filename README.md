@@ -1,4 +1,4 @@
-# #3 — R0.16.9
+# #3 — R0.17.0
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
@@ -190,3 +190,15 @@ R0.16.2 permite elegir de forma independiente la dificultad del rival, figuras s
 
 
 R0.16.3 devuelve la elección Con reloj / Sin reloj a la creación de partidas locales. Sin reloj no hay jugadas por timeout; la máquina responde cuando le toca y espera la siguiente jugada humana. La elección se recuerda y es independiente del nivel de figuras, dificultad e inventario rival. La pausa funciona en ambos ritmos.
+
+## Roedores y referencias — R0.17.0
+
+Cada jugador cuenta sus colocaciones efectivas desde esta versión (Doble suma dos; ampliar no suma). Cada 333 colocaciones aparece un roedor, máximo uno por jugador. El animal busca fichas de cualquiera de los dos símbolos dentro del territorio conectado; los destinos de otros roedores despiertos se reservan para evitar solapamientos. Su próxima comida se anuncia en amarillo; no consume la ficha recién colocada. No hay carta de control de roedores en esta versión.
+
+Cada turno propio completado avanza una fase: come una ficha en tres turnos y duerme los tres siguientes. Doble avanza una vez, pausa y expansión no avanzan. El contador registra ingestas reales; se retira al comer 33 fichas (63 turnos si siempre hay alimento, sin contar el turno de aparición). Sin alimento busca otra ficha; si no hay ninguna, continúa el ciclo sin incrementar el contador. Los puntos ganados permanecen. Una figura rota por un roedor puede volver a cobrarse al reconstruirla; las figuras intactas siguen protegidas contra cobros repetidos.
+
+Los roedores son amarillos y su celda muestra el contador; los huecos liberados tienen marco amarillo hasta ocuparse de nuevo. Tablero y mapa general distinguen sueño, objetivo y huecos; el acceso al mapa muestra ahora una miniatura real. La ficha de referencia del inmediato superior se representa como una celda azul.
+
+En Duelo y modos locales el #MAX es una referencia calculada con la misma fórmula y no altera el oficial de Mundo. Se muestra también en el marcador plegado y el resultado final. Combo máx. registra los puntos de una sola colocación o acción de carta que puntúa, incluidos bonus, excluyendo colocaciones por demora. Doble tiene dos resultados independientes. El récord se conserva por partida; en Mundo es persistente y los rankings por periodos muestran el mejor combo del periodo. Los nuevos registros no reconstruyen resultados antiguos desde puntos acumulados.
+
+La migración `supabase/migrations/20261006171644_rodents_and_combo_records.sql` junto con `20261006172126_optimize_rodent_search.sql` se aplica al servidor existente, conservando permisos, salas, turnos y puntuaciones. `tests/rodents.sql` verifica el ciclo completo mediante RPC en un duelo de cuatro dentro de una transacción revertida.

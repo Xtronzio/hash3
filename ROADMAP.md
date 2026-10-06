@@ -6,9 +6,9 @@ Anotado por Jorge el 5 de octubre de 2026. Pendiente de diseñar y desarrollar.
 
 Partir de un tablero o figura predefinida que se transforme borrando y colocando fichas, formando nuevas figuras. Quedan por definir los objetivos, las reglas de borrado, la puntuación y cómo se completa cada reto. No está activado en el juego.
 
-## Destructores para partidas largas
+## Roedores
 
-Idea para valorar en pruebas: liberar casillas sin quitar los puntos ya ganados, permitiendo nuevas construcciones y frenando el crecimiento del tablero. Puede evolucionar desde una herramienta de inventario a un actor automático que empiece tras cierta duración y actúe cada 30 segundos. Quedan por definir el momento de activación, los objetivos y el aviso previo. No está activado automáticamente.
+Implementados en R0.17.0 para partidas locales, Duelo y Mundo. Cada 333 colocaciones efectivas aparece uno por jugador. Come 1+1+1 y duerme 3 turnos propios; se retira tras 33 ingestas reales. Busca alimento dentro del territorio conectado y marca el destino en amarillo. Sus huecos permiten reconstruir y puntuar figuras rotas, sin descontar los puntos anteriores. El mapa permite localizarlos y consultar su contador. Pendientes: equilibrar aparición con pruebas reales, tipos por perímetro/figura y herramientas para frenarlos. El cambio de nombre a #33 se ha valorado; no está aplicado.
 
 ## Inventario online
 

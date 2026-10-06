@@ -1,5 +1,6 @@
 import {machineLevelLabel} from './machine.js';
 import {maxLabel} from './max.js';
+import {comboLabel} from './records.js';
 import {voteCounts} from './sessions.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const periods=[['all','General'],['year','Anual'],['month','Mensual'],['week','Semanal'],['day','Diaria'],['hour','Por horas']];
@@ -20,7 +21,7 @@ export function gamesMarkup({local=[],online=[],loading=false,error=''}={}){
  }).join('');
  return `<p>Elige qué partida quieres abrir. Las pausadas conservan tablero, puntos y turno.</p>${loading?'<p role="status">Consultando tus salas…</p>':''}${error?`<p class="muted">${esc(error)}</p>`:''}<div class="saved-game-group"><h3 class="heading">En curso · ${open.length}</h3>${cards(open)||'<p class="muted">No hay partidas abiertas.</p>'}</div><div class="saved-game-group"><h3 class="heading">Pausadas · ${paused.length}</h3>${cards(paused)||'<p class="muted">No hay partidas pausadas.</p>'}</div><details class="closed-games"><summary>Cerradas · ${closed.length}</summary>${cards(closed)||'<p class="muted">No hay partidas cerradas.</p>'}</details><p class="muted">Las partidas locales se conservan en este navegador.</p>`;
 }
-function rankRows(players,uid){return `<ol class="world-rank-list">${players.map(p=>`<li class="${p.id===uid?'rank-you':''}"><span class="rank-position ${p.rank===1?'gold':p.rank===2?'silver':p.rank===3?'bronze':''}">${p.rank}</span><span>${esc(p.name)}${p.id===uid?' · tú':''}<small>${p.score||0} puntos · ${p.max?.actions||0}/100 acciones${p.max?.provisional?' · provisional':''}</small></span><strong class="mono">${maxLabel(p)}</strong></li>`).join('')}</ol>`;}
+function rankRows(players,uid){return `<ol class="world-rank-list">${players.map(p=>`<li class="${p.id===uid?'rank-you':''}"><span class="rank-position ${p.rank===1?'gold':p.rank===2?'silver':p.rank===3?'bronze':''}">${p.rank}</span><span>${esc(p.name)}${p.id===uid?' · tú':''}<small>${p.score||0} puntos · Combo máx. ${comboLabel(p)} · ${p.max?.actions||0}/100 acciones${p.max?.provisional?' · provisional':''}</small></span><strong class="mono">${maxLabel(p)}</strong></li>`).join('')}</ol>`;}
 export function worldRankMarkup(state,uid){
  const {period='all',date='',hour=0,data,loading,error='',offset=0}=state;
  const filters=`<div class="rank-periods" role="group" aria-label="Periodo del ranking">${periods.map(([id,name])=>`<button data-action="rank-period" data-period="${id}" aria-pressed="${id===period}">${name}</button>`).join('')}</div>${period!=='all'?`<div class="rank-date"><label for="rank-date">Fecha del periodo<input id="rank-date" type="date" value="${esc(date)}"></label>${period==='hour'?`<label for="rank-hour">Hora<select id="rank-hour">${Array.from({length:24},(_,h)=>`<option value="${h}" ${h===Number(hour)?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}</select></label>`:''}</div>`:''}`;
