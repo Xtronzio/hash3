@@ -10,8 +10,7 @@ export function chooseMachineCard(room,now=Date.now()){
   const player=room.players.find(p=>p.id===actor),level=room.difficulty||'medium';
   const usable=tool=>canUsePracticeTool(room,actor,tool,now);
   const command=(tool,point,extra={})=>({action:'inventory',payload:{tool,playerId:actor,...point,...extra}});
-  // Prefer the frequent one-round reward and preserve longer cards when possible.
-  for(const tool of ['immunity-1','immunity-3','immunity-33'])if(usable(tool))return command(tool,{});
+  if(usable('immunity'))return command('immunity',{});
   if(level!=='basic'&&usable('combo')&&usable('double')&&usable('rival'))return command('combo',{});
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
   const neighbors=(point,symbol)=>[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>cells.get(key(point.x+dx,point.y+dy))?.symbol===symbol).length;

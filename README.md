@@ -1,20 +1,22 @@
-# #3 — R0.16.8
+# #3 — R0.16.9
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 
-## Inmunidad por combos de 33 puntos · R0.16.8
+## Inmunidad del territorio · R0.16.9
 
-En VS máquina y Sin conexión, una colocación manual de al menos 33 puntos cuenta como un combo, incluidos sus bonus. Los puntos logrados usando cartas, las colocaciones automáticas y el símbolo propio colocado por el rival no avanzan objetivos. No se exige número de turnos ni antigüedad; dos colocaciones de Doble se evalúan por separado, sin sumar jugadas menores.
+En VS máquina y Sin conexión, una colocación manual de al menos 33 puntos cuenta como un combo, incluidos sus bonus. Los puntos logrados usando cartas, las colocaciones automáticas y el símbolo propio colocado por el rival no avanzan objetivos. No se exige número de turnos ni antigüedad; las dos colocaciones de Doble se evalúan por separado, sin sumar jugadas menores.
 
-| Objetivo repetible | Carta ganada |
+| Objetivo repetible | Protecciones ganadas |
 | --- | --- |
-| Cada 3 combos de ≥33 puntos | Inmunidad de 1 ronda |
-| Cada 33 combos de ≥33 puntos | Inmunidad de 3 rondas |
-| Cada 333 combos de ≥33 puntos | Inmunidad de 33 rondas |
+| Cada 3 combos de ≥33 puntos | 1 protección de una ronda |
+| Cada 33 combos de ≥33 puntos | 3 protecciones de una ronda |
+| Cada 333 combos de ≥33 puntos | 33 protecciones de una ronda |
 
-Una misma colocación avanza los tres contadores. Cada objetivo entrega su propia carta, acumulable y elegible; gastar cualquier duración conserva todos los contadores y cartas restantes. Las recompensas se guardan aparte del máximo de ocho cartas de recarga y no entran en el sorteo. El número de la bolsa suma todas las cartas. Ganar inmunidad resalta la bolsa y anuncia las duraciones disponibles con el color del modo, sin repetir premios al cargar o retomar. En un dispositivo compartido, el aviso espera al turno del dueño.
+Una misma colocación avanza los tres contadores. Los premios se suman a la reserva de Inmunidad, aparte del máximo de ocho cartas de recarga; no entran en el sorteo. Ganar 3 o 33 protecciones entrega unidades independientes de una ronda. Nunca activa una inmunidad larga ni se activa automáticamente. En la partida, la bolsa abre un panel de iconos y cantidades. Inmunidad aparece al final con su icono de territorio protegido y el total guardado; tocarlo activa una sola ronda. Sus tres contadores muestran el premio (+1 / +3 / +33), los combos que faltan (−N) y una barra de progreso. La guía del hall conserva las explicaciones completas, incluida Inmunidad. El tablero no muestra una franja de inmunidad ni marcas de inmunidad sobre sus fichas. Cada colocación que avanza objetivos añade un aviso breve al aviso de puntos, también si todavía no entrega premio. El número de la bolsa suma todas las unidades; ganar protecciones resalta la bolsa y anuncia la cantidad recibida con el color del modo. En un dispositivo compartido, el aviso espera al turno del dueño.
 
-Cada carta muestra existencias, progreso y combos que faltan para la siguiente. El tablero ofrece el resumen sin abrir el inventario y muestra las rondas activas de ambos jugadores. Activar inmunidad consume una herramienta según el límite normal o Combo; no permite apilar ni sustituir una protección activa. Protege todas las fichas propias de borrar, convertir y desplazar, evita el bloqueo rival y cancela Ficha rival pendiente. Los rivales siguen colocando fichas normalmente. Se descuenta una ronda por turno rival completado (también automático o pase); Doble cuenta uno, ampliar y pausar no cuentan. La máquina usa las mismas reglas solo si tiene el inventario permitido. Los guardados previos empiezan con cero combos y cero inmunidades, sin reconstruir premios desde el marcador. El Espía continúa pendiente.
+**Escudo** protege una celda concreta con una ficha propia; **Inmunidad** protege todo el territorio del jugador contra los ataques de inventario: borrar, convertir, desplazar, bloqueo rival y Ficha rival. Los rivales siguen colocando fichas normalmente. Cada activación de Inmunidad consume solo una unidad y ocupa una herramienta según el límite normal o Combo; no se apila ni sustituye una protección activa. Termina tras un turno rival completado, haya ataques o no, también automático o pase. Doble cuenta un turno; ampliar y pausar no cuentan. Las unidades guardadas se conservan y solo se gasta otra si eliges activarla. Gastar conserva el progreso de todos los objetivos. La idea inicial del Espía queda integrada en esta protección; no se desarrollará como otra carta ni como aviso previo independiente.
+
+La máquina respeta las mismas reglas si tiene permitido el inventario. Los guardados previos a R0.16.8 parten de cero combos y protecciones, sin reconstruir premios desde el marcador. Las cartas antiguas de 3 o 33 rondas de R0.16.8 se convierten en 3 o 33 unidades de una ronda por carta. Si había una inmunidad larga activa, conserva una ronda activa y guarda las rondas restantes como unidades de reserva. La conversión es única, conserva los puntos, el turno y el progreso, y no anuncia un premio nuevo al abrir o retomar.
 
 ## Una herramienta por turno y Combo · R0.16.7
 

@@ -2,7 +2,7 @@ import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWin
 import {recordMax} from './max.js';
 import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
-import {immunityGoals,activateImmunity,recordImmunityCombo} from './immunity.js';
+import {activateImmunity,recordImmunityCombo} from './immunity.js';
 export const TURN_SECONDS=30;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
@@ -50,10 +50,10 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(tool==='hint')throw new Error('Activa Ayuda desde el inventario.');
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
-    if(['double','rival','combo'].includes(tool)||immunityGoals.some(g=>g.id===tool)){
+    if(['double','rival','combo','immunity'].includes(tool)){
       spendCard(room,playerId,tool);
       if(tool==='double')room.practiceTurn.remaining=2;else if(tool==='rival')room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
-      else if(immunityGoals.some(g=>g.id===tool))activateImmunity(room,playerId,tool);
+      else if(tool==='immunity')activateImmunity(room,playerId);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;

@@ -12,8 +12,7 @@ import './map-overview.css';
 import './inventory-sheet.css';
 import {overviewMarkup} from './map-overview.js';
 import {extensionView} from './map-camera.js';
-import {inventoryMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityBoardMarkup} from './inventory.js';
-import {immunityGoals,isImmune} from './immunity.js';
+import {inventoryMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded,toolAllowance} from './practice-tools.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
@@ -81,7 +80,7 @@ function updateInventoryFeedback(previous,next){
 function accept(next) {
   if(next.not_modified)return;
   if(room?.id===next.id&&next.version<room.version)return;
-  const previousRoom=room,feedback=scoreFeedback(room,next);
+  const previousRoom=room,feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
   if(changed)resetInventoryFeedback();
   if(changed){rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
@@ -95,7 +94,7 @@ function accept(next) {
   previousTarget=targetId||null;
   const pair=ownPair(),show=feedback&&pair&&[pair.x,pair.o].includes(feedback.player);
   if(show)startFigureEffect(feedback);
-  if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback);scheduleMachine();
+  if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);scheduleMachine();
 }
 function render() {
   const previous=document.querySelector('.viewport');
@@ -128,7 +127,7 @@ function render() {
     <div class="arena">${voteMarkup(room.vote,uid)}<div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario rival`:''}${opponent.bot?' · esperando duelista':''}${room.timeMode==='untimed'?' · sin reloj':''}</p>${room.kind==='duel'&&room.timeMode!=='untimed'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+nextSymbol:'ESPERANDO'}</div></div>
     ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
     <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps">${jumpButtons}</div></nav>${overviewMarkup({own,hasTarget:targetAvailable,open:worldMapOpen})}</div>
-    <footer class="game-dock">${isLocal()?immunityBoardMarkup(room,uid):''}<section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></section><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
+    <footer class="game-dock"><section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></section><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
     <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2><p class="menu-version">#3 · ${VERSION_LABEL} · ${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'} · ${3-(own.figures%3)} figuras para bonus +3</p>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="copy-room-code">Copiar código</button><button data-action="share">Copiar enlace</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="go-games">Mis partidas</button><button class="danger" data-action="abandon">Abandonar</button><button data-action="close-game-menu">Volver a la partida</button></section></div>
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();updateTimer();
@@ -174,7 +173,7 @@ function drawBoard(canExpand,ready,target) {
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
     const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${isShielded(room,c)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
-    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable?'tool-target':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${isShielded(room,c)?'shielded':''} ${c&&isImmune(room,c.owner)?'immune':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape(label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}</button>`;
+    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable?'tool-target':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${isShielded(room,c)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape(label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}</button>`;
   }).join('')+choices.filter(c=>!known.has(key(c.x,c.y))).map(c=>`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`).join('');
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
@@ -358,7 +357,7 @@ app.addEventListener('click',async e=>{
   if(action==='practice-tool'){
     const tool=b.dataset.tool;
     if(!canUsePracticeTool(room,uid,tool)){notify('Herramienta no disponible en este turno.');return;}
-    if(!['double','rival','combo'].includes(tool)&&!immunityGoals.some(g=>g.id===tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
+    if(!['double','rival','combo','immunity'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:uid});inventoryOpen=false;accept(next);});return;
   }
   if(action==='cancel-tool-selection'){inventorySelection=null;render();return;}
@@ -657,9 +656,9 @@ function startFigureEffect(feedback) {
     document.querySelectorAll('.score-float').forEach(c=>c.remove());figureEffect=null;
   },1400);
 }
-function showScore(feedback) {
+function showScore(feedback,comboNotice=null) {
   const n=document.querySelector('#notice');
-  n.innerHTML=`<strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><div class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b></div>`;
+  n.innerHTML=`<strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><div class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b>${comboNotice?`<span class="score-combo-progress" style="--combo-color:${getComputedStyle(document.querySelector('.game')).getPropertyValue('--mode-color')}">${escape(comboNotice.message)}</span>`:''}</div>`;
   n.classList.add('visible','score-notice');clearTimeout(noticeTimer);
   noticeTimer=setTimeout(()=>n.classList.remove('visible'),4500);
 }

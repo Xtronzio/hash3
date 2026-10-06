@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {figureWindows,availableCells,isBlockedCell} from '../src/game.js';
 import {initializeInventory,canUsePracticeTool,completeInventoryTurn,toolAllowance,toolCells} from '../src/practice-tools.js';
-import {immunityFor,immunityProgress,recordImmunityCombo,immunityRemaining} from '../src/immunity.js';
-import {inventoryTotal,inventoryMarkup,inventoryRefill,inventoryDockMarkup,immunityBoardMarkup} from '../src/inventory.js';
+import {immunityFor,immunityStock,immunityProgress,recordImmunityCombo,immunityRemaining} from '../src/immunity.js';
+import {inventoryTotal,inventoryMarkup,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from '../src/inventory.js';
 import {chooseMachineCard} from '../src/bot-inventory.js';
 import {saveLocalGame,loadLocalGames} from '../src/sessions.js';
 const now=1700000000000;
@@ -30,10 +30,10 @@ test('Solo cada jugada de al menos 33 puntos cuenta; no se exige antigüedad ni 
 });
 test('Los hitos repetibles 3, 33 y 333 avanzan juntos y sus premios nunca se pierden por bolsa llena',()=>{
  const r=earn(start(),3);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':1,'immunity-3':0,'immunity-33':0});
- earn(r,30);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':11,'immunity-3':1,'immunity-33':0});
+ earn(r,30);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':11,'immunity-3':3,'immunity-33':0});
  assert.deepEqual(immunityProgress(r,'local-x').map(g=>g.missing),[3,33,300]);
- earn(r,300);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':111,'immunity-3':10,'immunity-33':1});
- assert.equal(immunityFor(r,'local-x').earned,122);assert.equal(inventoryTotal(r,'local-x'),130);
+ earn(r,300);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':111,'immunity-3':30,'immunity-33':33});
+ assert.equal(immunityFor(r,'local-x').earned,122);assert.equal(inventoryTotal(r,'local-x'),182);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((s,n)=>s+n),8);
  completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,0);
 });
@@ -60,28 +60,32 @@ test('Una jugada inválida no consume premios ni altera contadores; no vuelve a 
  assert.equal(immunityFor(r,'local-x').cards['immunity-1'],1);
  assert.throws(()=>move(r,16,0));assert.deepEqual(r,snapshot);assert.equal(immunityFor(before,'local-x').combos,2);
 });
-test('Puedes elegir 1, 3 o 33 rondas; gastar conserva todas las demás cartas y el progreso',()=>{
- for(const rounds of [1,3,33]){
-   const before=earn(start(),333),r=card(before,'immunity-'+rounds);
-   assert.equal(immunityRemaining(r,'local-x'),rounds);assert.equal(immunityFor(r,'local-x').combos,333);
-   for(const g of immunityProgress(r,'local-x'))assert.equal(g.count,immunityFor(before,'local-x').cards[g.id]-(g.rounds===rounds?1:0));
+test('Los premios de 1, 3 y 33 son unidades de una ronda: cada activación gasta solo una',()=>{
+ for(const amount of [1,3,33]){
+   const before=earn(start(),333),merit=immunityFor(before,'local-x');
+   for(const id of Object.keys(merit.cards))merit.cards[id]=0;
+   merit.cards['immunity-'+amount]=amount;
+   const r=card(before,'immunity');
+   assert.equal(immunityRemaining(r,'local-x'),1);assert.equal(immunityStock(r,'local-x'),amount-1);
+   assert.equal(immunityFor(r,'local-x').combos,333);
    assert.deepEqual(immunityProgress(r,'local-x').map(g=>g.missing),[3,30,333]);
    assert.equal(inventoryTotal(r,'local-x'),inventoryTotal(before,'local-x')-1);
+   assert.throws(()=>card(before,'immunity-'+amount));
  }
 });
 test('Inmunidad respeta una herramienta, Combo, reloj, pausa, turnos y no apila duraciones activas',()=>{
  let r=earn(start('local','timed'),33),deadline=r.pairs[0].deadline;
- assert.equal(canUsePracticeTool(r,'local-o','immunity-1',now),false);
- assert.equal(canUsePracticeTool(r,'local-x','immunity-1',now+30000),false);
- const paused=localCommand(r,'pause',{},now);assert.equal(canUsePracticeTool(paused,'local-x','immunity-1',now),false);
- assert.throws(()=>card(card(r,'double'),'immunity-1'));
- r.players[0].inventory.cards.combo=1;r=card(r,'combo');r=card(r,'immunity-1');assert.equal(r.pairs[0].deadline,deadline);
- assert.equal(toolAllowance(r,'local-x').remaining,1);assert.equal(canUsePracticeTool(r,'local-x','immunity-3',now),false);
- assert.throws(()=>card(r,'immunity-3'));r=card(r,'double');assert.equal(toolAllowance(r,'local-x').remaining,0);
+ assert.equal(canUsePracticeTool(r,'local-o','immunity',now),false);
+ assert.equal(canUsePracticeTool(r,'local-x','immunity',now+30000),false);
+ const paused=localCommand(r,'pause',{},now);assert.equal(canUsePracticeTool(paused,'local-x','immunity',now),false);
+ assert.throws(()=>card(card(r,'double'),'immunity'));
+ r.players[0].inventory.cards.combo=1;r=card(r,'combo');r=card(r,'immunity');assert.equal(r.pairs[0].deadline,deadline);
+ assert.equal(toolAllowance(r,'local-x').remaining,1);assert.equal(canUsePracticeTool(r,'local-x','immunity',now),false);
+ assert.throws(()=>card(r,'immunity'));r=card(r,'double');assert.equal(toolAllowance(r,'local-x').remaining,0);
  assert.throws(()=>card(r,'rival'));
 });
 test('Bloquea borrar, convertir, desplazar, bloqueo y ficha rival sin gastar cartas enemigas',()=>{
- let r=earn(start(),3);r.cells.push({id:'own',x:0,y:0,symbol:'X',owner:'local-x'});r=card(r,'immunity-1');r=move(r,1,0);
+ let r=earn(start(),3);r.cells.push({id:'own',x:0,y:0,symbol:'X',owner:'local-x'});r=card(r,'immunity');r=move(r,1,0);
  const before=structuredClone(r);
  for(const tool of ['erase','opposite','shift','block','rival']){
    assert.equal(canUsePracticeTool(r,'local-o',tool,now),false);assert.equal(toolCells(r,'local-o',tool).length,0);
@@ -93,27 +97,29 @@ test('Bloquea borrar, convertir, desplazar, bloqueo y ficha rival sin gastar car
 test('Activarla cancela Ficha rival pendiente y permite colocar en celdas bloqueadas por el rival',()=>{
  const r=earn(start(),3);r.inventoryEffects.forced.push({player:'local-x',symbol:'O',by:'local-o'});
  r.inventoryEffects.blocks=r.terrain.map(c=>({...c,by:'local-o',remaining:2,fresh:false}));
- assert.equal(availableCells(r,r.pairs[0]).length,0);assert.equal(canUsePracticeTool(r,'local-x','immunity-1',now),true);
- const active=card(r,'immunity-1');assert.equal(active.inventoryEffects.forced.length,0);
+ assert.equal(availableCells(r,r.pairs[0]).length,0);assert.equal(canUsePracticeTool(r,'local-x','immunity',now),true);
+ const active=card(r,'immunity');assert.equal(active.inventoryEffects.forced.length,0);
  assert.equal(isBlockedCell(active,'local-x',0,0),false);assert.equal(availableCells(active,active.pairs[0]).length,9);
  const placed=move(active,0,0);assert.equal(placed.cells[0].symbol,'X');assert.equal(immunityRemaining(placed,'local-x'),1);
 });
-test('Cada turno rival descuenta una ronda, incluso automático; Doble, ampliación y turno propio no descuentan extra',()=>{
- let r=card(earn(start(),33),'immunity-3');r=move(r,0,0);assert.equal(immunityRemaining(r,'local-x'),3);
- r=card(r,'double','local-o');r=move(r,1,0);assert.equal(immunityRemaining(r,'local-x'),3);
- r=move(r,2,0);assert.equal(immunityRemaining(r,'local-x'),2);r=move(r,0,1);assert.equal(immunityRemaining(r,'local-x'),2);
+test('Una protección vence tras una ronda rival aunque no te ataquen; Doble no la termina en la primera ficha',()=>{
+ let r=card(earn(start(),33),'immunity'),stock=immunityStock(r,'local-x');
+ r=move(r,0,0);assert.equal(immunityRemaining(r,'local-x'),1);
+ r=card(r,'double','local-o');r=move(r,1,0);assert.equal(immunityRemaining(r,'local-x'),1);
+ r=move(r,2,0);assert.equal(immunityRemaining(r,'local-x'),0);assert.equal(immunityStock(r,'local-x'),stock);
+ r=card(r,'immunity');assert.equal(immunityStock(r,'local-x'),stock-1);r=move(r,0,1);
  r.timeMode='timed';r.pairs[0].deadline=new Date(now+30000).toISOString();r=localCommand(r,'tick',{},now+30000,()=>0);
- assert.equal(immunityRemaining(r,'local-x'),1);
- r=start();r=card(earn(r,33),'immunity-3');r.cells=r.terrain.map((c,i)=>({...c,id:'full'+i,symbol:'X',owner:'local-x'}));
+ assert.equal(immunityRemaining(r,'local-x'),0);assert.equal(immunityStock(r,'local-x'),stock-1);
+ r=start();r=card(earn(r,33),'immunity');r.cells=r.terrain.map((c,i)=>({...c,id:'full'+i,symbol:'X',owner:'local-x'}));
  r.pairs[0].pending=1;r.pairs[0].credits=1;r.pairs[0].expander='local-x';
- r=localCommand(r,'expand',{x:3,y:0},now);assert.equal(immunityRemaining(r,'local-x'),3);
- completeInventoryTurn(r,'local-o',{placed:false});assert.equal(immunityRemaining(r,'local-x'),2);
+ r=localCommand(r,'expand',{x:3,y:0},now);assert.equal(immunityRemaining(r,'local-x'),1);
+ completeInventoryTurn(r,'local-o',{placed:false});assert.equal(immunityRemaining(r,'local-x'),0);
 });
 test('Guardar, pausar y recuperar conserva cartas, progreso y duración sin repetir avisos',()=>{
- let r=card(earn(start(),334),'immunity-33');r=localCommand(r,'pause',{},now);
+ let r=card(earn(start(),334),'immunity');r=localCommand(r,'pause',{},now);
  const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
  saveLocalGame(storage,r,now);const restored=loadLocalGames(storage)[0],resumed=localCommand(restored,'resume',{},now+86400000);
- assert.deepEqual(immunityFor(resumed,'local-x'),immunityFor(r,'local-x'));assert.equal(immunityRemaining(resumed,'local-x'),33);
+ assert.deepEqual(immunityFor(resumed,'local-x'),immunityFor(r,'local-x'));assert.equal(immunityRemaining(resumed,'local-x'),1);
  assert.equal(inventoryRefill(r,restored,'local-x'),null);assert.equal(inventoryRefill(restored,resumed,'local-x'),null);
 });
 test('Los guardados antiguos empiezan sin inmunidad y conservan stock, puntaje y efectos de su turno',()=>{
@@ -125,22 +131,52 @@ test('Los guardados antiguos empiezan sin inmunidad y conservan stock, puntaje y
 });
 test('El premio avisa aunque se haya gastado otra carta; la bolsa suma inmunidades y el inventario cuenta lo que falta',()=>{
  const before=earn(scoringRoom(),332),next=move(card(before,'rival'),16,0),refill=inventoryRefill(before,next,'local-x');
- assert.equal(refill.added,2);assert.equal(refill.message,'Inmunidad disponible · 1 ronda + 33 rondas');
+ assert.equal(refill.added,34);assert.equal(refill.message,'Inmunidad disponible · +34 protecciones de 1 ronda');
  assert.match(inventoryDockMarkup(next,'local-x',{refill}),/is-refilled/);
  assert.match(inventoryDockMarkup(next,'local-x',{refill}),/Inmunidad disponible/);
- assert.match(inventoryMarkup(next,'local-x'),/Faltan 333 combos/);assert.match(inventoryMarkup(next,'local-x'),/×111/);
- assert.match(immunityBoardMarkup(next,'local-x'),/122 disponibles/);assert.match(immunityBoardMarkup(next,'local-x'),/33 rondas · ×1/);
- assert.throws(()=>card(next,'immunity-3','local-o')); // Cannot invent a reward for the other player.
+ assert.match(inventoryMarkup(next,'local-x'),/Faltan 333 combos/);assert.match(inventoryMarkup(next,'local-x'),/×174/);
+ assert.match(immunityComboNotice(before,next,'local-x').message,/\+34 protecciones/);
+ assert.throws(()=>card(next,'immunity','local-o')); // Cannot invent a reward for the other player.
 });
 test('La máquina recibe las mismas recompensas y solo las activa si el inventario está permitido',()=>{
  let r=move(start('solo'),0,0);earn(r,3,'local-o');const choice=chooseMachineCard(r,now);
- assert.equal(choice.payload.tool,'immunity-1');r=localCommand(r,choice.action,choice.payload,now);
+ assert.equal(choice.payload.tool,'immunity');r=localCommand(r,choice.action,choice.payload,now);
  assert.equal(immunityRemaining(r,'local-o'),1);assert.equal(immunityFor(r,'local-o').cards['immunity-1'],0);
  const disabled=move(start('solo'),0,0);earn(disabled,333,'local-o');disabled.machineInventory=false;
- assert.equal(chooseMachineCard(disabled,now),null);assert.throws(()=>card(disabled,'immunity-33','local-o'));
+ assert.equal(chooseMachineCard(disabled,now),null);assert.throws(()=>card(disabled,'immunity','local-o'));
 });
 test('Combo no promete combinar dos inmunidades que no se pueden apilar',()=>{
  const r=earn(start(),333);for(const t of Object.keys(r.players[0].inventory.cards))r.players[0].inventory.cards[t]=0;
  r.players[0].inventory.cards.combo=1;assert.equal(canUsePracticeTool(r,'local-x','combo',now),false);
  r.players[0].inventory.cards.double=1;assert.equal(canUsePracticeTool(r,'local-x','combo',now),true);
+});
+
+test('Las cartas antiguas de 3 y 33 rondas se convierten en protecciones sueltas sin repetir el premio',()=>{
+ const r=start();delete r.immunityVersion;
+ r.players[0].inventory.immunity={combos:334,cards:{'immunity-1':2,'immunity-3':3,'immunity-33':4},earned:7};
+ r.inventoryEffects.immunities=[{player:'local-x',remaining:20}];
+ const before=structuredClone(r);
+ assert.equal(immunityRemaining(r,'local-x'),1);assert.equal(immunityStock(r,'local-x'),162);
+ initializeInventory(r);
+ assert.equal(r.immunityVersion,2);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':21,'immunity-3':9,'immunity-33':132});
+ assert.equal(immunityRemaining(r,'local-x'),1);assert.equal(inventoryRefill(before,r,'local-x'),null);
+ const snapshot=structuredClone(r);initializeInventory(r);assert.deepEqual(r,snapshot);
+ const after=localCommand(r,'pause',{},now);assert.equal(inventoryRefill(r,after,'local-x'),null);
+});
+test('Guardar protecciones durante muchas rondas no las gasta ni las activa automáticamente',()=>{
+ const r=earn(start(),333),stock=immunityStock(r,'local-x');
+ for(let i=0;i<40;i++){completeInventoryTurn(r,'local-x');completeInventoryTurn(r,'local-o');}
+ assert.equal(immunityStock(r,'local-x'),174);assert.equal(immunityStock(r,'local-x'),stock);
+ assert.equal(immunityRemaining(r,'local-x'),0);
+});
+
+test('Cada colocación que avanza combos genera un aviso, aunque todavía no entregue una protección',()=>{
+ const before=scoringRoom(),next=move(before,16,0);
+ assert.equal(inventoryRefill(before,next,'local-x'),null);
+ assert.deepEqual(immunityComboNotice(before,next,'local-x'),{player:'local-x',message:'Combo de inmunidad · faltan 2 para otra protección'});
+ assert.equal(immunityComboNotice(before,next,'local-o'),null);
+ assert.equal(immunityComboNotice(null,next,'local-x'),null);
+ assert.equal(immunityComboNotice(next,structuredClone(next),'local-x'),null);
+ const paused=localCommand(next,'pause',{},now),resumed=localCommand(paused,'resume',{},now+1000);
+ assert.equal(immunityComboNotice(next,paused,'local-x'),null);assert.equal(immunityComboNotice(paused,resumed,'local-x'),null);
 });

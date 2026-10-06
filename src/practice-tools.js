@@ -1,5 +1,5 @@
 import {availableCells,connectedTerrain,terrainOf,key,isBlockedCell} from './game.js';
-import {immunityGoals,immunityFor,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
+import {immunityStock,spendImmunity,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
 export const REFILL_TURNS=4,MAX_CARDS=8,MAX_PER_CARD=2;
 export const practiceTools=[
   {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
@@ -8,11 +8,11 @@ export const practiceTools=[
   {id:'erase',label:'Borrar',description:'Borra una ficha rival y después juega. Tus propias fichas no se pueden borrar.',button:'Elegir ficha rival'},
   {id:'shift',label:'Desplazar',description:'Mueve una ficha rival a una celda vacía. Conserva su símbolo y dueño; las figuras nuevas puntúan para ese símbolo.',button:'Mover ficha rival'},
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
-  {id:'shield',label:'Escudo',description:'Protege una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger ficha'},
+  {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
-export const immunityTools=immunityGoals.map(g=>({...g,label:`Inmunidad · ${g.rounds} ronda${g.rounds===1?'':'s'}`,description:`Gana una carta cada ${g.combos} combos de 33 puntos o más. Al activarla, te protege de ataques de inventario durante ${g.rounds} ronda${g.rounds===1?'':'s'} rival${g.rounds===1?'':'es'}.`,button:'Activar inmunidad'}));
+export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege todo tu territorio durante una ronda. Cada 3, 33 y 333 combos de al menos 33 puntos ganas 1, 3 y 33 protecciones; las guardas y activas de una en una.',button:'Activar 1 ronda'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
 // Keep the eight starting tools; Combo is earned through the normal refill draw.
 const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,t.id==='combo'?0:1]));
@@ -28,7 +28,7 @@ export function initializeInventory(game){
   initializeImmunity(game);
 }
 export function inventoryFor(game,playerId){return game?.players?.find(p=>p.id===playerId)?.inventory||{cards:initialCards(),turns:0};}
-export function toolStock(game,playerId,tool){return (immunityGoals.some(g=>g.id===tool)?immunityFor(game,playerId).cards:inventoryFor(game,playerId).cards)[tool]||0;}
+export function toolStock(game,playerId,tool){return tool==='immunity'?immunityStock(game,playerId):inventoryFor(game,playerId).cards[tool]||0;}
 export function practiceTurn(game,playerId){return game.practiceTurn?.player===playerId?game.practiceTurn:{player:playerId,used:[],remaining:1};}
 export function toolAllowance(game,playerId){
   const state=practiceTurn(game,playerId),combo=state.used.includes('combo');
@@ -58,7 +58,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
     return state.used.length===0&&availableCells(game,p).length>0&&ordinary+immunity>=2;
   }
   if(!toolAllowance(game,playerId).remaining)return false;
-  if(immunityGoals.some(g=>g.id===tool))return !isImmune(game,playerId)&&availableCells(game,p,{ignoreBlocks:true}).length>0;
+  if(tool==='immunity')return !isImmune(game,playerId)&&availableCells(game,p,{ignoreBlocks:true}).length>0;
   if(tool==='double')return availableCells(game,p).length>=2;
   if(tool==='rival')return !game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))&&!game.inventoryEffects?.forced?.some(e=>e.player!==playerId);
   if(tool==='hint')return availableCells(game,p).length>0;
@@ -68,8 +68,8 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
 }
 export function spendCard(game,playerId,tool){
   initializeInventory(game);const player=game.players.find(p=>p.id===playerId);
-  const cards=immunityGoals.some(g=>g.id===tool)?player.inventory.immunity.cards:player.inventory.cards;
-  cards[tool]--;player.practiceTools=(player.practiceTools||0)+1;
+  if(tool==='immunity')spendImmunity(game,playerId);else player.inventory.cards[tool]--;
+  player.practiceTools=(player.practiceTools||0)+1;
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
 export function completeInventoryTurn(game,playerId,{automatic=false,placed=true,random=Math.random}={}){
