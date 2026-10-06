@@ -1,6 +1,6 @@
-import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows} from './game.js';
+import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows,isBlockedCell} from './game.js';
 import {recordMax} from './max.js';
-import {canUsePracticeTool,canErasePracticeCell,practiceTurn} from './practice-tools.js';
+import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 export const TURN_SECONDS=30;
 const id=()=>crypto.randomUUID();
@@ -13,20 +13,22 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  return {id:id(),code:'LOCAL',host:humanId,status:'playing',version:1,ruleVersion:2,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',version:1,ruleVersion:2,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
+  initializeInventory(room);return room;
 }
 function normalize(room,now) {
   for(const p of room.pairs) {
-    const free=availableCells(room,p);
+    const free=availableCells(room,p,{ignoreBlocks:true});
     if(free.length){p.pending=0;p.expander=null;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
     else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
   }
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
   const room=structuredClone(original),p=room.pairs[0];
+  initializeInventory(room);
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -44,32 +46,54 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   if(action==='inventory'){
     const {tool,playerId}=payload;
+    if(tool==='hint')throw new Error('Activa Ayuda desde el inventario.');
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: úsala en tu turno, antes de agotar el reloj; máximo dos por turno.');
-    const state=structuredClone(practiceTurn(room,playerId));
-    if(tool==='erase'){
-      const {x,y}=payload,linked=connectedTerrain(terrainOf(room),p.active);
-      const index=room.cells.findIndex(c=>c.x===x&&c.y===y);
-      if(index<0||!canErasePracticeCell(room,playerId,room.cells[index])||!linked.some(c=>c.x===x&&c.y===y))throw new Error('Elige una ficha rival en tu territorio conectado; tus colocaciones no se pueden borrar.');
-      const [cell]=room.cells.splice(index,1);
-      for(const player of room.players)if(player.lastMove?.id===cell.id)delete player.lastMove;
-      // Paid figures and scores are history. Rebuilding the same geometry
-      // cannot collect it again, even after its marks have been removed.
-      recordMax(room.players.find(v=>v.id===playerId),0,0);
-      room.lastEvent={id:id(),kind:'erase',player:playerId,x,y,symbol:cell.symbol};
-    }else{
-      if(tool==='double')state.remaining=2;
-      else state.nextSymbol=p.turn==='X'?'O':'X';
+    const actor=room.players.find(v=>v.id===playerId);
+    if(tool==='double'||tool==='rival'){
+      spendCard(room,playerId,tool);
+      if(tool==='double')room.practiceTurn.remaining=2;else room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
+    }else{
+      const {x,y}=payload;
+      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error('Elige una ficha rival en tu territorio conectado, sin escudo; tus colocaciones no se pueden borrar.');
+      const index=room.cells.findIndex(c=>c.x===x&&c.y===y);
+      const old=index>=0?room.cells[index]:null;
+      let changed=null;
+      if(tool==='erase')room.cells.splice(index,1);
+      if(tool==='opposite'){changed={...old,id:id(),symbol:actor.symbol,owner:playerId};room.cells[index]=changed;}
+      if(tool==='shift'){
+        const destination={x:payload.toX,y:payload.toY};
+        if(!moveDestination(room,playerId,destination)||isBlockedCell(room,old.owner,destination.x,destination.y))throw new Error('Elige un destino vacío, conectado y sin bloqueo para la ficha rival.');
+        changed={...old,...destination,id:id()};room.cells[index]=changed;
+      }
+      if(tool==='block')room.inventoryEffects.blocks.push({x,y,by:playerId,remaining:2,fresh:true});
+      if(tool==='shield')room.inventoryEffects.shields.push({cell:old.id,by:playerId,remaining:2});
+      if(['erase','opposite','shift'].includes(tool))for(const player of room.players)if(player.lastMove?.id===old.id)delete player.lastMove;
+      if(changed){
+        const scorer=room.players.find(v=>v.symbol===changed.symbol),result=scoreCell(room,changed,scorer);
+        room.players.find(v=>v.id===changed.owner).lastMove=changed;
+        recordMax(actor,scorer.id===actor.id?result.points-result.bonus:0,scorer.id===actor.id?result.figures:0);
+        room.lastEvent={id:changed.id,kind:'move',tool,player:scorer.id,actor:playerId,...result};
+      }else{
+        recordMax(actor,0,0);room.lastEvent={id:id(),kind:'inventory',tool,player:playerId,x,y};
+      }
+      spendCard(room,playerId,tool);
     }
-    state.used.push(tool);room.practiceTurn=state;
-    const player=room.players.find(v=>v.id===playerId);player.practiceTools=(player.practiceTools||0)+1;
     delete room.practiceHint;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   let automatic=false;
   if(action==='tick') {
     if(Date.parse(p.deadline)>now)return original;
-    const choices=p.pending?expansionOptions(terrainOf(room),p.active):availableCells(room,p);if(!choices.length)return original;
-    payload=choices[Math.floor(random()*choices.length)];action=p.pending?'expand':'move';automatic=true;
+    const choices=p.pending?expansionOptions(terrainOf(room),p.active):availableCells(room,p);
+    if(!choices.length){if(!p.pending&&availableCells(room,p,{ignoreBlocks:true}).length){action='pass';automatic=true;}else return original;}
+    else{payload=choices[Math.floor(random()*choices.length)];action=p.pending?'expand':'move';automatic=true;}
+  }
+  if(action==='pass'){
+    if(p.pending||availableCells(room,p).length||!availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Solo se puede pasar cuando todas las celdas vacías están bloqueadas.');
+    const actor=p[p.turn.toLowerCase()];completeInventoryTurn(room,actor,{automatic,placed:false,random});delete room.practiceTurn;
+    p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
+    room.lastEvent={id:id(),kind:'pass',player:actor,automatic};
+    normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   if(action==='move') {
     if(p.pending)throw new Error('Primero coloca la ampliación.');
@@ -77,24 +101,19 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const {x,y}=payload;
     if(!availableCells(room,p).some(c=>c.x===x&&c.y===y))throw new Error('Elige una celda vacía de tu territorio conectado.');
     const player=room.players.find(v=>v.symbol===p.turn),state=practiceTurn(room,player.id);
-    const symbol=automatic?p.turn:state.nextSymbol||p.turn,scorer=room.players.find(v=>v.symbol===symbol);
+    const symbol=placementSymbol(room,player.id),scorer=room.players.find(v=>v.symbol===symbol);
     const cell={id:id(),requestId:payload.requestId||id(),x,y,symbol,owner:player.id};
-    room.cells.push(cell);
-    const figures=figureWindows(room.cells,x,y,symbol,room.level).filter(f=>!room.forms.includes(f.id));
-    room.forms.push(...figures.map(f=>f.id));
-    const bonus=3*(Math.floor((scorer.figures+figures.length)/3)-Math.floor(scorer.figures/3));
-    const points=figures.reduce((sum,f)=>sum+f.size,0)+bonus;
-    scorer.score+=points;scorer.figures+=figures.length;player.lastMove=cell;
-    recordMax(player,scorer===player?points-bonus:0,scorer===player?figures.length:0,automatic);
-    p.credits+=figures.length;
-    const full=!availableCells(room,p).length;
-    if(!automatic&&state.remaining>1&&!full){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}
-    else{delete room.practiceTurn;p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();}
+    room.cells.push(cell);room.inventoryEffects.forced=room.inventoryEffects.forced.filter(e=>e.player!==player.id);
+    const {points,bonus,figures}=scoreCell(room,cell,scorer);player.lastMove=cell;
+    recordMax(player,scorer===player?points-bonus:0,scorer===player?figures:0,automatic);
+    const full=!availableCells(room,p,{ignoreBlocks:true}).length;
+    if(!automatic&&state.remaining>1&&!full&&availableCells(room,p).length){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}
+    else{completeInventoryTurn(room,player.id,{automatic,random});delete room.practiceTurn;p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();}
     if(full)p.expander=player.id;
-    room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:player.id,figures:figures.length,points,bonus,automatic,continuation:full};
+    room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:player.id,figures,points,bonus,automatic,continuation:full};
   }else if(action==='expand') {
     if(!automatic&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se colocará una ampliación automáticamente.');
-    if(!p.pending||availableCells(room,p).length)throw new Error('Usa las celdas vacías antes de ampliar.');
+    if(!p.pending||availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Usa las celdas vacías antes de ampliar.');
     const {x,y}=payload;
     if(!expansionOptions(terrainOf(room),p.active).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio y añadir alguna celda.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
@@ -106,4 +125,11 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
 }
 export function machineChoice(room,random=Math.random,options={}) {
   return chooseMachineMove(room,random,options);
+}
+function scoreCell(room,cell,scorer){
+  const figures=figureWindows(room.cells,cell.x,cell.y,cell.symbol,room.level).filter(f=>!room.forms.includes(f.id));
+  room.forms.push(...figures.map(f=>f.id));
+  const bonus=3*(Math.floor((scorer.figures+figures.length)/3)-Math.floor(scorer.figures/3)),points=figures.reduce((sum,f)=>sum+f.size,0)+bonus;
+  scorer.score+=points;scorer.figures+=figures.length;room.pairs[0].credits+=figures.length;
+  return {figures:figures.length,points,bonus};
 }

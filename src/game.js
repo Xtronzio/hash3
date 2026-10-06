@@ -12,9 +12,11 @@ export function connectedTerrain(terrain,active) {
   }
   return terrain.filter(c=>visited.has(key(c.x,c.y)));
 }
-export function availableCells(room,pair) {
+export function isBlockedCell(room,playerId,x,y){return !!room.inventoryEffects?.blocks?.some(e=>e.x===x&&e.y===y&&(e.by!==playerId||e.fresh)&&e.remaining>0);}
+export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   const occupied=new Set(room.cells.map(c=>key(c.x,c.y)));
-  return connectedTerrain(terrainOf(room),pair.active).filter(c=>!occupied.has(key(c.x,c.y)));
+  const playerId=pair[pair.turn.toLowerCase()];
+  return connectedTerrain(terrainOf(room),pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
 }
 export function expansionOptions(terrain,active) {
   const connected=connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();

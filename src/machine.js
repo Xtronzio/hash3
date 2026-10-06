@@ -1,4 +1,4 @@
-import {key,terrainOf,connectedTerrain,expansionOptions,shapeTemplates} from './game.js';
+import {key,terrainOf,connectedTerrain,expansionOptions,shapeTemplates,availableCells} from './game.js';
 
 export const machineLevels=[
   {id:'basic',label:'Básico'}, {id:'medium',label:'Medio'},
@@ -30,6 +30,8 @@ class Position {
     }
     this.cells.push(...frontier.values());
     this.index=new Map(this.cells.map((c,i)=>[key(c.x,c.y),i]));
+    this.forced=Object.fromEntries((room.inventoryEffects?.forced||[]).map(e=>[symbolNumber(room.players.find(p=>p.id===e.player)?.symbol),symbolNumber(e.symbol)]));
+    this.blocks=(room.inventoryEffects?.blocks||[]).map(b=>({i:this.index.get(key(b.x,b.y)),by:symbolNumber(room.players.find(p=>p.id===b.by)?.symbol),remaining:b.remaining,fresh:!!b.fresh})).filter(b=>b.i!==undefined&&b.remaining>0);
     const sets=new Set();this.expansions=this.expansionPoints.map(c=>Array.from({length:9},(_,n)=>this.index.get(key(c.x+n%3,c.y+Math.floor(n/3)))).filter(i=>i>=this.legalSize)).filter(indices=>{
       const id=[...indices].sort((a,b)=>a-b).join(',');if(sets.has(id))return false;sets.add(id);return true;
     });this.extensionLayers=0;this.extensionKey='root';
@@ -95,27 +97,33 @@ class Position {
     return value;
   }
   moves(s){
-    return this.free.filter(i=>!this.board[i]).map(i=>({i,g:this.gain(i,s),threat:this.gain(i,3-s).points,future:this.future(i,s)}))
+    const placed=this.forced[s]||s;
+    return this.free.filter(i=>!this.board[i]&&!this.blocks.some(b=>b.i===i&&b.remaining>0&&(b.by!==s||b.fresh))).map(i=>({i,g:this.gain(i,placed),threat:this.gain(i,3-s).points,future:this.future(i,placed)}))
       .map(m=>({...m,order:m.g.points*1.1+m.threat+m.future*0.2}))
       .sort((a,b)=>b.order-a.order||a.i-b.i);
   }
-  play(i,s,g){
-    const previous=this.figures[s];this.figures[s]+=g.figures;this.diff+=(s===1?1:-1)*g.points;
+  play(i,actor,g){
+    const s=this.forced[actor]||actor;
+    const previous={figures:this.figures[s],blocks:this.blocks,forced:this.forced,symbol:s};this.forced={...this.forced};delete this.forced[actor];this.figures[s]+=g.figures;this.diff+=(s===1?1:-1)*g.points;
+    this.advanceBlocks(actor);
     for(const p of this.at[i]){this.potential-=this.patternValue(p);if(s===1)p.x++;else p.o++;this.potential+=this.patternValue(p);}
     this.board[i]=s;this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];return previous;
   }
-  undo(i,s,g,previous){
-    this.board[i]=0;this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];this.figures[s]=previous;this.diff-=(s===1?1:-1)*g.points;
+  undo(i,actor,g,previous){
+    const s=previous.symbol;this.forced=previous.forced;
+    this.board[i]=0;this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];this.figures[s]=previous.figures;this.blocks=previous.blocks;this.diff-=(s===1?1:-1)*g.points;
     for(const p of this.at[i]){this.potential-=this.patternValue(p);if(s===1)p.x--;else p.o--;this.potential+=this.patternValue(p);}
   }
   evaluation(){return this.diff+this.potential*0.22;}
+  advanceBlocks(s){this.blocks=this.blocks.map(b=>({...b,remaining:b.remaining-(b.by!==s?1:0),fresh:b.by===s?false:b.fresh})).filter(b=>b.remaining>0);}
 }
 
 // Also used to verify that speculative scoring agrees with the game referee.
 export function machineMoveScore(room,point,symbol=room.pairs[0].turn){
   const position=new Position(room),i=position.index.get(key(point.x,point.y));
-  if(i===undefined||position.board[i])throw new Error('La máquina solo puede analizar celdas vacías legales.');
-  return position.gain(i,symbolNumber(symbol));
+  if(i===undefined||!position.moves(symbolNumber(room.pairs[0].turn)).some(m=>m.i===i))throw new Error('La máquina solo puede analizar celdas vacías legales.');
+  const actor=room.pairs[0][room.pairs[0].turn.toLowerCase()],forced=room.inventoryEffects?.forced?.find(e=>e.player===actor);
+  return position.gain(i,symbolNumber(forced?.symbol||symbol));
 }
 
 function searchPosition(position,turn,config,budget){
@@ -123,13 +131,18 @@ function searchPosition(position,turn,config,budget){
   const check=()=>{if(++budget.nodes>budget.maxNodes||(budget.nodes%32===0&&performance.now()>=budget.deadline))throw STOP;};
   function search(depth,s,alpha,beta,ply){
     check();
-    const k=`${extensionDepth}:${position.hash}:${position.hash2}:${position.extensionLayers}:${position.extensionKey}:${position.figures[1]%3}:${position.figures[2]%3}:${position.diff}:${s}`;
+    const k=`${extensionDepth}:${position.hash}:${position.hash2}:${position.extensionLayers}:${position.extensionKey}:${position.figures[1]%3}:${position.figures[2]%3}:${position.diff}:${s}:${JSON.stringify(position.forced)}:${position.blocks.map(b=>`${b.i},${b.by},${b.remaining},${+b.fresh}`).join(';')}`;
     const cached=table.get(k);
     if(cached&&cached.depth===depth){if(cached.bound==='exact')return cached.value;if(cached.bound==='lower')alpha=Math.max(alpha,cached.value);else beta=Math.min(beta,cached.value);if(alpha>=beta)return cached.value;}
     // Cache bounds must describe the window after a prior bound narrowed it.
     const startAlpha=alpha,startBeta=beta;
     let moves=position.moves(s);
     if(!moves.length){
+      if(position.free.some(i=>!position.board[i])){
+        if(depth<=0)return position.evaluation();
+        const blocks=position.blocks;position.advanceBlocks(s);
+        try{return search(depth-1,3-s,alpha,beta,ply+1);}finally{position.blocks=blocks;}
+      }
       if(!config.continuation||!position.futureWeight||position.extensionLayers>=(config.futureLayers||1)||(position.extensionLayers&&depth<=0)||!position.expansions.length)return position.evaluation();
       // Completing a block is not the end of #3. Its last mover chooses the
       // expansion, but the other symbol places the first mark afterwards.
@@ -248,6 +261,7 @@ export function chooseMachineMove(room,random=Math.random,options={}){
   const level=settings[room.difficulty]?room.difficulty:'medium',config=settings[level],start=performance.now();
   const budget={nodes:0,maxNodes:options.maxNodes??config.nodes,deadline:start+(options.maxTimeMs??config.time)};
   const pair=room.pairs[0];let choice,depth=0,continuation=0;
+  if(!pair.pending&&!availableCells(room,pair).length&&availableCells(room,pair,{ignoreBlocks:true}).length)return {action:'pass',payload:{}};
   if(pair.pending){choice={action:'expand',payload:chooseExpansion(room,level,random,config,budget)};depth=budget.expansionDepth||0;continuation=budget.expansionContinuation||0;}
   else{
     const position=new Position(room,options.futureWeight??1),turn=symbolNumber(pair.turn),moves=position.moves(turn);
@@ -257,7 +271,7 @@ export function chooseMachineMove(room,random=Math.random,options={}){
       const simple=[...moves].sort((a,b)=>b.g.points-a.g.points);
       i=random()<0.55?moves[Math.floor(random()*moves.length)].i:simple[Math.floor(random()*Math.min(3,simple.length))].i;
     }else if(level==='medium'){
-      const rated=moves.map(m=>({...m,value:m.g.points*2+m.threat+m.future*0.08})),best=Math.max(...rated.map(m=>m.value));
+      const rated=moves.map(m=>({...m,value:m.g.points*(position.forced[turn]&&position.forced[turn]!==turn?-2:2)+m.threat+m.future*0.08})),best=Math.max(...rated.map(m=>m.value));
       const preferred=rated.filter(m=>Math.abs(m.value-best)<1e-8);i=preferred[Math.floor(random()*preferred.length)].i;
     }else{
       const result=searchPosition(position,turn,config,budget);i=result.best;depth=result.depth;continuation=result.continuation||0;

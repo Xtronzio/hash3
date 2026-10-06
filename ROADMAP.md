@@ -12,4 +12,4 @@ Idea para valorar en pruebas: liberar casillas sin quitar los puntos ya ganados,
 
 ## Inventario online
 
-Equilibrar y extender las herramientas de práctica a Duelo y después a Mundo. Las pruebas actuales son libres en VS máquina y Sin conexión. En la herramienta Borrar, las colocaciones propias están protegidas: solo elimina fichas rivales del territorio conectado.
+Equilibrar y extender las herramientas de práctica a Duelo y después a Mundo. R0.16 limita las pruebas de VS máquina y Sin conexión a ocho cartas iniciales iguales, dos por turno y una reposición cada cuatro turnos propios. En la herramienta Borrar, las colocaciones propias están protegidas: solo elimina fichas rivales del territorio conectado.

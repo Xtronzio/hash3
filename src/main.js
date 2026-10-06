@@ -9,12 +9,14 @@ import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
 import './sessions.css';
 import './mobile-game.css';
 import './map-overview.css';
+import './inventory-sheet.css';
 import {overviewMarkup} from './map-overview.js';
+import {extensionView} from './map-camera.js';
 import {inventoryMarkup,usePracticeHint} from './inventory.js';
-import {canUsePracticeTool,canErasePracticeCell,practiceTurn} from './practice-tools.js';
+import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded} from './practice-tools.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
-import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells} from './game.js';
+import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells,isBlockedCell} from './game.js';
 
 import {createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
 import {scoreFeedback,scoreBreakdown} from './feedback.js';
@@ -26,6 +28,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const read = key => {try{return localStorage.getItem(key);}catch{return null;}};
 const save = (key,value) => {try{value===null?localStorage.removeItem(key):localStorage.setItem(key,value);}catch{/* device storage may be disabled */}};
 let pairLobby=null,mapInteracting=false,mapDeferred=false,gameMenuOpen=false,worldMapOpen=false;
+let worldMapState={};
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
 let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0;
 let figureEffect=null,figureTimer,scoreFloatTimer;
@@ -40,7 +43,7 @@ if(urlCode||pairUrlCode)hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
 const above=()=>immediateAbove(humans(),uid,!!room.commonWorld);
-const iconPaths={center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
+const iconPaths={fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
 const navIcon=kind=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${iconPaths[kind]||''}</svg>`;
 const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
 function setRankingOpen(open){rankOpen=open;blinkId=null;render();document.querySelector('.ranking-toggle')?.focus({preventScroll:true});}
@@ -59,10 +62,10 @@ function accept(next) {
   if(room?.id===next.id&&next.version<room.version)return;
   const feedback=scoreFeedback(room,next);
   const changed = room?.id!==next.id;
-  if(changed){rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
+  if(changed){rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
-  if(inventorySelection&&(!canUsePracticeTool(room,inventorySelection.player,'erase')||inventorySelection.player!==uid))inventorySelection=null;
+  if(inventorySelection&&(!canUsePracticeTool(room,inventorySelection.player,inventorySelection.tool)||inventorySelection.player!==uid||inventorySelection.source&&!room.cells.some(c=>c.id===inventorySelection.source.id)))inventorySelection=null;
   const target=above(), targetId=target?.lastMove?.id;
   if(!changed&&targetId&&targetId!==previousTarget)blinkId=targetId;
   else blinkId=null;
@@ -90,16 +93,18 @@ function render() {
   const jumpButtons=`${iconButton('center','center','Mi territorio')}${iconButton('locate','above','Rival superior',`class="blue" ${targetAvailable?'':'disabled'}`)}`;
   const rankRows=players=>players.map(p=>{const index=list.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}</span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
   const title=canExpand?'Amplía tu territorio':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
-  const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=tools?.nextSymbol||own.symbol;
-  const toolBanner=inventorySelection?'<div class="practice-banner" role="status"><span>Borrar · toca una ficha rival resaltada. Tus fichas están protegidas.</span><button class="small" data-action="cancel-tool-selection">Cancelar</button></div>':tools&&(tools.used.includes('double')||tools.nextSymbol)?`<div class="practice-banner" role="status"><span>${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${tools.nextSymbol?`Próxima ficha: ${tools.nextSymbol} · puntúa para ${tools.nextSymbol}.`:''}</span></div>`:'';
+  const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=room.inventoryEffects?.forced?.find(e=>e.player===uid)?.symbol||own.symbol;
+  const instructions={erase:'Toca una ficha rival resaltada para borrarla.',opposite:'Toca una ficha rival resaltada para convertirla en tuya.',shift:inventorySelection?.source?'Elige una celda vacía para desplazar la ficha seleccionada.':'Toca la ficha rival que quieres mover.',block:'Elige una celda vacía para reservarla; después coloca tu ficha en otra.',shield:'Toca una ficha tuya para protegerla.'};
+  const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span><button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
+  const blockedTurn=isLocal()&&ready&&!availableCells(room,pair).length&&availableCells(room,pair,{ignoreBlocks:true}).length;
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
   app.innerHTML=`<section class="game">
     <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${modeLabel}</div><span class="muted">${room.level==='advanced'?'Avanzado':'Normal'} · ${escape(own.name)} · ${own.symbol}</span></div></div><button class="game-menu-toggle" data-action="game-menu" aria-label="Opciones de partida">⋯</button></header>
     <div class="workspace"><aside class="ranking ${rankOpen?'is-open':''}" aria-label="${room.commonWorld?'Ranking de Mundo':'Marcador de la partida'}"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}" aria-controls="ranking-panel" aria-label="${rankOpen?'Plegar':'Desplegar'} ${room.commonWorld?'ranking de Mundo':'marcador'}"><span class="compact-rank">${compact.map(p=>`<span class="compact-player ${p.id===uid?own.symbol.toLowerCase():'blue'}"><b class="rank-position ${list.indexOf(p)===0?'gold':''}">${list.indexOf(p)+1}</b><span>${p.id===uid?'Tú':escape(p.name)}</span><strong>${p.score.toLocaleString('es-ES')}</strong></span>`).join('')}</span>${navIcon('chevron')}</button><section id="ranking-panel" class="ranking-panel" ${rankOpen?'':'hidden'}><h2 class="heading">${room.commonWorld?'RANKING MUNDO':'MARCADOR'}</h2><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(list)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}${own.practiceHints||own.practiceTools?' · Partida con inventario':''}</div><nav class="ranking-navigation" aria-label="Navegación del tablero"><button data-action="center">${navIcon('center')}Mi territorio</button><button class="blue" data-action="locate" ${targetAvailable?'':'disabled'}>${navIcon('above')}Rival superior</button><button data-action="map">${navIcon('map')}Mapa</button></nav></section></aside>
     <div class="arena">${voteMarkup(room.vote,uid)}<div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando duelista':''}${room.timeMode==='untimed'?' · sin reloj':''}</p>${room.kind==='duel'&&room.timeMode!=='untimed'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+nextSymbol:'ESPERANDO'}</div></div>
-    ${toolBanner}${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
-    <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button></div><div class="map-jumps">${jumpButtons}</div></nav>${overviewMarkup({own,hasTarget:targetAvailable,open:worldMapOpen})}</div>
-    <footer class="game-dock"><section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></section><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?iconButton('inventory','inventory','Inventario'):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
+    ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
+    <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board"></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps">${jumpButtons}</div></nav>${overviewMarkup({own,hasTarget:targetAvailable,open:worldMapOpen})}</div>
+    <footer class="game-dock"><section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></section><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?iconButton('inventory','inventory','Inventario',`aria-expanded="${inventoryOpen}" aria-controls="inventory-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
     <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2><p class="menu-version">#3 · ${VERSION_LABEL} · ${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'} · ${3-(own.figures%3)} figuras para bonus +3</p>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="copy-room-code">Copiar código</button><button data-action="share">Copiar enlace</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="go-games">Mis partidas</button><button class="danger" data-action="abandon">Abandonar</button><button data-action="close-game-menu">Volver a la partida</button></section></div>
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();updateTimer();
@@ -107,7 +112,7 @@ function render() {
   if(!scroll||nowKey!==activeKey)requestAnimationFrame(()=>center(pair.active.x+1,pair.active.y+1));
   else {const v=document.querySelector('.viewport');v.scrollLeft=scroll.left;v.scrollTop=scroll.top;}
   activeKey=nowKey;
-  bindMap({room,layout,zoom,target,own,changeZoom:changeMapZoom,onClose:()=>{worldMapOpen=false;},interacting:value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;setTimeout(()=>render(),0);}}});
+  bindMap({room,layout,zoom,target,own,mapState:worldMapState,changeZoom:changeMapZoom,onClose:()=>{worldMapOpen=false;},interacting:value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;setTimeout(()=>render(),0);}}});
   if(busy)document.querySelectorAll('[data-action="move"],[data-action="select-expansion"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
 }
 let layout={minX:0,minY:0,size:56,padding:100};
@@ -127,6 +132,8 @@ function drawBoard(canExpand,ready,target) {
   const board=document.querySelector('.board');
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(connectedTerrain(terrain,pair.active).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
+  const free=new Set(availableCells(room,pair).map(c=>key(c.x,c.y))),selection=inventorySelection?.player===uid?inventorySelection:null;
+  const targets=selection?new Set(toolCells(room,uid,selection.tool).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
   board.innerHTML=terrain.map(pos=>{
     const {x,y}=pos,c=cells.get(key(x,y)),active=linked.has(key(x,y));
@@ -134,12 +141,16 @@ function drawBoard(canExpand,ready,target) {
     const color=c?(myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
     const owner=c?room.players.find(p=>p.id===c.owner)?.name:'';
     const select=canExpand&&choiceKeys.has(key(x,y));
-    const erasing=inventorySelection?.player===uid,removable=erasing&&active&&ready&&canErasePracticeCell(room,uid,c);
+    const targeting=!!selection,source=selection?.source,chosen=source&&c?.id===source.id;
+    const removable=targeting&&active&&ready&&(source?moveDestination(room,uid,pos)&&moveDestination(room,source.owner,pos):targets.has(key(x,y)));
+    const blocked=isBlockedCell(room,uid,x,y),reserved=!c&&room.inventoryEffects?.blocks.some(e=>e.x===x&&e.y===y&&e.by===uid&&e.remaining>0);
+    const playable=active&&ready&&!c&&!blocked&&!targeting;
     const glowing=figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y));
     const glowStyle=glowing?`--figure-color:${figureEffect.symbol==='X'?'var(--red)':'var(--green)'};--figure-duration:${Math.max(1,figureEffect.until-performance.now())}ms;`:'';
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
-    const label=removable?`Borrar ${c.symbol} de ${owner}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}`;
-    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${active&&ready&&!c&&!erasing?'available':''} ${removable?'removable':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${removable?'inventory-erase':select?'select-expansion':active&&ready&&!c&&!erasing?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${erasing&&!removable||!select&&!ready?'disabled':''} aria-disabled="${!removable&&!select&&(!active||!ready||!!c||erasing)}" aria-label="${escape(label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}</button>`;
+    const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
+    const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${isShielded(room,c)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
+    return `<button class="cell terrain-cell ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable?'tool-target':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${isShielded(room,c)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape(label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}</button>`;
   }).join('')+choices.filter(c=>!known.has(key(c.x,c.y))).map(c=>`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`).join('');
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
@@ -315,23 +326,26 @@ app.addEventListener('click',async e=>{
     });return;
   }
   if(action==='hall-inventory'){openHallDialog('inventory','hall-inventory');return;}
-  if(action==='inventory'){inventoryOpen=true;renderInventory();return;}
-  if(action==='close-inventory'){inventoryOpen=false;document.querySelector('.inventory-dialog')?.remove();return;}
+  if(action==='inventory'){inventoryOpen=!inventoryOpen;inventorySelection=null;render();return;}
+  if(action==='close-inventory'){inventoryOpen=false;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(action==='practice-hint'){
     await run(async()=>{const next=usePracticeHint(room,uid);inventoryOpen=false;accept(next);center(next.practiceHint.x,next.practiceHint.y);});return;
   }
   if(action==='practice-tool'){
     const tool=b.dataset.tool;
     if(!canUsePracticeTool(room,uid,tool)){notify('Herramienta no disponible en este turno.');return;}
-    if(tool==='erase'){inventorySelection={player:uid};inventoryOpen=false;render();return;}
+    if(!['double','rival'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:uid});inventoryOpen=false;accept(next);});return;
   }
   if(action==='cancel-tool-selection'){inventorySelection=null;render();return;}
-  if(action==='inventory-erase'){
+  if(action==='inventory-target'){
+    const selection=inventorySelection;
+    if(!selection||selection.player!==uid)return;
+    if(selection.tool==='shift'&&!selection.source){const cell=room.cells.find(c=>c.x===Number(b.dataset.x)&&c.y===Number(b.dataset.y));if(!cell)return;selection.source={...cell};render();return;}
     await run(async()=>{
-      if(inventorySelection?.player!==uid)throw new Error('Vuelve a elegir Borrar en el inventario.');
-      const next=localCommand(room,'inventory',{tool:'erase',playerId:uid,x:Number(b.dataset.x),y:Number(b.dataset.y)});
-      inventorySelection=null;accept(next);notify('Ficha borrada. Los puntos se conservan y puedes jugar.');
+      const destination={x:Number(b.dataset.x),y:Number(b.dataset.y)},payload=selection.source?{x:selection.source.x,y:selection.source.y,toX:destination.x,toY:destination.y}:destination;
+      const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...payload});
+      inventorySelection=null;accept(next);if(!next.lastEvent.points)notify(`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Los puntos se conservan; coloca tu ficha.`);
     });return;
   }
   if(action==='hall-games'){await openMyGames();return;}
@@ -375,6 +389,11 @@ app.addEventListener('click',async e=>{
   if(action==='center'){rankOpen=false;worldMapOpen=false;zoom=1;render();const p=ownPair();center(p.active.x+1,p.active.y+1);document.querySelector('.game-minimap')?.focus({preventScroll:true});return;}
   if(action==='locate'){const target=above(),pair=room.pairs.find(p=>p.id===target?.pair),move=target?.lastMove||(pair?{x:pair.active.x+1,y:pair.active.y+1}:null);if(move){rankOpen=false;worldMapOpen=false;zoom=1;render();center(move.x,move.y);document.querySelector('.game-minimap')?.focus({preventScroll:true});}return;}
   if(action==='plus'||action==='minus'||action==='zoom-level'){changeMapZoom(action==='zoom-level'?(zoom<.75?1:zoom<1.3?1.6:.55):zoom*(action==='plus'?1.25:.8));return;}
+  if(action==='fit-board'){
+    const v=document.querySelector('.viewport'),fit=extensionView(terrainOf(room),{width:v.clientWidth,height:v.clientHeight},innerWidth<=760?48:56);
+    if(fit){zoom=fit.zoom;render();const active=ownPair().active;center(fit.capped?active.x+1:fit.x,fit.capped?active.y+1:fit.y);if(fit.capped)notify('Vista amplia de tu zona. Usa el mapa para explorar el tablero completo.');}
+    return;
+  }
   if(action==='share'||action==='share-pair'){
     await run(async()=>{
       if(action==='share-pair')accept(await command('reserve',{code:room.code}));
@@ -422,6 +441,7 @@ app.addEventListener('click',async e=>{
   });
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&(inventoryOpen||inventorySelection)){e.preventDefault();inventoryOpen=false;inventorySelection=null;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(e.key==='Escape'&&worldMapOpen){e.preventDefault();worldMapOpen=false;document.querySelector('.world-map').hidden=true;document.querySelector('.game-minimap')?.focus({preventScroll:true});return;}
   const radio=e.target.closest?.('.hall-modes [role="radio"]');
   if(radio&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
@@ -429,7 +449,7 @@ document.addEventListener('keydown',e=>{
     const next=e.key==='Home'?0:e.key==='End'?hallModes.length-1:(i+step+hallModes.length)%hallModes.length;
     hallMode=hallModes[next].id;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
   }
-  if(pendingDelete||inventoryOpen){
+  if(pendingDelete){
     if(e.key==='Escape'){e.preventDefault();if(pendingDelete){pendingDelete=null;document.querySelector('.delete-dialog')?.remove();}else{inventoryOpen=false;document.querySelector('.inventory-dialog')?.remove();}return;}
     if(e.key==='Tab'){const selector=pendingDelete?'.delete-dialog':'.inventory-dialog',nodes=[...document.querySelectorAll(selector+' button:not(:disabled)')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
     return;
@@ -615,9 +635,9 @@ function showScore(feedback) {
 }
 
 function renderInventory(){
- document.querySelector('.inventory-dialog')?.remove();if(!inventoryOpen||!room)return;
- app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop inventory-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="inventory-title"><div class="hall-dialog-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div>${inventoryMarkup(room,uid)}<button class="inventory-back" data-action="close-inventory">Volver a la partida</button></section></div>`);
- document.querySelector('[data-action="close-inventory"]')?.focus();
+ document.querySelector('.inventory-sheet')?.remove();if(!inventoryOpen||!room)return;
+ app.insertAdjacentHTML('beforeend',`<section class="inventory-sheet" id="inventory-panel" role="region" aria-labelledby="inventory-title"><div class="inventory-sheet-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div><div class="inventory-sheet-body">${inventoryMarkup(room,uid)}</div></section>`);
+ document.querySelector('[data-action="close-inventory"]')?.focus({preventScroll:true});
 }
 function renderDeleteGame(){
  document.querySelector('.delete-dialog')?.remove();if(!pendingDelete)return;

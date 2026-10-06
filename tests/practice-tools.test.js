@@ -32,19 +32,20 @@ test('Borrar solo libera fichas rivales, sin cambiar puntos, terreno, turno ni r
  assert.equal(erased.players[0].maxActions.at(-1).points,0);assert.deepEqual(room,snapshot);
 });
 
-test('Tus propias fichas contrarias tampoco se borran para deshacer una mala colocación',()=>{
- let room=tool(game(),'opposite');room=localCommand(room,'move',{x:0,y:0},now+1000);room=localCommand(room,'move',{x:1,y:1},now+1000);
- assert.equal(room.cells[0].symbol,'O');assert.equal(room.cells[0].owner,'local-x');
- assert.throws(()=>tool(room,'erase','local-x',{x:0,y:0}),/tus colocaciones/);
- assert.equal(tool(room,'erase','local-x',{x:1,y:1}).cells.length,1);
+test('Ficha contraria convierte una ficha puesta del rival, conserva los puntos y permite jugar después',()=>{
+ let room=play(game(),[[0,0],[1,1]]),old=room.cells[1],scores=room.players.map(p=>p.score),deadline=room.pairs[0].deadline;
+ room=tool(room,'opposite','local-x',{x:1,y:1});
+ const converted=room.cells.find(c=>c.x===1&&c.y===1);assert.equal(converted.symbol,'X');assert.equal(converted.owner,'local-x');assert.notEqual(converted.id,old.id);
+ assert(room.players.every((p,i)=>p.score>=scores[i]));assert.equal(room.pairs[0].turn,'X');assert.equal(room.pairs[0].deadline,deadline);
+ assert.throws(()=>tool(room,'erase','local-x',{x:1,y:1}));room=localCommand(room,'move',{x:2,y:0},now+2000);assert.equal(room.pairs[0].turn,'O');
 });
 
-test('La ficha contraria cambia una colocación, conserva identidad y puntúa para el símbolo colocado',()=>{
- let room=play(game(),[[0,0],[0,1],[2,0],[1,1]]),beforeX=room.players[0].score;
- room=tool(room,'opposite');room=localCommand(room,'move',{x:2,y:1},now+2000);
- assert.equal(room.players[0].symbol,'X');assert.equal(room.cells.at(-1).symbol,'O');assert.equal(room.cells.at(-1).owner,'local-x');
- assert.equal(room.players[0].score,beforeX);assert(room.players[1].score>0);assert.equal(room.lastEvent.player,'local-o');assert.equal(room.lastEvent.actor,'local-x');
- assert.equal(room.players[0].maxActions.at(-1).points,0);assert.equal(room.pairs[0].turn,'O');assert.equal(room.practiceTurn,undefined);
+test('Ficha rival fuerza al adversario a colocar tu símbolo una sola vez, incluso con Doble',()=>{
+ let room=tool(game(),'rival');room=localCommand(room,'move',{x:0,y:0},now+1000);
+ assert.equal(room.cells.at(-1).symbol,'X');room=tool(room,'double','local-o');
+ room=localCommand(room,'move',{x:1,y:0},now+2000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.cells.at(-1).owner,'local-o');assert.equal(room.pairs[0].turn,'O');
+ room=localCommand(room,'move',{x:1,y:1},now+3000);assert.equal(room.cells.at(-1).symbol,'O');assert.equal(room.inventoryEffects.forced.length,0);
+ assert.throws(()=>tool(room,'erase','local-x',{x:0,y:0}));assert.equal(tool(room,'erase','local-x',{x:1,y:0}).cells.length,2);
 });
 
 test('Una geometría ya cobrada no vuelve a puntuar tras borrar y reconstruir; la máquina respeta esa historia',()=>{
@@ -69,8 +70,8 @@ test('El inventario respeta reloj, pausa, modo, territorio, turno y máximo dos 
  assert.equal(canUsePracticeTool(localCommand(room,'pause',{},now+1000),'local-x','double',now+1000),false);
  const island={...room,terrain:[...room.terrain,{x:100,y:100}],cells:[...room.cells,{id:'island',owner:'local-o',symbol:'O',x:100,y:100}]};
  assert.throws(()=>tool(island,'erase','local-x',{x:100,y:100}),/territorio conectado/);
- room=tool(room,'double');room=tool(room,'opposite');assert.equal(canUsePracticeTool(room,'local-x','erase',now+1000),false);assert.throws(()=>tool(room,'erase','local-x',{x:1,y:1}),/máximo dos/);
- room=localCommand(room,'move',{x:2,y:0},now+1000);assert.equal(room.cells.at(-1).symbol,'O');assert.equal(room.pairs[0].turn,'X');
+ room=tool(room,'double');room=tool(room,'rival');assert.equal(canUsePracticeTool(room,'local-x','erase',now+1000),false);assert.throws(()=>tool(room,'erase','local-x',{x:1,y:1}),/máximo dos/);
+ room=localCommand(room,'move',{x:2,y:0},now+1000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.pairs[0].turn,'X');
  room=localCommand(room,'move',{x:0,y:1},now+1000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.pairs[0].turn,'O');
  assert.equal(canUsePracticeTool(room,'local-o','double',now+1000),true);
 });
