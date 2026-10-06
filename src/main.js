@@ -76,7 +76,7 @@ function accept(next) {
 }
 function render() {
   const previous=document.querySelector('.viewport');
-  const scroll=previous?{left:previous.scrollLeft,top:previous.scrollTop}:null;
+  const scroll=previous?{left:previous.scrollLeft,top:previous.scrollTop,width:previous.clientWidth,height:previous.clientHeight}:null;
   if(pairLobby&&!room){renderPairLobby();return;}
   if(!room){renderHome();return;}
   if(!isLocal()&&ownPlayer()?.active===false&&room.status!=='finished'){renderReturn();return;}
@@ -98,7 +98,7 @@ function render() {
   const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span><button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
   const blockedTurn=isLocal()&&ready&&!availableCells(room,pair).length&&availableCells(room,pair,{ignoreBlocks:true}).length;
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
-  app.innerHTML=`<section class="game">
+  app.innerHTML=`<section class="game ${inventoryOpen?'inventory-visible':''}">
     <header class="topbar"><div class="row"><span class="brand heading">#3</span><div><div class="code-mini mono">${modeLabel}</div><span class="muted">${room.level==='advanced'?'Avanzado':'Normal'} · ${escape(own.name)} · ${own.symbol}</span></div></div><button class="game-menu-toggle" data-action="game-menu" aria-label="Opciones de partida">⋯</button></header>
     <div class="workspace"><aside class="ranking ${rankOpen?'is-open':''}" aria-label="${room.commonWorld?'Ranking de Mundo':'Marcador de la partida'}"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}" aria-controls="ranking-panel" aria-label="${rankOpen?'Plegar':'Desplegar'} ${room.commonWorld?'ranking de Mundo':'marcador'}"><span class="compact-rank">${compact.map(p=>`<span class="compact-player ${p.id===uid?own.symbol.toLowerCase():'blue'}"><b class="rank-position ${list.indexOf(p)===0?'gold':''}">${list.indexOf(p)+1}</b><span>${p.id===uid?'Tú':escape(p.name)}</span><strong>${p.score.toLocaleString('es-ES')}</strong></span>`).join('')}</span>${navIcon('chevron')}</button><section id="ranking-panel" class="ranking-panel" ${rankOpen?'':'hidden'}><h2 class="heading">${room.commonWorld?'RANKING MUNDO':'MARCADOR'}</h2><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(list)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}${own.practiceHints||own.practiceTools?' · Partida con inventario':''}</div><nav class="ranking-navigation" aria-label="Navegación del tablero"><button data-action="center">${navIcon('center')}Mi territorio</button><button class="blue" data-action="locate" ${targetAvailable?'':'disabled'}>${navIcon('above')}Rival superior</button><button data-action="map">${navIcon('map')}Mapa</button></nav></section></aside>
     <div class="arena">${voteMarkup(room.vote,uid)}<div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${opponent.bot?' · esperando duelista':''}${room.timeMode==='untimed'?' · sin reloj':''}</p>${room.kind==='duel'&&room.timeMode!=='untimed'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+nextSymbol:'ESPERANDO'}</div></div>
@@ -110,7 +110,7 @@ function render() {
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();updateTimer();
   const nowKey=key(pair.active.x,pair.active.y);
   if(!scroll||nowKey!==activeKey)requestAnimationFrame(()=>center(pair.active.x+1,pair.active.y+1));
-  else {const v=document.querySelector('.viewport');v.scrollLeft=scroll.left;v.scrollTop=scroll.top;}
+  else {const v=document.querySelector('.viewport');v.scrollLeft=scroll.left+(scroll.width-v.clientWidth)/2;v.scrollTop=scroll.top+(scroll.height-v.clientHeight)/2;}
   activeKey=nowKey;
   bindMap({room,layout,zoom,target,own,mapState:worldMapState,changeZoom:changeMapZoom,onClose:()=>{worldMapOpen=false;},interacting:value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;setTimeout(()=>render(),0);}}});
   if(busy)document.querySelectorAll('[data-action="move"],[data-action="select-expansion"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
@@ -636,7 +636,7 @@ function showScore(feedback) {
 
 function renderInventory(){
  document.querySelector('.inventory-sheet')?.remove();if(!inventoryOpen||!room)return;
- app.insertAdjacentHTML('beforeend',`<section class="inventory-sheet" id="inventory-panel" role="region" aria-labelledby="inventory-title"><div class="inventory-sheet-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div><div class="inventory-sheet-body">${inventoryMarkup(room,uid)}</div></section>`);
+ document.querySelector('.game-dock').insertAdjacentHTML('beforebegin',`<section class="inventory-sheet" id="inventory-panel" role="region" aria-labelledby="inventory-title"><div class="inventory-sheet-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div><div class="inventory-sheet-body">${inventoryMarkup(room,uid)}</div></section>`);
  document.querySelector('[data-action="close-inventory"]')?.focus({preventScroll:true});
 }
 function renderDeleteGame(){
