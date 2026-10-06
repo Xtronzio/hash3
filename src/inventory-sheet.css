@@ -14,6 +14,11 @@
 .game .game-bottom button[aria-expanded="true"]{color:var(--mode-color);background:color-mix(in srgb,var(--mode-color) 6%,transparent);border-top:2px solid var(--mode-color)}
 .game .game-bottom{position:relative}
 .inventory-dock-icon{position:relative;display:inline-flex}
+.inventory-dock-icon.is-protected{padding-left:29px}
+.dock-immunity-active{position:absolute;left:0;top:50%;transform:translateY(-50%);width:25px;height:25px;display:grid;place-items:center;border:1px solid currentColor;border-radius:5px;background:#0d1117;pointer-events:none;box-shadow:0 0 8px currentColor}
+.game .game-bottom .dock-immunity-active.x{color:var(--red)}
+.game .game-bottom .dock-immunity-active.o{color:var(--green)}
+.game .game-bottom .dock-immunity-active svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;fill:none}
 .inventory-badge{position:absolute;top:-7px;right:-13px;min-width:20px;height:20px;padding:0 4px;display:grid;place-items:center;background:var(--mode-color);color:#071116;border:2px solid #101216;border-radius:20px;font-size:11px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .inventory-badge.is-empty{opacity:.55}
 .game .game-bottom .inventory-dock-button.is-refilled{background:color-mix(in srgb,var(--mode-color) 6%,transparent)}

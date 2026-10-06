@@ -218,3 +218,10 @@ ACTIVAR CELDA entra en las recargas del inventario de VS máquina y Sin conexió
 El mapa conserva las estadísticas y una sola fila de iconos: extensión, territorio propio, rival superior, localizador de roedores y cierre. No tiene +/− ni porcentaje; mantiene pellizco, arrastre y zoom con rueda. Los roedores cuentan con un marcador amarillo de tamaño legible incluso cuando el mapa está alejado o están dormidos; tocar el localizador recorre los animales presentes, priorizando el propio. Los avisos de puntuación no tapan el mapa. El ranking desplegado muestra el contador real de fichas propias y el próximo hito, o comidas y estado del animal activo. Entre la retirada tras 33 comidas y el siguiente hito puede no haber animales: el tamaño del mapa no determina los nacimientos.
 
 El árbitro local busca la pareja del roedor por sus integrantes y reintenta un nacimiento pendiente si no encuentra alimento, en vez de perder el hito. No se cambian los contadores ni la cadencia de las salas online. La ausencia observada en una partida concreta no puede diagnosticarse solo con una captura del mapa; los nuevos contadores permiten comprobarla sin reiniciar esa partida.
+
+
+## Navegación unificada e inmunidad visible — R0.17.3
+
+El ranking desplegado comparte iconos, botones circulares, tamaño y colores con el tablero para ir al territorio propio, al rival superior y a los roedores. El acceso al mapa usa su mismo icono, sin etiquetas visibles; todos los botones conservan nombres accesibles.
+
+La inmunidad activa muestra su icono junto a la bolsa, en rojo para X o verde para O. Se conserva durante el turno propio y desaparece al completar el turno rival, según las reglas existentes. La señal permanece visible con el inventario cerrado y no se confunde con el contador de cartas disponibles.
