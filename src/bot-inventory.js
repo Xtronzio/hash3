@@ -4,7 +4,7 @@ import {availableCells,figureWindows,key,isBlockedCell} from './game.js';
 // Card decisions stay in the Worker alongside search. The same referee and
 // stock rules validate bot and human actions; no hidden cards or privileges.
 export function chooseMachineCard(room,now=Date.now()){
-  if(room.mode!=='solo'||room.pairs[0].pending)return null;
+  if(room.mode!=='solo'||room.machineInventory!==true||room.pairs[0].pending)return null;
   const pair=room.pairs[0],actor=pair[pair.turn.toLowerCase()],human=room.humanId||pair.x;
   if(actor===human)return null;
   const player=room.players.find(p=>p.id===actor),level=room.difficulty||'medium';

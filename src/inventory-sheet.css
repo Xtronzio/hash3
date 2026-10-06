@@ -13,3 +13,5 @@
 @media(max-height:450px) and (orientation:landscape){.inventory-sheet{max-height:55dvh}.inventory-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.inventory-card{min-height:125px}}
 
 .game.inventory-visible .map-wrap{min-height:100px}.game.inventory-visible .team-score-bottom{padding-top:4px;padding-bottom:4px}
+
+.machine-inventory-choice{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid #465364;border-radius:9px;margin:8px 0 16px;color:#f0f4f9}.machine-inventory-choice input{width:22px;height:22px;flex-shrink:0;margin:0;accent-color:#00e5ff}.machine-inventory-choice span{display:grid;gap:5px}.machine-inventory-choice strong{font-size:14px}.machine-inventory-choice small{font-size:12px;line-height:1.45;color:#b4c0d0}

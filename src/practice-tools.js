@@ -34,6 +34,7 @@ export function toolCells(game,playerId,tool){
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p||p.pending||p[p.turn.toLowerCase()]!==playerId)return false;
+  if(game.mode==='solo'&&playerId!==(game.humanId||p.x)&&game.machineInventory!==true)return false;
   if(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now))return false;
   if(!practiceTools.some(t=>t.id===tool)||(inventoryFor(game,playerId).cards[tool]||0)<=0)return false;
   const state=practiceTurn(game,playerId);

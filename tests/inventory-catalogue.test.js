@@ -66,7 +66,7 @@ test('Las partidas antiguas reciben el catálogo y no conservan la antigua inter
  r=card(r,'rival');const copy=structuredClone(r);initializeInventory(copy);assert.deepEqual(copy.inventoryEffects.forced,r.inventoryEffects.forced);
 });
 test('La máquina usa el mismo stock y respeta bloqueos e imposiciones en Alto y Pro',()=>{
- let r=createLocal('solo','A','',now,'normal','timed','pro');r=card(r,'rival');r=card(r,'block',{x:1,y:1});r=move(r,0,0);
+ let r=createLocal('solo','A','',now,'normal','timed','pro','X',true);r=card(r,'rival');r=card(r,'block',{x:1,y:1});r=move(r,0,0);
  const action=chooseMachineCard(r,now);assert(action);r=localCommand(r,action.action,action.payload,now);assert.equal(r.players[1].inventory.cards.double,0);
  for(const difficulty of ['high','pro']){
    const room={...r,difficulty},choice=chooseMachineMove(room,()=>0,{maxTimeMs:50,maxNodes:3000});
@@ -74,4 +74,16 @@ test('La máquina usa el mismo stock y respeta bloqueos e imposiciones en Alto y
    const predicted=machineMoveScore(room,choice.payload),actual=localCommand(room,'move',choice.payload,now);assert.equal(actual.cells.at(-1).symbol,'X');assert.equal(predicted.points,actual.lastEvent.points);
  }
  assert.throws(()=>machineMoveScore(r,{x:1,y:1}),/legales/);
+});
+
+
+test('Inventario de máquina desactivado por defecto y validado también por el árbitro',()=>{
+ let r=createLocal('solo','A','',now,'advanced','timed','pro','O');assert.equal(r.machineInventory,false);assert.equal(r.level,'advanced');assert.equal(r.difficulty,'pro');
+ assert.equal(chooseMachineCard(r,now),null);assert.equal(canUsePracticeTool(r,'local-x','double',now),false);
+ assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now));
+ const action=chooseMachineMove(r,()=>0,{maxTimeMs:20,maxNodes:1000});assert.equal(action.action,'move');r=localCommand(r,action.action,action.payload,now);
+ assert.equal(canUsePracticeTool(r,'local-o','double',now),true);assert.equal(r.players[0].inventory.cards.double,1);
+ r=localCommand(r,'pause',{},now+1000);r=localCommand(r,'resume',{},now+86400000);assert.equal(r.machineInventory,false);
+ const enabled=createLocal('solo','A','',now,'normal','timed','medium','O',true);assert.equal(canUsePracticeTool(enabled,'local-x','double',now),true);
+ const legacy=structuredClone(enabled);delete legacy.machineInventory;assert.equal(chooseMachineCard(legacy,now),null);
 });
