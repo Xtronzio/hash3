@@ -18,7 +18,7 @@ test('Doble coloca dos fichas del mismo jugador con un solo reloj y dos acciones
  room=localCommand(room,'move',{x:2,y:0},now+2000);
  assert.equal(room.pairs[0].turn,'X');assert.equal(room.practiceTurn.remaining,1);assert.equal(room.pairs[0].deadline,deadline);assert(room.lastEvent.points>0);
  room=localCommand(room,'move',{x:0,y:1},now+3000);
- assert.equal(room.pairs[0].turn,'O');assert.equal(room.practiceTurn,undefined);assert.equal(Date.parse(room.pairs[0].deadline),now+33000);
+ assert.equal(room.pairs[0].turn,'O');assert.equal(room.practiceTurn,undefined);assert.equal(Date.parse(room.pairs[0].deadline),now+36000);
  assert.deepEqual(room.cells.slice(-2).map(c=>c.owner),['local-x','local-x']);assert.equal(room.players[0].maxActions.length,before+2);
 });
 
@@ -66,7 +66,7 @@ test('El inventario respeta reloj, pausa, modo, territorio, turno y una herramie
  let room=play(game(),[[0,0],[1,1]]);
  assert.equal(canUsePracticeTool(room,'local-o','erase',now),false);
  assert.equal(canUsePracticeTool({...room,mode:undefined},'local-x','double',now),false);
- assert.equal(canUsePracticeTool(room,'local-x','double',now+30000),false);
+ assert.equal(canUsePracticeTool(room,'local-x','double',now+33000),false);
  assert.equal(canUsePracticeTool(localCommand(room,'pause',{},now+1000),'local-x','double',now+1000),false);
  const island={...room,terrain:[...room.terrain,{x:100,y:100}],cells:[...room.cells,{id:'island',owner:'local-o',symbol:'O',x:100,y:100}]};
  assert.throws(()=>tool(island,'erase','local-x',{x:100,y:100}),/territorio conectado/);
@@ -81,15 +81,15 @@ test('Guardar y pausar a mitad del doble conserva el símbolo humano O, la segun
  room=tool(room,'double','local-o');room=localCommand(room,'move',{x:0,y:0},now+2000);room=localCommand(room,'pause',{},now+4000);
  const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
  saveLocalGame(storage,room,now+4000);room=localCommand(loadLocalGames(storage)[0],'resume',{},now+86400000);
- assert.equal(localHumanId(room),'local-o');assert.equal(room.practiceTurn.remaining,1);assert.equal(Date.parse(room.pairs[0].deadline),now+86400000+26000);
+ assert.equal(localHumanId(room),'local-o');assert.equal(room.practiceTurn.remaining,1);assert.equal(Date.parse(room.pairs[0].deadline),now+86400000+29000);
  room=localCommand(room,'move',{x:2,y:2},now+86400001);assert.equal(room.cells.at(-1).owner,'local-o');assert.equal(room.pairs[0].turn,'X');
 });
 
 test('Al vencer el doble se coloca solo una ficha automática y se entrega el turno al rival',()=>{
  let room=tool(game(),'double');room=localCommand(room,'move',{x:0,y:0},now+2000);
- room=localCommand(room,'tick',{},now+30000,()=>0);
+ room=localCommand(room,'tick',{},now+33000,()=>0);
  assert.equal(room.cells.length,2);assert.equal(room.lastEvent.automatic,true);assert.equal(room.pairs[0].turn,'O');assert.equal(room.practiceTurn,undefined);
- assert.equal(localCommand(room,'tick',{},now+30000),room);
+ assert.equal(localCommand(room,'tick',{},now+33000),room);
 });
 
 test('Tras borrados repetidos, la máquina coincide con el árbitro para figuras nuevas, ya cobradas y grupos complejos',()=>{

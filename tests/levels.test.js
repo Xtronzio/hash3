@@ -52,7 +52,7 @@ test('Un grupo y una línea diagonal de igual tamaño no se confunden',()=>{
 test('Nivel antiguo sigue normal; los turnos vencidos y la máquina mantienen el nivel',()=>{
   assert.equal(createLocal('solo').level,'normal');assert.throws(()=>createLocal('solo','A','B',0,'otro'),/nivel/);
   const r=createLocal('solo','A','B',0,'advanced');r.cells=marks([[0,0],[1,0],[2,0]]);r.terrain=marks([[0,0],[1,0],[2,0],[1,1]]);
-  const n=localCommand(r,'tick',{},30000,()=>0);assert.equal(n.lastEvent.points,13);assert.equal(n.level,'advanced');
-  const old=structuredClone(r);delete old.level;assert.equal(localCommand(old,'tick',{},30000,()=>0).lastEvent.points,6);
+  const n=localCommand(r,'tick',{},33000,()=>0);assert.equal(n.lastEvent.points,13);assert.equal(n.level,'advanced');
+  const old=structuredClone(r);delete old.level;assert.equal(localCommand(old,'tick',{},33000,()=>0).lastEvent.points,6);
   assert.deepEqual(machineChoice(r,()=>0).payload,{x:1,y:1,symbol:'X'});
 });

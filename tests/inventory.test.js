@@ -20,7 +20,7 @@ test('Practice inventory respects the turn, paused games, expansion, clock and o
  assert.equal(canUsePracticeHint(game,'local-o',now),false);assert.throws(()=>usePracticeHint(game,'local-o',now));
  assert.equal(canUsePracticeHint({...game,mode:undefined,commonWorld:true},'local-x',now),false);
  assert.equal(canUsePracticeHint(localCommand(game,'pause',{},now+1000),'local-x',now),false);
- assert.equal(canUsePracticeHint(game,'local-x',now+30000),false);
+ assert.equal(canUsePracticeHint(game,'local-x',now+33000),false);
  const pending=structuredClone(game);pending.pairs[0].pending=1;assert.equal(canUsePracticeHint(pending,'local-x',now),false);
  const unlimited=createLocal('solo','A','B',now,'normal','untimed');assert.equal(canUsePracticeHint(unlimited,'local-x',now+86400000),true);
 });

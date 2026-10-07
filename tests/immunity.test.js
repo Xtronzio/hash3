@@ -49,7 +49,7 @@ test('No premia las acciones de cartas, el tiempo agotado ni el símbolo impuest
  let r=scoringRoom();r.cells.push({x:16,y:0,id:'target',symbol:'O',owner:'local-o'});
  r=card(r,'opposite','local-x',{x:16,y:0});assert.equal(r.lastEvent.points,33);assert.equal(immunityFor(r,'local-x').combos,0);
  r=scoringRoom({clock:'timed'});const free=availableCells(r,r.pairs[0]),index=free.findIndex(c=>c.x===16&&c.y===0);
- r=localCommand(r,'tick',{},now+30000,()=>(index+.1)/free.length);
+ r=localCommand(r,'tick',{},now+33000,()=>(index+.1)/free.length);
  assert.equal(r.lastEvent.points,33);assert.equal(r.lastEvent.automatic,true);assert.equal(immunityFor(r,'local-x').combos,0);
  r=scoringRoom({symbol:'O'});r.inventoryEffects.forced.push({player:'local-x',symbol:'O',by:'local-o'});r=move(r,16,0);
  assert.equal(r.lastEvent.points,33);assert.equal(r.lastEvent.player,'local-o');
@@ -76,7 +76,7 @@ test('Los premios de 1, 3 y 33 son unidades de una ronda: cada activación gasta
 test('Inmunidad respeta una herramienta, Combo, reloj, pausa, turnos y no apila duraciones activas',()=>{
  let r=earn(start('local','timed'),33),deadline=r.pairs[0].deadline;
  assert.equal(canUsePracticeTool(r,'local-o','immunity',now),false);
- assert.equal(canUsePracticeTool(r,'local-x','immunity',now+30000),false);
+ assert.equal(canUsePracticeTool(r,'local-x','immunity',now+33000),false);
  const paused=localCommand(r,'pause',{},now);assert.equal(canUsePracticeTool(paused,'local-x','immunity',now),false);
  assert.throws(()=>card(card(r,'double'),'immunity'));
  r.players[0].inventory.cards.combo=1;r=card(r,'combo');r=card(r,'immunity');assert.equal(r.pairs[0].deadline,deadline);
@@ -108,7 +108,7 @@ test('Una protección vence tras una ronda rival aunque no te ataquen; Doble no 
  r=card(r,'double','local-o');r=move(r,1,0);assert.equal(immunityRemaining(r,'local-x'),1);
  r=move(r,2,0);assert.equal(immunityRemaining(r,'local-x'),0);assert.equal(immunityStock(r,'local-x'),stock);
  r=card(r,'immunity');assert.equal(immunityStock(r,'local-x'),stock-1);r=move(r,0,1);
- r.timeMode='timed';r.pairs[0].deadline=new Date(now+30000).toISOString();r=localCommand(r,'tick',{},now+30000,()=>0);
+ r.timeMode='timed';r.pairs[0].deadline=new Date(now+33000).toISOString();r=localCommand(r,'tick',{},now+33000,()=>0);
  assert.equal(immunityRemaining(r,'local-x'),0);assert.equal(immunityStock(r,'local-x'),stock-1);
  r=start();r=card(earn(r,33),'immunity');r.cells=r.terrain.map((c,i)=>({...c,id:'full'+i,symbol:'X',owner:'local-x'}));
  r.pairs[0].pending=1;r.pairs[0].credits=1;r.pairs[0].expander='local-x';

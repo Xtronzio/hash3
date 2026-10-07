@@ -15,7 +15,8 @@ import './mobile-game.css';
 import './map-overview.css';
 import './inventory-sheet.css';
 import {overviewMarkup} from './map-overview.js';
-import {extensionView} from './map-camera.js';
+import {extensionView,clampBoardZoom} from './map-camera.js';
+import {cellIndex,viewportWindow,reconcileCells} from './board-window.js';
 import {inventoryMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded,toolAllowance} from './practice-tools.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
@@ -32,8 +33,9 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const read = key => {try{return localStorage.getItem(key);}catch{return null;}};
 const save = (key,value) => {try{value===null?localStorage.removeItem(key):localStorage.setItem(key,value);}catch{/* device storage may be disabled */}};
 let pairLobby=null,mapInteracting=false,mapDeferred=false,gameMenuOpen=false,worldMapOpen=false;
-let worldMapState={};
-let pauseMapOpen=false,pauseMapState={},disposeInspection=null,thumbnailObserver=null;
+let worldMapState={},refreshBoard=()=>{},boardFrame=0;
+function scheduleBoard(){if(!boardFrame)boardFrame=requestAnimationFrame(()=>{boardFrame=0;refreshBoard();});}
+let pauseMapOpen=false,pauseMapState={},disposeInspection=null,disposeMap=null,thumbnailObserver=null;
 const onlinePreviews=new Map();
 const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snapshot)=>onlinePreviews.set(key,{room:snapshot,at:Date.now()}));
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
@@ -109,9 +111,12 @@ function accept(next) {
   if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);scheduleMachine();
 }
 function render() {
+  mapInteracting=false;mapDeferred=false;
+  disposeMap?.();disposeMap=null;
   if(room?.status!=='paused'){disposeInspection?.();disposeInspection=null;pauseMapOpen=false;}
+  cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};
   const previous=document.querySelector('.viewport');
-  const scroll=previous?{left:previous.scrollLeft,top:previous.scrollTop,width:previous.clientWidth,height:previous.clientHeight}:null;
+  const scroll=previous?{left:previous.scrollLeft,top:previous.scrollTop,width:previous.clientWidth,height:previous.clientHeight,x:layout.minX+(previous.scrollLeft+previous.clientWidth/2-layout.padding)/layout.size-.5,y:layout.minY+(previous.scrollTop+previous.clientHeight/2-layout.padding)/layout.size-.5}:null;
   if(pairLobby&&!room){renderPairLobby();return;}
   if(!room){renderHome();return;}
   if(!isLocal()&&ownPlayer()?.active===false&&room.status!=='finished'){renderReturn();return;}
@@ -140,16 +145,16 @@ function render() {
     <div class="workspace"><aside class="ranking ${rankOpen?'is-open':''}" aria-label="${room.commonWorld?'Ranking de Mundo':'Marcador de la partida'}"><button class="ranking-toggle" data-action="ranking" aria-expanded="${rankOpen}" aria-controls="ranking-panel" aria-label="${rankOpen?'Plegar':'Desplegar'} ${room.commonWorld?'ranking de Mundo':'marcador'}"><span class="compact-rank">${compact.map(p=>`<span class="compact-player ${p.id===uid?own.symbol.toLowerCase():'blue'}"><b class="rank-position ${list.indexOf(p)===0?'gold':''}">${list.indexOf(p)+1}</b><span>${p.id===uid?'Tú':escape(p.name)}</span><strong class="compact-metrics">${p.score.toLocaleString('es-ES')}<small>#MAX ${maxLabel(p)}</small></strong></span>`).join('')}</span>${navIcon('chevron')}</button><section id="ranking-panel" class="ranking-panel" ${rankOpen?'':'hidden'}><h2 class="heading">${room.commonWorld?'RANKING MUNDO':'MARCADOR'}</h2><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(list)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}${own.practiceHints||own.practiceTools?' · Partida con inventario':''}</div><nav class="ranking-navigation icon-navigation" aria-label="Navegación del tablero">${jumpButtons}${rodentButton}${iconButton('map','map','Mapa general')}</nav></section></aside>
     <div class="arena">${voteMarkup(room.vote,uid)}<div class="turnbar"><div><h1 class="heading">${title}</h1><p>Contra ${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario rival`:''}${opponent.bot?' · esperando duelista':''}${room.timeMode==='untimed'?' · sin reloj':''}</p>${room.kind==='duel'&&room.timeMode!=='untimed'?'<p class="duel-clock"><strong>FIN DEL DUELO · <span id="duel-time" class="mono"></span></strong></p>':''}</div><div class="turn-chip ${ready?'ready':expanding?'expanding':''}"><span class="turn-timer mono" aria-label="Tiempo restante"></span>${expanding?'AMPLIACIÓN':ready?'JUEGA '+nextSymbol:'ESPERANDO'}</div></div>
     ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span><button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
-    <div class="map-wrap"><div class="viewport" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${rodentButton}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,rodentButton})}</div>
+    <div class="map-wrap"><div class="viewport" tabindex="0" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${rodentButton}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,rodentButton})}</div>
     <footer class="game-dock"><section class="team-score-bottom" aria-label="Puntuación de los equipos"><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></section><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
     <div class="dialog-backdrop game-menu" ${gameMenuOpen?'':'hidden'}><section class="dialog" role="dialog" aria-modal="true" aria-label="Opciones de partida"><h2 class="heading">Opciones</h2><p class="menu-version">#3 · ${VERSION_LABEL} · ${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'} · ${3-(own.figures%3)} figuras para bonus +3</p>${isLocal()?'':`<p>Sala <strong class="mono">${escape(room.code)}</strong></p><button data-action="copy-room-code">Copiar código</button><button data-action="share">Copiar enlace</button>${opponent.bot&&!room.commonWorld?'<button data-action="share-pair">Invitar a mi rival</button>':''}`}${isLocal()||room.host===uid&&!room.commonWorld?'<button class="danger" data-action="finish">Finalizar sala</button>':''}<button data-action="go-games">Mis partidas</button><button class="danger" data-action="abandon">Abandonar</button><button data-action="close-game-menu">Volver a la partida</button></section></div>
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();updateTimer();
   const nowKey=key(pair.active.x,pair.active.y);
   if(!scroll||nowKey!==activeKey)requestAnimationFrame(()=>center(pair.active.x+1,pair.active.y+1));
-  else {const v=document.querySelector('.viewport');v.scrollLeft=scroll.left+(scroll.width-v.clientWidth)/2;v.scrollTop=scroll.top+(scroll.height-v.clientHeight)/2;}
+  else center(scroll.x,scroll.y);
   activeKey=nowKey;
-  bindMap({room,layout,zoom,target,own,mapState:worldMapState,changeZoom:changeMapZoom,onClose:()=>{worldMapOpen=false;},interacting:value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;setTimeout(()=>render(),0);}}});
+  disposeMap=bindMap({room,layout,zoom,target,own,onNavigate:scheduleBoard,mapState:worldMapState,changeZoom:changeMapZoom,onClose:()=>{worldMapOpen=false;},interacting:value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;setTimeout(()=>render(),0);}}});
   if(busy)document.querySelectorAll('[data-action="move"],[data-action="select-expansion"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
 }
 let layout={minX:0,minY:0,size:56,padding:100};
@@ -165,18 +170,20 @@ function drawBoard(canExpand,ready,target) {
   const choices=canExpand?expansionOptions(terrain,pair.active):[],choiceKeys=new Set(choices.map(c=>key(c.x,c.y)));
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
   const all=[...terrain,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets];
-  const minX=Math.min(...all.map(c=>c.x)),minY=Math.min(...all.map(c=>c.y)),maxX=Math.max(...all.map(c=>c.x)),maxY=Math.max(...all.map(c=>c.y));
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const c of all){minX=Math.min(minX,c.x);minY=Math.min(minY,c.y);maxX=Math.max(maxX,c.x);maxY=Math.max(maxY,c.y);}
   const viewport=document.querySelector('.viewport');
-  const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,viewport.clientWidth/2,viewport.clientHeight/2);Object.assign(layout,{minX,minY,size,padding});
-  const board=document.querySelector('.board');
+  const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,viewport.clientWidth/2,viewport.clientHeight/2);Object.assign(layout,{minX,minY,size,padding,previewScale:1,minZoom:room.commonWorld?.55:.3});
+  const board=document.querySelector('.board');board.replaceChildren();
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(connectedTerrain(terrain,pair.active).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
   const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
-  const free=new Set(availableCells(room,pair).map(c=>key(c.x,c.y)));
   const targets=selection?new Set(toolCells(room,uid,selection.tool).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
-  board.innerHTML=terrain.map(pos=>{
+  const index=cellIndex(terrain),choiceIndex=cellIndex(choices.filter(c=>!known.has(key(c.x,c.y)))),activationIndex=cellIndex(activationTargets);
+  let nodes=new Map();
+  const cellMarkup=pos=>{
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
     const isTarget=c&&c.id===target?.lastMove?.id,last=c&&c.id===own.lastMove?.id;
     const color=c?(myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
@@ -192,29 +199,40 @@ function drawBoard(canExpand,ready,target) {
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
     const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${isShielded(room,c)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
     return `<button class="cell terrain-cell ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable?'tool-target':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${isShielded(room,c)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/33 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):''}</button>`;
-  }).join('')+choices.filter(c=>!known.has(key(c.x,c.y))).map(c=>`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`).join('');
-  if(ready&&activationTargets.length)board.insertAdjacentHTML('beforeend',activationTargets.map(c=>`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Activar celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`).join(''));
+  };
+  refreshBoard=()=>{
+   if(!board.isConnected)return;
+   const window=viewportWindow(viewport,layout);
+   const entries=index.query(window).map(pos=>({id:'cell:'+key(pos.x,pos.y),markup:cellMarkup(pos)}));
+   entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
+  if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Activar celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
-    board.insertAdjacentHTML('beforeend',`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`);
+    entries.push({id:'score',markup:`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`});
   }
   if(selectedExpansion) {
     const b=selectedExpansion;
-    board.insertAdjacentHTML('beforeend',`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`);
+    entries.push({id:'preview',markup:`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`});
   }
+  nodes=reconcileCells(board,entries,nodes);
+  };
+  if(size<14){
+   board.innerHTML=`<svg class="board-overview" data-action="board-overview" viewBox="${minX} ${minY} ${maxX-minX+1} ${maxY-minY+1}" style="left:${padding}px;top:${padding}px;width:${(maxX-minX+1)*size}px;height:${(maxY-minY+1)*size}px" role="img" aria-label="Vista completa del tablero. Toca una zona para acercarte.">${thumbnailMarkup(room).replace(/^.*?<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>`;
+   refreshBoard=()=>{};
+  }else refreshBoard();
 }
 function center(x,y) {
   const v=document.querySelector('.viewport');if(!v)return;
   const {minX,minY,size,padding}=layout;
   v.scrollLeft=(x-minX+.5)*size+padding-v.clientWidth/2;
-  v.scrollTop=(y-minY+.5)*size+padding-v.clientHeight/2;
+  v.scrollTop=(y-minY+.5)*size+padding-v.clientHeight/2;refreshBoard();
 }
 function changeMapZoom(value,inGesture=false,anchor=null){
  const viewport=document.querySelector('.viewport');if(!viewport)return;
  const x=(viewport.scrollLeft+viewport.clientWidth/2-layout.padding)/layout.size+layout.minX-.5;
  const y=(viewport.scrollTop+viewport.clientHeight/2-layout.padding)/layout.size+layout.minY-.5;
- zoom=Math.max(.3,Math.min(2.2,value));
- if(inGesture){const p=ownPair(),o=ownPlayer(),ready=!p.pending&&p.turn===o.symbol;drawBoard(p.pending&&p.expander===uid,ready,above());if(anchor){viewport.scrollLeft=(anchor.point.x-layout.minX)*layout.size+layout.padding-anchor.screen.x;viewport.scrollTop=(anchor.point.y-layout.minY)*layout.size+layout.padding-anchor.screen.y;}else center(x,y);const n=document.querySelector('.zoom-label');if(n)n.textContent='ZOOM · '+Math.round(zoom*100)+'%';}
+ zoom=clampBoardZoom(value,!!room.commonWorld);
+ if(inGesture){const p=ownPair(),o=ownPlayer(),ready=!p.pending&&p.turn===o.symbol;drawBoard(p.pending&&p.expander===uid,ready,above());if(anchor){viewport.scrollLeft=(anchor.point.x-layout.minX)*layout.size+layout.padding-anchor.screen.x;viewport.scrollTop=(anchor.point.y-layout.minY)*layout.size+layout.padding-anchor.screen.y;}else center(x,y);refreshBoard();const n=document.querySelector('.zoom-label');if(n)n.textContent='ZOOM · '+Math.round(zoom*100)+'%';}
  else{render();center(x,y);}
 }
 function savedLocal(){return localGames()[0]||null;}
@@ -280,7 +298,7 @@ function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
-function clearGameView(){disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();room=null;inventoryOpen=false;inventorySelection=null;gameMenuOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+function clearGameView(){disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();room=null;inventoryOpen=false;inventorySelection=null;gameMenuOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
 function goToHall(){
  if(room?.status!=='paused')throw new Error('Pausa la partida antes de volver al hall.');
  if(isLocal())persistLocal(room);
@@ -357,7 +375,7 @@ function suspendLocal(){
  try{clearTimeout(machineTimer);accept(localCommand(room,'pause'));}catch{}
 }
 function timeModeSelector(id,value='timed'){
- return `<label for="${id}">Ritmo de la partida</label><select id="${id}"><option value="timed" ${value==='timed'?'selected':''}>Con reloj · 30 segundos por turno</option><option value="untimed" ${value==='untimed'?'selected':''}>Por turnos · sin reloj</option></select>`;
+ return `<label for="${id}">Ritmo de la partida</label><select id="${id}"><option value="timed" ${value==='timed'?'selected':''}>Con reloj · 33 segundos por turno</option><option value="untimed" ${value==='untimed'?'selected':''}>Por turnos · sin reloj</option></select>`;
 }
 
 function playHallMode() {
@@ -481,9 +499,14 @@ app.addEventListener('click',async e=>{
   }
   if(action==='locate'){const target=above(),pair=room.pairs.find(p=>p.id===target?.pair),move=target?.lastMove||(pair?{x:pair.active.x+1,y:pair.active.y+1}:null);if(move){rankOpen=false;worldMapOpen=false;zoom=1;render();center(move.x,move.y);document.querySelector('.game-minimap')?.focus({preventScroll:true});}return;}
   if(action==='plus'||action==='minus'||action==='zoom-level'){changeMapZoom(action==='zoom-level'?(zoom<.75?1:zoom<1.3?1.6:.55):zoom*(action==='plus'?1.25:.8));return;}
+  if(action==='board-overview'){
+    const v=document.querySelector('.viewport'),r=v.getBoundingClientRect(),x=layout.minX+(v.scrollLeft+e.clientX-r.left-v.clientLeft-layout.padding)/layout.size-.5,y=layout.minY+(v.scrollTop+e.clientY-r.top-v.clientTop-layout.padding)/layout.size-.5;
+    zoom=1;render();center(x,y);return;
+  }
   if(action==='fit-board'){
+    if(room.commonWorld)return;
     const v=document.querySelector('.viewport'),fit=extensionView(terrainOf(room),{width:v.clientWidth,height:v.clientHeight},innerWidth<=760?48:56);
-    if(fit){zoom=fit.zoom;render();const active=ownPair().active;center(fit.capped?active.x+1:fit.x,fit.capped?active.y+1:fit.y);if(fit.capped)notify('Vista amplia de tu zona. Usa el mapa para explorar el tablero completo.');}
+    if(fit){zoom=fit.zoom;render();center(fit.x,fit.y);}
     return;
   }
   if(action==='share'||action==='share-pair'){
@@ -616,7 +639,7 @@ function machineInventorySelector(enabled=false){
 }
 function renderRoomSetup(){
  document.querySelector('.room-dialog')?.remove();const setup=roomSetup;
- app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog game-mode-dialog ${hallModeClass(setup.kind)}" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2>${symbolSelector(setup.symbol,'duel-symbol')}<p>El creador elige su símbolo. X siempre empieza; en 1 contra 1 tu rival recibe el contrario.</p><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>30 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
+ app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog game-mode-dialog ${hallModeClass(setup.kind)}" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2>${symbolSelector(setup.symbol,'duel-symbol')}<p>El creador elige su símbolo. X siempre empieza; en 1 contra 1 tu rival recibe el contrario.</p><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>33 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
  document.querySelectorAll('[name="duel-symbol"]').forEach(input=>input.addEventListener('change',()=>{roomSetup.symbol=input.value;save('hash3_symbol',input.value);}));
  document.querySelector('#room-level').addEventListener('change',e=>{roomSetup.level=e.target.value;});
  document.querySelector('#duel-format').addEventListener('change',e=>{roomSetup.format=e.target.value;});
@@ -660,7 +683,7 @@ function renderLocalSetup() {
   document.querySelector('.local-dialog')?.remove();
   app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog game-mode-dialog ${hallModeClass(hallMode==='offline'?'offline':'solo')}" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2>${hallNameField(read('hash3_name'),{id:'local-name',label:localSetup==='solo'?'Tu apodo':'Tu nombre',placeholder:localSetup==='solo'?'Tú':'Jugador 1'})}${localSetup==='solo'?machineDifficultySelector(read('hash3_difficulty')):''}${localSetup==='local'?'<label for="second-name">Otro jugador</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}${localSetup==='solo'?machineInventorySelector(read('hash3_machine_inventory')==='true'):''}${timeModeSelector('local-time-mode',read('hash3_local_time_mode')==='untimed'?'untimed':'timed')}${symbolSelector(read('hash3_symbol'),'local-symbol')}<p>X siempre empieza. ${localSetup==='solo'?'La máquina juega con el símbolo contrario al tuyo.':'El otro jugador usa el símbolo contrario. Pasad el dispositivo después de cada turno.'} <span id="local-time-hint"></span> Puedes pausar y volver al hall sin perder la partida.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
   document.querySelectorAll('[name="machine-difficulty"]').forEach(input=>input.addEventListener('change',()=>{document.querySelector('#machine-level-hint').textContent=machineLevelHints[input.value];}));
-  const localClock=document.querySelector('#local-time-mode'),refreshClock=()=>{document.querySelector('#local-time-hint').textContent=localClock.value==='untimed'?'Sin límite por turno ni jugadas automáticas. Cada jugador espera a que juegue su rival.':'30 segundos por turno. Al agotarse se coloca una ficha automática; la pausa conserva el tiempo restante.';};
+  const localClock=document.querySelector('#local-time-mode'),refreshClock=()=>{document.querySelector('#local-time-hint').textContent=localClock.value==='untimed'?'Sin límite por turno ni jugadas automáticas. Cada jugador espera a que juegue su rival.':'33 segundos por turno. Al agotarse se coloca una ficha automática; la pausa conserva el tiempo restante.';};
   localClock.addEventListener('change',refreshClock);refreshClock();
   (document.querySelector('#local-name:not([type="hidden"])')||document.querySelector('#second-name')||document.querySelector('[name="machine-difficulty"]:checked')||document.querySelector('#local-level')).focus();
 }

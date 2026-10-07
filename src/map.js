@@ -2,8 +2,12 @@ import {bindBoardNavigation} from './board-navigation.js';
 import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {rodentIcon,rodentSleeping} from './rodents.js';
-export function overviewCells(terrain){return terrain.map(p=>`<rect x="${p.x+.07}" y="${p.y+.07}" width=".86" height=".86" rx=".06" fill="${p.fill}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".09"':''}/>${p.rodent?`<text x="${p.x+.5}" y="${p.y+.64}" text-anchor="middle" font-size=".45" fill="${p.rodent.phase>=3?'var(--yellow)':'#08090b'}" font-weight="700">${p.rodent.eaten}</text>`:''}`).join('');}
-export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onClose,mapState={}}){
+export function overviewCells(terrain){
+ const paths=new Map();
+ for(const p of terrain){const group=p.fill+(p.eaten?' eaten':''),part=`M${p.x+.07} ${p.y+.07}h.86v.86h-.86Z`;if(!paths.has(group))paths.set(group,{fill:p.fill,eaten:p.eaten,d:''});paths.get(group).d+=part;}
+ return [...paths.values()].map(p=>`<path fill="${p.fill}" d="${p.d}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".09"':''}/>`).join('');
+}
+export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onClose,onNavigate=()=>{},mapState={}}){
   const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('.map-canvas');
   const model=overviewModel(room,own,target);if(!viewport||!big||!model)return;
   const {bounds,terrain,active,ownColor}=model;
@@ -13,6 +17,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   panel.querySelector('.map-summary').innerHTML=`${terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${bounds.width-4} × ${bounds.height-4}</span>`;
   big.insertAdjacentHTML('beforeend',(room.rodents||[]).map(r=>`<g class="map-rodent-pin" data-x="${r.x+.5}" data-y="${r.y+.5}" aria-label="Roedor, ${r.eaten}/33 comidas, ${rodentSleeping(r)?'dormido':'comiendo'}"><title>Roedor · ${r.eaten}/33 · ${rodentSleeping(r)?'dormido':'comiendo'}</title><circle r="14" fill="#151109" stroke="var(--yellow)" stroke-width="2"/><svg x="-11" y="-11" width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="var(--yellow)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${rodentIcon}</svg><text x="11" y="16" text-anchor="middle" font-size="9" fill="var(--yellow)" stroke="#151109" stroke-width="3" paint-order="stroke" font-weight="700">${r.eaten}</text>${rodentSleeping(r)?'<text x="12" y="-10" font-size="9" fill="var(--yellow)">z</text>':''}</g>`).join(''));
   const update=()=>{
+    onNavigate();
     if(!big.isConnected){observer.disconnect();return;}
     const rect=big.getBoundingClientRect();
     if(rect.width&&rect.height){
@@ -85,5 +90,6 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   big.addEventListener('pointerup',e=>endMap(e));big.addEventListener('pointercancel',e=>endMap(e,true));big.addEventListener('lostpointercapture',e=>endMap(e,true));
   const observer=new ResizeObserver(update);observer.observe(big);
   viewport.addEventListener('scroll',update,{passive:true});requestAnimationFrame(update);
-  bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting,update});
+  const disposeNavigation=bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting,update});
+  return ()=>{observer.disconnect();disposeNavigation?.();};
 }

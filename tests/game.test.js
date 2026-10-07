@@ -49,12 +49,12 @@ test('No permite ampliar a una isla distante o sin añadir terreno',()=>{
   const r=createLocal('local','A','B',0),options=expansionOptions(r.terrain,r.pairs[0].active);
   assert.ok(!options.some(c=>c.x===99));assert.ok(!options.some(c=>c.x===0&&c.y===0));
 });
-test('Al agotar 30 segundos mueve al azar una sola vez, mantiene el turno y no pisa fichas',()=>{
+test('Al agotar 33 segundos mueve al azar una sola vez, mantiene el turno y no pisa fichas',()=>{
   let r=createLocal('local','A','B',1000);r=localCommand(r,'move',{x:0,y:0},1000);
-  assert.equal(localCommand(r,'tick',{},30999),r);
-  r=localCommand(r,'tick',{},31000,()=>0);
+  assert.equal(localCommand(r,'tick',{},33999),r);
+  r=localCommand(r,'tick',{},34000,()=>0);
   assert.equal(r.cells.length,2);assert.equal(r.cells[1].symbol,'O');assert.notEqual(key(r.cells[0].x,r.cells[0].y),key(r.cells[1].x,r.cells[1].y));
-  assert.equal(r.lastEvent.automatic,true);assert.equal(localCommand(r,'tick',{},31000),r);
+  assert.equal(r.lastEvent.automatic,true);assert.equal(localCommand(r,'tick',{},34000),r);
 });
 test('La máquina completa una figura posible y solo elige celdas vacías',()=>{
   const r=createLocal('solo','A','',0);r.pairs[0].turn='O';r.cells=marks([[0,0],[1,0]],'O');
@@ -74,11 +74,11 @@ test('La ampliación también vence: añade terreno al azar y conserva las ficha
   let r=createLocal('local','A','B',0);
   for(const [x,y] of [[0,0],[0,1],[1,0],[1,1],[2,0],[2,2],[0,2],[2,1],[1,2]])r=localCommand(r,'move',{x,y},0);
   const before=structuredClone(r.cells);
-  assert.equal(r.pairs[0].pending,1);assert.equal(Date.parse(r.pairs[0].deadline),30000);
-  assert.equal(localCommand(r,'tick',{},29999),r);
-  assert.throws(()=>localCommand(r,'expand',{x:3,y:0},30000),/Tiempo agotado/);
-  r=localCommand(r,'tick',{},30000,()=>0);
+  assert.equal(r.pairs[0].pending,1);assert.equal(Date.parse(r.pairs[0].deadline),33000);
+  assert.equal(localCommand(r,'tick',{},32999),r);
+  assert.throws(()=>localCommand(r,'expand',{x:3,y:0},33000),/Tiempo agotado/);
+  r=localCommand(r,'tick',{},33000,()=>0);
   assert.deepEqual(r.cells,before);assert.ok(r.terrain.length>9);assert.equal(r.pairs[0].pending,0);
   assert.equal(r.lastEvent.kind,'expand');assert.equal(r.lastEvent.automatic,true);
-  assert.equal(localCommand(r,'tick',{},30000),r);
+  assert.equal(localCommand(r,'tick',{},33000),r);
 });

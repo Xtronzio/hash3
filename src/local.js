@@ -5,7 +5,7 @@ import {initializeRodents,stepRodent} from './rodents.js';
 import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 import {activateImmunity,recordImmunityCombo} from './immunity.js';
-export const TURN_SECONDS=30;
+export const TURN_SECONDS=33;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
 export const localMachineId=room=>{const p=room.pairs[0];return localHumanId(room)===p.x?p.o:p.x;};
@@ -31,7 +31,7 @@ function normalize(room,now) {
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
   const room=structuredClone(original),p=room.pairs[0];
-  initializeInventory(room);initializeRodents(room);
+  initializeInventory(room);initializeRodents(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;

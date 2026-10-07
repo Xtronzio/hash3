@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {terrainBounds,extensionView,fitOverview,zoomCamera,panCamera} from '../src/map-camera.js';
-test('Zoom extensión conserva una escala legible en tableros gigantes y centra coordenadas negativas',()=>{
+test('Zoom extensión encaja el tablero completo incluso en tableros gigantes y centra coordenadas negativas',()=>{
  const terrain=[{x:-1000,y:-20},{x:999,y:20}],view=extensionView(terrain,{width:390,height:600},48);
- assert.equal(view.capped,true);assert.equal(view.zoom*48,18);assert.equal(view.x,-.5);
+ assert.equal(view.capped,false);assert.equal(view.zoom*48,.175);assert.equal(view.x,-.5);
  const small=extensionView([{x:0,y:0},{x:2,y:2}],{width:390,height:600},48);assert.equal(small.capped,false);assert(Math.abs(small.zoom-1.6)<1e-12);
  assert.equal(terrainBounds([]),null);
 });

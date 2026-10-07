@@ -37,6 +37,6 @@ test('Una jugada que no puntúa no resalta figuras antiguas',()=>{
 test('La jugada por tiempo agotado también muestra las figuras pagadas',()=>{
   let r=createLocal('local','Ana','Luis',0);
   for(const [x,y] of [[0,0],[0,1],[1,0],[1,1]])r=play(r,x,y);
-  const next=localCommand(r,'tick',{},30000,()=>0),f=scoreFeedback(r,next);
+  const next=localCommand(r,'tick',{},33000,()=>0),f=scoreFeedback(r,next);
   assert.ok(f);assert.equal(f.automatic,true);assert.equal(f.points,3);
 });

@@ -1,6 +1,17 @@
-# #3 — R0.17.0
+# #3 — R0.19.0
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
+
+## Navegación y reloj · R0.19.0
+
+El tablero detallado dibuja solo las celdas visibles con un margen de dos celdas. Un índice espacial por grupos de 16×16 evita recorrer todo el terreno al navegar. Arrastre, rueda y pellizco actualizan la ventana; las celdas que permanecen visibles conservan sus nodos. La cámara se conserva en coordenadas del juego al recibir actualizaciones o cambiar el tamaño de la pantalla.
+
+Zoom extensión encaja el tablero completo en Duelo y modos locales; cuando las celdas serían menores de 14 píxeles muestra una vista simplificada. Tocar una zona vuelve a la escala de juego allí, sin colocar ficha. Mundo no tiene extensión en el tablero principal y limita el alejamiento al 55 %. El minimapa permite ver y explorar el mundo completo; su representación agrupa celdas en trazados SVG por color.
+
+Los turnos humanos y ampliaciones con reloj pasan a 33 segundos en local y servidor. Las partidas sin reloj se mantienen. Las partidas existentes conservan su plazo en curso y milisegundos de pausa; los turnos siguientes usan 33 segundos. El reloj total del duelo y la respuesta de dos segundos de la máquina online se conservan. La migración incluye comprobaciones de estos casos y conserva privilegios y comprobaciones de pertenencia.
+
+Roedores periódicos, bombas, gusanos, obras, fronteras y cambios de Mundo siguen pendientes del siguiente bloque; esta versión mejora la navegación y los relojes.
+
 
 ## Inmunidad del territorio · R0.16.9
 

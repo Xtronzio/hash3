@@ -39,14 +39,14 @@ test('Combo se conserva con pausa y Doble, no reinicia reloj y caduca al complet
  r=move(r,0,0,now+1000);assert.equal(toolAllowance(r,'local-x').remaining,1);
  r=localCommand(r,'pause',{},now+2000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},now+86400000);
  assert.equal(toolAllowance(r,'local-x').remaining,1);assert.equal(r.practiceTurn.remaining,1);
- r=card(r,'rival','local-x',{},now+86400001);assert.equal(Date.parse(r.pairs[0].deadline),now+86400000+28000);
+ r=card(r,'rival','local-x',{},now+86400001);assert.equal(Date.parse(r.pairs[0].deadline),now+86400000+31000);
  r=move(r,1,0,now+86400002);assert.equal(r.practiceTurn,undefined);
  assert.equal(toolAllowance(r,'local-o').limit,1);r=move(r,1,1,now+86400003);
  assert.equal(toolAllowance(r,'local-x').combo,false);assert.equal(toolAllowance(r,'local-x').limit,1);
 });
 test('Tiempo agotado cancela Combo y no avanza la recarga',()=>{
  let r=earnCombo(start('local','timed'));r=card(r,'combo');r=card(r,'double');
- const turns=r.players[0].inventory.turns;r=localCommand(r,'tick',{},now+30000,()=>0);
+ const turns=r.players[0].inventory.turns;r=localCommand(r,'tick',{},now+33000,()=>0);
  assert.equal(r.practiceTurn,undefined);assert.equal(r.pairs[0].turn,'O');assert.equal(r.cells.length,1);
  assert.equal(r.players[0].inventory.turns,turns);assert.equal(toolAllowance(r,'local-x').combo,false);
 });

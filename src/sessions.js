@@ -11,7 +11,7 @@ export function loadLocalGames(storage,now=Date.now()){
   try{const old=JSON.parse(storage.getItem('hash3_local'));if(!canonical&&valid(old)&&!games.some(g=>g.id===old.id)){
     // Existing single saves become paused; no elapsed offline moves are replayed.
     let imported={...old,updatedAt:old.updatedAt||new Date(now).toISOString()};
-    if(imported.status==='playing'){const at=Date.parse(imported.updatedAt);imported=localCommand(imported,'pause',{},Number.isFinite(at)&&old.updatedAt?at:Date.parse(imported.pairs[0].deadline)-30000||now);}
+    if(imported.status==='playing'){const at=Date.parse(imported.updatedAt);imported=localCommand(imported,'pause',{},Number.isFinite(at)&&old.updatedAt?at:Date.parse(imported.pairs[0].deadline)-(old.turnSeconds??30)*1000||now);}
     games.push(imported);
   }}catch{}
   return games.sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
