@@ -20,3 +20,6 @@ body:has(.world-map:not([hidden])) #notice.score-notice{visibility:hidden}
 @media(max-width:360px){.game .map-controls{gap:2px}.game .map-controls button{width:40px}}
 
 .game .map-summary .map-dimensions{display:inline-block;white-space:nowrap}
+
+.game .map-controls{flex-wrap:wrap}
+@media(max-width:600px){.game .map-summary{flex-basis:100%}}

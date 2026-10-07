@@ -30,3 +30,5 @@ body{padding-bottom:0}.app-version{position:absolute;width:1px;height:1px;overfl
 .game .icon-navigation button.blue{border-color:#345173}
 .game .icon-navigation button.yellow{color:var(--yellow)}
 .game .ranking-navigation.icon-navigation{justify-content:center;gap:6px}
+
+.game .map-jumps{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 24px)}

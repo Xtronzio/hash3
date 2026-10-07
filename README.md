@@ -340,3 +340,11 @@ Frontera solo está disponible para quien tiene pendiente colocar una ampliació
 La barra de ampliación ofrece un acceso directo si hay una carta disponible. Durante la previsualización del muro se ocultan los controles de colocar el 3×3 para evitar confirmar la ampliación por accidente. El inventario informa «Solo al ampliar» fuera de esa fase. Se admite una Frontera por ampliación y esa marca sobrevive al guardado y la pausa; se limpia al terminar la fase. El gasto conserva turno, reloj, fichas, puntos, contadores de colocación y recarga, y no consume el cupo de herramientas del próximo turno de fichas.
 
 Validación: 180 pruebas JavaScript, incluida una partida real de nueve movimientos seguida de muro, pausa, reanudación y ampliación, tanto con reloj como sin reloj. Se comprueban propiedad del expander, rechazo durante turnos normales y al agotar el tiempo, gasto de una carta, preservación del reloj y disponibilidad de herramientas tras ampliar. Compilaciones normal y GitHub Pages/offline.
+
+## Localizadores por tipo — R0.21.3
+
+El tablero y el mapa tienen tres localizadores separados: Roedores, Bombas y Gusanos. Cada uno recorre exclusivamente su tipo, dando prioridad a los originados por el jugador y manteniendo su propio cursor. Sin habitantes de ese tipo el botón permanece desactivado. El aviso muestra comidas completadas y tiempo restante, o la cuenta atrás de explosión; distingue pausa y retirada del gusano. Las obras conservan un acceso independiente mientras estén activas. La inspección del tablero pausado ofrece los mismos filtros, también para bombas situadas en posiciones todavía sin terreno. Los iconos usan el viewBox de 32 y mantienen la fila siempre que cabe; los controles permiten salto de línea en pantallas estrechas.
+
+Reglas vigentes: roedor cada 33 colocaciones propias, bomba automática cada 66 y gusano cada 99. Roedores y gusanos comen tres fichas X/O, a intervalos de 33 segundos. El roedor escoge alimento en su zona conectada y el gusano continúa por fichas adyacentes, incluidas diagonales; el cuerpo permanece bloqueado hasta retirarse 33 segundos después de su tercera comida. La bomba automática explota tras 33 segundos, vacía tres celdas y rompe las fronteras alcanzadas sin quitar terreno ni restar puntos pagados.
+
+Validación: 180 pruebas JavaScript y compilaciones normal y GitHub Pages/offline.

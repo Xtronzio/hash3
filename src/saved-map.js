@@ -56,7 +56,10 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
     if(action==='fit')setCamera({...fitted});
     if(action==='own'&&model.active)focus({x:model.active.x+1.5,y:model.active.y+1.5});
     if(action==='rival')focus(model.target);
-    if(action==='rodent'){const rats=model.terrain.filter(p=>p.rodent);if(rats.length){state.rodentIndex=(state.rodentIndex??-1)+1;const r=rats[state.rodentIndex%rats.length];focus({x:r.x+.5,y:r.y+.5});}}
+    if(['rodent','bomb','worm','work'].includes(action)){
+      const items=(model.habitats||model.terrain.flatMap(p=>p.rodent?[p.rodent]:[])).filter(p=>action==='work'?['build','destroy'].includes(p.kind):p.kind===action);
+      if(items.length){const cursor=action+'Index';state[cursor]=(state[cursor]??-1)+1;const r=items[state[cursor]%items.length];focus({x:r.x+.5,y:r.y+.5});}
+    }
   });
   listen(svg,'wheel',e=>{e.preventDefault();setCamera(zoomCamera(camera,bounds,Math.exp(Math.max(-1.2,Math.min(1.2,-e.deltaY*.003))),point(e.clientX,e.clientY),fitted));},{passive:false});
   listen(svg,'touchmove',e=>e.preventDefault(),{passive:false});

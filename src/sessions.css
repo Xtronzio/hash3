@@ -85,3 +85,6 @@ body:has(.inspection-overlay){overflow:hidden}
 .hall-dialog-footer .saved-games-home{margin-left:auto}
 .hall-dialog-footer:has(.saved-games-home){justify-content:flex-start;gap:8px}
 @media(max-width:360px){.hall-dialog-heading h2{font-size:26px;min-width:0;overflow-wrap:anywhere}}
+
+.inspection-controls{flex-wrap:wrap}.inspection-controls button[data-inspect-action="bomb"],.inspection-controls button[data-inspect-action="worm"],.inspection-controls button[data-inspect-action="work"]{color:var(--yellow)}
+@media(max-width:600px){.inspection-controls>span{flex-basis:100%}}
