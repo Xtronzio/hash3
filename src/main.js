@@ -853,8 +853,14 @@ function startFigureEffect(feedback) {
   },1400);
 }
 function showScore(feedback,comboNotice=null) {
-  const n=document.querySelector('#notice');
-  n.innerHTML=`<strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><div class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b>${comboNotice?`<span class="score-combo-progress" style="--combo-color:${getComputedStyle(document.querySelector('.game')).getPropertyValue('--mode-color')}">${escape(comboNotice.message)}</span>`:''}</div>`;
+  const n=document.querySelector('#notice'),roomId=room.id;
+  n.innerHTML=`<button class="score-notice-jump" aria-label="Ver jugada de ${escape(feedback.name)} · +${feedback.points} puntos"><strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><span class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b>${comboNotice?`<span class="score-combo-progress" style="--combo-color:${getComputedStyle(document.querySelector('.game')).getPropertyValue('--mode-color')}">${escape(comboNotice.message)}</span>`:''}<span class="score-notice-hint">Toca para ver la jugada ↗</span></span></button>`;
+  n.querySelector('button').addEventListener('click',()=>{
+    if(room?.id!==roomId||room.status!=='playing')return;
+    inventoryOpen=false;worldMapOpen=false;zoom=Math.max(zoom,.8);
+    startFigureEffect(feedback);render();center(feedback.move.x,feedback.move.y);
+    n.classList.remove('visible');clearTimeout(noticeTimer);
+  });
   n.classList.add('visible','score-notice');clearTimeout(noticeTimer);
   noticeTimer=setTimeout(()=>n.classList.remove('visible'),4500);
 }

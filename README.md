@@ -358,3 +358,8 @@ Durante la ampliación, tocar un + elige el punto fijo y muestra las tres celdas
 ## Icono de gusano — R0.21.5
 
 El gusano tiene cuerpo alargado y curvado, segmentos transversales, cabeza y ojo. El mismo SVG se usa en el tablero, localizadores y mapas guardados.
+
+
+## Aviso de puntos navegable — R0.21.6
+
+Al tocar el cuadro de una jugada que puntúa se centra el tablero en esa jugada, con zoom legible y resalte de sus figuras. El destino se conserva en el aviso aunque llegue otra actualización; solo funciona dentro de la misma partida activa. También se puede activar con teclado.
