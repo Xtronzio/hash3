@@ -1,13 +1,13 @@
 import {habitatLocations,habitatReservations} from './habitat-tools.js';
 import {terrainOf,key} from './game.js';
 import {navigationIcon} from './navigation-icons.js';
-import {frontierMarkup} from './frontiers.js';
+import {frontierMarkup,frontierCells} from './frontiers.js';
 
 export function overviewModel(room,own,target){
   const actual=terrainOf(room),terrain=[...actual,...habitatReservations(room).filter(c=>!actual.some(t=>t.x===c.x&&t.y===c.y))],myPair=room.pairs.find(p=>p.id===own?.pair),targetPair=room.pairs.find(p=>p.id===target?.pair);
   if(!terrain.length)return null;
   let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
-  for(const cell of terrain){left=Math.min(left,cell.x);top=Math.min(top,cell.y);right=Math.max(right,cell.x+1);bottom=Math.max(bottom,cell.y+1);}
+  for(const cell of [...terrain,...frontierCells(room)]){left=Math.min(left,cell.x);top=Math.min(top,cell.y);right=Math.max(right,cell.x+1);bottom=Math.max(bottom,cell.y+1);}
   const bounds={x:left-2,y:top-2,width:right-left+4,height:bottom-top+4};
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),owners=new Set(myPair?[myPair.x,myPair.o]:[]);
   const eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y))),rodents=new Map(habitatLocations(room).map(r=>[key(r.x,r.y),r]));

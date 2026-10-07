@@ -1,5 +1,5 @@
 import {terrainOf,connectedTerrain,key} from './game.js';
-import {frontierReachable,frontierSegments,edgeKey} from './frontiers.js';
+import {frontierReachable,frontierSegments,nearbyFrontierCells,frontierHit,edgeKey} from './frontiers.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 export const HABITAT_INTERVAL=33000;
 export const HABITAT_FREQUENCIES={rodent:33,bomb:66,worm:99,work:198};
@@ -42,7 +42,7 @@ export function clearHabitatCell(room,point){
 }
 const patterns=[[[0,0],[1,0],[2,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,1],[2,2]],[[0,0],[1,-1],[2,-2]],[[0,0],[1,0],[0,1]],[[0,0],[-1,0],[0,1]],[[0,0],[1,0],[0,-1]],[[0,0],[-1,0],[0,-1]]];
 function automaticBlast(room,point,random){
- const area=areaAt(room,point),known=new Set(area.map(c=>key(c.x,c.y))),options=[];
+ const terrain=connectedTerrain(terrainOf(room),point),area=[...terrain,...nearbyFrontierCells(room,terrain)],known=new Set(area.map(c=>key(c.x,c.y))),options=[];
  for(const c of area)for(const shape of patterns){const blast=shape.map(([dx,dy])=>({x:c.x+dx,y:c.y+dy}));if(blast.every(c=>known.has(key(c.x,c.y))))options.push(blast);}
  return choose(options,random);
 }
@@ -109,7 +109,7 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random){
    else{room.works=room.works.filter(w=>w.id!==e.id);changed=true;}
   }else if(e.blast){
    for(const c of e.blast)clearHabitatCell(room,c);
-   const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>!f.edges.some(({a,b})=>hit.has(key(a.x,a.y))||hit.has(key(b.x,b.y))));
+   const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>!frontierHit(f,hit));
    room.bombs=room.bombs.filter(b=>b.id!==e.id);changed=true;
   }else{
    if(e.kind==='worm'&&e.eaten>=3){room.worms=room.worms.filter(w=>w.id!==e.id);changed=true;continue;}

@@ -324,3 +324,11 @@ Los ciclos siguen funcionando en partidas sin reloj. La pausa local y la pausa v
 La barrera se selecciona en un punto fijo del tablero y gira 90° por toque. Las cuatro orientaciones mantienen ese punto, muestran su previsualización y solo permiten Aplicar cuando la geometría es válida. Los guardados anteriores conservan sus segmentos originales. El mapa y el localizador incluyen roedores, gusanos, obras y bombas.
 
 Validación: 176 pruebas de JavaScript y compilaciones normal y GitHub Pages/offline. `tests/habitats.sql` cubre el motor del servidor sin alterar partidas reales; `tests/rodents.sql` comprueba comandos autenticados, duplicados y pausas con fixtures que se revierten.
+
+## Frontera de celdas sin construir — R0.21.1
+
+La carta Frontera coloca un muro 3×1 en tres posiciones todavía sin terreno, adyacentes al territorio. Se elige un «+» y cada giro rota 90° alrededor de esa primera celda, sin cambiar el punto. Aplicar solo está disponible si la orientación cabe en tres huecos libres y no invade obras o barreras. No construye terreno ni modifica fichas o puntos.
+
+Cada celda muestra un rombo violeta y un marco, diferenciados del amarillo de los habitantes. El botón de giro tiene estilo SVG explícito para que la flecha sea visible en móvil. Los muros bloquean ampliaciones y Construir celda, sobreviven al guardado y a la pausa, y se rompen completos cuando una bomba manual o automática alcanza una de sus celdas. El mapa, el minimapa y las miniaturas incluyen los rombos y sus límites. Los guardados con fronteras antiguas mantienen sus reglas originales y se muestran con tres rombos.
+
+Validación: 179 pruebas JavaScript, incluidos cuatro giros, huecos sin construir, reservas, solapamientos, guardado, ampliación, construcción y bomba; compilaciones normal y GitHub Pages/offline.

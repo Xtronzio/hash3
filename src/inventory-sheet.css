@@ -57,6 +57,14 @@
 
 .inventory-catalog div.inventory-card:hover{background:#1a232e;border-color:#435167}
 .inventory-help{margin-top:12px;padding-top:10px;border-top:1px solid #465364}.inventory-help h3{margin:0 0 7px;font-size:12px;color:#b8c5d8}.inventory-help-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.board-frontier{position:absolute;background:var(--yellow);z-index:4;pointer-events:none;box-shadow:0 0 0 1px #08090b}.board-frontier.is-preview{background:transparent;border:2px dashed var(--yellow)}
+/* The frontier reserves three unbuilt expansion cells, separate from yellow inhabitants. */
+.board-frontier-cell{position:absolute;display:grid;place-items:center;border:2px solid var(--frontier);background:#171020;z-index:5;pointer-events:none;box-sizing:border-box;color:var(--frontier)}
+.board-frontier-cell svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
+.board-frontier-cell.is-preview{border-style:dashed;background:#171020cc}
+.frontier-pivot{position:absolute;left:5px;top:5px;width:7px;height:7px;border:1px solid #fff;border-radius:50%;background:var(--frontier)}
+.cell.frontier-anchor{color:var(--frontier);outline-color:var(--frontier);border:1px dashed var(--frontier);font-size:26px}
+.inventory-target-banner .frontier-rotate{display:grid;place-items:center;width:44px;min-width:44px;min-height:44px;padding:9px;color:var(--frontier)}
+.inventory-target-banner .frontier-rotate svg{display:block;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
 .area-preview{border-color:var(--yellow)!important;pointer-events:none}.bomb-preview{border-style:dashed!important;border-radius:50%}.area-anchor{color:var(--yellow);font-size:24px}
 .super-help-steps{padding-left:22px;margin:14px 0;line-height:1.65;font-size:13px}.super-help-points{color:var(--yellow);font-size:18px}.super-help-dialog .dialog{max-height:85dvh;overflow:auto}
