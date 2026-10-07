@@ -1,3 +1,4 @@
+import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {isImmune} from './immunity.js';
 import {expansionCrossesFrontier,expansionFrontierContext} from './frontiers.js';
 export const key = (x, y) => `${x},${y}`;
@@ -14,11 +15,11 @@ export function connectedTerrain(terrain,active) {
   }
   return terrain.filter(c=>visited.has(key(c.x,c.y)));
 }
-export function isBlockedCell(room,playerId,x,y){return !!room.inventoryEffects?.blocks?.some(e=>e.x===x&&e.y===y&&(e.by===playerId?e.fresh:!isImmune(room,playerId))&&e.remaining>0);}
+export function isBlockedCell(room,playerId,x,y){return habitatBlocked(room,x,y)||!!room.inventoryEffects?.blocks?.some(e=>e.x===x&&e.y===y&&(e.by===playerId?e.fresh:!isImmune(room,playerId))&&e.remaining>0);}
 export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   const occupied=new Set(room.cells.map(c=>key(c.x,c.y)));
   const playerId=pair[pair.turn.toLowerCase()];
-  return connectedTerrain(terrainOf(room),pair.terrainAnchor||pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
+  return connectedTerrain(terrainOf(room),pair.terrainAnchor||pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
 }
 export function expansionOptions(terrain,active,room) {
   if(!terrain.length)return [{x:active.x,y:active.y}];
@@ -33,7 +34,7 @@ export function expansionOptions(terrain,active,room) {
       const x=p.x+dx,y=p.y+dy;if(!known.has(key(x,y)))adds=true;
       if(linked.has(key(x,y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>linked.has(key(x+a,y+b))))touches=true;
     }
-    return adds&&touches&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
+    return adds&&touches&&!habitatReservations(room||{}).some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
   });
 }
 const canonical=points=>points.map(([x,y])=>`${x},${y}`).sort().join(';');

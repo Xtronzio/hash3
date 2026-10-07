@@ -1,3 +1,4 @@
+import {habitatBlocked} from './habitat-tools.js';
 import {terrainOf,connectedTerrain,key,expansionOptions} from './game.js';
 import {isImmune} from './immunity.js';
 import {frontierEdges,frontierDirections,edgeKey,frontierSegments,frontierCells} from './frontiers.js';
@@ -8,13 +9,13 @@ const protectedCell=(r,c)=>c&&(shielded(r,c)||isImmune(r,c.owner));
 const area=(r)=>connectedTerrain(terrainOf(r),r.pairs[0].terrainAnchor||r.pairs[0].active);
 export function tornadoSlots(room,point){
  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
- return area(room).filter(c=>c.x>=point.x&&c.x<point.x+3&&c.y>=point.y&&c.y<point.y+3&&!protectedCell(room,cells.get(key(c.x,c.y)))&&!room.inventoryEffects?.blocks?.some(b=>b.x===c.x&&b.y===c.y&&b.remaining>0));
+ return area(room).filter(c=>c.x>=point.x&&c.x<point.x+3&&c.y>=point.y&&c.y<point.y+3&&!habitatBlocked(room,c.x,c.y)&&!protectedCell(room,cells.get(key(c.x,c.y)))&&!room.inventoryEffects?.blocks?.some(b=>b.x===c.x&&b.y===c.y&&b.remaining>0));
 }
 export function tornadoOptions(room){
  const points=new Map(),terrain=area(room),known=new Set(terrain.map(c=>key(c.x,c.y))),cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),reserved=new Set((room.inventoryEffects?.blocks||[]).filter(b=>b.remaining>0).map(b=>key(b.x,b.y)));
  for(const c of terrain)for(let dx=-2;dx<=0;dx++)for(let dy=-2;dy<=0;dy++){const p={x:c.x+dx,y:c.y+dy};points.set(key(p.x,p.y),p);}
  return [...points.values()].filter(p=>{
-  const states=new Set();for(let dx=0;dx<3;dx++)for(let dy=0;dy<3;dy++){const k=key(p.x+dx,p.y+dy),c=cells.get(k);if(known.has(k)&&!reserved.has(k)&&!protectedCell(room,c))states.add(c?.symbol||'empty');}return states.size>1;
+  const states=new Set();for(let dx=0;dx<3;dx++)for(let dy=0;dy<3;dy++){const k=key(p.x+dx,p.y+dy),c=cells.get(k);if(known.has(k)&&!habitatBlocked(room,p.x+dx,p.y+dy)&&!reserved.has(k)&&!protectedCell(room,c))states.add(c?.symbol||'empty');}return states.size>1;
  });
 }
 function bombContext(room){return {terrain:new Map(area(room).map(c=>[key(c.x,c.y),c])),cells:new Map(room.cells.map(c=>[key(c.x,c.y),c])),barriers:new Set(frontierCells(room).map(c=>key(c.x,c.y)))};}
@@ -36,14 +37,15 @@ export function bombBlast(room,point,random=Math.random,context=bombContext(room
  }
  return blast;
 }
-export function frontierOptions(room,side='north',actor){
+export function frontierOptions(room,side='north',actor,{pivot=false}={}){
  if(!frontierDirections.includes(side))return [];
  if(room.players.some(p=>p.id!==actor&&isImmune(room,p.id)))return [];
  const terrain=area(room),known=new Set(terrain.map(c=>key(c.x,c.y))),existing=new Set(frontierSegments(room).map(edgeKey)),points=new Map();
- for(const c of terrain)for(let i=0;i<3;i++){
+ if(pivot){for(const c of terrain)for(const [dx,dy]of [[0,0],[1,0],[0,1],[1,1]]){const p={x:c.x+dx,y:c.y+dy,side,pivot:true};points.set(key(p.x,p.y),p);}}
+ else for(const c of terrain)for(let i=0;i<3;i++){
   const p=side==='north'?{x:c.x-i,y:c.y,side}:side==='south'?{x:c.x-i,y:c.y-2,side}:side==='west'?{x:c.x,y:c.y-i,side}:{x:c.x-2,y:c.y-i,side};points.set(key(p.x,p.y),p);
  }
- return [...points.values()].filter(p=>frontierEdges(p).every(e=>known.has(key(e.a.x,e.a.y))&&!existing.has(edgeKey(e))));
+ return [...points.values()].filter(p=>frontierEdges(p).every(e=>(pivot?(known.has(key(e.a.x,e.a.y))||known.has(key(e.b.x,e.b.y))):known.has(key(e.a.x,e.a.y)))&&!existing.has(edgeKey(e))&&!habitatBlocked(room,e.a.x,e.a.y)&&!habitatBlocked(room,e.b.x,e.b.y)));
 }
 function pruneBrokenForms(room){
  const symbols=new Map(room.cells.map(c=>[key(c.x,c.y),c.symbol]));
@@ -71,7 +73,7 @@ export function applyAreaTool(room,actor,tool,point,random=Math.random){
   room.inventoryEffects.blocks=room.inventoryEffects.blocks.filter(e=>!hit.has(key(e.x,e.y)));
   for(const p of room.players)if(p.lastMove&&!room.cells.some(c=>c.id===p.lastMove.id))delete p.lastMove;
  }else if(tool==='frontier'){
-  if(!frontierOptions(room,point.side,actor).some(p=>p.x===point.x&&p.y===point.y))throw new Error('La frontera debe cubrir tres celdas existentes y no solapar otra barrera.');
+  if(!frontierOptions(room,point.side,actor,{pivot:point.pivot===true}).some(p=>p.x===point.x&&p.y===point.y))throw new Error('La frontera debe cubrir tres celdas existentes y no solapar otra barrera.');
   room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),by:actor,edges:frontierEdges(point)});
   if(!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,room).length)throw new Error('Esta frontera cerraría todas las salidas de ampliación. Elige otra cara.');
  }else throw new Error('Herramienta de zona desconocida.');

@@ -1,3 +1,4 @@
+import {advanceHabitats,freezeHabitats,resumeHabitats} from './inhabitants.js';
 import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows,isBlockedCell} from './game.js';
 import {recordMax} from './max.js';
 import {recordCombo} from './records.js';
@@ -21,7 +22,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
-  initializeInventory(room);initializeRodents(room);return room;
+  initializeInventory(room);initializeRodents(room,now);return room;
 }
 function normalize(room,now) {
   for(const p of room.pairs) {
@@ -32,22 +33,25 @@ function normalize(room,now) {
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
   const room=structuredClone(original),p=room.pairs[0];
-  initializeInventory(room);initializeRodents(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  initializeInventory(room);initializeRodents(room,now);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
     if(room.status!=='playing')throw new Error('La partida no está en curso.');
+    advanceHabitats(room,now,random);freezeHabitats(room,now);
     room.pauseRemainingMs=room.timeMode==='untimed'?null:Math.max(0,Date.parse(p.deadline)-now);
     room.status='paused';room.pausedAt=new Date(now).toISOString();p.deadline=null;room.updatedAt=room.pausedAt;room.version++;return room;
   }
   if(action==='resume'){
     if(room.status==='playing')return original;
     if(room.status!=='paused')throw new Error('La partida no está pausada.');
-    room.status='playing';p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
+    resumeHabitats(room,now);room.status='playing';p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
     delete room.pauseRemainingMs;delete room.pausedAt;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
-  if(action==='tick'&&(room.status!=='playing'||room.timeMode==='untimed'))return original;
+  if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
+  const habitatChanged=advanceHabitats(room,now,random);
+  const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='inventory'){
     const {tool,playerId}=payload;
     if(['hint','hint-expand','super-hint'].includes(tool))throw new Error('Activa Ayuda desde el inventario.');
@@ -103,14 +107,14 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   }
   let automatic=false;
   if(action==='tick') {
-    if(Date.parse(p.deadline)>now)return original;
+    if(room.timeMode==='untimed'||Date.parse(p.deadline)>now)return habitatTick();
     const choices=p.pending?expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room):availableCells(room,p);
-    if(!choices.length){if(!p.pending&&availableCells(room,p,{ignoreBlocks:true}).length){action='pass';automatic=true;}else return original;}
+    if(!choices.length){if(!p.pending&&availableCells(room,p,{ignoreBlocks:true}).length){action='pass';automatic=true;}else return habitatTick();}
     else{payload=choices[Math.floor(random()*choices.length)];action=p.pending?'expand':'move';automatic=true;}
   }
   if(action==='pass'){
     if(p.pending||availableCells(room,p).length||!availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Solo se puede pasar cuando todas las celdas vacías están bloqueadas.');
-    const actor=p[p.turn.toLowerCase()];stepRodent(room,actor,{placed:false});completeInventoryTurn(room,actor,{automatic,placed:false,random});delete room.practiceTurn;
+    const actor=p[p.turn.toLowerCase()];stepRodent(room,actor,{placed:false,now,random});completeInventoryTurn(room,actor,{automatic,placed:false,random});delete room.practiceTurn;
     p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'pass',player:actor,automatic};
     normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
@@ -130,7 +134,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     recordMax(player,scorer===player?points-bonus:0,scorer===player?figures:0,automatic);
     let full=!availableCells(room,p,{ignoreBlocks:true}).length;
     const completed=automatic||state.remaining<=1||full||!availableCells(room,p).length;
-    stepRodent(room,player.id,{placed:true,completed,exclude:cell.id});
+    stepRodent(room,player.id,{placed:true,completed,exclude:cell.id,now,random});
     full=!availableCells(room,p,{ignoreBlocks:true}).length;
     if(!completed&&state.remaining>1&&!full&&availableCells(room,p).length){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}
     else{completeInventoryTurn(room,player.id,{automatic,random});delete room.practiceTurn;p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();}

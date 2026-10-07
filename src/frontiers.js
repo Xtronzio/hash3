@@ -1,7 +1,13 @@
 const key=(x,y)=>`${x},${y}`;
 export const frontierDirections=['north','east','south','west'];
-export function frontierEdges({x,y,side}){
+export function frontierEdges({x,y,side,pivot=false}){
  if(!Number.isInteger(x)||!Number.isInteger(y)||!frontierDirections.includes(side))return [];
+ if(pivot)return Array.from({length:3},(_,i)=>{
+  if(side==='north')return {a:{x:x+i,y:y-1},b:{x:x+i,y}};
+  if(side==='east')return {a:{x:x-1,y:y+i},b:{x,y:y+i}};
+  if(side==='south')return {a:{x:x-i-1,y:y-1},b:{x:x-i-1,y}};
+  return {a:{x:x-1,y:y-i-1},b:{x,y:y-i-1}};
+ });
  return Array.from({length:3},(_,i)=>{
   const a=side==='north'?{x:x+i,y}:side==='south'?{x:x+i,y:y+2}:side==='west'?{x,y:y+i}:{x:x+2,y:y+i};
   const b={x:a.x+(side==='east'?1:side==='west'?-1:0),y:a.y+(side==='south'?1:side==='north'?-1:0)};
@@ -38,3 +44,6 @@ export function frontierLine({a,b}){
 export function frontierMarkup(room){
  return `<g class="map-frontiers" stroke="var(--yellow)" stroke-width="3" stroke-linecap="square">${frontierSegments(room).map(edge=>{const p=frontierLine(edge);return `<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}" vector-effect="non-scaling-stroke"><title>Frontera · solo se rompe con Bomba</title></line>`;}).join('')}</g>`;
 }
+
+// Preserve the selected pivot across exact 90-degree clockwise rotations.
+export function rotateFrontier(selection){const i=frontierDirections.indexOf(selection.side||'north');return {...selection,side:frontierDirections[(i+1)%4]};}

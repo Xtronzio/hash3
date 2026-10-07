@@ -1,3 +1,4 @@
+import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {availableCells,connectedTerrain,terrainOf,key,isBlockedCell} from './game.js';
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
@@ -48,29 +49,29 @@ export function toolAllowance(game,playerId){
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
-export function toolCells(game,playerId,tool,{side='north'}={}){
+export function toolCells(game,playerId,tool,{side='north',pivot=false}={}){
   const p=game?.pairs?.[0];if(!p)return [];
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
-  if(tool==='frontier')return frontierOptions(game,side,playerId);
+  if(tool==='frontier')return frontierOptions(game,side,playerId,{pivot});
   const linked=new Set(connectedTerrain(terrainOf(game),(p.terrainAnchor||p.active)).map(c=>key(c.x,c.y)));
   if(tool==='activate'){
     const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),occupied=new Set(game.cells.map(c=>key(c.x,c.y))),holes=new Map();
     const frontier=expansionFrontierContext(terrainOf(game),p.terrainAnchor||p.active,game);
     for(const c of connectedTerrain(terrainOf(game),(p.terrainAnchor||p.active)))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);
-      if(!known.has(k)&&!occupied.has(k)&&(!frontier||[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const b={x:point.x+dx,y:point.y+dy};return frontier.reached.has(key(b.x,b.y))&&!frontier.blocked.has(edgeKey({a:point,b}));})))holes.set(k,point);
+      if(!known.has(k)&&!occupied.has(k)&&!habitatBlocked(game,point.x,point.y)&&(!frontier||[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const b={x:point.x+dx,y:point.y+dy};return frontier.reached.has(key(b.x,b.y))&&!frontier.blocked.has(edgeKey({a:point,b}));})))holes.set(k,point);
     }
     return [...holes.values()];
   }
   if(tool==='destroy'){
     if(game.players.some(v=>v.id!==playerId&&isImmune(game,v.id)))return [];
     const occupied=new Set(game.cells.map(c=>key(c.x,c.y)));
-    return terrainOf(game).filter(c=>linked.has(key(c.x,c.y))&&!occupied.has(key(c.x,c.y)));
+    return terrainOf(game).filter(c=>linked.has(key(c.x,c.y))&&!occupied.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&!game.rodents?.some(r=>r.x===c.x&&r.y===c.y));
   }
   if(tool==='block')return game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))?[]:availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
-  return game.cells.filter(c=>linked.has(key(c.x,c.y))&&canErasePracticeCell(game,playerId,c));
+  return game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c));
 }
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];

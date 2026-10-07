@@ -74,3 +74,19 @@ test('New cards enter refill at zero stock in old saves, preserve eight starting
  const index=practiceTools.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<4;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
  const ready=fill(start());for(const t of ['tornado','bomb','frontier']){assert.equal(canUsePracticeTool(localCommand(ready,'pause',{},now),'local-x',t,now),false);assert.equal(canUsePracticeTool({...ready,timeMode:'timed',pairs:[{...ready.pairs[0],deadline:new Date(now).toISOString()}]},'local-x',t,now),false);}
 });
+
+test('Barrera rotates exactly 90 degrees about a fixed selected pivot, including a full turn',async()=>{
+ const {rotateFrontier,frontierLine}=await import('../src/frontiers.js');let selection={side:'north',point:{x:3,y:3},tool:'frontier'};
+ const first=frontierEdges({...selection.point,side:selection.side,pivot:true}).map(frontierLine);
+ assert.deepEqual(first.map(p=>[p.x1,p.y1,p.x2,p.y2]),[[3,3,4,3],[4,3,5,3],[5,3,6,3]]);
+ for(let i=0;i<4;i++){
+  selection=rotateFrontier(selection);assert.deepEqual(selection.point,{x:3,y:3});
+  const lines=frontierEdges({...selection.point,side:selection.side,pivot:true}).map(frontierLine);
+  if(i===0)assert.deepEqual(lines.map(p=>[p.x1,p.y1,p.x2,p.y2]),[[3,3,3,4],[3,4,3,5],[3,5,3,6]]);
+ }
+ assert.equal(selection.side,'north');assert.deepEqual(frontierEdges({...selection.point,side:selection.side,pivot:true}).map(frontierLine),first);
+});
+test('Pivot frontier stores the displayed geometry and retains old saved perimeter barriers',()=>{
+ const r=fill(start());const next=card(r,'frontier',{x:0,y:0,side:'north',pivot:true});assert.deepEqual(next.frontiers[0].edges,frontierEdges({x:0,y:0,side:'north',pivot:true}));
+ assert.equal(frontierEdges({x:0,y:0,side:'east'})[0].a.x,2);
+});

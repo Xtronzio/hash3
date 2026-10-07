@@ -19,7 +19,7 @@ test('Metrics separate modes and shared-device participants without inventing mi
  assert.equal(summarizeMetrics([{game:'a',max:0,bestCombo:0}]).max,0);
 });
 test('Navigation icons distinguish fit, fullscreen and restore',()=>{
- assert.equal(new Set(Object.values(navigationPaths)).size,3);assert.match(navigationIcon('fit'),/<rect/);assert.doesNotMatch(navigationIcon('restore'),/×|undefined/);
+ assert.equal(new Set([navigationPaths.fit,navigationPaths.fullscreen,navigationPaths.restore]).size,3);assert.match(navigationIcon('fit'),/<rect/);assert.doesNotMatch(navigationIcon('restore'),/×|undefined/);
 });
 test('Construction rename preserves old inventories and destruction starts with zero stock',()=>{
  const g=createLocal('local');g.players[0].inventory.cards.activate=2;initializeInventory(g);

@@ -310,3 +310,17 @@ Cada fila muestra una miniatura del tablero guardado. Las salas online consultan
 El menú «…» permite anclar/desanclar o borrar/quitar una partida. En móvil, deslizar a la derecha ancla/desancla; si la papelera estaba visible, primero la oculta. Deslizar a la izquierda mantiene el borrado con confirmación. Las ancladas aparecen arriba, incluidas las pausadas y cerradas. El anclaje se guarda en este navegador y, para salas online, se separa por identidad. No altera el tablero ni el orden de los guardados.
 
 El mapa de pausa admite arrastre, pellizco, rueda y teclado (flechas, +/− y Home). Puede ampliarse a pantalla completa; acercarse muestra X/O. Los controles permiten extensión, territorio propio, rival y roedores cuando existen. La consulta conserva fichas, puntuación, turno y reloj; solo Retomar reanuda la partida local. En un Duelo online, la pausa sigue sujeta al estado compartido y a la votación existente. Los gestos modifican la cámara y coalescen las actualizaciones por frame sin reconstruir las celdas.
+
+## Habitantes y barrera — R0.21.0
+
+Los contadores son independientes por jugador: roedor cada 33 colocaciones propias, bomba automática cada 66, gusano cada 99 y obra cada 198. La bomba automática sustituye a la antigua lluvia de tandas; la carta Bomba sigue siendo independiente. Los contadores no retroceden cuando se vacían fichas ni se reproducen hitos históricos al actualizar un guardado.
+
+Roedor y gusano tienen tres comidas, una cada 33 segundos. El roedor cambia de ubicación al colocar en su celda sin perder capacidad ni reiniciar su reloj. El gusano recorre fichas adyacentes, también diagonales, deja cuerpo bloqueado hasta retirarse 33 segundos después de su tercera comida y respeta fronteras. Si no encuentra alimento, espera al siguiente intervalo. Los eventos neutrales conservan origen y capacidad y no restan puntos ya cobrados.
+
+Una obra reúne tres pares constructor/destructor: reserva nueve celdas vacías para quitar y nueve huecos para construir. Cada par transforma una celda cada 33 segundos durante tres intervalos, con eliminación y construcción atómicas. No se pueden ocupar, destruir con una carta ni ampliar sobre posiciones reservadas. Un conflicto invalida el resto de ese proyecto; nunca deja una eliminación unilateral. Pueden cortar puentes, conservando las anclas de las parejas.
+
+Los ciclos siguen funcionando en partidas sin reloj. La pausa local y la pausa votada de Duelo conservan el tiempo restante. En Mundo, una zona conectada que conserva humanos activos sigue funcionando; una zona inactiva congela sus ciclos. No se ejecutan tandas acumuladas después de periodos sin actividad. Los eventos online se resuelven por el servidor bajo el bloqueo existente de la sala; no se aceptan estados ni relojes enviados por el cliente.
+
+La barrera se selecciona en un punto fijo del tablero y gira 90° por toque. Las cuatro orientaciones mantienen ese punto, muestran su previsualización y solo permiten Aplicar cuando la geometría es válida. Los guardados anteriores conservan sus segmentos originales. El mapa y el localizador incluyen roedores, gusanos, obras y bombas.
+
+Validación: 176 pruebas de JavaScript y compilaciones normal y GitHub Pages/offline. `tests/habitats.sql` cubre el motor del servidor sin alterar partidas reales; `tests/rodents.sql` comprueba comandos autenticados, duplicados y pausas con fixtures que se revierten.
