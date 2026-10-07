@@ -363,3 +363,8 @@ El gusano tiene cuerpo alargado y curvado, segmentos transversales, cabeza y ojo
 ## Aviso de puntos navegable — R0.21.6
 
 Al tocar el cuadro de una jugada que puntúa se centra el tablero en esa jugada, con zoom legible y resalte de sus figuras. El destino se conserva en el aviso aunque llegue otra actualización; solo funciona dentro de la misma partida activa. También se puede activar con teclado.
+
+
+## Ajuste táctil y pausa — R0.21.7
+
+El giro deja libre el centro de la celda elegida para confirmar la frontera con la segunda pulsación. Pausar con el inventario abierto conserva la partida sin intentar dibujar la bolsa en la pantalla de pausa.

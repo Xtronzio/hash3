@@ -64,7 +64,7 @@
 .board-frontier-cell.is-invalid{border-color:#ff818b;background:#381421cc}
 .frontier-pivot-place{position:absolute;inset:0;padding:0;border:0;border-radius:0;background:transparent;pointer-events:auto;touch-action:manipulation}
 .frontier-pivot-place:hover:not(:disabled){background:#c18aff18}
-.frontier-pivot-rotate{position:absolute;right:0;top:0;width:clamp(32px,50%,44px);height:clamp(32px,50%,44px);padding:5px;border:1px solid var(--frontier);border-radius:5px;background:#21152e;color:var(--frontier);pointer-events:auto;touch-action:manipulation}
+.frontier-pivot-rotate{position:absolute;right:0;top:0;width:min(45%,44px);height:min(45%,44px);padding:5px;border:1px solid var(--frontier);border-radius:5px;background:#21152e;color:var(--frontier);pointer-events:auto;touch-action:manipulation}
 .board-frontier-cell .frontier-pivot-rotate svg{width:100%;height:100%;stroke-width:2}
 .cell.frontier-anchor{color:var(--frontier);outline-color:var(--frontier);border:1px dashed var(--frontier);font-size:26px}
 .inventory-target-banner .frontier-rotate,.expansion-controls .expansion-frontier{display:grid;place-items:center;width:44px;min-width:44px;min-height:44px;padding:9px;color:var(--frontier)}

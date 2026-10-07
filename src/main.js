@@ -866,7 +866,7 @@ function showScore(feedback,comboNotice=null) {
 }
 
 function renderInventory(){
- document.querySelector('.inventory-sheet')?.remove();if(!inventoryOpen||!room)return;
+ document.querySelector('.inventory-sheet')?.remove();if(!inventoryOpen||room?.status!=='playing')return;
  document.querySelector('.game-dock').insertAdjacentHTML('beforebegin',`<section class="inventory-sheet" id="inventory-panel" role="region" aria-labelledby="inventory-title"><div class="inventory-sheet-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div><div class="inventory-sheet-body">${inventoryMarkup(room,uid)}</div></section>`);
  document.querySelector('[data-action="close-inventory"]')?.focus({preventScroll:true});
 }
