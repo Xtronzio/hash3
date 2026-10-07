@@ -5,7 +5,7 @@ import {bindMap} from './map.js';
 import {bindGestures} from './gestures.js';
 import {maxLabel} from './max.js';
 import {navigationPaths} from './navigation-icons.js';
-import {metricsMarkup,localMetrics} from './metrics.js';
+import {metricsMarkup,metricsModePicker,localMetrics} from './metrics.js';
 import {comboLabel} from './records.js';
 import {rodentMark,rodentSleeping,rodentIcon,rodentLabel} from './rodents.js';
 import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin} from './sessions.js';
@@ -271,7 +271,7 @@ function renderHallDialog() {
   const local=savedLocal();let markup;
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',inventoryMarkup(null,null));
-  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`<div class="metrics-tabs" role="group" aria-label="Vista de rendimiento"><button data-action="metrics-view" data-view="personal" aria-pressed="${metricView==='personal'}">${hallIcon('profile')}Mis métricas</button><button data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}">${hallIcon('world')}Clasificación Mundo</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode})}`);
+  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`${metricsModePicker(metricView==='personal'?metricMode:null)}<div class="metrics-classification"><button class="mode-green" data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}">${hallIcon('world')}Clasificación Mundo</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode,showModes:false})}`);
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}));
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local});
   app.insertAdjacentHTML('beforeend',markup);
@@ -499,7 +499,7 @@ app.addEventListener('click',async e=>{
   if(action==='hall-close'){if(!pendingDelete)closeHallDialog();return;}
   if(action==='hall-ranking'){await openHallRanking();return;}
   if(action==='metrics-view'){metricView=b.dataset.view;renderHallDialog();if(metricView==='world')await refreshWorldRank();return;}
-  if(action==='metrics-mode'){metricMode=b.dataset.mode;renderHallDialog();return;}
+  if(action==='metrics-mode'){metricView='personal';metricMode=b.dataset.mode;renderHallDialog();return;}
   if(action==='refresh-metrics'){await refreshMetrics();return;}
   if(action==='hall-menu'||action==='hall-profile'||action==='hall-help'||action==='hall-offline'){
     openHallDialog(action.replace('hall-','')==='menu'?'menu':action.replace('hall-','')==='profile'?'profile':action.replace('hall-','')==='help'?'help':'offline',action);return;

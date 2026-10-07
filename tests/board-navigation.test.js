@@ -16,7 +16,7 @@ function harness(){
   addEventListener:(kind,fn)=>listeners.set(kind,fn)};
  const layout={minX:-5,minY:3,size:48,padding:100};
  const dispose=bindBoardNavigation({viewport,layout,zoom:1,changeZoom:(...args)=>commits.push(args),interacting:value=>interactions.push(value),update:()=>{updates++;}});
- const send=(kind,id,x,y)=>listeners.get(kind)?.({pointerId:id,button:0,clientX:x,clientY:y,target:{closest:()=>null},preventDefault:()=>{},stopPropagation:()=>{stopped=true;}});
+ const send=(kind,id,x,y,target={closest:()=>null})=>listeners.get(kind)?.({pointerId:id,button:0,clientX:x,clientY:y,target,preventDefault:()=>{},stopPropagation:()=>{stopped=true;}});
  return {board,space,viewport,classes,commits,interactions,send,dispose,
   get updates(){return updates;},get pendingFrames(){return frames.size;},
   flush:()=>{for(const [n,fn] of [...frames]){frames.delete(n);fn();}},
@@ -76,5 +76,26 @@ test('A second finger starts its pinch from the pending drag position; disposal 
   h.send('pointerdown',2,250,120);assert.equal(h.viewport.scrollLeft,260);assert.equal(h.updates,1);
   h.send('pointermove',2,260,120);assert.equal(h.pendingFrames,1);h.dispose();h.flush();
   assert.equal(h.updates,1);assert.equal(h.commits.length,0);
+ }finally{h.restore();}
+});
+
+test('Touch capture transferred from a cell keeps one-finger dragging alive',()=>{
+ const h=harness();try{
+  h.send('pointerdown',1,110,120);h.send('pointermove',1,120,120);h.flush();
+  // Browsers bubble this from the touched child when capture moves to viewport.
+  h.send('lostpointercapture',1,120,120,{closest:()=>null});
+  assert.equal(h.interactions.at(-1),true);
+  h.send('pointermove',1,210,150);h.flush();
+  assert.equal(h.viewport.scrollLeft,200);assert.equal(h.viewport.scrollTop,170);
+  h.send('pointerup',1,210,150);h.send('click',1,210,150);
+  assert.equal(h.interactions.at(-1),false);assert.equal(h.stopped,true);
+ }finally{h.restore();}
+});
+test('Losing capture on the viewport itself ends an interrupted drag',()=>{
+ const h=harness();try{
+  h.send('pointerdown',1,110,120);h.send('pointermove',1,150,120);
+  h.send('lostpointercapture',1,150,120,h.viewport);
+  assert.equal(h.viewport.scrollLeft,260);assert.equal(h.interactions.at(-1),false);
+  h.send('pointermove',1,190,120);h.flush();assert.equal(h.viewport.scrollLeft,260);
  }finally{h.restore();}
 });

@@ -1,4 +1,10 @@
-# #3 — R0.19.3
+# #3 — R0.19.4
+
+## Arrastre táctil y métricas · R0.19.4
+
+El arrastre con un dedo conserva el gesto cuando la captura táctil pasa de la celda al tablero. Solo la pérdida de captura del propio tablero termina el arrastre. Se conserva el toque para colocar fichas y el pellizco con dos dedos.
+
+Las cuatro modalidades abren sus métricas directamente. Se elimina el botón «Mis métricas» y la selección usa el color del hall en texto, icono y marco: Mundo verde, Duelo rojo, VS máquina cian y Sin conexión plata. La clasificación de Mundo conserva un acceso independiente; los selectores permanecen visibles para volver directamente a cualquier modalidad.
 
 ## Arrastre del tablero · R0.19.3
 

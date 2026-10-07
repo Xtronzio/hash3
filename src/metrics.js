@@ -1,5 +1,5 @@
 import {localHumanId} from './local.js';
-import {hallIcon} from './hall.js';
+import {hallIcon,hallModeClass} from './hall.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const metricModes=[['solo','VS máquina','robot'],['local','Sin conexión','players'],['duel','Duelo','duel'],['world','Mundo','world']];
 export function localMetrics(games=[]){
@@ -18,12 +18,16 @@ function tiles(entries,mode){
  const fields=[['Partidas',m.games],['Cerradas',m.closed],['Puntos acumulados',m.score],['Figuras',m.figures],['Fichas colocadas',m.placements],['Combo récord',m.bestCombo],[mode==='world'?'#MAX actual':'Mejor #MAX de partida',max]];
  return `<dl class="metric-cards">${fields.map(([label,v])=>`<div><dt>${label}</dt><dd>${typeof v==='string'?v:format(v)}</dd></div>`).join('')}</dl>`;
 }
-export function metricsMarkup({entries=[],mode='solo',loading=false,error=''}={}){
+export const metricModeClass=mode=>hallModeClass(mode==='local'?'offline':mode);
+export function metricsModePicker(mode='solo'){
+ return `<div class="metric-modes" role="group" aria-label="Modalidad de las métricas">${metricModes.map(([id,label,icon])=>`<button class="${metricModeClass(id)}" data-action="metrics-mode" data-mode="${id}" aria-pressed="${id===mode}">${hallIcon(icon)}${label}</button>`).join('')}</div>`;
+}
+export function metricsMarkup({entries=[],mode='solo',loading=false,error='',showModes=true}={}){
  const selected=entries.filter(e=>e.mode===mode),name=metricModes.find(m=>m[0]===mode)?.[1]||'VS máquina';
- let body=`<div class="metric-modes" role="group" aria-label="Modalidad de las métricas">${metricModes.map(([id,label,icon])=>`<button data-action="metrics-mode" data-mode="${id}" aria-pressed="${id===mode}">${hallIcon(icon)}${label}</button>`).join('')}</div>`;
+ let body=showModes?metricsModePicker(mode):'';
  if(loading)body+='<p role="status">Consultando tus métricas online…</p>';
  if(error)body+=`<p class="muted">${esc(error)}</p><button data-action="refresh-metrics">Volver a consultar</button>`;
- body+=`<h3 class="heading hall-ranking-subtitle">${name}</h3>`;
+ body+=`<h3 class="heading hall-ranking-subtitle metric-mode-title ${metricModeClass(mode)}">${name}</h3>`;
  if(!selected.length)return body+`<p class="muted">${loading&&['duel','world'].includes(mode)?'Esperando datos de esta modalidad.':'No hay partidas registradas en esta modalidad.'}</p>`;
  if(mode==='local'){
    const people=new Map();for(const e of selected){const key=e.name||e.participant;if(!people.has(key))people.set(key,[]);people.get(key).push(e);}

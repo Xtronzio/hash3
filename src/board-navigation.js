@@ -54,7 +54,7 @@ export function bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting
   if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch&&pointers.size>=2){e.preventDefault();pinch.requested=clamp(pinch.baseZoom*distance()/pinch.distance);pinch.screen=screen(midpoint());queue();return;}
   if(drag&&(drag.moved||Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>6)){
-   e.preventDefault();suppressUntil=Infinity;viewport.setPointerCapture(e.pointerId);
+   e.preventDefault();suppressUntil=Infinity;if(!viewport.hasPointerCapture(e.pointerId))viewport.setPointerCapture(e.pointerId);
    drag.moved=true;pan={left:drag.left+drag.x-e.clientX,top:drag.top+drag.y-e.clientY};queue();
   }
  },{passive:false});
@@ -67,7 +67,10 @@ export function bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting
   if(!pointers.size){drag=null;if(suppressUntil===Infinity)suppressUntil=Date.now()+180;interacting(false);}
   else{const a=[...pointers.values()][0];drag={x:a.x,y:a.y,left:viewport.scrollLeft,top:viewport.scrollTop};}
  };
- listen('pointerup',end);listen('pointercancel',end);listen('lostpointercapture',end);
+ listen('pointerup',end);listen('pointercancel',end);
+ // Touch starts with implicit capture on a cell. Its capture-loss event bubbles
+ // when dragging transfers capture to the viewport; that is not the gesture ending.
+ listen('lostpointercapture',e=>{if(e.target===viewport)end(e);});
  listen('click',e=>{if(Date.now()<suppressUntil){e.stopPropagation();e.preventDefault();}},{capture:true});
  return ()=>{controller.abort();clearTimeout(wheelTimer);cancelAnimationFrame(frame);};
 }
