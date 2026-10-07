@@ -6,6 +6,12 @@ import {createLocal,localCommand} from '../src/local.js';
 import {gamesMarkup} from '../src/session-ui.js';
 
 const memory=()=>{const values=new Map();return {getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};};
+test('Saved rival stays blue and outlined even after its last piece disappears',()=>{
+ const r=createLocal('local','A','B'),own=r.players[0],target=r.players[1];target.lastMove={id:'o',x:1,y:1};r.cells=[{id:'o',x:1,y:1,symbol:'O',owner:target.id}];
+ let m=savedMapModel(r,own,target);assert.equal(m.terrain.find(p=>p.x===1&&p.y===1).fill,'var(--blue)');assert.match(inspectionCells(m),/class="inspection-rival"/);
+ r.cells=[];m=savedMapModel(r,own,target);assert.equal(m.terrain.find(p=>p.x===1&&p.y===1).fill,'var(--blue)');assert.match(inspectionCells(m),/Referencia del rival superior/);
+ assert.doesNotMatch(thumbnailMarkup(r),/var\(--blue\)/);
+});
 test('Pin metadata survives game updates without changing board, clock or save order and isolates online identities',()=>{
  const storage=memory();let a=createLocal('local','A','B',1700000000000),b=createLocal('solo','C','D',1700000001000);
  a=localCommand(a,'pause',{},1700000000001);saveLocalGame(storage,a,1700000000002);saveLocalGame(storage,b,1700000001001);

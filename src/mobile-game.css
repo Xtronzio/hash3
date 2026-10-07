@@ -18,6 +18,11 @@ body{padding-bottom:0}.app-version{position:absolute;width:1px;height:1px;overfl
 }
 @media(max-height:450px) and (orientation:landscape){.game .topbar{min-height:44px;padding:0}.game .ranking-toggle{height:44px}.game .turnbar{min-height:34px;padding:2px}.game .turnbar p{display:none}.game .game-dock{display:flex;min-height:48px}.game .team-score-bottom{width:45%;min-height:48px;padding:4px 12px}.game .game-bottom{flex:1}.game .ranking-panel{max-height:70dvh}.game .map-wrap{min-height:70px}.game .map-tools{flex-direction:row;gap:6px}.game .map-zoom{display:flex}}
 @media(prefers-reduced-motion:reduce){.saved-game .saved-game-front{transition:none}}
+@media(max-width:600px){
+ .saved-game>.pin-game-button{display:grid;place-items:center;position:absolute;left:0;top:0;bottom:0;margin:0;width:60px;min-height:44px;visibility:hidden;border:0;border-radius:0;background:#f4c65d1c;color:var(--yellow);z-index:0}
+ .pin-game-button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .saved-game.is-pin-revealed>.pin-game-button{visibility:visible;z-index:2}.saved-game.is-pin-revealed .saved-game-front{transform:translateX(64px)}.saved-game.is-pin-revealed .saved-game-more{color:var(--yellow)}
+}
 
 /* Shared navigation buttons in the ranking and on the board. */
 .game .icon-navigation button{flex:none;width:44px;height:44px;min-height:44px;padding:9px;border-radius:50%;display:grid;place-items:center;background:#101216;border-color:#343943}

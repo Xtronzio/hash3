@@ -6,7 +6,7 @@ export function savedMapModel(room,own,target){
   if(!room||!Array.isArray(room.cells)||!Array.isArray(room.pairs)||!Array.isArray(room.terrain)&&!Array.isArray(room.blocks))return null;
   const model=overviewModel(room,own,target);if(!model)return null;
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
-  return {...model,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':'#343e4c'};})};
+  return {...model,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':'#343e4c'};})};
 }
 export function thumbnailMarkup(room){
   const model=savedMapModel(room);if(!model)return '<span class="saved-map-pending" aria-label="Mapa no disponible">—</span>';
@@ -19,7 +19,8 @@ export function inspectionCells(model){
   return model.terrain.map(p=>`<rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" rx=".04" fill="${p.fill}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".08"':''}/>`).join('')+
     `<g class="inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${model.terrain.map(p=>p.symbol==='X'?`<path d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:'').join('')}</g>`+
     model.terrain.filter(p=>p.rodent).map(p=>`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".3" fill="none" stroke="#08090b" stroke-width=".12"/>`).join('')+
-    (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="${model.ownColor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'');
+    (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="${model.ownColor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
+    (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 
 export function bindInspection(panel,model,state={},interacting=()=>{}){

@@ -4,6 +4,8 @@ import './board.css';
 import {bindMap} from './map.js';
 import {bindGestures} from './gestures.js';
 import {maxLabel} from './max.js';
+import {navigationPaths} from './navigation-icons.js';
+import {metricsMarkup,localMetrics} from './metrics.js';
 import {comboLabel} from './records.js';
 import {rodentMark,rodentSleeping,rodentIcon,rodentLabel} from './rodents.js';
 import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin} from './sessions.js';
@@ -19,7 +21,7 @@ import {extensionView,clampBoardZoom} from './map-camera.js';
 import {cellIndex,viewportWindow,reconcileCells} from './board-window.js';
 import {inventoryMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded,toolAllowance} from './practice-tools.js';
-import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup} from './hall.js';
+import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells,isBlockedCell} from './game.js';
 
@@ -46,6 +48,7 @@ let inventoryRefillEffect=null,inventoryRefillTimer;
 const pendingInventoryRefills=new Map();
 const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 let hallMode='world',hallModeSelected=false,hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
+let metricView='personal',metricMode='solo',metricState={entries:[],loading:false,error:''},metricsRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 let rodentFocus=0;
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
@@ -56,14 +59,14 @@ const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
 const above=()=>immediateAbove(humans(),uid,!!room.commonWorld);
 const iconPaths={play:'<path d="m8 4 12 8-12 8V4Z"/>',home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3V10Z"/>',rodent:rodentIcon,activate:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8m-4-4h8"/>',fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
-const navIcon=kind=>`<svg viewBox="0 0 ${kind==='rodent'?'32 32':'24 24'}" aria-hidden="true" focusable="false">${iconPaths[kind]||''}</svg>`;
+const navIcon=kind=>`<svg viewBox="0 0 ${kind==='rodent'?'32 32':'24 24'}" aria-hidden="true" focusable="false">${navigationPaths[kind]||iconPaths[kind]||''}</svg>`;
 const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
 function setRankingOpen(open){rankOpen=open;blinkId=null;render();document.querySelector('.ranking-toggle')?.focus({preventScroll:true});}
 function pinSavedGame(row){
  const local=row.dataset.local==='true',game=local?localGames().find(g=>g.id===row.dataset.id):myGames.online?.find(g=>g.id===row.dataset.id);if(!game)return;
  try{const pinned=toggleGamePin(localStorage,{...game,local},uid);renderHallDialog();document.querySelector(`.saved-game[data-id="${CSS.escape(game.id)}"] [data-action="toggle-game-menu"]`)?.focus({preventScroll:true});notify(pinned?'Partida anclada.':'Partida desanclada.');}catch{notify('No se ha podido guardar el anclaje en este navegador.');}
 }
-bindGestures(app,{setRankingOpen,togglePinned:pinSavedGame});
+bindGestures(app,{setRankingOpen});
 const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice');n.textContent=message; n.classList.add('visible');
@@ -136,7 +139,7 @@ function render() {
   const title=canExpand?'Amplía tu territorio':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=room.inventoryEffects?.forced?.find(e=>e.player===uid)?.symbol||own.symbol;
   const comboStatus=tools?.used.includes('combo')?toolAllowance(room,uid):null;
-  const instructions={activate:'Toca un hueco resaltado para activarlo; después coloca tu ficha normalmente.',erase:'Toca una ficha rival resaltada para borrarla.',opposite:'Toca una ficha rival resaltada para convertirla en tuya.',shift:inventorySelection?.source?'Elige una celda vacía para desplazar la ficha seleccionada.':'Toca la ficha rival que quieres mover.',block:'Elige una celda vacía para reservarla; después coloca tu ficha en otra.',shield:'Toca una ficha tuya para protegerla.'};
+  const instructions={activate:'Toca un hueco resaltado para construir una celda; después coloca tu ficha normalmente.',erase:'Toca una ficha rival resaltada para borrarla.',opposite:'Toca una ficha rival resaltada para convertirla en tuya.',shift:inventorySelection?.source?'Elige una celda vacía para desplazar la ficha seleccionada.':'Toca la ficha rival que quieres mover.',block:'Elige una celda vacía para reservarla; después coloca tu ficha en otra.',shield:'Toca una ficha tuya para protegerla.'};
   const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span><button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(comboStatus||tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${comboStatus?`Combo · ${comboStatus.remaining} herramienta${comboStatus.remaining===1?'':'s'} disponible${comboStatus.remaining===1?'':'s'}. `:''}${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
   const blockedTurn=isLocal()&&ready&&!availableCells(room,pair).length&&availableCells(room,pair,{ignoreBlocks:true}).length;
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
@@ -205,7 +208,7 @@ function drawBoard(canExpand,ready,target) {
    const window=viewportWindow(viewport,layout);
    const entries=index.query(window).map(pos=>({id:'cell:'+key(pos.x,pos.y),markup:cellMarkup(pos)}));
    entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
-  if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Activar celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
+  if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Construir celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
     entries.push({id:'score',markup:`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`});
@@ -252,7 +255,7 @@ function openHallDialog(kind,returnAction='hall-play') {
   if(hallDialog&&hallDialog!==kind)hallHistory.push(hallDialog);hallReturnAction=returnAction;hallDialog=kind;renderHallDialog();
 }
 function hallDialogFrame(title,body) {
-  return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer"><button data-action="hall-close">Volver</button></div></section></div>`;
+  return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer"><button class="text-icon-button" data-action="hall-close">${hallIcon('back')}Volver</button></div></section></div>`;
 }
 function rankingRows(players,byMax=false) {
   return `<ol class="hall-ranking-list">${rankedPlayers(players.filter(p=>!p.bot),byMax).map((p,i)=>`<li><span class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</span><span>${escape(p.name)}<small>${p.figures} figuras · ${p.symbol||'—'}</small></span><strong class="mono">${byMax?maxLabel(p)+' #MAX':p.score}</strong></li>`).join('')}</ol>`;
@@ -262,7 +265,7 @@ function renderHallDialog() {
   const local=savedLocal();let markup;
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',inventoryMarkup(null,null));
-  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking de Mundo',worldRankMarkup(hallRanking,uid));
+  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`<div class="metrics-tabs" role="group" aria-label="Vista de rendimiento"><button data-action="metrics-view" data-view="personal" aria-pressed="${metricView==='personal'}">${hallIcon('profile')}Mis métricas</button><button data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}">${hallIcon('world')}Clasificación Mundo</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode})}`);
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}));
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local});
   app.insertAdjacentHTML('beforeend',markup);
@@ -348,7 +351,14 @@ async function refreshWorldRank(){
  catch(error){if(request!==rankRequest)return;hallRanking.error=error.message||'No se ha podido consultar el ranking.';}
  if(request===rankRequest){hallRanking.loading=false;if(hallDialog==='ranking')renderHallDialog();}
 }
-async function openHallRanking(){openHallDialog('ranking','hall-ranking');await refreshWorldRank();}
+async function refreshMetrics(){
+ const request=++metricsRequest;metricState.loading=navigator.onLine;metricState.error='';renderHallDialog();
+ if(!navigator.onLine){metricState.error='Sin conexión: se muestran tus partidas locales. Conecta para consultar Mundo y Duelo.';renderHallDialog();return;}
+ try{uid=await ensurePlayer();const next=await command('my_metrics');if(request!==metricsRequest)return;metricState.entries=next.entries||[];}
+ catch(error){if(request!==metricsRequest)return;metricState.error=error.message||'No se han podido consultar tus métricas online.';}
+ if(request===metricsRequest){metricState.loading=false;if(hallDialog==='ranking')renderHallDialog();}
+}
+async function openHallRanking(){metricView='personal';openHallDialog('ranking','hall-ranking');await refreshMetrics();}
 function renderPaused(){
  inventorySelection=null;
  const own=ownPlayer(),totals={X:0,O:0};room.players.forEach(p=>{if(p.symbol)totals[p.symbol]+=p.score;});
@@ -358,7 +368,7 @@ function renderPaused(){
  const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
  const inspection=savedMapModel(room,own,target);
  const inspectButton=(action,kind,label)=>`<button data-inspect-action="${action}" aria-label="${label}" title="${label}">${navIcon(kind)}</button>`;
- const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.active?inspectButton('own','center','Mi territorio'):''}${inspection.target?inspectButton('rival','above','Rival superior'):''}${room.rodents?.length?inspectButton('rodent','rodent','Localizar roedores'):''}${pauseMapOpen?'<button data-action="close-pause-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button>':iconButton('expand-pause-map','fit','Ampliar mapa a pantalla completa')}</nav>`:'';
+ const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.active?inspectButton('own','center','Mi territorio'):''}${inspection.target?inspectButton('rival','above','Rival superior'):''}${room.rodents?.length?inspectButton('rodent','rodent','Localizar roedores'):''}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
  const canvas='<svg class="inspection-canvas" tabindex="0" role="img" aria-label="Tablero guardado: arrastra o pellizca para inspeccionar. Con teclado, flechas para moverte y más o menos para acercar."></svg>';
  const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${canvas}</section>`:'';
  disposeInspection?.();disposeInspection=null;
@@ -482,6 +492,9 @@ app.addEventListener('click',async e=>{
   if(action==='hall-play'){playHallMode();return;}
   if(action==='hall-close'){if(!pendingDelete)closeHallDialog();return;}
   if(action==='hall-ranking'){await openHallRanking();return;}
+  if(action==='metrics-view'){metricView=b.dataset.view;renderHallDialog();if(metricView==='world')await refreshWorldRank();return;}
+  if(action==='metrics-mode'){metricMode=b.dataset.mode;renderHallDialog();return;}
+  if(action==='refresh-metrics'){await refreshMetrics();return;}
   if(action==='hall-menu'||action==='hall-profile'||action==='hall-help'||action==='hall-offline'){
     openHallDialog(action.replace('hall-','')==='menu'?'menu':action.replace('hall-','')==='profile'?'profile':action.replace('hall-','')==='help'?'help':'offline',action);return;
   }

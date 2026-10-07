@@ -29,9 +29,11 @@ test('Cancelled touch and mouse drags never reveal a delete action',()=>{
  const h=harness();h.send('pointerdown',150,100);h.send('pointermove',70,100);h.send('pointercancel',70,100);assert.equal(h.open.size,0);
  const m=harness();m.send('pointerdown',150,100,{type:'mouse'});m.send('pointermove',70,100,{type:'mouse'});m.send('pointerup',70,100,{type:'mouse'});assert.equal(m.open.size,0);
 });
-test('Right swipe pins a row and suppresses opening; right swipe on exposed deletion only closes it',()=>{
- const h=harness();h.send('pointerdown',50,100);h.send('pointermove',140,100);h.send('pointerup',140,100);assert.equal(h.pins.length,1);h.send('click',140,100);assert.ok(h.stopped);
- h.send('pointerdown',140,100);h.send('pointermove',50,100);h.send('pointerup',50,100);h.send('pointerdown',50,100);h.send('pointermove',140,100);h.send('pointerup',140,100);assert.equal(h.pins.length,1);assert.equal(h.open.size,0);
+test('Right swipe reveals a pin action without pinning or opening; opposite swipe closes it',()=>{
+ const h=harness();h.send('pointerdown',50,100);h.send('pointermove',140,100);h.send('pointerup',140,100);assert.equal(h.pins.length,0);assert.ok(h.open.has('is-pin-revealed'));h.send('click',140,100);assert.ok(h.stopped);
+ h.send('pointerdown',140,100);h.send('pointermove',50,100);h.send('pointerup',50,100);assert.equal(h.open.size,0);
+ h.send('pointerdown',140,100);h.send('pointermove',50,100);h.send('pointerup',50,100);assert.ok(h.open.has('is-revealed'));
+ h.send('pointerdown',50,100);h.send('pointermove',140,100);h.send('pointerup',140,100);assert.equal(h.pins.length,0);assert.equal(h.open.size,0);
 });
 test('Ranking header supports down to open and up to close without toggle clicks',()=>{
  const h=harness(),opts={target:'handle'};

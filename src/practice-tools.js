@@ -10,9 +10,11 @@ export const practiceTools=[
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
   {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
-  {id:'activate',label:'Activar celda',description:'Activa un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
+  {id:'activate',label:'Construir celda',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
+// Catalogue only until occupied-cell, turn and connectivity rules are agreed.
+export const pendingTools=[{id:'destroy',label:'Destruir celda',description:'Elimina una celda del tablero. El hueco puede recuperarse mediante ampliación o Construir celda. Reglas de uso pendientes.'}];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege todo tu territorio durante una ronda. Cada 3, 33 y 333 combos de al menos 33 puntos ganas 1, 3 y 33 protecciones; las guardas y activas de una en una.',button:'Activar 1 ronda'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
 // Keep eight starting cards; Combo and Activate enter through the refill draw.

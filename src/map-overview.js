@@ -1,4 +1,5 @@
 import {terrainOf,key} from './game.js';
+import {navigationIcon} from './navigation-icons.js';
 
 export function overviewModel(room,own,target){
   const terrain=terrainOf(room),myPair=room.pairs.find(p=>p.id===own?.pair),targetPair=room.pairs.find(p=>p.id===target?.pair);
@@ -26,5 +27,5 @@ export function overviewView(bounds,view){
 }
 
 export function overviewMarkup({open,jumpButtons='',rodentButton=''}){
-  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><nav class="map-controls" aria-label="Controles del mapa"><p class="map-summary"></p><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">⤢</button>${jumpButtons}${rodentButton}<button data-action="close-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button></nav><svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg></section>`;
+  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><nav class="map-controls" aria-label="Controles del mapa"><p class="map-summary"></p><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">${navigationIcon('fit')}</button>${jumpButtons}${rodentButton}<button data-action="close-map" aria-label="Volver al tablero" title="Volver al tablero">${navigationIcon('restore')}</button></nav><svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg></section>`;
 }

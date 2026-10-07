@@ -1,4 +1,13 @@
-# #3 — R0.19.0
+# #3 — R0.19.1
+
+## Interfaz y métricas · R0.19.1
+
+- Deslizar una partida a la derecha descubre una chincheta; tocarla ancla o desancla. Deslizar a la izquierda descubre la papelera. Los gestos no abren ni borran partidas.
+- Zoom extensión, pantalla completa y salir de pantalla completa tienen iconos distintos. En el mapa de pausa, el rival conserva una referencia azul incluso si su última ficha ha desaparecido.
+- «Activar celda» se llama ahora «Construir celda», sin cambiar su comportamiento, stock guardado ni identificador interno. «Destruir celda» aparece como carta pendiente en el catálogo; no se reparte hasta cerrar sus reglas.
+- Ranking abre Mis métricas por modalidad: VS máquina, Sin conexión, Duelo y Mundo. Las locales usan partidas guardadas en este navegador; las compartidas distinguen participantes. Una consulta autenticada de solo lectura devuelve métricas propias online sin cargar tableros ni avanzar relojes. Ocultar una sala no borra estas métricas.
+- La clasificación de Mundo y sus periodos permanecen independientes; las referencias #MAX de práctica y Duelo no cambian el #MAX oficial. Registros antiguos ausentes se muestran como —.
+- Los eventos 33/66/99 y sus indicadores múltiples siguen pendientes del bloque de habitantes; este pase no cambia el calendario actual de roedores.
 
 Juego de figuras y territorio. Repositorio: `Xtronzio/hash3`.
 

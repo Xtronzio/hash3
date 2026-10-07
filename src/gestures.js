@@ -3,18 +3,19 @@ export function swipeDirection(dx,dy,axis,threshold=44){
  const primary=axis==='x'?dx:dy,secondary=axis==='x'?dy:dx;
  return Math.abs(primary)>=threshold&&Math.abs(primary)>Math.abs(secondary)*1.4?Math.sign(primary):0;
 }
-export function bindGestures(root,{setRankingOpen,togglePinned=()=>{}}){
+export function bindGestures(root,{setRankingOpen}){
  let gesture=null,suppressUntil=0;
  const reveal=(row,open)=>{
-  root.querySelectorAll('.saved-game.is-revealed').forEach(other=>{if(other!==row)reveal(other,false);});
-  row.classList.toggle('is-revealed',open);
+  root.querySelectorAll('.saved-game.is-revealed,.saved-game.is-pin-revealed').forEach(other=>{if(other!==row)reveal(other,false);});
+  row.classList.toggle('is-revealed',open===true);
+  row.classList.toggle('is-pin-revealed',open==='pin');
   const toggle=row.querySelector('[data-action="toggle-delete"]');
   toggle?.setAttribute('aria-expanded',String(open));
  };
  root.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse'||!e.isPrimary)return;
   const handle=e.target.closest('.ranking-toggle'),row=e.target.closest('.saved-game');
-  if(!handle&&!row||e.target.closest('.delete-game-button'))return;
+  if(!handle&&!row||e.target.closest('.delete-game-button,.pin-game-button'))return;
   gesture={id:e.pointerId,x:e.clientX,y:e.clientY,handle,row,locked:false};
  });
  root.addEventListener('pointermove',e=>{
@@ -34,9 +35,9 @@ export function bindGestures(root,{setRankingOpen,togglePinned=()=>{}}){
   const direction=swipeDirection(e.clientX-current.x,e.clientY-current.y,current.handle?'y':'x',current.handle?32:44);
   if(!direction)return;
   if(current.handle)setRankingOpen(direction>0);
-  else if(direction<0)reveal(current.row,true);
+  else if(direction<0)reveal(current.row,current.row.classList.contains('is-pin-revealed')?false:true);
   else if(current.row.classList.contains('is-revealed'))reveal(current.row,false);
-  else togglePinned(current.row);
+  else reveal(current.row,'pin');
  };
  root.addEventListener('pointerup',e=>end(e));
  root.addEventListener('pointercancel',e=>end(e,true));
