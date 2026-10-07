@@ -1,4 +1,8 @@
-# #3 — R0.19.4
+# #3 — R0.19.5
+
+## Tablero y marcador · R0.19.5
+
+La partida usa una sola franja superior para el turno, símbolo y cuenta atrás. La puntuación inferior abre el marcador con #MAX, combo récord y detalles de modalidad, figuras, identidad, rival y reloj. Las opciones de compartir sala permanecen en este panel; Abandonar pasa a la botonera inferior y Finalizar conserva su acción separada. Se elimina el menú «…», el marcador superior repetido y el aviso de ampliación cuando ya se muestra el estado. El panel conserva la cámara, puntos y turno; abrirlo no pausa la partida ni su reloj.
 
 ## Arrastre táctil y métricas · R0.19.4
 

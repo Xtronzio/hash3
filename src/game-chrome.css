@@ -1,0 +1,28 @@
+/* A single turn strip; details and ranking open from the bottom score. */
+.game .compact-turnbar{min-height:44px;padding:5px 0;gap:10px;border-bottom:1px solid var(--line);flex-shrink:0}
+.game .compact-turnbar .brand{font-size:25px;flex:none}
+.game .compact-turnbar .turn-state{font-size:18px;line-height:1.1;min-width:0;flex:1;letter-spacing:.02em}
+.game .turn-clocks{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}
+.game .compact-turnbar .turn-timer{font-size:22px;line-height:1.1;white-space:nowrap}
+.game .compact-turnbar .duel-clock{font-size:10px;white-space:nowrap;color:var(--muted)}
+.game .turn-timer[hidden],.game .score-dialog[hidden]{display:none}
+.game button.team-score-bottom{width:100%;grid-template-columns:1fr 1fr;text-align:left;border-inline:0;border-radius:0;cursor:pointer}
+.game .team-score-bottom:hover,.game .team-score-bottom:focus-visible{background:#1a1d24}
+.game .game-bottom button[data-action="abandon"]{border:0;background:transparent;padding:6px;min-height:44px}
+.game .score-dialog{z-index:30;padding:12px}
+.game .score-panel{width:min(100%,560px);padding:18px;max-height:88dvh}
+.game .score-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.game .score-panel-heading h2{font-size:28px;margin:0}
+.game .score-panel-heading button{width:44px;height:44px;padding:9px;display:grid;place-items:center;flex:none}
+.game .score-panel-heading svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.game .score-panel .rank-extra{max-height:35dvh;overflow:auto}
+.game .score-panel .rank-name{overflow-wrap:anywhere}
+.game .score-panel .game-details{margin:18px 0 0;display:grid;gap:10px;border-top:1px solid var(--line);padding-top:16px;font-size:12px}
+.game-details>div{display:grid;grid-template-columns:95px minmax(0,1fr);gap:10px}
+.game-details dt{color:var(--muted)}.game-details dd{margin:0;overflow-wrap:anywhere}
+.game .score-panel .menu-version{font-size:11px;margin:16px 0}
+.game .score-share{display:flex;flex-wrap:wrap;gap:8px}.game .score-share p{width:100%;margin:0}.game .score-share button{font-size:12px;min-height:44px}
+.game .score-return{width:100%;min-height:44px;margin-top:16px}
+.game .score-panel .rank-columns,.game .score-panel .rank-row{grid-template-columns:20px minmax(0,1fr) 55px 70px;gap:6px;padding-inline:0}
+@media(max-width:600px){.game .compact-turnbar .turn-state{font-size:16px}.game .compact-turnbar .brand{font-size:23px}.game .score-panel{padding:16px}.game .score-panel .rank-name{font-size:12px}}
+@media(max-height:450px) and (orientation:landscape){.game .compact-turnbar{min-height:36px;padding:2px 0}.game button.team-score-bottom{width:45%}}
