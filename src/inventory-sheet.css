@@ -49,3 +49,8 @@
 .inventory-immunity-guide{margin-top:18px}.inventory-immunity-guide h3{display:flex;align-items:center;gap:10px;font-size:17px}.inventory-immunity-guide .inventory-icon svg{width:32px;height:32px}.immunity-guide-table{width:100%;margin:10px 0;border-collapse:collapse;font-size:12px}.immunity-guide-table th,.immunity-guide-table td{padding:8px;border-bottom:1px solid #435167;text-align:left}.immunity-guide-table th{color:#b8c5d8}
 #notice .score-combo-progress{color:var(--combo-color,#00e5ff);font-size:11px;font-weight:700}
 @media(max-width:360px){.inventory-sheet .inventory-compact-grid,.inventory-immunity-bottom{gap:6px}.inventory-sheet .inventory-icon-card{min-height:62px}.immunity-compact-goal .immunity-missing{font-size:17px}}
+
+/* The hall catalogue stays readable independently of availability in a game. */
+.inventory-catalog .inventory-card:disabled,.inventory-catalog button:disabled{opacity:1}
+.inventory-catalog div.inventory-card{cursor:default}
+.inventory-catalog .inventory-card-action:empty{display:none}

@@ -66,3 +66,9 @@ body:has(.inspection-overlay){overflow:hidden}
 @media(min-width:601px){.paused-details{grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr)}}
 @media(max-height:450px) and (orientation:landscape){.paused-game .paused-minimap .inspection-canvas{height:180px}}
 .inspection-controls button svg{border:0;border-radius:0;background:transparent;min-height:0}
+
+.saved-game-group .saved-group-heading,.closed-games .saved-group-heading{display:flex;align-items:center;gap:12px;min-height:44px;font-size:20px;margin:0 0 8px;color:var(--text,#e3e5e9)}
+.saved-group-heading svg,.saved-games-home svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.closed-games summary{list-style:none}.closed-games summary::-webkit-details-marker{display:none}
+.closed-games summary::after{content:'⌄';margin-left:auto}.closed-games[open] summary::after{transform:rotate(180deg)}
+.hall-dialog-footer .saved-games-home{width:48px;height:48px;padding:10px;display:grid;place-items:center}

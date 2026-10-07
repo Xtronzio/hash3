@@ -1,4 +1,8 @@
-# #3 — R0.19.5
+# #3 — R0.19.6
+
+## Inventario y partidas · R0.19.6
+
+El catálogo del hall muestra las herramientas con contraste completo y sin acciones «Usar» deshabilitadas. Las restricciones del inventario durante la partida se conservan. Mis partidas usa iconos con contadores para ancladas, en curso, pausadas y cerradas, con etiquetas accesibles; se eliminan las instrucciones repetidas y los mensajes de grupos vacíos. El pie vuelve al inicio con un icono de casa.
 
 ## Tablero y marcador · R0.19.5
 
