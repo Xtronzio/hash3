@@ -1,9 +1,12 @@
 import {overviewModel,overviewPoint} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
+import {immediateAbove} from './game.js';
 
 // A snapshot is only drawn; inspecting it never dispatches a game command.
-export function savedMapModel(room,own,target){
+export function savedMapModel(room,own){
   if(!room||!Array.isArray(room.cells)||!Array.isArray(room.pairs)||!Array.isArray(room.terrain)&&!Array.isArray(room.blocks))return null;
+  // Use the same ranking as the live board; the leader has no blue reference.
+  const target=own?immediateAbove((room.players||[]).filter(p=>!p.bot),own.id,!!room.commonWorld):null;
   const model=overviewModel(room,own,target);if(!model)return null;
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
   return {...model,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':'#343e4c'};})};
