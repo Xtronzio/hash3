@@ -19,7 +19,7 @@ export function inspectionCells(model){
   return model.terrain.map(p=>`<rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" rx=".04" fill="${p.fill}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".08"':''}/>`).join('')+
     `<g class="inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${model.terrain.map(p=>p.symbol==='X'?`<path d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:'').join('')}</g>`+
     model.terrain.filter(p=>p.rodent).map(p=>`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".3" fill="none" stroke="#08090b" stroke-width=".12"/>`).join('')+
-    (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="${model.ownColor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
+    (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="#e3e5e9" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
     (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 

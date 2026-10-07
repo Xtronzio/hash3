@@ -1,4 +1,8 @@
-# #3 — R0.19.1
+# #3 — R0.19.2
+
+## Marco activo · R0.19.2
+
+El territorio activo se encuadra en blanco tanto en el mapa de la partida como en el visor de pausa. La referencia del rival conserva el azul. Se mantiene el acceso para localizar habitantes; este pase no cambia sus ciclos.
 
 ## Interfaz y métricas · R0.19.1
 
