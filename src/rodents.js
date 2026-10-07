@@ -20,7 +20,7 @@ export function rodentSleeping(r){return r.phase>=3;}
 function pickFood(room,r,exclude){
   const player=room.players.find(p=>p.id===r.player),pair=room.pairs.find(p=>p.x===player?.id||p.o===player?.id);
   if(!pair)return null;
-  const area=new Set(connectedTerrain(terrainOf(room),pair.active).map(c=>key(c.x,c.y)));
+  const area=new Set(connectedTerrain(terrainOf(room),pair.terrainAnchor||pair.active).map(c=>key(c.x,c.y)));
   const reserved=new Set(room.rodents.filter(v=>v.id!==r.id&&!rodentSleeping(v)).map(v=>key(v.x,v.y)));
   return room.cells.filter(c=>c.id!==exclude&&area.has(key(c.x,c.y))&&!reserved.has(key(c.x,c.y)))
     .sort((a,b)=>(Math.abs(a.x-r.x)+Math.abs(a.y-r.y))-(Math.abs(b.x-r.x)+Math.abs(b.y-r.y))||a.x-b.x||a.y-b.y)[0]||null;

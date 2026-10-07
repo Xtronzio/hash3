@@ -72,3 +72,8 @@ body:has(.inspection-overlay){overflow:hidden}
 .closed-games summary{list-style:none}.closed-games summary::-webkit-details-marker{display:none}
 .closed-games summary::after{content:'⌄';margin-left:auto}.closed-games[open] summary::after{transform:rotate(180deg)}
 .hall-dialog-footer .saved-games-home{width:48px;height:48px;padding:10px;display:grid;place-items:center}
+
+.inventory-start{display:flex;gap:12px;margin-top:18px}.inventory-start button{width:48px;height:48px;min-height:48px;padding:10px;display:grid;place-items:center}
+.inventory-start svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.saved-group-heading .saved-group-label{font-size:20px;font-family:'Barlow Condensed',Impact,sans-serif;text-transform:uppercase;font-weight:700}
+.saved-group-heading .saved-group-count{color:var(--muted);font-size:18px}

@@ -18,13 +18,13 @@ const formId=(symbol,kind,indices,cells)=>`${symbol===1?'X':'O'}:${kind}:`+indic
 // undoes each move, rather than cloning a growing game for every branch.
 class Position {
   constructor(room,futureWeight=1){
-    this.cells=connectedTerrain(terrainOf(room),room.pairs[0].active);
+    this.cells=connectedTerrain(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active);
     this.legalSize=this.cells.length;this.futureWeight=futureWeight;
     const existing=new Set(this.cells.map(c=>key(c.x,c.y))),frontier=new Map();
     if(futureWeight)for(const c of this.cells)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);if(!existing.has(k))frontier.set(k,point);
     }
-    this.expansionPoints=futureWeight?expansionOptions(this.cells,room.pairs[0].active):[];
+    this.expansionPoints=futureWeight?expansionOptions(this.cells,room.pairs[0].terrainAnchor||room.pairs[0].active):[];
     for(const point of this.expansionPoints)for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++){
       const c={x:point.x+dx,y:point.y+dy},k=key(c.x,c.y);if(!existing.has(k))frontier.set(k,c);
     }
@@ -210,7 +210,7 @@ function chooseExpansion(room,level,random,config,budget){
   const pair=room.pairs[0],actor=symbolNumber(room.players.find(p=>p.id===pair.expander)?.symbol||pair.turn);
   const turn=symbolNumber(pair.turn),known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),unique=new Set();
   const candidates=[];
-  for(const point of expansionOptions(terrainOf(room),pair.active)){
+  for(const point of expansionOptions(terrainOf(room),pair.terrainAnchor||pair.active)){
     const added=Array.from({length:9},(_,i)=>({x:point.x+i%3,y:point.y+Math.floor(i/3)})).filter(c=>!known.has(key(c.x,c.y)));
     const id=added.map(c=>key(c.x,c.y)).sort().join(';');if(unique.has(id))continue;unique.add(id);
     candidates.push({point,added});

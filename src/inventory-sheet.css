@@ -54,3 +54,5 @@
 .inventory-catalog .inventory-card:disabled,.inventory-catalog button:disabled{opacity:1}
 .inventory-catalog div.inventory-card{cursor:default}
 .inventory-catalog .inventory-card-action:empty{display:none}
+
+.inventory-catalog div.inventory-card:hover{background:#1a232e;border-color:#435167}

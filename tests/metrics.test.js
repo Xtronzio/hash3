@@ -21,10 +21,10 @@ test('Metrics separate modes and shared-device participants without inventing mi
 test('Navigation icons distinguish fit, fullscreen and restore',()=>{
  assert.equal(new Set(Object.values(navigationPaths)).size,3);assert.match(navigationIcon('fit'),/<rect/);assert.doesNotMatch(navigationIcon('restore'),/×|undefined/);
 });
-test('Construction rename preserves old inventories; pending destruction is catalogue only',()=>{
+test('Construction rename preserves old inventories and destruction starts with zero stock',()=>{
  const g=createLocal('local');g.players[0].inventory.cards.activate=2;initializeInventory(g);
  assert.equal(practiceTools.find(t=>t.id==='activate').label,'Construir celda');assert.equal(g.players[0].inventory.cards.activate,2);
- assert.equal(g.players[0].inventory.cards.destroy,undefined);assert.equal(pendingTools[0].label,'Destruir celda');
- const html=inventoryMarkup(null,null);assert.match(html,/Construir celda/);assert.doesNotMatch(html,/Activar celda/);assert.match(html,/disabled aria-label="Destruir celda, pendiente"/);
- for(const action of ['setup-solo','setup-local','hall-games'])assert.match(html,new RegExp('data-action="'+action+'"><svg'));
+ assert.equal(g.players[0].inventory.cards.destroy,0);assert.equal(pendingTools.length,0);
+ const html=inventoryMarkup(null,null);assert.match(html,/Construir celda/);assert.doesNotMatch(html,/Activar celda/);assert.match(html,/Destruir celda/);assert.doesNotMatch(html,/Reglas de uso pendientes/);
+ for(const action of ['setup-solo','setup-local','hall-games'])assert.match(html,new RegExp('data-action="'+action+'"[^>]*><svg'));
 });

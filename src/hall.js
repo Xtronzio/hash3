@@ -19,6 +19,7 @@ export function machineDifficultySelector(difficulty='medium'){
   return `<fieldset class="machine-difficulty"><legend>Nivel del rival</legend><div class="machine-scale">${machineLevels.map((l,index)=>`<label class="machine-level"><input type="radio" name="machine-difficulty" value="${l.id}" ${l.id===selected?'checked':''} aria-describedby="machine-level-hint"><span class="machine-level-content"><span class="machine-intensity" aria-hidden="true">${[0,1,2,3].map(n=>`<i class="${n<=index?'filled':''}" style="--bar-height:${8+n*5}px"></i>`).join('')}</span><strong>${l.label}</strong></span></label>`).join('')}</div><p id="machine-level-hint" class="machine-level-hint" role="status">${machineLevelHints[selected]}</p></fieldset>`;
 }
 const paths={
+  home:'<path d="m4 13 12-10 12 10v16h-8v-9h-8v9H4V13Z"/>',
   back:'<path d="m14 7-9 9 9 9M5 16h23"/>',
   players:'<circle cx="11" cy="10" r="5"/><path d="M2 28v-3c0-5 4-8 9-8s9 3 9 8v3M22 5a5 5 0 0 1 0 10m1 3c5 0 7 3 7 7v3"/>',
   menu:'<path d="M6 8h20M6 16h20M6 24h20"/>',
@@ -27,7 +28,7 @@ const paths={
   duel:'<path d="m7 4 18 18-4 4L3 8V4h4Zm18 0L7 22l4 4L29 8V4h-4ZM3 23l6 6m-4-2-3 3m21-7 6 6m-2-2 3 3"/>',
   robot:'<rect x="6" y="10" width="20" height="17" rx="5"/><path d="M16 5v5M3 15v7m26-7v7"/><circle cx="16" cy="4" r="1"/><path d="M12 16v2m8-2v2m-7 5h6"/>',
   offline:'<path d="M3 10a21 21 0 0 1 22-1M7 15a14 14 0 0 1 13-2M12 20a6 6 0 0 1 5-1M5 28 28 5"/><circle cx="16" cy="26" r="1"/>',
-  games:'<rect x="4" y="7" width="24" height="21" rx="3"/><path d="M10 4v6m12-6v6M4 14h24m-17 5h4m-4 4h10"/>',
+  games:'<path d="M4 9V6h9l3 4h12v18H4V9Z"/>',
   ranking:'<path d="M4 27V16h7v11m0 0V6h9v21m0 0V20h8v7H4"/>',
   inventory:'<rect x="6" y="8" width="20" height="21" rx="4"/><path d="M11 8V5a5 5 0 0 1 10 0v3M6 16h20m-14 6h8M3 16v8m26-8v8"/>',
   achievements:'<path d="M9 4h14v9a7 7 0 0 1-14 0V4Zm0 3H4v5a6 6 0 0 0 6 6M23 7h5v5a6 6 0 0 1-6 6M16 20v7m-6 1h12"/>',

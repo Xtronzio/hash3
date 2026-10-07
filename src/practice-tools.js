@@ -11,14 +11,14 @@ export const practiceTools=[
   {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',label:'Ayuda',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'activate',label:'Construir celda',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
+  {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
-// Catalogue only until occupied-cell, turn and connectivity rules are agreed.
-export const pendingTools=[{id:'destroy',label:'Destruir celda',description:'Elimina una celda del tablero. El hueco puede recuperarse mediante ampliación o Construir celda. Reglas de uso pendientes.'}];
+export const pendingTools=[];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege todo tu territorio durante una ronda. Cada 3, 33 y 333 combos de al menos 33 puntos ganas 1, 3 y 33 protecciones; las guardas y activas de una en una.',button:'Activar 1 ronda'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
-// Keep eight starting cards; Combo and Activate enter through the refill draw.
-const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,['combo','activate'].includes(t.id)?0:1]));
+// Keep eight starting cards; Combo, Construct and Destroy enter through the refill draw.
+const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,['combo','activate','destroy'].includes(t.id)?0:1]));
 export function initializeInventory(game){
   if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
   game.inventoryVersion=2;
@@ -42,14 +42,19 @@ export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.sh
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
 export function toolCells(game,playerId,tool){
   const p=game?.pairs?.[0];if(!p)return [];
-  const linked=new Set(connectedTerrain(terrainOf(game),p.active).map(c=>key(c.x,c.y)));
+  const linked=new Set(connectedTerrain(terrainOf(game),(p.terrainAnchor||p.active)).map(c=>key(c.x,c.y)));
   if(tool==='activate'){
     const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),occupied=new Set(game.cells.map(c=>key(c.x,c.y))),holes=new Map();
-    for(const c of connectedTerrain(terrainOf(game),p.active))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    for(const c of connectedTerrain(terrainOf(game),(p.terrainAnchor||p.active)))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);
       if(!known.has(k)&&!occupied.has(k))holes.set(k,point);
     }
     return [...holes.values()];
+  }
+  if(tool==='destroy'){
+    if(game.players.some(v=>v.id!==playerId&&isImmune(game,v.id)))return [];
+    const occupied=new Set(game.cells.map(c=>key(c.x,c.y)));
+    return terrainOf(game).filter(c=>linked.has(key(c.x,c.y))&&!occupied.has(key(c.x,c.y)));
   }
   if(tool==='block')return game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))?[]:availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
@@ -99,7 +104,7 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
 }
 export function moveDestination(game,playerId,cell){
   if(!cell)return false;
-  const pair=game.pairs[0],linked=connectedTerrain(terrainOf(game),pair.active);
+  const pair=game.pairs[0],linked=connectedTerrain(terrainOf(game),(pair.terrainAnchor||pair.active));
   return linked.some(c=>c.x===cell.x&&c.y===cell.y)&&!game.cells.some(c=>c.x===cell.x&&c.y===cell.y)&&!isBlockedCell(game,playerId,cell.x,cell.y);
 }
 

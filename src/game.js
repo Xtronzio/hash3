@@ -17,9 +17,10 @@ export function isBlockedCell(room,playerId,x,y){return !!room.inventoryEffects?
 export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   const occupied=new Set(room.cells.map(c=>key(c.x,c.y)));
   const playerId=pair[pair.turn.toLowerCase()];
-  return connectedTerrain(terrainOf(room),pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
+  return connectedTerrain(terrainOf(room),pair.terrainAnchor||pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
 }
 export function expansionOptions(terrain,active) {
+  if(!terrain.length)return [{x:active.x,y:active.y}];
   const connected=connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
   for(const c of connected)for(let ox=-3;ox<=1;ox++)for(let oy=-3;oy<=1;oy++) {
     const p={x:c.x+ox,y:c.y+oy};candidates.set(key(p.x,p.y),p);

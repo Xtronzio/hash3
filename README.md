@@ -1,4 +1,10 @@
-# #3 — R0.19.7
+# #3 — R0.19.8
+
+## Destruir celda y accesos · R0.19.8
+
+Destruir celda entra en la recarga de VS máquina y Sin conexión, conservando las ocho cartas iniciales. Solo elimina celdas vacías del territorio conectado y respeta Inmunidad. Conserva fichas, puntuación, figuras ya pagadas y reloj; cuenta como herramienta y después se coloca la ficha. El hueco puede recuperarse construyendo o ampliando. Si se elimina la referencia del territorio, se conserva una referencia de navegación válida sin mover el marco activo; las zonas aisladas se recuperan al reconectarlas. Si no quedan celdas jugables, se pasa a ampliación.
+
+Se quita la flecha de abandonar en la partida local; quedan Pausa y la bandera de Finalizar. Los accesos del catálogo son iconos con etiquetas accesibles, el icono de partidas es una carpeta, y catálogo y métricas vuelven al inicio con la casa. Mis partidas muestra iconos, etiquetas Ancladas, Activas, Pausadas y Cerradas y sus contadores.
 
 ## Marcador desplegable · R0.19.7
 

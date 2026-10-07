@@ -59,11 +59,21 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;
-      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error(tool==='activate'?'Elige un hueco sin ampliar que toque tu territorio conectado.':'Elige una ficha rival en tu territorio conectado, sin escudo; tus colocaciones no se pueden borrar.');
+      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error(tool==='destroy'?'Elige una celda vacía, sin ficha, de tu territorio conectado.':tool==='activate'?'Elige un hueco sin ampliar que toque tu territorio conectado.':'Elige una ficha rival en tu territorio conectado, sin escudo; tus colocaciones no se pueden borrar.');
       const index=room.cells.findIndex(c=>c.x===x&&c.y===y);
       const old=index>=0?room.cells[index]:null;
       let changed=null;
       if(tool==='activate')room.terrain=[...terrainOf(room),{x,y}];
+      if(tool==='destroy'){
+        const anchor=p.terrainAnchor||p.active;
+        const remaining=connectedTerrain(terrainOf(room),anchor).filter(c=>c.x!==x||c.y!==y);
+        room.terrain=terrainOf(room).filter(c=>c.x!==x||c.y!==y);
+        if(anchor.x===x&&anchor.y===y&&remaining.length){
+          const closest=remaining.reduce((a,b)=>Math.abs(b.x-x)+Math.abs(b.y-y)<Math.abs(a.x-x)+Math.abs(a.y-y)?b:a);
+          p.terrainAnchor={x:closest.x,y:closest.y};
+        }
+        room.inventoryEffects.blocks=room.inventoryEffects.blocks.filter(e=>e.x!==x||e.y!==y);
+      }
       if(tool==='erase')room.cells.splice(index,1);
       if(tool==='opposite'){changed={...old,id:id(),symbol:actor.symbol,owner:playerId};room.cells[index]=changed;}
       if(tool==='shift'){
@@ -85,12 +95,12 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       }
       spendCard(room,playerId,tool);
     }
-    delete room.practiceHint;room.updatedAt=new Date(now).toISOString();room.version++;return room;
+    delete room.practiceHint;if(tool==='destroy')normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   let automatic=false;
   if(action==='tick') {
     if(Date.parse(p.deadline)>now)return original;
-    const choices=p.pending?expansionOptions(terrainOf(room),p.active):availableCells(room,p);
+    const choices=p.pending?expansionOptions(terrainOf(room),p.terrainAnchor||p.active):availableCells(room,p);
     if(!choices.length){if(!p.pending&&availableCells(room,p,{ignoreBlocks:true}).length){action='pass';automatic=true;}else return original;}
     else{payload=choices[Math.floor(random()*choices.length)];action=p.pending?'expand':'move';automatic=true;}
   }
@@ -126,10 +136,10 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!automatic&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se colocará una ampliación automáticamente.');
     if(!p.pending||availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Usa las celdas vacías antes de ampliar.');
     const {x,y}=payload;
-    if(!expansionOptions(terrainOf(room),p.active).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio y añadir alguna celda.');
+    if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio y añadir alguna celda.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy});
-    room.blocks.push({x,y});p.active={x,y};p.credits--;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
+    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;p.credits--;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
   }else throw new Error('Acción desconocida.');
   delete room.practiceHint;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;

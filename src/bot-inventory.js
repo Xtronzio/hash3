@@ -42,6 +42,11 @@ export function chooseMachineCard(room,now=Date.now()){
     const target=toolCells(room,actor,'shield').find(c=>neighbors(c,player.symbol)>=1);
     if(target)return command('shield',target);
   }
+  if(usable('destroy')){
+    const symbol=player.symbol==='X'?'O':'X';
+    const target=toolCells(room,actor,'destroy').find(point=>figureWindows([...room.cells,{...point,symbol}],point.x,point.y,symbol,room.level).some(f=>!room.forms.includes(f.id)));
+    if(target)return command('destroy',target);
+  }
   if(usable('block')){
     const target=toolCells(room,actor,'block').find(c=>neighbors(c,player.symbol==='X'?'O':'X')>=2);
     if(target)return command('block',target);

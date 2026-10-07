@@ -12,7 +12,7 @@ const move=(r,x,y,t=now)=>localCommand(r,'move',{x,y},t,()=>0);
 const card=(r,tool,point={})=>localCommand(r,'inventory',{tool,playerId:r.pairs[0][r.pairs[0].turn.toLowerCase()],...point},now);
 
 test('Ambos jugadores empiezan con ocho cartas iguales; gastar no recarga inmediatamente',()=>{
- let r=start();assert.equal(practiceTools.length,10);assert.deepEqual(r.players[0].inventory,r.players[1].inventory);
+ let r=start();assert.equal(practiceTools.length,11);assert.deepEqual(r.players[0].inventory,r.players[1].inventory);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((a,b)=>a+b),8);
  r=card(r,'double');assert.equal(r.players[0].inventory.cards.double,0);r=move(r,0,0);assert.equal(r.players[0].inventory.turns,0);
  r=move(r,1,0);assert.equal(r.players[0].inventory.turns,1);assert.equal(r.players[0].inventory.cards.double,0);
