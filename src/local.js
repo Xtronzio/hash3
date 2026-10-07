@@ -5,6 +5,7 @@ import {initializeRodents,stepRodent} from './rodents.js';
 import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 import {activateImmunity,recordImmunityCombo} from './immunity.js';
+import {applyAreaTool} from './area-tools.js';
 export const TURN_SECONDS=33;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
@@ -49,10 +50,13 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   if(action==='inventory'){
     const {tool,playerId}=payload;
-    if(tool==='hint')throw new Error('Activa Ayuda desde el inventario.');
+    if(['hint','hint-expand','super-hint'].includes(tool))throw new Error('Activa Ayuda desde el inventario.');
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
-    if(['double','rival','combo','immunity'].includes(tool)){
+    if(['tornado','bomb','frontier'].includes(tool)){
+      const result=applyAreaTool(room,playerId,tool,payload,random);
+      spendCard(room,playerId,tool);room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,...result};
+    }else if(['double','rival','combo','immunity'].includes(tool)){
       spendCard(room,playerId,tool);
       if(tool==='double')room.practiceTurn.remaining=2;else if(tool==='rival')room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
       else if(tool==='immunity')activateImmunity(room,playerId);
@@ -100,7 +104,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   let automatic=false;
   if(action==='tick') {
     if(Date.parse(p.deadline)>now)return original;
-    const choices=p.pending?expansionOptions(terrainOf(room),p.terrainAnchor||p.active):availableCells(room,p);
+    const choices=p.pending?expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room):availableCells(room,p);
     if(!choices.length){if(!p.pending&&availableCells(room,p,{ignoreBlocks:true}).length){action='pass';automatic=true;}else return original;}
     else{payload=choices[Math.floor(random()*choices.length)];action=p.pending?'expand':'move';automatic=true;}
   }
@@ -136,7 +140,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!automatic&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se colocará una ampliación automáticamente.');
     if(!p.pending||availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Usa las celdas vacías antes de ampliar.');
     const {x,y}=payload;
-    if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio y añadir alguna celda.');
+    if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio, añadir celdas y respetar las fronteras.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy});
     room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;p.credits--;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();

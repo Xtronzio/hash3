@@ -1,4 +1,5 @@
 import {isImmune} from './immunity.js';
+import {expansionCrossesFrontier,expansionFrontierContext} from './frontiers.js';
 export const key = (x, y) => `${x},${y}`;
 export function rankedPlayers(players,byMax=false) { return [...players].sort((a,b)=>(byMax?((b.max?.value??-1)-(a.max?.value??-1)):b.score-a.score)||a.order-b.order); }
 export function immediateAbove(players,uid,byMax=false) { const list=rankedPlayers(players,byMax),i=list.findIndex(p=>p.id===uid); return i>0?list[i-1]:null; }
@@ -19,20 +20,20 @@ export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   const playerId=pair[pair.turn.toLowerCase()];
   return connectedTerrain(terrainOf(room),pair.terrainAnchor||pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
 }
-export function expansionOptions(terrain,active) {
+export function expansionOptions(terrain,active,room) {
   if(!terrain.length)return [{x:active.x,y:active.y}];
   const connected=connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
   for(const c of connected)for(let ox=-3;ox<=1;ox++)for(let oy=-3;oy<=1;oy++) {
     const p={x:c.x+ox,y:c.y+oy};candidates.set(key(p.x,p.y),p);
   }
-  const linked=new Set(connected.map(c=>key(c.x,c.y)));
+  const linked=new Set(connected.map(c=>key(c.x,c.y))),frontierContext=expansionFrontierContext(terrain,active,room);
   return [...candidates.values()].filter(p=>{
     let adds=false,touches=false;
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++) {
       const x=p.x+dx,y=p.y+dy;if(!known.has(key(x,y)))adds=true;
       if(linked.has(key(x,y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>linked.has(key(x+a,y+b))))touches=true;
     }
-    return adds&&touches;
+    return adds&&touches&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
   });
 }
 const canonical=points=>points.map(([x,y])=>`${x},${y}`).sort().join(';');

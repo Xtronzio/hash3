@@ -1,5 +1,23 @@
 # Pendientes de #3
 
+## Inventario: bloque R0.20.0
+
+Orden acordado por Jorge el 7 de octubre de 2026: cerrar primero el inventario y después desarrollar el bloque completo de habitantes. Implementadas para VS máquina y Sin conexión:
+
+- Tornado: selección 3×3 como al ampliar; mezcla fichas y huecos existentes, conserva símbolos, dueños, terreno y puntos. Las fichas con Escudo o Inmunidad y las reservas de Bloqueo permanecen en su lugar.
+- Bomba: elimina tres fichas en un grupo conectado al azar por vecindad de ocho direcciones, sin plantillas de línea, L o diagonal. No elimina terreno ni descuenta puntos. Junto a una Frontera puede alcanzar huecos y romper los tres segmentos de la barrera. Respeta Escudo e Inmunidad.
+- Frontera: tres segmentos en una cara seleccionable y giratoria. Bloquea las ampliaciones que crucen esa cara y el paso de habitantes en ambos sentidos; se puede rodear. Es permanente y solo Bomba la rompe. Debe dejar alguna salida para ampliar. El mapa y los guardados conservan las barreras.
+- Ayuda de ampliación: durante esa fase propone una ubicación favorable y legal para el 3×3. Consume su carta al mostrar la sugerencia; el jugador confirma la ampliación o elige otra.
+- Súper Ayuda: analiza movimientos y cartas disponibles, propone una secuencia para el turno actual con los recursos y puntos previstos, y la ejecuta tras confirmar. Cancelar no consume nada. La ejecución consume su carta y las herramientas propuestas, respeta Combo, Doble, protecciones, reloj y turno. No juega por el rival ni amplía automáticamente.
+
+Las tres ayudas están agrupadas bajo Ayuda. Se mantienen las ocho cartas iniciales, una herramienta ordinaria por turno o dos tras Combo, recarga cada cuatro turnos propios, máximo ocho cartas y dos de cada tipo. Las cinco nuevas cartas entran por la recarga; los guardados anteriores las incorporan con reserva cero. Desplazar ficha ya existía y no se duplica. Tornado y Bomba no puntúan directamente; las figuras rotas pueden reconstruirse y cobrarse con una colocación posterior.
+
+Pendiente independiente: extender el inventario a Duelo y Mundo.
+
+## Siguiente bloque: habitantes
+
+Decisiones posteriores al comportamiento original de Roedores: aparición cada 33 colocaciones propias; tres comidas separadas por 33 segundos. Bomba habitante cada 66, que vacía tres fichas; Gusano cada 99, con tres comidas adyacentes de ocho direcciones y cuerpo que bloquea. OBRA coordina tres constructores y tres destructores, con tres pasos cada 33 segundos: nueve celdas construidas y nueve eliminadas. Los proyectos deben mostrarse completos. Queda concretar la desaparición del Gusano tras la tercera comida y el reloj de zonas inactivas. Al salir de una partida personal no debe avanzar en ausencia ni ejecutar acciones acumuladas al regresar. Estas reglas todavía no están implementadas; el Roedor actual conserva su comportamiento anterior hasta completar el bloque.
+
 ## Modo inverso / puzle
 
 Anotado por Jorge el 5 de octubre de 2026. Pendiente de diseñar y desarrollar.

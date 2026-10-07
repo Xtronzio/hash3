@@ -16,14 +16,14 @@ export function thumbnailMarkup(room){
   const paths=new Map();
   for(const p of model.terrain){const part=`M${p.x+.07} ${p.y+.07}h.86v.86h-.86Z`;paths.set(p.fill,(paths.get(p.fill)||'')+part);}
   const b=model.bounds;
-  return `<svg viewBox="${b.x} ${b.y} ${b.width} ${b.height}" role="img" aria-label="Miniatura del tablero, ${model.terrain.length} casillas">${[...paths].map(([fill,d])=>`<path fill="${fill}" d="${d}"/>`).join('')}</svg>`;
+  return `<svg viewBox="${b.x} ${b.y} ${b.width} ${b.height}" role="img" aria-label="Miniatura del tablero, ${model.terrain.length} casillas">${[...paths].map(([fill,d])=>`<path fill="${fill}" d="${d}"/>`).join('')}${model.frontiers||''}</svg>`;
 }
 export function inspectionCells(model){
   return model.terrain.map(p=>`<rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" rx=".04" fill="${p.fill}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".08"':''}/>`).join('')+
     `<g class="inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${model.terrain.map(p=>p.symbol==='X'?`<path d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:'').join('')}</g>`+
     model.terrain.filter(p=>p.rodent).map(p=>`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".3" fill="none" stroke="#08090b" stroke-width=".12"/>`).join('')+
     (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="#e3e5e9" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
-    (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
+    (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'')+(model.frontiers||'');
 }
 
 export function bindInspection(panel,model,state={},interacting=()=>{}){

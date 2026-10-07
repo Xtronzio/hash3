@@ -1,2 +1,2 @@
-export const VERSION_LABEL='R0.19.10';
-export const BUILD_ID='20261007-r1910';
+export const VERSION_LABEL='R0.20.0';
+export const BUILD_ID='20261007-r200';

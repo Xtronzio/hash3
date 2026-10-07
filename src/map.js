@@ -2,6 +2,7 @@ import {bindBoardNavigation} from './board-navigation.js';
 import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {rodentIcon,rodentSleeping} from './rodents.js';
+import {frontierMarkup} from './frontiers.js';
 export function overviewCells(terrain){
  const paths=new Map();
  for(const p of terrain){const group=p.fill+(p.eaten?' eaten':''),part=`M${p.x+.07} ${p.y+.07}h.86v.86h-.86Z`;if(!paths.has(group))paths.set(group,{fill:p.fill,eaten:p.eaten,d:''});paths.get(group).d+=part;}
@@ -15,6 +16,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   let fitted={...bounds},camera=mapState.box?clampCamera(mapState.box,bounds):{...bounds},aspect=null;
   big.innerHTML=overviewCells(terrain)+'<rect class="map-view" fill="#ffffff06" stroke="#e3e5e9" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>'+(active?`<rect x="${active.x}" y="${active.y}" width="3" height="3" rx=".08" fill="${ownColor}" fill-opacity=".12" stroke="#e3e5e9" stroke-width="2.5" vector-effect="non-scaling-stroke"/><g class="map-own-pin"><circle r="7" fill="${ownColor}" stroke="#090d12" stroke-width="3"/><circle r="2" fill="#fff"/></g>`:'')+(model.target?'<g class="map-rival-pin"><path d="M0 -9 9 0 0 9 -9 0Z" fill="var(--blue)" stroke="#090d12" stroke-width="3"/></g>':'');
   panel.querySelector('.map-summary').innerHTML=`${terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${bounds.width-4} × ${bounds.height-4}</span>`;
+  big.insertAdjacentHTML('beforeend',frontierMarkup(room));
   big.insertAdjacentHTML('beforeend',(room.rodents||[]).map(r=>`<g class="map-rodent-pin" data-x="${r.x+.5}" data-y="${r.y+.5}" aria-label="Roedor, ${r.eaten}/33 comidas, ${rodentSleeping(r)?'dormido':'comiendo'}"><title>Roedor · ${r.eaten}/33 · ${rodentSleeping(r)?'dormido':'comiendo'}</title><circle r="14" fill="#151109" stroke="var(--yellow)" stroke-width="2"/><svg x="-11" y="-11" width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="var(--yellow)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${rodentIcon}</svg><text x="11" y="16" text-anchor="middle" font-size="9" fill="var(--yellow)" stroke="#151109" stroke-width="3" paint-order="stroke" font-weight="700">${r.eaten}</text>${rodentSleeping(r)?'<text x="12" y="-10" font-size="9" fill="var(--yellow)">z</text>':''}</g>`).join(''));
   const update=(immediate=false)=>{
     onNavigate(immediate===true);
