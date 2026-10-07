@@ -71,3 +71,11 @@ export const frontierDiamond='<svg viewBox="0 0 24 24" aria-hidden="true"><path 
 
 // Preserve the selected pivot across exact 90-degree clockwise rotations.
 export function rotateFrontier(selection){const i=frontierDirections.indexOf(selection.side||'north');return {...selection,side:frontierDirections[(i+1)%4]};}
+
+// A second tap on the chosen expansion anchor places the current orientation.
+export function selectFrontier(selection,point,anchors){
+ if(selection.point?.x===point.x&&selection.point?.y===point.y)return {selected:selection,confirm:true};
+ const anchor=anchors.find(a=>a.x===point.x&&a.y===point.y);
+ if(!anchor)return {selected:selection,confirm:false};
+ return {selected:{...selection,point:{x:point.x,y:point.y},side:anchor.side},confirm:false};
+}

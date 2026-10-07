@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {canUsePracticeTool,initializeInventory,completeInventoryTurn,toolCells,practiceTools} from '../src/practice-tools.js';
 import {tornadoOptions,bombBlast,frontierOptions,frontierAnchors} from '../src/area-tools.js';
-import {frontierReachable,frontierEdges,frontierMarkup,frontierTiles,frontierCells,rotateFrontier} from '../src/frontiers.js';
+import {frontierReachable,frontierEdges,frontierMarkup,frontierTiles,frontierCells,rotateFrontier,selectFrontier} from '../src/frontiers.js';
 import {expansionOptions,terrainOf,figureWindows} from '../src/game.js';
 import {activateImmunity} from '../src/immunity.js';
 import {savedMapModel,inspectionCells,thumbnailMarkup} from '../src/saved-map.js';
@@ -136,4 +136,20 @@ test('Only the expander can place Frontier before the 3×3; it preserves the pha
   assert.equal(canUsePracticeTool(enlarged,'local-o','double',now+2000),true);assert.equal(canUsePracticeTool(enlarged,'local-x','frontier',now+2000),false);
   if(timeMode==='timed'){assert.equal(canUsePracticeTool(before,'local-x','frontier',now+33000),false);assert.throws(()=>localCommand(before,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0,side:'south'},now+33000));}
  }
+});
+
+
+test('Frontier selection starts valid, keeps the rotated pivot on second tap and changes to another anchor',()=>{
+ const r=expanding(),anchors=frontierAnchors(r,'local-x');
+ const anchor=anchors.find(a=>!frontierOptions(r,'north','local-x').some(p=>p.x===a.x&&p.y===a.y));
+ assert.ok(anchor);
+ const first=selectFrontier({player:'local-x',tool:'frontier'},anchor,anchors);
+ assert.equal(first.confirm,false);
+ assert.ok(frontierOptions(r,first.selected.side,'local-x').some(p=>p.x===anchor.x&&p.y===anchor.y));
+ assert.equal(frontierTiles({...first.selected.point,side:first.selected.side}).length,3);
+ const rotated=rotateFrontier(first.selected),second=selectFrontier(rotated,anchor,anchors);
+ assert.equal(second.confirm,true);assert.deepEqual(second.selected,rotated);
+ const other=anchors.find(a=>a.x!==anchor.x||a.y!==anchor.y);
+ const changed=selectFrontier(rotated,other,anchors);assert.equal(changed.confirm,false);assert.deepEqual(changed.selected.point,{x:other.x,y:other.y});
+ const invalid=selectFrontier(rotated,{x:100000,y:100000},anchors);assert.equal(invalid.confirm,false);assert.deepEqual(invalid.selected,rotated);
 });

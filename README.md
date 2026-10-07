@@ -348,3 +348,8 @@ El tablero y el mapa tienen tres localizadores separados: Roedores, Bombas y Gus
 Reglas vigentes: roedor cada 33 colocaciones propias, bomba automática cada 66 y gusano cada 99. Roedores y gusanos comen tres fichas X/O, a intervalos de 33 segundos. El roedor escoge alimento en su zona conectada y el gusano continúa por fichas adyacentes, incluidas diagonales; el cuerpo permanece bloqueado hasta retirarse 33 segundos después de su tercera comida. La bomba automática explota tras 33 segundos, vacía tres celdas y rompe las fronteras alcanzadas sin quitar terreno ni restar puntos pagados.
 
 Validación: 180 pruebas JavaScript y compilaciones normal y GitHub Pages/offline.
+
+
+## Frontera como ampliación — R0.21.4
+
+Durante la ampliación, tocar un + elige el punto fijo y muestra las tres celdas del muro con una orientación válida. El botón de giro está en esa celda y gira exactamente 90° sin mover el punto. Una segunda pulsación en el punto seleccionado o Colocar confirma la frontera; después se coloca el 3×3 normal. Las orientaciones que pisan terreno o reservas se resaltan y no permiten colocar.
