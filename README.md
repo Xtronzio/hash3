@@ -246,3 +246,11 @@ El árbitro descarta además cualquier hueco que contenga una ficha guardada aun
 Durante el pellizco, el tablero conserva las celdas existentes y aplica una transformación visual como máximo una vez por fotograma. Al terminar el gesto reconstruye las celdas una sola vez y conserva la coordenada bajo el centro de los dedos, incluido su desplazamiento. Se puede continuar arrastrando con el dedo restante; cancelar y perder la captura liberan el gesto sin colocar fichas. Ctrl/⌘ + rueda aplica el mismo método y confirma la escala al terminar la secuencia, manteniendo el punto bajo el cursor. Los cambios de tamaño de ventana se aplazan durante la interacción.
 
 Verificado en navegador táctil con 1.999 celdas: cero reconstrucciones durante doce movimientos de pellizco y cinco eventos de rueda, una al terminar cada gesto, punto de referencia estable y colocación normal posterior. Las nuevas pruebas cubren agrupación por fotograma, anclaje, toque frente a arrastre y cancelación con un dedo restante. Las reglas y los eventos del juego conservan su funcionamiento.
+
+## Mis partidas y mapa en pausa — R0.18.0
+
+Cada fila muestra una miniatura del tablero guardado. Las salas online consultan el comando de lectura `get` al entrar en la zona visible de la lista, con dos consultas simultáneas como máximo y caché de 30 segundos. No se reingresa al jugador ni se procesan turnos al consultar la miniatura.
+
+El menú «…» permite anclar/desanclar o borrar/quitar una partida. En móvil, deslizar a la derecha ancla/desancla; si la papelera estaba visible, primero la oculta. Deslizar a la izquierda mantiene el borrado con confirmación. Las ancladas aparecen arriba, incluidas las pausadas y cerradas. El anclaje se guarda en este navegador y, para salas online, se separa por identidad. No altera el tablero ni el orden de los guardados.
+
+El mapa de pausa admite arrastre, pellizco, rueda y teclado (flechas, +/− y Home). Puede ampliarse a pantalla completa; acercarse muestra X/O. Los controles permiten extensión, territorio propio, rival y roedores cuando existen. La consulta conserva fichas, puntuación, turno y reloj; solo Retomar reanuda la partida local. En un Duelo online, la pausa sigue sujeta al estado compartido y a la votación existente. Los gestos modifican la cámara y coalescen las actualizaciones por frame sin reconstruir las celdas.

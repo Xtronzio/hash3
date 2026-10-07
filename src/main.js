@@ -1,18 +1,20 @@
 import './style.css';
 import './hall.css';
 import './board.css';
-import {bindMap,overviewCells} from './map.js';
+import {bindMap} from './map.js';
 import {bindGestures} from './gestures.js';
 import {maxLabel} from './max.js';
 import {comboLabel} from './records.js';
 import {rodentMark,rodentSleeping,rodentIcon,rodentLabel} from './rodents.js';
-import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion} from './sessions.js';
+import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin} from './sessions.js';
+import {savedMapModel,thumbnailMarkup,bindInspection} from './saved-map.js';
+import {createSnapshotQueue} from './snapshot-queue.js';
 import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
 import './sessions.css';
 import './mobile-game.css';
 import './map-overview.css';
 import './inventory-sheet.css';
-import {overviewMarkup,overviewModel} from './map-overview.js';
+import {overviewMarkup} from './map-overview.js';
 import {extensionView} from './map-camera.js';
 import {inventoryMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded,toolAllowance} from './practice-tools.js';
@@ -31,6 +33,9 @@ const read = key => {try{return localStorage.getItem(key);}catch{return null;}};
 const save = (key,value) => {try{value===null?localStorage.removeItem(key):localStorage.setItem(key,value);}catch{/* device storage may be disabled */}};
 let pairLobby=null,mapInteracting=false,mapDeferred=false,gameMenuOpen=false,worldMapOpen=false;
 let worldMapState={};
+let pauseMapOpen=false,pauseMapState={},disposeInspection=null,thumbnailObserver=null;
+const onlinePreviews=new Map();
+const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snapshot)=>onlinePreviews.set(key,{room:snapshot,at:Date.now()}));
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
 let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0;
 let figureEffect=null,figureTimer,scoreFloatTimer;
@@ -52,7 +57,11 @@ const iconPaths={play:'<path d="m8 4 12 8-12 8V4Z"/>',home:'<path d="m3 10 9-7 9
 const navIcon=kind=>`<svg viewBox="0 0 ${kind==='rodent'?'32 32':'24 24'}" aria-hidden="true" focusable="false">${iconPaths[kind]||''}</svg>`;
 const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
 function setRankingOpen(open){rankOpen=open;blinkId=null;render();document.querySelector('.ranking-toggle')?.focus({preventScroll:true});}
-bindGestures(app,{setRankingOpen});
+function pinSavedGame(row){
+ const local=row.dataset.local==='true',game=local?localGames().find(g=>g.id===row.dataset.id):myGames.online?.find(g=>g.id===row.dataset.id);if(!game)return;
+ try{const pinned=toggleGamePin(localStorage,{...game,local},uid);renderHallDialog();document.querySelector(`.saved-game[data-id="${CSS.escape(game.id)}"] [data-action="toggle-game-menu"]`)?.focus({preventScroll:true});notify(pinned?'Partida anclada.':'Partida desanclada.');}catch{notify('No se ha podido guardar el anclaje en este navegador.');}
+}
+bindGestures(app,{setRankingOpen,togglePinned:pinSavedGame});
 const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice');n.textContent=message; n.classList.add('visible');
@@ -86,7 +95,7 @@ function accept(next) {
   const previousRoom=room,feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
   if(changed)resetInventoryFeedback();
-  if(changed){rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
+  if(changed){pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};gameMenuOpen=false;previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
   updateInventoryFeedback(previousRoom,next);
@@ -100,6 +109,7 @@ function accept(next) {
   if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);scheduleMachine();
 }
 function render() {
+  if(room?.status!=='paused'){disposeInspection?.();disposeInspection=null;pauseMapOpen=false;}
   const previous=document.querySelector('.viewport');
   const scroll=previous?{left:previous.scrollLeft,top:previous.scrollTop,width:previous.clientWidth,height:previous.clientHeight}:null;
   if(pairLobby&&!room){renderPairLobby();return;}
@@ -235,9 +245,10 @@ function renderHallDialog() {
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',inventoryMarkup(null,null));
   else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking de Mundo',worldRankMarkup(hallRanking,uid));
-  }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames()}));
+  }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}));
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local});
   app.insertAdjacentHTML('beforeend',markup);
+  if(hallDialog==='games')bindOnlineThumbnails();
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
   const form=document.querySelector('#entry-form');
@@ -269,7 +280,7 @@ function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
-function clearGameView(){stopMachine();resetInventoryFeedback();room=null;inventoryOpen=false;inventorySelection=null;gameMenuOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+function clearGameView(){disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();room=null;inventoryOpen=false;inventorySelection=null;gameMenuOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
 function goToHall(){
  if(room?.status!=='paused')throw new Error('Pausa la partida antes de volver al hall.');
  if(isLocal())persistLocal(room);
@@ -285,9 +296,32 @@ async function openMyGames(){
  const request=++gamesRequest;myGames={online:[],loading:navigator.onLine,error:''};
  openHallDialog('games','hall-games');
  if(!navigator.onLine){myGames.error='Sin conexión: puedes abrir tus partidas locales. Las salas online se mostrarán al reconectar.';renderHallDialog();return;}
- try{uid=await ensurePlayer();const next=await command('my_games');if(hallDialog!=='games'||request!==gamesRequest)return;myGames.online=next.games;}
+ try{uid=await ensurePlayer();const next=await command('my_games');if(hallDialog!=='games'||request!==gamesRequest)return;myGames.online=next.games.map(g=>({...g,preview:onlinePreviews.get(`${uid}:${g.id}`)?.room}));}
  catch(error){if(hallDialog!=='games'||request!==gamesRequest)return;myGames.error=error.message||'No se han podido consultar tus salas.';}
  if(hallDialog==='games'&&request===gamesRequest){myGames.loading=false;renderHallDialog();}
+}
+function bindOnlineThumbnails(){
+ thumbnailObserver?.disconnect();
+ const request=gamesRequest,player=uid;
+ const current=()=>hallDialog==='games'&&request===gamesRequest&&player===uid;
+ const update=(game,snapshot)=>{
+   if(!current())return;game.preview=snapshot;
+   const row=document.querySelector(`.saved-game[data-local="false"][data-id="${CSS.escape(game.id)}"]`);
+   const thumbnail=row?.querySelector('.saved-game-thumbnail');if(thumbnail)thumbnail.innerHTML=thumbnailMarkup(snapshot);
+ };
+ thumbnailObserver=new IntersectionObserver(entries=>{
+   for(const entry of entries){if(!entry.isIntersecting)continue;thumbnailObserver.unobserve(entry.target);
+     const game=myGames.online?.find(g=>g.id===entry.target.dataset.id);if(!game)continue;
+     const cached=onlinePreviews.get(`${player}:${game.id}`);if(cached){update(game,cached.room);if(Date.now()-cached.at<30000)continue;}
+     requestOnlinePreview(game,player,current).then(snapshot=>{if(snapshot)update(game,snapshot);}).catch(()=>{
+       if(current()){const thumb=document.querySelector(`.saved-game[data-local="false"][data-id="${CSS.escape(game.id)}"] .saved-game-thumbnail`);if(thumb)thumb.title='No se ha podido consultar el mapa. Puedes abrir la partida.';}
+     });
+   }
+ },{rootMargin:'100px'});
+ document.querySelectorAll('.saved-game[data-local="false"]').forEach(row=>thumbnailObserver.observe(row));
+}
+function requestOnlinePreview(game,player,current){
+ return previewRequests.request(`${player}:${game.id}`,game.code,()=>current()&&myGames.online?.some(g=>g.id===game.id));
 }
 async function refreshWorldRank(){
  const request=++rankRequest;hallRanking.loading=true;hallRanking.error='';if(hallDialog==='ranking')renderHallDialog();
@@ -302,10 +336,20 @@ function renderPaused(){
  const own=ownPlayer(),totals={X:0,O:0};room.players.forEach(p=>{if(p.symbol)totals[p.symbol]+=p.score;});
  const mode=isLocal()?(room.mode==='solo'?'VS máquina':'Sin conexión'):room.kind==='duel'?'Duelo':'Sala libre';
  const timer=room.pauseDuelMs==null?'':`${Math.floor(room.pauseDuelMs/60000)}:${String(Math.floor(room.pauseDuelMs/1000)%60).padStart(2,'0')} de duelo conservados`;
- const list=gameRank(),target=above(),model=overviewModel(room,own,target);
+ const list=gameRank(),target=above()||room.players.find(p=>p.id!==uid&&p.pair===own?.pair);
  const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
- const minimap=model?`<figure class="paused-minimap" aria-label="Mapa de la partida pausada"><figcaption>${model.terrain.length.toLocaleString('es-ES')} casillas · ${model.bounds.width-4} × ${model.bounds.height-4}</figcaption><svg viewBox="${model.bounds.x} ${model.bounds.y} ${model.bounds.width} ${model.bounds.height}" role="img" aria-label="Vista del tablero guardado">${overviewCells(model.terrain)}${model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="${model.ownColor}" stroke-width="2" vector-effect="non-scaling-stroke"/>`:''}</svg></figure>`:'';
+ const inspection=savedMapModel(room,own,target);
+ const inspectButton=(action,kind,label)=>`<button data-inspect-action="${action}" aria-label="${label}" title="${label}">${navIcon(kind)}</button>`;
+ const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.active?inspectButton('own','center','Mi territorio'):''}${inspection.target?inspectButton('rival','above','Rival superior'):''}${room.rodents?.length?inspectButton('rodent','rodent','Localizar roedores'):''}${pauseMapOpen?'<button data-action="close-pause-map" aria-label="Cerrar mapa" title="Cerrar mapa">×</button>':iconButton('expand-pause-map','fit','Ampliar mapa a pantalla completa')}</nav>`:'';
+ const canvas='<svg class="inspection-canvas" tabindex="0" role="img" aria-label="Tablero guardado: arrastra o pellizca para inspeccionar. Con teclado, flechas para moverte y más o menos para acercar."></svg>';
+ const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${canvas}</section>`:'';
+ disposeInspection?.();disposeInspection=null;
  app.innerHTML=`<section class="lobby paused-game"><header class="row spread lobby-header"><span class="brand heading">#3</span><span class="tag">${VERSION_LABEL} · ${mode}</span></header><h1 class="heading">Partida pausada</h1><p class="instructions">Tablero, puntos y turno guardados.${!isLocal()?` Pausa compartida. ${escape(timer)}`:''}</p><section class="paused-scores" aria-label="Puntuación de los equipos"><strong class="x">X ${totals.X}</strong><strong class="o">O ${totals.O}</strong></section><nav class="paused-actions" aria-label="Acciones de partida pausada">${iconButton('resume','play',isLocal()?'Retomar partida':'Solicitar reanudación','class="primary"')}${iconButton('go-hall','home','Volver al hall')}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav>${voteMarkup(room.vote,uid)}<div class="paused-details">${ranking}${minimap}</div><p class="paused-turn muted">${room.timeMode==='untimed'?'Sin reloj':'Con reloj'} · ${ownPair()?.pending?'Ampliación pendiente':'Turno '+(ownPair()?.turn||'')} · ${room.level==='advanced'?'Avanzado':'Normal'}</p></section>`;
+ if(inspection){
+   if(pauseMapOpen){document.querySelector('.paused-game').inert=true;app.insertAdjacentHTML('beforeend',`<div class="inspection-overlay"><section class="inspection-panel inspection-fullscreen" role="dialog" aria-modal="true" aria-label="Mapa de la partida pausada">${mapControls}${canvas}</section></div>`);}
+   const panel=document.querySelector(pauseMapOpen?'.inspection-fullscreen':'.paused-minimap');
+   disposeInspection=bindInspection(panel,inspection,pauseMapState,value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;render();}});
+ }
  renderFinish();renderLeave();renderInventory();
 }
 function suspendLocal(){
@@ -346,6 +390,15 @@ async function run(operation) {
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
   let action=b.dataset.action;
+  if(action==='expand-pause-map'||action==='close-pause-map'){
+    pauseMapOpen=action==='expand-pause-map';renderPaused();document.querySelector(pauseMapOpen?'[data-action="close-pause-map"]':'[data-action="expand-pause-map"]')?.focus({preventScroll:true});return;
+  }
+  if(action==='toggle-game-menu'){
+    const menu=b.parentElement.querySelector('.saved-game-menu'),open=menu.hidden;
+    document.querySelectorAll('.saved-game-menu').forEach(m=>m.hidden=true);document.querySelectorAll('[data-action="toggle-game-menu"]').forEach(t=>t.setAttribute('aria-expanded','false'));
+    menu.hidden=!open;b.setAttribute('aria-expanded',String(open));return;
+  }
+  if(action==='pin-game'){pinSavedGame(b.closest('.saved-game'));return;}
   if(action==='invalid-cell'){if(!busy&&room?.status==='playing'&&ownPair()?.turn===ownPlayer()?.symbol&&!ownPair()?.pending){b.classList.remove('invalid-flash');void b.offsetWidth;b.classList.add('invalid-flash');setTimeout(()=>b.classList.remove('invalid-flash'),360);}return;}
   if(action==='delete-game'){
     const local=b.dataset.local==='true',game=local?localGames().find(g=>g.id===b.dataset.id):myGames.online?.find(g=>g.id===b.dataset.id);
@@ -356,7 +409,7 @@ app.addEventListener('click',async e=>{
     const target=pendingDelete;if(!target)return;
     await run(async()=>{
       if(target.local)deleteLocalGame(localStorage,target.id);
-      else {uid=await ensurePlayer();await command('remove_game',{code:target.code});myGames.online=myGames.online?.filter(g=>g.id!==target.id)||[];}
+      else {uid=await ensurePlayer();await previewRequests.get(`${uid}:${target.id}`)?.catch(()=>{});await command('remove_game',{code:target.code});myGames.online=myGames.online?.filter(g=>g.id!==target.id)||[];}
       pendingDelete=null;document.querySelector('.delete-dialog')?.remove();renderHallDialog();
     });return;
   }
@@ -489,6 +542,12 @@ document.addEventListener('keydown',e=>{
     const next=e.key==='Home'?0:e.key==='End'?hallModes.length-1:(i+step+hallModes.length)%hallModes.length;
     hallMode=hallModes[next].id;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
   }
+  if(pauseMapOpen){
+    if(e.key==='Escape'){e.preventDefault();pauseMapOpen=false;renderPaused();document.querySelector('[data-action="expand-pause-map"]')?.focus({preventScroll:true});return;}
+    if(e.key==='Tab'){const nodes=[...document.querySelectorAll('.inspection-fullscreen button,.inspection-fullscreen [tabindex="0"]')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
+    return;
+  }
+  if(e.key==='Escape'&&document.querySelector('.saved-game-menu:not([hidden])')){e.preventDefault();const menu=document.querySelector('.saved-game-menu:not([hidden])');menu.hidden=true;const toggle=menu.parentElement.querySelector('[data-action="toggle-game-menu"]');toggle.setAttribute('aria-expanded','false');toggle.focus();return;}
   if(pendingDelete){
     if(e.key==='Escape'){e.preventDefault();if(pendingDelete){pendingDelete=null;document.querySelector('.delete-dialog')?.remove();}else{inventoryOpen=false;document.querySelector('.inventory-dialog')?.remove();}return;}
     if(e.key==='Tab'){const selector=pendingDelete?'.delete-dialog':'.inventory-dialog',nodes=[...document.querySelectorAll(selector+' button:not(:disabled)')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
@@ -654,7 +713,7 @@ function updateOfflineStatus() {
   n.textContent=navigator.serviceWorker?.controller?'Preparado para jugar sin conexión.':'Los modos locales no necesitan cobertura durante la partida. Abre esta web una primera vez con internet.';
 }
 startUpdates({
-  canReload:()=>(!room||room.status!=='playing')&&!pairLobby&&!worldMapOpen&&!gameMenuOpen&&!mapInteracting&&!busy&&!pendingDelete&&!inventoryOpen&&!hallDialog&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
+  canReload:()=>(!room||room.status!=='playing')&&!pairLobby&&!worldMapOpen&&!pauseMapOpen&&!gameMenuOpen&&!mapInteracting&&!busy&&!pendingDelete&&!inventoryOpen&&!hallDialog&&!localSetup&&!roomSetup&&!finishOpen&&!leaveOpen&&(!figureEffect||figureEffect.floatUntil<=performance.now())&&!document.activeElement?.matches('input,textarea'),
   beforeReload:()=>{
     if(isLocal()){save('hash3_local',JSON.stringify(room));try{sessionStorage.setItem('hash3_restore_local','1');}catch{/* The saved game remains available from the start screen. */}}
   },

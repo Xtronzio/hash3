@@ -30,3 +30,32 @@
 .paused-game .paused-turn{font-size:11px;line-height:1.5;margin-top:12px}
 @media(max-width:600px){.paused-details{grid-template-columns:minmax(0,1fr)}.paused-game{padding:14px 12px}.paused-game .lobby-header{margin-bottom:12px}.paused-game .paused-actions{margin-bottom:12px}.paused-ranking ol{max-height:180px}}
 @media(max-height:450px) and (orientation:landscape){.paused-game .lobby-header{margin-bottom:6px}.paused-game h1{font-size:24px}.paused-game .paused-scores{padding:6px 0}.paused-details{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}.paused-minimap svg{height:160px}}
+
+/* Recognise a saved board without opening it. */
+.saved-game .saved-game-info.saved-game-open{display:flex;align-items:center;gap:12px;padding:12px 8px}
+.saved-game-thumbnail{width:92px;height:76px;flex:none;display:grid;place-items:center;border:1px solid #29313d;border-radius:7px;background:#090d12;overflow:hidden}
+.saved-game-thumbnail svg{width:100%;height:100%;padding:4px;stroke:none}
+.saved-map-pending{color:var(--muted);font-size:22px}
+.saved-game-copy{display:grid;gap:5px;flex:1;min-width:0}.saved-game-copy>strong{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.saved-game-pin{color:var(--yellow);display:inline-flex}.saved-game-pin svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.saved-game .saved-game-more{display:block!important}.saved-game-actions{position:relative}.saved-game .saved-game-front{gap:4px}
+.saved-game-menu{position:absolute;right:46px;top:50%;transform:translateY(-50%);width:148px;background:#1b232e;border:1px solid #475263;border-radius:8px;padding:4px;z-index:5;box-shadow:0 4px 16px #0008}
+.saved-game-menu[hidden]{display:none}.saved-game-menu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;min-height:40px;padding:8px;font-size:13px}
+.saved-game-menu button[data-action="delete-game"]{color:var(--red)}.saved-game-menu svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.saved-game.is-pinned{border-left:2px solid var(--yellow)}
+/* One camera draws each paused snapshot once; gestures only change its viewBox. */
+.inspection-panel{min-width:0;background:#11161d;border:1px solid #283241;border-radius:9px;padding:6px;display:flex;flex-direction:column;gap:6px}
+.inspection-controls{display:flex;align-items:center;gap:4px;flex:none}.inspection-controls>span{flex:1;min-width:0;font-size:10px;color:var(--muted);line-height:1.4;font-variant-numeric:tabular-nums}.inspection-controls .map-dimensions{display:inline-block;white-space:nowrap}
+.inspection-controls button{width:40px;height:40px;min-height:40px;flex:none;padding:8px;font-size:25px;display:grid;place-items:center;background:#1b232e;border-color:#354255}
+.inspection-controls button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.inspection-controls button[data-inspect-action="rival"]{color:var(--blue)}.inspection-controls button[data-inspect-action="rodent"]{color:var(--yellow)}
+.paused-game .paused-minimap .inspection-canvas,.inspection-fullscreen .inspection-canvas{display:block;width:100%;height:clamp(220px,38dvh,340px);min-height:80px;border:1px solid #283241;border-radius:6px;background:#090d12;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;fill:none}
+.inspection-canvas:active{cursor:grabbing}.inspection-canvas:focus-visible{outline:2px solid var(--blue);outline-offset:1px}.inspection-symbols{display:none}.show-symbols .inspection-symbols{display:block}
+.inspection-overlay{position:fixed;inset:0;z-index:100;background:#08090b;display:flex;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overscroll-behavior:contain}
+.inspection-fullscreen{width:100%;height:100%;max-width:none}.inspection-fullscreen .inspection-canvas{height:auto;flex:1;min-height:0}.inspection-fullscreen .inspection-controls>span{font-size:11px}
+body:has(.inspection-overlay){overflow:hidden}
+@media(max-width:600px){.saved-game-thumbnail{width:74px;height:70px}.saved-game .saved-game-info.saved-game-open{gap:9px;padding:12px 6px}.saved-game-copy>small{font-size:10px}.saved-game .saved-game-actions .saved-game-more{width:38px;min-width:38px}.saved-game-menu{right:39px;width:138px}.paused-game .paused-minimap .inspection-canvas{height:clamp(240px,38dvh,340px)}}
+@media(max-width:360px){.saved-game-thumbnail{width:62px;height:64px}.inspection-controls{gap:2px}.inspection-controls button{width:36px;min-height:40px;padding:6px}}
+@media(min-width:601px){.paused-details{grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr)}}
+@media(max-height:450px) and (orientation:landscape){.paused-game .paused-minimap .inspection-canvas{height:180px}}
+.inspection-controls button svg{border:0;border-radius:0;background:transparent;min-height:0}

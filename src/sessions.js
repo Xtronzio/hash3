@@ -1,5 +1,11 @@
 import {localCommand} from './local.js';
 const valid=g=>g&&typeof g.id==='string'&&['solo','local'].includes(g.mode)&&Array.isArray(g.players)&&Array.isArray(g.pairs)&&['playing','paused','finished'].includes(g.status);
+export const gamePinKey=(game,uid='')=>game.local||game.mode?`local:${game.id}`:`online:${uid}:${game.id}`;
+export function loadGamePins(storage){try{const pins=JSON.parse(storage.getItem('hash3_game_pins'));return Array.isArray(pins)?pins.filter(p=>typeof p==='string'):[];}catch{return [];}}
+export function toggleGamePin(storage,game,uid=''){
+ const pins=loadGamePins(storage),id=gamePinKey(game,uid),pinned=!pins.includes(id),next=pinned?[...pins,id]:pins.filter(p=>p!==id);
+ storage.setItem('hash3_game_pins',JSON.stringify(next));return pinned;
+}
 export function loadLocalGames(storage,now=Date.now()){
   let games=[],canonical=false;try{const list=JSON.parse(storage.getItem('hash3_locals'));if(Array.isArray(list)){games=list.filter(valid);canonical=true;}}catch{}
   try{const old=JSON.parse(storage.getItem('hash3_local'));if(!canonical&&valid(old)&&!games.some(g=>g.id===old.id)){

@@ -3,7 +3,7 @@ export function swipeDirection(dx,dy,axis,threshold=44){
  const primary=axis==='x'?dx:dy,secondary=axis==='x'?dy:dx;
  return Math.abs(primary)>=threshold&&Math.abs(primary)>Math.abs(secondary)*1.4?Math.sign(primary):0;
 }
-export function bindGestures(root,{setRankingOpen}){
+export function bindGestures(root,{setRankingOpen,togglePinned=()=>{}}){
  let gesture=null,suppressUntil=0;
  const reveal=(row,open)=>{
   root.querySelectorAll('.saved-game.is-revealed').forEach(other=>{if(other!==row)reveal(other,false);});
@@ -34,7 +34,9 @@ export function bindGestures(root,{setRankingOpen}){
   const direction=swipeDirection(e.clientX-current.x,e.clientY-current.y,current.handle?'y':'x',current.handle?32:44);
   if(!direction)return;
   if(current.handle)setRankingOpen(direction>0);
-  else reveal(current.row,direction<0);
+  else if(direction<0)reveal(current.row,true);
+  else if(current.row.classList.contains('is-revealed'))reveal(current.row,false);
+  else togglePinned(current.row);
  };
  root.addEventListener('pointerup',e=>end(e));
  root.addEventListener('pointercancel',e=>end(e,true));
