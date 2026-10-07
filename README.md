@@ -353,3 +353,8 @@ Validación: 180 pruebas JavaScript y compilaciones normal y GitHub Pages/offlin
 ## Frontera como ampliación — R0.21.4
 
 Durante la ampliación, tocar un + elige el punto fijo y muestra las tres celdas del muro con una orientación válida. El botón de giro está en esa celda y gira exactamente 90° sin mover el punto. Una segunda pulsación en el punto seleccionado o Colocar confirma la frontera; después se coloca el 3×3 normal. Las orientaciones que pisan terreno o reservas se resaltan y no permiten colocar.
+
+
+## Icono de gusano — R0.21.5
+
+El gusano tiene cuerpo alargado y curvado, segmentos transversales, cabeza y ojo. El mismo SVG se usa en el tablero, localizadores y mapas guardados.
