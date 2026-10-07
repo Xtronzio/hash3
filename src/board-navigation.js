@@ -5,7 +5,7 @@ export function bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting
  if(!board||!space)return;
  const controller=new AbortController();
  const listen=(type,fn,options={})=>viewport.addEventListener(type,fn,{...options,signal:controller.signal});
- const pointers=new Map();let drag=null,pinch=null,wheel=null,frame=0,wheelTimer=0,suppressUntil=0;
+ const pointers=new Map();let drag=null,pan=null,pinch=null,wheel=null,frame=0,wheelTimer=0,suppressUntil=0;
  const clamp=value=>Math.max(layout.minZoom??.3,Math.min(2.2,value));
  const midpoint=()=>{const [a,b]=[...pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};};
  const distance=()=>{const [a,b]=[...pointers.values()];return Math.max(1,Math.hypot(a.x-b.x,a.y-b.y));};
@@ -16,7 +16,9 @@ export function bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting
   return {baseZoom:zoom,requested:zoom,pixel,screen:local,width:parseFloat(board.style.width),height:parseFloat(board.style.height),point:{x:layout.minX+(pixel.x-layout.padding)/layout.size,y:layout.minY+(pixel.y-layout.padding)/layout.size}};
  };
  const preview=()=>{
-  frame=0;const state=pinch||wheel;if(!state||!viewport.isConnected)return;
+  frame=0;if(!viewport.isConnected)return;
+  if(pan){viewport.scrollLeft=pan.left;viewport.scrollTop=pan.top;pan=null;update();return;}
+  const state=pinch||wheel;if(!state)return;
   const factor=state.requested/state.baseZoom;
   space.style.width=`${state.width*factor}px`;space.style.height=`${state.height*factor}px`;
   board.style.transform=`scale(${factor})`;layout.previewScale=factor;
@@ -24,6 +26,7 @@ export function bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting
   update();
  };
  const queue=()=>{if(!frame)frame=requestAnimationFrame(preview);};
+ const flushPan=()=>{if(pan){cancelAnimationFrame(frame);preview();}};
  const commit=state=>{
   if(frame){cancelAnimationFrame(frame);frame=0;}
   if(!state||!viewport.isConnected)return;
@@ -43,20 +46,21 @@ export function bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting
  },{passive:false});
  listen('pointerdown',e=>{
   if(e.button!==0||pointers.size>=2||e.target.closest('.game-minimap,.world-map'))return;
-  finishWheel();interacting(true);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  finishWheel();flushPan();interacting(true);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size===1)drag={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
   if(pointers.size===2){pinch={...start(midpoint()),distance:distance()};drag=null;suppressUntil=Infinity;for(const id of pointers.keys())viewport.setPointerCapture(id);}
  });
  listen('pointermove',e=>{
   if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch&&pointers.size>=2){e.preventDefault();pinch.requested=clamp(pinch.baseZoom*distance()/pinch.distance);pinch.screen=screen(midpoint());queue();return;}
-  if(drag&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>6){
+  if(drag&&(drag.moved||Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>6)){
    e.preventDefault();suppressUntil=Infinity;viewport.setPointerCapture(e.pointerId);
-   viewport.scrollLeft=drag.left+drag.x-e.clientX;viewport.scrollTop=drag.top+drag.y-e.clientY;update();
+   drag.moved=true;pan={left:drag.left+drag.x-e.clientX,top:drag.top+drag.y-e.clientY};queue();
   }
  },{passive:false});
  const end=e=>{
   if(!pointers.has(e.pointerId))return;
+  flushPan();
   pointers.delete(e.pointerId);
   if(pinch&&pointers.size<2){const state=pinch;pinch=null;commit(state);}
   if(viewport.hasPointerCapture(e.pointerId))viewport.releasePointerCapture(e.pointerId);

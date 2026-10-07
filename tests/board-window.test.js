@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cellIndex,viewportWindow,reconcileCells} from '../src/board-window.js';
+import {cellIndex,viewportWindow,viewportCellWindow,cachedCellWindow,reconcileCells} from '../src/board-window.js';
 import {clampBoardZoom} from '../src/map-camera.js';
 
 test('Large terrain renders only the viewport and margin, including negative and distant coordinates',()=>{
@@ -29,4 +29,17 @@ test('Pan preserves overlapping DOM nodes and removes offscreen cells',()=>{
  const state=reconcileCells(container,[{id:'a',markup:'a'},{id:'b',markup:'b'}]),b=state.get('b').node;
  reconcileCells(container,[{id:'b',markup:'b'},{id:'c',markup:'c'}],state);
  assert.equal(created,3);assert.equal(state.get('b').node,b);assert.equal(nodes.length,2);assert.ok(!state.has('a'));
+});
+test('Pixel pans reuse the window; crossing an edge only prepares newly visible cells',()=>{
+ const cells=Array.from({length:100000},(_,i)=>({x:i%1000,y:Math.floor(i/1000)}));
+ let prepared=0;const cache=cachedCellWindow(cellIndex(cells),p=>{prepared++;return `${p.x},${p.y}`;});
+ const viewport={scrollLeft:520,scrollTop:510,clientWidth:390,clientHeight:500},layout={minX:0,minY:0,padding:100,size:50};
+ const first=cache.query(viewportCellWindow(viewport,layout));assert.ok(first.length<200);
+ const count=prepared;viewport.scrollLeft+=1;
+ assert.equal(cache.query(viewportCellWindow(viewport,layout)),first);assert.equal(prepared,count);
+ viewport.scrollLeft+=50;const next=cache.query(viewportCellWindow(viewport,layout));
+ assert.ok(prepared-count<20);assert.equal(next.find(e=>e.id==='cell:10,10'),first.find(e=>e.id==='cell:10,10'));
+ const before=prepared;cache.query(viewportCellWindow(viewport,layout),'changed');assert.equal(prepared-before,next.length);
+ const far={x:700,y:70,width:10,height:10};cache.query(far);const after=prepared;cache.query(viewportCellWindow(viewport,layout),'changed');
+ assert.equal(prepared-after,next.length); // Offscreen markup is not retained indefinitely.
 });

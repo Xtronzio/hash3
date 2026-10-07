@@ -1,4 +1,8 @@
-# #3 — R0.19.2
+# #3 — R0.19.3
+
+## Arrastre del tablero · R0.19.3
+
+El arrastre agrupa los movimientos por fotograma y aplica la última posición antes de terminar el gesto. La ventana detallada se actualiza al cruzar el borde de una celda; reutiliza el contenido de las fichas que siguen visibles y conserva una caché limitada a esa ventana. El mapa oculto deja de medir y actualizar sus elementos durante la navegación. El pellizco dibuja las nuevas celdas en el mismo fotograma de su transformación. Se mantiene la colocación con un toque, sin colocar tras un arrastre, y el marco activo blanco de R0.19.2.
 
 ## Marco activo · R0.19.2
 

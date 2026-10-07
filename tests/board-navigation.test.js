@@ -4,7 +4,7 @@ import {bindBoardNavigation} from '../src/board-navigation.js';
 
 function harness(){
  const listeners=new Map(),frames=new Map(),classes=new Set(),captures=new Set(),commits=[],interactions=[];
- let id=0,stopped=false;
+ let id=0,stopped=false,updates=0;
  const previous={request:globalThis.requestAnimationFrame,cancel:globalThis.cancelAnimationFrame};
  globalThis.requestAnimationFrame=fn=>{frames.set(++id,fn);return id;};
  globalThis.cancelAnimationFrame=n=>frames.delete(n);
@@ -15,9 +15,10 @@ function harness(){
   setPointerCapture:id=>captures.add(id),hasPointerCapture:id=>captures.has(id),releasePointerCapture:id=>captures.delete(id),
   addEventListener:(kind,fn)=>listeners.set(kind,fn)};
  const layout={minX:-5,minY:3,size:48,padding:100};
- bindBoardNavigation({viewport,layout,zoom:1,changeZoom:(...args)=>commits.push(args),interacting:value=>interactions.push(value),update:()=>{}});
+ const dispose=bindBoardNavigation({viewport,layout,zoom:1,changeZoom:(...args)=>commits.push(args),interacting:value=>interactions.push(value),update:()=>{updates++;}});
  const send=(kind,id,x,y)=>listeners.get(kind)?.({pointerId:id,button:0,clientX:x,clientY:y,target:{closest:()=>null},preventDefault:()=>{},stopPropagation:()=>{stopped=true;}});
- return {board,space,viewport,classes,commits,interactions,send,
+ return {board,space,viewport,classes,commits,interactions,send,dispose,
+  get updates(){return updates;},get pendingFrames(){return frames.size;},
   flush:()=>{for(const [n,fn] of [...frames]){frames.delete(n);fn();}},
   get stopped(){return stopped;},restore:()=>{globalThis.requestAnimationFrame=previous.request;globalThis.cancelAnimationFrame=previous.cancel;}};
 }
@@ -39,7 +40,7 @@ test('Tap never zooms or suppresses placement; dragging suppresses its trailing 
  const h=harness();try{
   h.send('pointerdown',1,110,120);h.send('pointerup',1,110,120);h.send('click',1,110,120);
   assert.equal(h.commits.length,0);assert.equal(h.stopped,false);assert.equal(h.interactions.at(-1),false);
-  h.send('pointerdown',1,110,120);h.send('pointermove',1,150,140);assert.equal(h.viewport.scrollLeft,260);assert.equal(h.viewport.scrollTop,180);
+  h.send('pointerdown',1,110,120);h.send('pointermove',1,150,140);h.flush();assert.equal(h.viewport.scrollLeft,260);assert.equal(h.viewport.scrollTop,180);
   h.send('pointerup',1,150,140);h.send('click',1,150,140);assert.equal(h.stopped,true);assert.equal(h.commits.length,0);
  }finally{h.restore();}
 });
@@ -47,7 +48,33 @@ test('Cancelled pinch clears the preview, commits once, and allows the remaining
  const h=harness();try{
   h.send('pointerdown',1,110,120);h.send('pointerdown',2,210,120);h.send('pointermove',2,160,120);h.flush();
   h.send('pointercancel',2,160,120);assert.equal(h.commits.length,1);assert.equal(h.board.style.transform,'');
-  const left=h.viewport.scrollLeft;h.send('pointermove',1,90,120);assert.equal(h.viewport.scrollLeft,left+20);
+  const left=h.viewport.scrollLeft;h.send('pointermove',1,90,120);h.flush();assert.equal(h.viewport.scrollLeft,left+20);
   h.send('pointerup',1,90,120);assert.equal(h.commits.length,1);assert.equal(h.interactions.at(-1),false);
+ }finally{h.restore();}
+});
+test('Fast dragging paints once per frame and flushes the final pending position on release',()=>{
+ const h=harness();try{
+  h.send('pointerdown',1,110,120);
+  for(let i=0;i<1000;i++)h.send('pointermove',1,130+i/100,140+i/100);
+  assert.equal(h.pendingFrames,1);assert.equal(h.updates,0);h.flush();
+  assert.equal(h.updates,1);assert.equal(h.viewport.scrollLeft,270.01);
+  h.send('pointermove',1,145,150);h.send('pointerup',1,145,150);
+  assert.equal(h.viewport.scrollLeft,265);assert.equal(h.viewport.scrollTop,170);
+  assert.equal(h.updates,2);assert.equal(h.pendingFrames,0);h.flush();assert.equal(h.updates,2);
+ }finally{h.restore();}
+});
+test('A drag returning within the initial threshold still follows the finger',()=>{
+ const h=harness();try{
+  h.send('pointerdown',1,110,120);h.send('pointermove',1,150,120);h.flush();
+  h.send('pointermove',1,112,120);h.send('pointerup',1,112,120);
+  assert.equal(h.viewport.scrollLeft,298);h.send('click',1,112,120);assert.equal(h.stopped,true);
+ }finally{h.restore();}
+});
+test('A second finger starts its pinch from the pending drag position; disposal cancels pending work',()=>{
+ const h=harness();try{
+  h.send('pointerdown',1,110,120);h.send('pointermove',1,150,120);
+  h.send('pointerdown',2,250,120);assert.equal(h.viewport.scrollLeft,260);assert.equal(h.updates,1);
+  h.send('pointermove',2,260,120);assert.equal(h.pendingFrames,1);h.dispose();h.flush();
+  assert.equal(h.updates,1);assert.equal(h.commits.length,0);
  }finally{h.restore();}
 });

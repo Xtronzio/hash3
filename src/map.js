@@ -16,9 +16,10 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   big.innerHTML=overviewCells(terrain)+'<rect class="map-view" fill="#ffffff06" stroke="#e3e5e9" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>'+(active?`<rect x="${active.x}" y="${active.y}" width="3" height="3" rx=".08" fill="${ownColor}" fill-opacity=".12" stroke="#e3e5e9" stroke-width="2.5" vector-effect="non-scaling-stroke"/><g class="map-own-pin"><circle r="7" fill="${ownColor}" stroke="#090d12" stroke-width="3"/><circle r="2" fill="#fff"/></g>`:'')+(model.target?'<g class="map-rival-pin"><path d="M0 -9 9 0 0 9 -9 0Z" fill="var(--blue)" stroke="#090d12" stroke-width="3"/></g>':'');
   panel.querySelector('.map-summary').innerHTML=`${terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${bounds.width-4} × ${bounds.height-4}</span>`;
   big.insertAdjacentHTML('beforeend',(room.rodents||[]).map(r=>`<g class="map-rodent-pin" data-x="${r.x+.5}" data-y="${r.y+.5}" aria-label="Roedor, ${r.eaten}/33 comidas, ${rodentSleeping(r)?'dormido':'comiendo'}"><title>Roedor · ${r.eaten}/33 · ${rodentSleeping(r)?'dormido':'comiendo'}</title><circle r="14" fill="#151109" stroke="var(--yellow)" stroke-width="2"/><svg x="-11" y="-11" width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="var(--yellow)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${rodentIcon}</svg><text x="11" y="16" text-anchor="middle" font-size="9" fill="var(--yellow)" stroke="#151109" stroke-width="3" paint-order="stroke" font-weight="700">${r.eaten}</text>${rodentSleeping(r)?'<text x="12" y="-10" font-size="9" fill="var(--yellow)">z</text>':''}</g>`).join(''));
-  const update=()=>{
-    onNavigate();
+  const update=(immediate=false)=>{
+    onNavigate(immediate===true);
     if(!big.isConnected){observer.disconnect();return;}
+    if(panel.hidden)return;
     const rect=big.getBoundingClientRect();
     if(rect.width&&rect.height){
       fitted=fitOverview(bounds,rect);
@@ -90,6 +91,6 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   big.addEventListener('pointerup',e=>endMap(e));big.addEventListener('pointercancel',e=>endMap(e,true));big.addEventListener('lostpointercapture',e=>endMap(e,true));
   const observer=new ResizeObserver(update);observer.observe(big);
   viewport.addEventListener('scroll',update,{passive:true});requestAnimationFrame(update);
-  const disposeNavigation=bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting,update});
-  return ()=>{observer.disconnect();disposeNavigation?.();};
+  const disposeNavigation=bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting,update:()=>update(true)});
+  return ()=>{observer.disconnect();viewport.removeEventListener('scroll',update);disposeNavigation?.();};
 }
