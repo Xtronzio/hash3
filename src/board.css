@@ -33,3 +33,7 @@
 .game .rodent-mark.sleeping{background:transparent;opacity:.6}.game .rodent-mark.sleeping svg{width:42%;height:42%;position:absolute;left:0;top:0}
 .game .rodent-mark small{position:absolute;left:35%;top:0;font-size:12px}
 .map-key.rodent{background:var(--yellow);border-color:var(--yellow)}
+
+.game .board-space{position:relative;overflow:hidden;flex:none}
+.game .board-space .board{margin:0;transform-origin:0 0}
+.game .board-space.is-navigating .board{will-change:transform}

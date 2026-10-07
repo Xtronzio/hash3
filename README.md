@@ -239,3 +239,10 @@ La pantalla de pausa reúne retomar, hall, mis partidas y finalizar en una fila 
 Los botones de huecos de ACTIVAR CELDA usan posición absoluta, igual que las celdas del tablero. Antes heredaban posición relativa y se desplazaban en el flujo de la página, pudiendo aparecer sobre fichas aunque sus coordenadas lógicas fueran huecos. Los marcadores y sus zonas de toque coinciden ahora con las coordenadas que activan, también al alejar el tablero.
 
 El árbitro descarta además cualquier hueco que contenga una ficha guardada aunque falte su entrada en el terreno. La carta sigue añadiendo una sola celda vacía adyacente al territorio conectado, conserva las fichas y el turno y permite puntuar con la colocación normal posterior. Verificado en navegador a 320 y 390 px con varios niveles de zoom, además de 124 pruebas de reglas.
+
+
+## Navegación continua de tableros grandes — R0.17.7
+
+Durante el pellizco, el tablero conserva las celdas existentes y aplica una transformación visual como máximo una vez por fotograma. Al terminar el gesto reconstruye las celdas una sola vez y conserva la coordenada bajo el centro de los dedos, incluido su desplazamiento. Se puede continuar arrastrando con el dedo restante; cancelar y perder la captura liberan el gesto sin colocar fichas. Ctrl/⌘ + rueda aplica el mismo método y confirma la escala al terminar la secuencia, manteniendo el punto bajo el cursor. Los cambios de tamaño de ventana se aplazan durante la interacción.
+
+Verificado en navegador táctil con 1.999 celdas: cero reconstrucciones durante doce movimientos de pellizco y cinco eventos de rueda, una al terminar cada gesto, punto de referencia estable y colocación normal posterior. Las nuevas pruebas cubren agrupación por fotograma, anclaje, toque frente a arrastre y cancelación con un dedo restante. Las reglas y los eventos del juego conservan su funcionamiento.
