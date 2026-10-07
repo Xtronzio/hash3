@@ -77,3 +77,11 @@ body:has(.inspection-overlay){overflow:hidden}
 .inventory-start svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .saved-group-heading .saved-group-label{font-size:20px;font-family:'Barlow Condensed',Impact,sans-serif;text-transform:uppercase;font-weight:700}
 .saved-group-heading .saved-group-count{color:var(--muted);font-size:18px}
+
+/* Group navigation into one row, with the home action at the right edge. */
+.hall-dialog-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hall-dialog-footer button[aria-label]{flex:none;width:48px;height:48px;min-height:48px;padding:10px;display:grid;place-items:center}
+.hall-dialog-footer svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hall-dialog-footer .saved-games-home{margin-left:auto}
+.hall-dialog-footer:has(.saved-games-home){justify-content:flex-start;gap:8px}
+@media(max-width:360px){.hall-dialog-heading h2{font-size:26px;min-width:0;overflow-wrap:anywhere}}

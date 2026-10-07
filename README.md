@@ -1,4 +1,8 @@
-# #3 — R0.19.8
+# #3 — R0.19.9
+
+## Fila de navegación · R0.19.9
+
+El catálogo reúne sus tres accesos y la casa en el mismo pie. La casa queda a la derecha. Se guarda en AGENTS.md el criterio de agrupar los iconos en una línea siempre que haya espacio, manteniendo el tamaño táctil y evitando desbordamientos; la vuelta al inicio ocupa el extremo derecho.
 
 ## Destruir celda y accesos · R0.19.8
 
