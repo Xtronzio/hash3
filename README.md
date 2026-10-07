@@ -1,4 +1,8 @@
-# #3 — R0.19.6
+# #3 — R0.19.7
+
+## Marcador desplegable · R0.19.7
+
+La puntuación inferior incorpora una pestaña que despliega y recoge una sección informativa sobre la propia botonera. Se elimina el emergente, el fondo oscurecido, la flecha de salida, el botón de volver y los controles de navegación y compartir del marcador. El panel solo muestra datos, conserva la cámara y permite seguir navegando por el tablero y usando la botonera. Escape recoge la sección; el reloj continúa.
 
 ## Inventario y partidas · R0.19.6
 

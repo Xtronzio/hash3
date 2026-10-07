@@ -5,12 +5,13 @@
 .game .turn-clocks{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}
 .game .compact-turnbar .turn-timer{font-size:22px;line-height:1.1;white-space:nowrap}
 .game .compact-turnbar .duel-clock{font-size:10px;white-space:nowrap;color:var(--muted)}
-.game .turn-timer[hidden],.game .score-dialog[hidden]{display:none}
-.game button.team-score-bottom{width:100%;grid-template-columns:1fr 1fr;text-align:left;border-inline:0;border-radius:0;cursor:pointer}
+.game .turn-timer[hidden],.game .score-sheet[hidden]{display:none}
+.game button.team-score-bottom{width:100%;position:relative;grid-template-columns:1fr 1fr;text-align:left;border-inline:0;border-radius:0;cursor:pointer}
 .game .team-score-bottom:hover,.game .team-score-bottom:focus-visible{background:#1a1d24}
 .game .game-bottom button[data-action="abandon"]{border:0;background:transparent;padding:6px;min-height:44px}
-.game .score-dialog{z-index:30;padding:12px}
-.game .score-panel{width:min(100%,560px);padding:18px;max-height:88dvh}
+.game .game-dock{position:relative}
+.game .score-sheet{position:absolute;z-index:15;bottom:100%;left:0;right:0;background:#101319;border:1px solid #414754;border-bottom:0;border-radius:12px 12px 0 0;overflow:auto;overscroll-behavior:contain;box-shadow:0 -4px 12px #0004}
+.game .score-panel{width:100%;padding:18px;max-height:min(68dvh,calc(100dvh - 170px));box-sizing:border-box}
 .game .score-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 .game .score-panel-heading h2{font-size:28px;margin:0}
 .game .score-panel-heading button{width:44px;height:44px;padding:9px;display:grid;place-items:center;flex:none}
@@ -26,3 +27,12 @@
 .game .score-panel .rank-columns,.game .score-panel .rank-row{grid-template-columns:20px minmax(0,1fr) 55px 70px;gap:6px;padding-inline:0}
 @media(max-width:600px){.game .compact-turnbar .turn-state{font-size:16px}.game .compact-turnbar .brand{font-size:23px}.game .score-panel{padding:16px}.game .score-panel .rank-name{font-size:12px}}
 @media(max-height:450px) and (orientation:landscape){.game .compact-turnbar{min-height:36px;padding:2px 0}.game button.team-score-bottom{width:45%}}
+
+.game .score-disclosure-tab{position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:46px;height:28px;display:grid;place-items:center;border:1px solid #596273;border-radius:8px 8px 0 0;background:#202630;color:#e3e5e9}
+.game .score-disclosure-tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(180deg)}
+.game .team-score-bottom[aria-expanded=true] .score-disclosure-tab svg{transform:none}
+.game .team-score-bottom[aria-expanded=true]{border-top-color:#596273}
+.game .score-panel .rank-name{white-space:normal}
+.game .score-panel .rank-name small{display:block}
+.game .score-panel .connection{display:inline}
+@media(max-height:450px) and (orientation:landscape){.game .score-panel{max-height:calc(100dvh - 110px);padding:12px}.game .score-disclosure-tab{top:4px}.game .game-details{grid-template-columns:1fr 1fr}}
