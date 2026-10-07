@@ -29,9 +29,9 @@ import {frontierAnchors} from './area-tools.js';
 import {useExpansionHint,planSuperHelp,suggestExpansion,executeSuperHelp} from './assistance.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
-import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, connectedTerrain, availableCells,isBlockedCell} from './game.js';
+import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, playableTerrain, availableCells,isBlockedCell} from './game.js';
 
-import {createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
+import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
 import {scoreFeedback,scoreBreakdown} from './feedback.js';
 import {VERSION_LABEL} from './version.js';
 import {startUpdates} from './updates.js';
@@ -112,6 +112,7 @@ function updateInventoryFeedback(previous,next){
 }
 function accept(next) {
   if(next.not_modified)return;
+  if(next.mode)next=reconcileLocalBoard(next);
   if(room?.id===next.id&&next.version<room.version)return;
   const previousRoom=room,feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
@@ -226,7 +227,7 @@ function drawBoard(canExpand,ready,target) {
   const board=document.querySelector('.board');board.replaceChildren();
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
-  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(connectedTerrain(terrain,pair.terrainAnchor||pair.active).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
+  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
   const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
   const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
   const targets=selection?new Set(toolCells(room,uid,selection.tool,{side:selection.side||'north'}).map(c=>key(c.x,c.y))):null;

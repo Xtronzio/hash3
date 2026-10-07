@@ -1,5 +1,5 @@
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
-import {availableCells,connectedTerrain,terrainOf,key,isBlockedCell} from './game.js';
+import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game.js';
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
 import {expansionFrontierContext,edgeKey} from './frontiers.js';
@@ -54,11 +54,11 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false}={}){
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
   if(tool==='frontier')return frontierOptions(game,side,playerId,{pivot});
-  const linked=new Set(connectedTerrain(terrainOf(game),(p.terrainAnchor||p.active)).map(c=>key(c.x,c.y)));
+  const linked=new Set(playableTerrain(game,p).map(c=>key(c.x,c.y)));
   if(tool==='activate'){
     const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),occupied=new Set(game.cells.map(c=>key(c.x,c.y))),holes=new Map();
     const frontier=expansionFrontierContext(terrainOf(game),p.terrainAnchor||p.active,game);
-    for(const c of connectedTerrain(terrainOf(game),(p.terrainAnchor||p.active)))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    for(const c of playableTerrain(game,p))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const point={x:c.x+dx,y:c.y+dy},k=key(point.x,point.y);
       if(!known.has(k)&&!occupied.has(k)&&!habitatBlocked(game,point.x,point.y)&&(!frontier||[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const b={x:point.x+dx,y:point.y+dy};return frontier.reached.has(key(b.x,b.y))&&!frontier.blocked.has(edgeKey({a:point,b}));})))holes.set(k,point);
     }
@@ -125,7 +125,7 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
 }
 export function moveDestination(game,playerId,cell){
   if(!cell)return false;
-  const pair=game.pairs[0],linked=connectedTerrain(terrainOf(game),(pair.terrainAnchor||pair.active));
+  const pair=game.pairs[0],linked=playableTerrain(game,pair);
   return linked.some(c=>c.x===cell.x&&c.y===cell.y)&&!game.cells.some(c=>c.x===cell.x&&c.y===cell.y)&&!isBlockedCell(game,playerId,cell.x,cell.y);
 }
 

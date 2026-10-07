@@ -1,12 +1,12 @@
 import {habitatBlocked} from './habitat-tools.js';
-import {terrainOf,connectedTerrain,key,expansionOptions} from './game.js';
+import {terrainOf,playableTerrain,key,expansionOptions} from './game.js';
 import {isImmune} from './immunity.js';
 import {frontierTiles,frontierDirections,frontierCells,nearbyFrontierCells,frontierHit} from './frontiers.js';
 
 const directions=Array.from({length:9},(_,i)=>[i%3-1,Math.floor(i/3)-1]).filter(([x,y])=>x||y);
 const shielded=(r,c)=>r.inventoryEffects?.shields?.some(e=>e.cell===c?.id&&e.remaining>0);
 const protectedCell=(r,c)=>c&&(shielded(r,c)||isImmune(r,c.owner));
-const area=(r)=>connectedTerrain(terrainOf(r),r.pairs[0].terrainAnchor||r.pairs[0].active);
+const area=(r)=>playableTerrain(r);
 export function tornadoSlots(room,point){
  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
  return area(room).filter(c=>c.x>=point.x&&c.x<point.x+3&&c.y>=point.y&&c.y<point.y+3&&!habitatBlocked(room,c.x,c.y)&&!protectedCell(room,cells.get(key(c.x,c.y)))&&!room.inventoryEffects?.blocks?.some(b=>b.x===c.x&&b.y===c.y&&b.remaining>0));

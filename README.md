@@ -368,3 +368,8 @@ Al tocar el cuadro de una jugada que puntúa se centra el tablero en esa jugada,
 ## Ajuste táctil y pausa — R0.21.7
 
 El giro deja libre el centro de la celda elegida para confirmar la frontera con la segunda pulsación. Pausar con el inventario abierto conserva la partida sin intentar dibujar la bolsa en la pantalla de pausa.
+
+
+## Todo el tablero local sigue jugable — R0.21.8
+
+En Solo y Sin conexión, los destructores pueden separar físicamente partes del tablero sin quitar las celdas construidas que quedan al otro lado. Las colocaciones, herramientas, ayuda, ampliaciones y máquina reconocen todas esas zonas. Solo se amplía cuando no quedan celdas libres en el conjunto del tablero; las celdas destruidas, fronteras, cuerpos de gusano y proyectos mantienen sus restricciones. Los guardados anteriores recuperan su fase correcta conservando fichas, puntos y reloj. La conectividad geométrica de las figuras y de los habitantes se conserva.

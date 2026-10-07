@@ -15,15 +15,21 @@ export function connectedTerrain(terrain,active) {
   }
   return terrain.filter(c=>visited.has(key(c.x,c.y)));
 }
+// Local games share one built board, even when demolition leaves separate islands.
+// Keep connectivity for geometry and for distinct territories in online rooms.
+export function playableTerrain(room,pair=room.pairs[0]) {
+  const terrain=terrainOf(room);
+  return ['solo','local'].includes(room.mode)?terrain:connectedTerrain(terrain,pair.terrainAnchor||pair.active);
+}
 export function isBlockedCell(room,playerId,x,y){return habitatBlocked(room,x,y)||!!room.inventoryEffects?.blocks?.some(e=>e.x===x&&e.y===y&&(e.by===playerId?e.fresh:!isImmune(room,playerId))&&e.remaining>0);}
 export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   const occupied=new Set(room.cells.map(c=>key(c.x,c.y)));
   const playerId=pair[pair.turn.toLowerCase()];
-  return connectedTerrain(terrainOf(room),pair.terrainAnchor||pair.active).filter(c=>!occupied.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
+  return playableTerrain(room,pair).filter(c=>!occupied.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
 }
 export function expansionOptions(terrain,active,room) {
   if(!terrain.length)return [{x:active.x,y:active.y}];
-  const connected=connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
+  const connected=['solo','local'].includes(room?.mode)?terrain:connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
   for(const c of connected)for(let ox=-3;ox<=1;ox++)for(let oy=-3;oy<=1;oy++) {
     const p={x:c.x+ox,y:c.y+oy};candidates.set(key(p.x,p.y),p);
   }

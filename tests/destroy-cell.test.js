@@ -18,7 +18,7 @@ test('Destruction removes only terrain, preserving tokens, paid figures, score, 
 });
 test('Destroy follows stock, one-tool/Combo limits, clock, pause, expansion and immunity',()=>{
  const r=start();assert.ok(canUsePracticeTool(r,'local-x','destroy',now));
- for(const mutate of [g=>g.status='paused',g=>g.pairs[0].pending=1,g=>g.players[0].inventory.cards.destroy=0,g=>{g.timeMode='timed';g.pairs[0].deadline=new Date(now).toISOString();},g=>activateImmunity(g,'local-o')]){const g=structuredClone(r);mutate(g);assert.throws(()=>destroy(g));}
+ for(const mutate of [g=>g.status='paused',g=>{g.pairs[0].pending=1;g.cells=g.terrain.map((c,i)=>({...c,id:'full'+i,owner:'local-o',symbol:'O'}));},g=>g.players[0].inventory.cards.destroy=0,g=>{g.timeMode='timed';g.pairs[0].deadline=new Date(now).toISOString();},g=>activateImmunity(g,'local-o')]){const g=structuredClone(r);mutate(g);assert.throws(()=>destroy(g));}
  const next=destroy(r);assert.equal(canUsePracticeTool(next,'local-x','double',now),false);
  r.players[0].inventory.cards.combo=1;r.players[0].inventory.cards.activate=1;
  const armed=localCommand(r,'inventory',{tool:'combo',playerId:'local-x'},now),removed=destroy(armed),restored=localCommand(removed,'inventory',{tool:'activate',playerId:'local-x',x:1,y:1},now);

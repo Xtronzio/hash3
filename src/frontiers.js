@@ -52,7 +52,10 @@ export function frontierReachable(terrain,start,room){
 }
 export function expansionFrontierContext(terrain,start,room){
  if(!room?.frontiers?.length)return null;
- return {known:new Set(terrain.map(c=>key(c.x,c.y))),reached:new Set(frontierReachable(terrain,start,room).map(c=>key(c.x,c.y))),blocked:new Set(frontierSegments(room).map(edgeKey))};
+ // Cell walls cannot exclude another built island from local expansion. Preserve
+ // the blocking semantics of old saved edge walls until they are removed.
+ const reached=['solo','local'].includes(room.mode)&&!room.frontiers.some(f=>f.edges?.length)?terrain:frontierReachable(terrain,start,room);
+ return {known:new Set(terrain.map(c=>key(c.x,c.y))),reached:new Set(reached.map(c=>key(c.x,c.y))),blocked:new Set(frontierSegments(room).map(edgeKey))};
 }
 export function expansionCrossesFrontier(terrain,start,point,room,context){
  if(!room?.frontiers?.length)return false;

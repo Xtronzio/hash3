@@ -15,11 +15,11 @@ test('Activate adds exactly one missing cell, preserves the turn and scores only
  assert.ok(availableCells(next,next.pairs[0]).some(c=>c.x===1&&c.y===1));
  const played=localCommand(next,'move',{x:1,y:1},now);assert.equal(played.cells.at(-1).symbol,'X');assert.ok(played.lastEvent.points>=3);assert.equal(played.players[0].placements,1);assert.equal(played.pairs[0].turn,'O');
 });
-test('Activation targets include holes and adjacent borders, never existing terrain or disconnected remote cells',()=>{
+test('Activation targets include holes and borders of every built island, never existing terrain',()=>{
  const r=start(),targets=toolCells(r,'local-x','activate');assert.ok(targets.some(c=>c.x===1&&c.y===1));assert.ok(targets.some(c=>c.x===-1&&c.y===0));
  assert.equal(new Set(targets.map(c=>`${c.x},${c.y}`)).size,targets.length);
  for(const pos of [{x:0,y:0},{x:1000,y:1000},{x:1.5,y:1}]){const before=structuredClone(r);assert.throws(()=>card(r,pos.x,pos.y));assert.deepEqual(r,before);}
- const isolated=structuredClone(r);isolated.terrain.push({x:100,y:100});assert.ok(!toolCells(isolated,'local-x','activate').some(c=>c.x>50));
+ const isolated=structuredClone(r);isolated.terrain.push({x:100,y:100});assert.ok(toolCells(isolated,'local-x','activate').some(c=>c.x>50));
 });
 test('Card obeys stock, clock, expansion, pause and one tool per turn; Combo allows activation plus another tool',()=>{
  const r=start();assert.ok(canUsePracticeTool(r,'local-x','activate',now));assert.equal(canUsePracticeTool({...r,status:'paused'},'local-x','activate',now),false);

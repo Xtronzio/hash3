@@ -1,4 +1,4 @@
-import {key,terrainOf,connectedTerrain,expansionOptions,shapeTemplates,availableCells} from './game.js';
+import {key,terrainOf,playableTerrain,expansionOptions,shapeTemplates,availableCells} from './game.js';
 
 export const machineLevels=[
   {id:'basic',label:'Básico'}, {id:'medium',label:'Medio'},
@@ -18,7 +18,7 @@ const formId=(symbol,kind,indices,cells)=>`${symbol===1?'X':'O'}:${kind}:`+indic
 // undoes each move, rather than cloning a growing game for every branch.
 class Position {
   constructor(room,futureWeight=1){
-    this.cells=connectedTerrain(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active);
+    this.cells=[...playableTerrain(room)];
     this.legalSize=this.cells.length;this.futureWeight=futureWeight;
     const existing=new Set(this.cells.map(c=>key(c.x,c.y))),frontier=new Map();
     if(futureWeight)for(const c of this.cells)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){

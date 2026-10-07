@@ -17,11 +17,12 @@ test('Figuras distintas pueden compartir fichas pero sus identidades no se dupli
   assert.equal(f.filter(v=>v.kind==='línea').length,2);assert.equal(new Set(f.map(v=>v.id)).size,f.length);
   assert.equal(figureWindows(marks([[0,0],[1,0],[2,0]]),1,0,'O').length,0);
 });
-test('El territorio conectado incluye huecos antiguos y excluye islas',()=>{
+test('El tablero local incluye islas construidas y la geometría conserva las conexiones reales',()=>{
   const r=createLocal('local','A','B',0);r.terrain.push({x:3,y:0},{x:20,y:0});r.pairs[0].active={x:3,y:0};
   r.cells=marks([[3,0],[1,1]]);
   assert.ok(availableCells(r,r.pairs[0]).some(c=>c.x===0&&c.y===0));
-  assert.ok(!availableCells(r,r.pairs[0]).some(c=>c.x===20));
+  assert.ok(availableCells(r,r.pairs[0]).some(c=>c.x===20));
+  const online={...r};delete online.mode;assert.ok(!availableCells(online,r.pairs[0]).some(c=>c.x===20));
   assert.equal(connectedTerrain(r.terrain,r.pairs[0].active).length,10);
 });
 test('Una figura no permite ampliar mientras quedan celdas vacías',()=>{

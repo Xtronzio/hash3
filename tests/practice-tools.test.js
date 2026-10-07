@@ -69,7 +69,8 @@ test('El inventario respeta reloj, pausa, modo, territorio, turno y una herramie
  assert.equal(canUsePracticeTool(room,'local-x','double',now+33000),false);
  assert.equal(canUsePracticeTool(localCommand(room,'pause',{},now+1000),'local-x','double',now+1000),false);
  const island={...room,terrain:[...room.terrain,{x:100,y:100}],cells:[...room.cells,{id:'island',owner:'local-o',symbol:'O',x:100,y:100}]};
- assert.throws(()=>tool(island,'erase','local-x',{x:100,y:100}),/territorio conectado/);
+ const erased=tool(island,'erase','local-x',{x:100,y:100});assert.ok(!erased.cells.some(c=>c.id==='island'));
+ const unbuilt={...room,cells:[...room.cells,{id:'unbuilt',owner:'local-o',symbol:'O',x:100,y:100}]};assert.throws(()=>tool(unbuilt,'erase','local-x',{x:100,y:100}),/del tablero/);
  room.players[0].inventory.cards.combo=1;room.players[0].inventory.cards.hint=0;room=tool(room,'combo');room=tool(room,'double');room=tool(room,'rival');assert.equal(canUsePracticeTool(room,'local-x','erase',now+1000),false);assert.throws(()=>tool(room,'erase','local-x',{x:1,y:1}),/una por turno/);
  room=localCommand(room,'move',{x:2,y:0},now+1000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.pairs[0].turn,'X');
  room=localCommand(room,'move',{x:0,y:1},now+1000);assert.equal(room.cells.at(-1).symbol,'X');assert.equal(room.pairs[0].turn,'O');

@@ -31,7 +31,16 @@ function normalize(room,now) {
     else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
   }
 }
+// Recover older saves that entered expansion while another built island had holes.
+export function reconcileLocalBoard(original,now=Date.now()) {
+  if(!['solo','local'].includes(original.mode)||original.status!=='playing')return original;
+  const room={...original,pairs:original.pairs.map(p=>({...p}))};
+  normalize(room,now);
+  if(JSON.stringify(room.pairs)===JSON.stringify(original.pairs))return original;
+  return {...room,version:room.version+1,updatedAt:new Date(now).toISOString()};
+}
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
+  original=reconcileLocalBoard(original,now);
   const room=structuredClone(original),p=room.pairs[0];
   initializeInventory(room);initializeRodents(room,now);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
@@ -45,7 +54,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='resume'){
     if(room.status==='playing')return original;
     if(room.status!=='paused')throw new Error('La partida no está pausada.');
-    resumeHabitats(room,now);room.status='playing';p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
+    resumeHabitats(room,now);room.status='playing';normalize(room,now);p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
     delete room.pauseRemainingMs;delete room.pausedAt;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   if(action==='tick'&&room.status!=='playing')return original;
@@ -67,7 +76,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;
-      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error(tool==='destroy'?'Elige una celda vacía, sin ficha, de tu territorio conectado.':tool==='activate'?'Elige un hueco sin ampliar que toque tu territorio conectado.':'Elige una ficha rival en tu territorio conectado, sin escudo; tus colocaciones no se pueden borrar.');
+      if(!toolCells(room,playerId,tool).some(c=>c.x===x&&c.y===y))throw new Error(tool==='destroy'?'Elige una celda vacía, sin ficha, del tablero construido.':tool==='activate'?'Elige un hueco sin ampliar que toque el tablero construido.':'Elige una ficha rival del tablero, sin escudo; tus colocaciones no se pueden borrar.');
       const index=room.cells.findIndex(c=>c.x===x&&c.y===y);
       const old=index>=0?room.cells[index]:null;
       let changed=null;
@@ -123,7 +132,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(p.pending)throw new Error('Primero coloca la ampliación.');
     if(!automatic&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se jugará automáticamente.');
     const {x,y}=payload;
-    if(!availableCells(room,p).some(c=>c.x===x&&c.y===y))throw new Error('Elige una celda vacía de tu territorio conectado.');
+    if(!availableCells(room,p).some(c=>c.x===x&&c.y===y))throw new Error('Elige una celda vacía del tablero construido.');
     const player=room.players.find(v=>v.symbol===p.turn),state=practiceTurn(room,player.id);
     const symbol=placementSymbol(room,player.id),scorer=room.players.find(v=>v.symbol===symbol);
     const cell={id:id(),requestId:payload.requestId||id(),x,y,symbol,owner:player.id};
