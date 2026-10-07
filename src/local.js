@@ -27,7 +27,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
 function normalize(room,now) {
   for(const p of room.pairs) {
     const free=availableCells(room,p,{ignoreBlocks:true});
-    if(free.length){p.pending=0;p.expander=null;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
+    if(free.length){p.pending=0;p.expander=null;delete p.frontierUsed;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
     else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
   }
 }
@@ -55,7 +55,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='inventory'){
     const {tool,playerId}=payload;
     if(['hint','hint-expand','super-hint'].includes(tool))throw new Error('Activa Ayuda desde el inventario.');
-    if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
+    if(!canUsePracticeTool(room,playerId,tool,now))throw new Error(tool==='frontier'?'Frontera solo puede usarla quien está ampliando, una vez antes de colocar el 3×3 y sin agotar el reloj.':'Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
     if(['tornado','bomb','frontier'].includes(tool)){
       const result=applyAreaTool(room,playerId,tool,payload,random);
@@ -147,7 +147,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio, añadir celdas y respetar las fronteras.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy});
-    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;p.credits--;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
+    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.credits--;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
   }else throw new Error('Acción desconocida.');
   delete room.practiceHint;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;

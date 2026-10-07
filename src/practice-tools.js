@@ -17,7 +17,7 @@ export const practiceTools=[
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos, conservando símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a una frontera también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe las fronteras alcanzadas. Después coloca tu ficha.',button:'Elegir centro'},
-  {id:'frontier',label:'Frontera',description:'Coloca un muro 3×1 en tres huecos sin construir junto a tu territorio. Cada celda lleva un rombo violeta. Gíralo 90° sobre el punto elegido antes de aplicar. Esos huecos no se pueden construir ni ampliar; no caduca y solo Bomba lo rompe.',button:'Colocar muro 3×1'},
+  {id:'frontier',label:'Frontera',description:'Solo quien está ampliando puede usarla, una vez por ampliación. Primero coloca y gira el muro 3×1 en tres huecos sin construir; después coloca la ampliación 3×3. Cada celda lleva un rombo violeta. No consume una herramienta del turno de fichas; solo Bomba rompe el muro.',button:'Colocar muro y después ampliar'},
   {id:'hint-expand',group:'help',label:'Ayuda de ampliación',description:'Durante la ampliación propone una ubicación 3×3 favorable para tus próximas figuras, respetando las fronteras. Tú confirmas o eliges otra.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
@@ -78,16 +78,18 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p)return false;
   if(game.mode==='solo'&&playerId!==(game.humanId||p.x)&&game.machineInventory!==true)return false;
   if(p.pending){
-    return tool==='hint-expand'&&p.expander===playerId&&toolStock(game,playerId,tool)>0&&game.practiceHint?.action!=='expand'&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now);
+    if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
+    if(tool==='frontier')return !p.frontierUsed&&!availableCells(game,p,{ignoreBlocks:true}).length&&['north','east','south','west'].some(side=>frontierOptions(game,side,playerId).length);
+    return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
-  if(tool==='hint-expand'||p[p.turn.toLowerCase()]!==playerId)return false;
+  if(['hint-expand','frontier'].includes(tool)||p[p.turn.toLowerCase()]!==playerId)return false;
   if(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now))return false;
   if(!inventoryTools.some(t=>t.id===tool)||toolStock(game,playerId,tool)<=0)return false;
   const state=practiceTurn(game,playerId);
   if(state.used.includes(tool))return false;
   if(tool==='super-hint')return availableCells(game,p).length>0;
   if(tool==='combo'){
-    const ordinary=practiceTools.filter(t=>!['combo','super-hint','hint-expand'].includes(t.id)&&toolStock(game,playerId,t.id)>0).length;
+    const ordinary=practiceTools.filter(t=>!['combo','super-hint','hint-expand','frontier'].includes(t.id)&&toolStock(game,playerId,t.id)>0).length;
     const immunity=!isImmune(game,playerId)&&immunityTools.some(t=>toolStock(game,playerId,t.id)>0)?1:0;
     return state.used.every(id=>id==='super-hint')&&availableCells(game,p).length>0&&ordinary+immunity>=2;
   }
@@ -98,13 +100,13 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='hint')return availableCells(game,p).length>0;
   if(tool==='shift'&&!availableCells(game,p).length)return false;
   if(tool==='block'&&availableCells(game,p).length<2)return false;
-  if(tool==='frontier')return ['north','east','south','west'].some(side=>frontierOptions(game,side,playerId).length);
   return toolCells(game,playerId,tool).length>0;
 }
 export function spendCard(game,playerId,tool){
   initializeInventory(game);const player=game.players.find(p=>p.id===playerId);
   if(tool==='immunity')spendImmunity(game,playerId);else player.inventory.cards[tool]--;
   player.practiceTools=(player.practiceTools||0)+1;
+  if(tool==='frontier'){game.pairs[0].frontierUsed=true;return;}
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
 export function completeInventoryTurn(game,playerId,{automatic=false,placed=true,random=Math.random}={}){

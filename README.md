@@ -332,3 +332,11 @@ La carta Frontera coloca un muro 3×1 en tres posiciones todavía sin terreno, a
 Cada celda muestra un rombo violeta y un marco, diferenciados del amarillo de los habitantes. El botón de giro tiene estilo SVG explícito para que la flecha sea visible en móvil. Los muros bloquean ampliaciones y Construir celda, sobreviven al guardado y a la pausa, y se rompen completos cuando una bomba manual o automática alcanza una de sus celdas. El mapa, el minimapa y las miniaturas incluyen los rombos y sus límites. Los guardados con fronteras antiguas mantienen sus reglas originales y se muestran con tres rombos.
 
 Validación: 179 pruebas JavaScript, incluidos cuatro giros, huecos sin construir, reservas, solapamientos, guardado, ampliación, construcción y bomba; compilaciones normal y GitHub Pages/offline.
+
+## Frontera durante la ampliación — R0.21.2
+
+Frontera solo está disponible para quien tiene pendiente colocar una ampliación. Durante esa fase, aunque el turno de fichas ya haya pasado al rival, puede gastar una carta para ubicar y girar el muro 3×1 en los huecos sin construir. Después conserva la ampliación pendiente y coloca su 3×3 en una posición que respete el muro. También puede ampliar directamente sin usar Frontera.
+
+La barra de ampliación ofrece un acceso directo si hay una carta disponible. Durante la previsualización del muro se ocultan los controles de colocar el 3×3 para evitar confirmar la ampliación por accidente. El inventario informa «Solo al ampliar» fuera de esa fase. Se admite una Frontera por ampliación y esa marca sobrevive al guardado y la pausa; se limpia al terminar la fase. El gasto conserva turno, reloj, fichas, puntos, contadores de colocación y recarga, y no consume el cupo de herramientas del próximo turno de fichas.
+
+Validación: 180 pruebas JavaScript, incluida una partida real de nueve movimientos seguida de muro, pausa, reanudación y ampliación, tanto con reloj como sin reloj. Se comprueban propiedad del expander, rechazo durante turnos normales y al agotar el tiempo, gasto de una carta, preservación del reloj y disponibilidad de herramientas tras ampliar. Compilaciones normal y GitHub Pages/offline.
