@@ -9,5 +9,9 @@ export function boardActionFeedback(previous,next){
  const habitat=next.habitatEvent,neutral=next.neutralEvent;
  if(habitat&&habitat.id!==previous.habitatEvent?.id)visits.push(...(habitat.actions||[]));
  if(neutral&&neutral.id!==previous.neutralEvent?.id)visits.push({x:neutral.x,y:neutral.y,kind:'neutral'});
- return visits.length?{visits}:null;
+ // A meal can free the exact cell chosen for # in the same command. The
+ // resulting action must explain #, rather than covering it with a mouse.
+ const neutralPositions=new Set(visits.filter(v=>v.kind==='neutral').map(v=>`${v.x},${v.y}`));
+ const distinct=visits.filter(v=>v.kind==='neutral'||!neutralPositions.has(`${v.x},${v.y}`));
+ return distinct.length?{visits:distinct}:null;
 }

@@ -1,3 +1,4 @@
+import {boardCellLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game.js';
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
@@ -56,6 +57,7 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false}={}){
   if(tool==='frontier')return frontierOptions(game,side,playerId,{pivot});
   const linked=new Set(playableTerrain(game,p).map(c=>key(c.x,c.y)));
   if(tool==='activate'){
+    if(terrainOf(game).length>=boardCellLimit(game))return [];
     const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),occupied=new Set(game.cells.map(c=>key(c.x,c.y))),holes=new Map();
     const frontier=expansionFrontierContext(terrainOf(game),p.terrainAnchor||p.active,game);
     for(const c of playableTerrain(game,p))for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){

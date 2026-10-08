@@ -1,89 +1,90 @@
-# Incidencia proporcional de fauna y obras
+# Ecología proporcional de #3 — R0.21.14
 
-Fecha: 8 de octubre de 2026. Estado: cálculo inicial y propuesta de calibración; no aplicado a R0.21.12. La aclaración posterior de Jorge sustituye la propuesta temporal para roedores y la retirada del gusano: véase la actualización al final. Las tablas originales quedan como referencia histórica, no reglas vigentes.
+Reglas acordadas con Jorge, 8 de octubre de 2026. Implementación local (VS máquina / Sin conexión); actualización online pendiente de conexión SQL. Inmunidad como turno de calma: propuesta pendiente de implementar.
 
-## Origen del 198
+## Control de complejidad
 
-El mínimo común múltiplo de 33, 66 y 99 es 198. En esa colocación coinciden las tres apariciones. El asistente reutilizó ese valor como frecuencia de OBRA. Es una elección de implementación, no una cifra solicitada por Jorge ni una deducción del equilibrio de constructores/destructores. El reloj de los obreros es de 33 segundos; 198 solo determina el nacimiento de un proyecto.
+Tres checks independientes, representados por iconos: Inventario rival (máquina), Fauna / habitantes, Fenómenos territoriales. Se guardan con cada partida. En dos humanos el primer check no aplica a una máquina y aparece deshabilitado; ambos humanos conservan su inventario.
 
-## Incidencia actual
+## Fenómenos
 
-Cada jugador genera, por 198 colocaciones aceptadas:
+Jorge eligió 33 de cada 333: 9,9099 %. Es distinto de 1/9 exacto (11,1111 %, 37 de 333). En cada nuevo hito de superficie 333/666/999… se sortea UNA carta viable, no tres simultáneas. Aviso de 33 segundos con icono, cuenta atrás y celdas marcadas; tocar el icono localiza la región. El hito se consume una sola vez, aunque una demolición obligue a reconstruir hasta esa misma superficie. No ejecutar hitos anteriores al cargar un guardado. No acumular eventos pendientes; la región anunciada queda fijada.
 
-| Tipo | Apariciones | Capacidad por aparición | Capacidad total |
-|---|---:|---:|---:|
-| Roedor | 6 | 3 fichas | 18 fichas |
-| Bomba | 3 | Hasta 3 fichas | Hasta 9 fichas |
-| Gusano | 2 | 3 fichas | 6 fichas |
-| Total | 11 | | Hasta 33 fichas |
+| Hito de terreno | Lluvia o Cataclismo | Terreno tras impacto máximo | OVNI si todas esas celdas están ocupadas |
+|---:|---:|---:|---:|
+| 333 | 33 celdas y sus fichas | 300 | 33 fichas; terreno intacto |
+| 666 | 66 celdas y sus fichas | 600 | 66 fichas; terreno intacto |
+| 999 | 99 celdas y sus fichas | 900 | 99 fichas; terreno intacto |
+| 3.330 | 330 celdas y sus fichas | 3.000 | 330 fichas; terreno intacto |
 
-33 / 198 = 1 / 6 = 16,67 % de las fichas colocadas. Es capacidad máxima atribuible a esos nacimientos, no consumo inmediato ni garantizado: faltan ciclos, alimento adyacente o fichas dentro de explosiones; algunos habitantes pueden permanecer esperando. No es un porcentaje por segundo. La fauna actual escala con las colocaciones, no con la superficie de una partida de actividad fija.
+- Lluvia: celdas distintas dispersas al azar, en grupos visuales de tres; elimina terreno y fichas. La carta Bomba del jugador conserva su regla anterior: vacía tres celdas y rompe frontera, sin demoler terreno.
+- Cataclismo: región compacta conectada; cada celda debe tener al menos DOS vecinos de la propia región por sus lados. Sin diagonales ni puntas de un solo vecino. Conservar anclajes, revisar de nuevo antes del impacto y cancelar obras/cuerpos/fronteras afectados. Si no hay parche válido se elige otra carta viable.
+- OVNI: floor(fichas ocupadas × 33/333), incluida #. 100 fichas → 9; 333 → 33; 1.000 → 99. Retira fichas de la zona anunciada y conserva TODAS las celdas. Si la región se vacía antes, no busca víctimas adicionales.
 
-Una OBRA tiene 3 parejas y 3 ciclos: construye hasta 9 celdas y destruye hasta 9 celdas vacías. El balance de superficie es cero. Mayor cantidad de obreros aumenta la transformación del mapa; no controla su crecimiento neto.
+El máximo territorial por carta es aproximadamente 9,91 % de la superficie del hito. Si los tres tipos resultaran equiprobables y siempre viables, la demolición esperada sería 6,61 %: dos cartas demuelen y una no. No usar ese promedio como garantía en un mapa cuya geometría sesgue el sorteo. La demolición por hito preserva al menos alrededor del 90 % de terreno, pero no fija un máximo absoluto: sucesivos hitos mayores siguen permitiendo mapas mayores.
 
-## Por qué no basta multiplicar todos los nacimientos
+## Habitantes sin saturación
 
-Tomando 333 celdas como referencia provisional, un multiplicador sin límite N / 333 retiraría potencialmente 33 × N / 333 fichas por cada 198 colocaciones. A partir de 1.998 celdas esa capacidad iguala las 198 colocaciones; a mayor superficie la supera. Las limitaciones de alimento impiden ejecutar toda esa capacidad, pero quedarían generaciones esperando. No usar ese multiplicador de nacimientos como controlador de población.
+Contador y cupos por zona activa, compartidos entre jugadores. Factor m=N/333. Pesos por activación: 3m roedores, m gusanos y m proyectos de obreros (tres parejas por proyecto). Arrastrar la fracción hasta futuras activaciones, en vez de redondear siempre hacia arriba; descartar nacimientos sin espacio/comida, no acumularlos. Población simultánea acotada por superficie. Las bombas automáticas pequeñas anteriores dejan de nacer: las sustituye el sorteo de lluvia territorial.
 
-## Propuesta: población por superficie y reposición
+Para que una población proporcional no devore una partida con actividad fija, también aumenta el intervalo entre nacimientos: techo(33 × max(1,m)) para roedores, techo(99 × max(1,m)) para gusanos y techo(198 × max(1,m)) para obras.
 
-Referencia de calibración elegida para pruebas, no equilibrio demostrado: por cada 333 celdas activas, 3 roedores, 1 bomba, 1 gusano y 3 parejas constructor/destructor. Las capacidades individuales siguen siendo de 3 y el ciclo sigue siendo de 33 segundos.
-
-Con N celdas de la zona activa y m = N / 333:
-
-- Roedores objetivo: 3m.
-- Bombas pendientes objetivo: m.
-- Gusanos objetivo: m.
-- Parejas de obreros objetivo: 3m.
-
-| Celdas activas | Roedores | Bombas | Gusanos | Parejas de obreros | Construidas y eliminadas por 3 ciclos |
+| Celdas | Grupo de roedores | Colocaciones entre grupos | Gusanos | Colocaciones entre generaciones | Proyectos de obra / intervalo |
 |---:|---:|---:|---:|---:|---:|
-| 333 | 3 | 1 | 1 | 3 | 9 + 9 |
-| 999 | 9 | 3 | 3 | 9 | 27 + 27 |
-| 2.997 | 27 | 9 | 9 | 27 | 81 + 81 |
-| 8.991 | 81 | 27 | 27 | 81 | 243 + 243 |
+| 333 | 3 | 33 | 1 | 99 | 1 / 198 |
+| 666 | 6 | 66 | 2 | 198 | 2 / 396 |
+| 999 | 9 | 99 | 3 | 297 | 3 / 594 |
+| 3.330 | 30 | 330 | 10 | 990 | 10 / 1.980 |
 
-Se cuentan parejas, no proyectos ni individuos: 3 parejas son 3 constructores y 3 destructores. Las cifras de fauna son poblaciones objetivo mantenidas, no nuevas generaciones en cada ciclo. La reposición solo cubre vacantes tras la retirada/explosión; no suma indefinidamente encima de habitantes existentes.
+A 100 celdas el presupuesto por activación es 0,9009 roedores y 0,3003 gusanos/proyectos; a 1.000 es diez veces mayor. Son promedios enteros alternantes, no fracciones de animales en pantalla. El intervalo mínimo de tableros pequeños conserva entrada gradual.
 
-### Incidencia temporal de la propuesta
+Cada roedor consume como máximo tres fichas, en tres visitas ligadas a colocaciones; desaparece visualmente entre ellas. No usa reloj, no come # ni la ficha recién colocada. Cada gusano consume tres, una cada 33 segundos, y desaparece con la tercera (99 s con alimento continuo). Un proyecto transforma hasta nueve celdas construidas y nueve retiradas, con balance neto cero. El 198 procede del mínimo común múltiplo de 33/66/99; fue una decisión previa de implementación, no una deducción del equilibrio.
 
-Con alimento continuo y reposición sin retraso, en régimen estable:
+### Cuenta del equilibrio
 
-- Cada roedor come 1 ficha por ciclo y se sustituye después de 3 comidas.
-- Cada bomba puede retirar 3 fichas por ciclo y se sustituye después de explotar.
-- Cada gusano come 3 fichas en 4 ciclos: el cuarto es su retirada. La media ideal por gusano activo es 3/4 de ficha por ciclo.
+Desde N=333, con tamaño fijo, nacimientos regulares, alimento y espacio suficientes:
 
-Capacidad media ideal por ciclo de 33 segundos: 3m + 3m + 0,75m = 6,75m fichas. Dividiendo por N = 333m resulta 6,75 / 333 = 2,027 % de la superficie por ciclo. En 99 segundos, la media ideal es 6,081 %. Son medias de régimen estable y capacidades máximas; no garantizan ese consumo en cada intervalo ni en una zona vacía. Si las generaciones nacen sincronizadas, las comidas también oscilan.
+- Roedores: (3m × 3 comidas) / (33m colocaciones) = 9/33 = 27,27 %.
+- Gusanos: (m × 3 comidas) / (99m colocaciones) = 3/99 = 3,03 %.
+- Capacidad conjunta: 10/33 = 30,30 % de colocaciones nuevas.
+- Obreros: (m × 9)/(198m) = 4,55 % por dirección, sin crecimiento neto.
 
-Los obreros mantenidos realizan hasta 3m construcciones y 3m eliminaciones por ciclo, o 9m + 9m por 99 segundos. Cada dirección transforma el 2,703 % del terreno en tres ciclos y el tamaño neto permanece igual.
+Queda un balance ideal de 69,70 fichas netas por cada 100 nuevas, antes de fenómenos, cartas y #. Para ocupar 333 huecos a ese ritmo harían falta aproximadamente 333/(23/33)=478 colocaciones, sin contar las pausas ni las nuevas ampliaciones. No es una tasa garantizada: hay ráfagas por generación, limitaciones de alimento/geometría, redondeo y cambios de tamaño. Es un régimen teórico de referencia; las pruebas de jugadas largas deben medir la incidencia efectiva. No sumar la demolición de terreno y el consumo de fichas como si fueran la misma magnitud.
 
-La proporción propuesta entre especies es una nueva calibración sencilla en escala del 3, no una reproducción de las frecuencias relativas ni de las poblaciones simultáneas de los hitos antiguos. Hay que medir su efecto con distintas velocidades de colocación antes de adoptarla.
+A seis segundos por colocación, 478 jugadas son unos 48 minutos; a 33 segundos, unas 4,4 horas. Por ello no se promete que un mapa grande tarde horas si se juega muy rápido o con muchos jugadores; estas reglas contienen la presión y el crecimiento sin imponer artificialmente una duración.
 
-### Requisitos de implementación y prueba
+## Separación temporal
 
-1. Contar celdas construidas reales; excluir huecos y proyectos todavía no construidos. Compartir un único presupuesto por zona activa, evitando multiplicar el mismo tablero por sus jugadores. Si se separan o unen zonas, redistribuir los cupos sin repetir nacimientos.
-2. Mantener el factor lineal también entre los tamaños de la tabla. Usar crédito fraccionario persistente o alternancia de cupos; no saltar exclusivamente entre potencias de 3, porque la densidad caería durante cada tramo. Los tableros menores de 333 necesitan cupos enteros intermitentes y entrada gradual, no redondear todos los tipos hacia arriba desde el 3×3 inicial.
-3. Limitar entradas por alimento legal, disponibilidad de explosiones y suficientes celdas vacías para obras. No crear generaciones pendientes sin límite. Respetar fronteras y reservas. Una superficie casi vacía tendrá una incidencia efectiva inferior a la capacidad máxima calculada.
-4. Conservar las pausas y la ausencia de recuperación de ciclos atrasados. Reponer gradualmente mientras la zona esté activa; al abrir un guardado no ejecutar una ráfaga de comida o explosiones.
-5. Al disminuir la superficie por cataclismo, recalcular los cupos. Los supervivientes sobrantes no se reponen; resolver por separado los habitantes directamente afectados por la demolición.
-6. Medir población simultánea, fichas efectivamente consumidas, ocupación, tiempo de simulación y capacidad de mantener actividad humana. Comparar 333/999/2.997/8.991 celdas con distinta ocupación, ritmo de juego y número de jugadores. La incidencia respecto de nuevas colocaciones depende del ritmo; no será constante además de ser constante por superficie y por tiempo.
-7. Consultar índices por snapshot en la pantalla. No añadir recorridos de fauna/terreno completos durante arrastre o pellizco. Representación agrupada en mapas y detalle limitado a pantalla más 2 celdas.
+Desde el aviso territorial se congelan visitas, nacimientos y ciclos de fauna. El impacto no se combina con comidas/obras en el mismo comando. Después se recalculan terreno y fichas restantes, habitantes supervivientes, cupos y siguientes nacimientos; se cancela lo demolido, se descarta exceso y crédito acumulado, y se reinician los ciclos supervivientes. Deben pasar 33 segundos Y tres nuevas colocaciones antes de reactivar la fauna. La pausa congela también ese margen. No se recuperan acciones atrasadas de golpe.
 
-## OVNI y cataclismo
+## Verificación y límites
 
-Requisito confirmado por Jorge: ambos afectarán una zona extensa y se incorporarán próximamente.
+Pruebas de presupuestos 100/1.000, regiones de 333/999/3.330, dos vecinos por celda, sorteo único y no repetición de hitos, OVNI por ocupación, limpieza de demolición, pausas, tres checks y recuperación. No se cambia navegación: dibujo por viewport+2 celdas, índices por snapshot y acciones consultadas solo en la ventana. SQL online bloqueado por timeout; estas reglas no están aún en Duelo/Mundo.
 
-- OVNI: retira fichas dentro de la zona; no elimina ninguna celda. Controla ocupación, no superficie.
-- Cataclismo: elimina celdas y sus fichas en toda la zona afectada. Es el mecanismo para controlar la superficie.
+## Ampliación libre por mérito
 
-La extensión debe aumentar con el tablero. Falta definir el porcentaje y la frecuencia. Para controlar tamaño, las celdas demolidas por unidad de tiempo deben compensar el crecimiento neto por ampliaciones; para reducirlo, deben superarlo. Más obreros equilibrados no aportan esa reducción. Conservar los criterios de navegación y definir continuidad de zonas, anclajes, fronteras y reservas antes de activar estos eventos.
+Jorge eligió una ampliación libre cada tres figuras cobradas, máximo una guardada. El icono 3×3 muestra ×1. Puede activarse en el turno propio aunque haya huecos, previsualizarse/cancelarse sin gasto, y consumirse al colocar el bloque. Conserva créditos normales y el mismo jugador continúa su turno. A mitad de Doble no se abre otra fase. No hay premios retroactivos de figuras históricas. Las ampliaciones normales al llenar el terreno se mantienen.
 
-## Actualización posterior: personalidad de roedores y tres inventarios
+La cuenta de 478 colocaciones es una referencia de llenado bajo fauna, no una espera impuesta: los premios por mérito permiten crecer antes. Cada premio utilizado añade hasta nueve celdas; solaparlo añade menos. El límite de una reserva evita convertir combinaciones de muchas figuras en una ráfaga de ampliaciones almacenadas.
 
-Jorge aclara que los roedores no usan tiempo. Cada hito propio de 33 colocaciones aumenta su grupo: 1/2/3 a las 33/66/99, y sucesivos. Durante tres movimientos jugados del territorio, cada roedor aparece, consume una ficha y desaparece en cada visita, usando sitios distintos. El movimiento que activa el hito cuenta como la primera visita. Capacidad por grupo: hasta 3/6/9 fichas. Solo consumen alimento legal existente, excluyen la ficha recién colocada y la #, y las visitas sin alimento no se acumulan. Esto reemplaza la propuesta anterior de población temporal para roedores.
+## Límite sin ecología: objetivo 33.333
 
-El gusano se retira inmediatamente con su tercera comida. Con alimento continuo son 3 ciclos/99 segundos, no 4 ciclos/132 segundos; el cálculo anterior de consumo por gusano activo de 0,75 por ciclo ya no se aplica.
+Jorge descartó 999 y eligió 33.333 como objetivo, condicionado a mejorar guardado/cálculo y comprobar móviles antes de fijarlo en producción. Aplicable a partidas sin fauna Y sin fenómenos (VS máquina, Sin conexión y Duelo), excluyendo Mundo. Contar terreno real, no caja envolvente ni ampliaciones históricas. El código en desarrollo usa ese cupo; la versión pública no ha recibido este cambio.
 
-Por 198 colocaciones de un jugador, los seis grupos de roedores tienen tamaños 1+2+3+4+5+6=21 y capacidad de hasta 63 comidas, más hasta 9 de bombas y 6 de gusanos: 78/198=39,39 % de las colocaciones, una vez completadas todas las visitas y los ciclos con alimento suficiente. Esta incidencia teórica cambia con el hito; no equivale a un consumo garantizado ni a un porcentaje temporal fijo. La nueva regla de hitos es explícita y debe medirse al probar partidas largas. La calibración por superficie de los otros habitantes/cartas todavía está pendiente.
+Ensayo del 8 de octubre de 2026, Node en el entorno de desarrollo: terreno compacto, ocupación 80 %, una figura histórica por cada tres fichas; mediana de cinco ejecuciones tras calentamiento. Los tiempos no incluyen DOM, almacenamiento físico del navegador, máquina ni prueba de móvil. El guardado se mide con almacenamiento simulado.
 
-Los grupos conceptuales son inventario del jugador, fauna local e inventario del territorio. Lluvia de bombas, #, OVNI y cataclismo son cartas automáticas del territorio. Obreros, roedores y gusanos son habitantes. OVNI/cataclismo siguen pendientes de desarrollo. Mantener animaciones breves y elementales para explicar las acciones sin romper el minimalismo ni el rendimiento.
+| Celdas | Jugada | Opciones de ampliación | Serializar guardado | Consulta de ventana | JSON de partida |
+|---:|---:|---:|---:|---:|---:|
+| 9.999 | 50,2 ms | 38,3 ms | 5,8 ms | 0,007 ms | 745.072 bytes |
+| 33.333 | 163,7 ms | 120,4 ms | 19,8 ms | 0,007 ms | 2.584.348 bytes |
+| 99.999 | 530,1 ms | 422,2 ms | 48,0 ms | 0,007 ms | 7.903.533 bytes |
+
+La ventana consultada contiene 308 celdas en los tres tamaños; esto verifica el índice, no el rendimiento del navegador completo. A una colocación cada 10 segundos, ocupar 9.999/33.333/99.999 celdas supone 27,8/92,6/277,8 horas acumuladas sin borrados y sin tiempos de ampliación. Los premios permiten ampliar antes de llenar; no es duración mínima ni una predicción de partida.
+
+El coste por jugada ya crece notablemente a 33.333. El guardado actual serializa toda la colección y duplica la partida más reciente en una clave antigua; varios guardados grandes comparten cuota. Antes de considerar listo el objetivo: eliminar duplicación sin romper recuperación, adoptar guardado adecuado para partidas grandes, reducir trabajo de ampliación/jugada y comprobar dispositivos reales. No inferir un máximo seguro solo del renderizado por ventana. Las expansiones y Construir celda respetan el cupo en desarrollo; un tablero lleno sin ampliación legal termina por puntos. Portado online pendiente.
+
+## Objetivos y Logros (acuerdo posterior)
+
+Elegir final por celdas actuales (33/333/3.333/33.333), duración total (3/5/10 minutos, como Duelo) o movimientos (33/333/3.333/33.333). Modos locales; Duelo requiere servidor. Celdas se pueden combinar con ecología. No esperar al llenado cuando se alcanza la superficie. Cada colocación de ambos participantes cuenta un movimiento, también automática y cada colocación de Doble; cartas y ampliar no cuentan. Tiempo total se congela en pausa y es independiente del reloj por turno. Puntuar la colocación final antes de cerrar. No hay nuevo movimiento ni comida atrasada al agotar la duración total.
+
+Logros archiva un resumen compacto por partida completada: puntos, figuras, colocaciones, combo, #MAX, fecha y configuración. Agrupar solo mismo objetivo y mismas reglas. Guardados finales manuales no obtienen el logro de objetivo. Borrar el tablero mantiene el resumen; borrar una partida anclada sigue prohibido. Datos locales de este navegador, sin promesa de sincronización. Se eliminó la duplicación de tablero en la clave antigua, que ahora contiene únicamente su id; la colección sigue siendo fuente del guardado y conserva importación antigua. La búsqueda de ampliaciones consulta contorno exterior/huecos; pruebas comparan sus resultados con búsqueda anterior exhaustiva, con islas y fronteras.

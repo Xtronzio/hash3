@@ -48,13 +48,42 @@
 @keyframes tornado-piece{0%{transform:translate(0,0) rotate(0deg);opacity:1}25%{transform:translate(calc(var(--tornado-dx)*.15 + var(--tornado-spin)*10px),calc(var(--tornado-dy)*.2 - 9px)) rotate(calc(var(--tornado-spin)*80deg));opacity:.35}50%{transform:translate(calc(var(--tornado-dx)*.6 - var(--tornado-spin)*9px),calc(var(--tornado-dy)*.45 + 8px)) rotate(calc(var(--tornado-spin)*210deg));opacity:1}75%{transform:translate(calc(var(--tornado-dx)*.9 + var(--tornado-spin)*4px),calc(var(--tornado-dy)*.85 - 4px)) rotate(calc(var(--tornado-spin)*315deg));opacity:.45}100%{transform:translate(var(--tornado-dx),var(--tornado-dy)) rotate(calc(var(--tornado-spin)*360deg));opacity:1}}
 @media(prefers-reduced-motion:reduce){.game .tornado-piece{animation:none;transform:translate(var(--tornado-dx),var(--tornado-dy))}.game .tornado-zone{animation:none;background:#00e5ff18;box-shadow:inset 0 0 0 2px #00e5ff80}}
 .cell.neutral{color:#c5cbd4;background:#20252d}
-.rodent-visit{pointer-events:none;z-index:9;color:var(--yellow);background:#161109;animation:rodent-visit .9s both;animation-delay:var(--visit-delay,0ms)}
-.rodent-visit svg{width:72%;height:72%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.board-action{pointer-events:none;z-index:9;color:var(--yellow);background:#161109;animation:rodent-visit .9s both;animation-delay:var(--visit-delay,0ms)}
+.board-action svg{width:72%;height:72%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @keyframes rodent-visit{0%{opacity:0;transform:scale(.35)}20%,65%{opacity:1;transform:scale(1)}45%{transform:scale(.8) rotate(-12deg)}100%{opacity:0;transform:scale(.2) rotate(15deg)}}
-@media(prefers-reduced-motion:reduce){.rodent-visit{animation:none}}
-.board-action-neutral{color:#c5cbd4;background:#20252d}
+@media(prefers-reduced-motion:reduce){.board-action{animation:none}}
+.board-action-neutral{color:#e3e5e9;background:#20252d;animation:neutral-arrival .9s both}
+@keyframes neutral-arrival{0%{opacity:0;transform:scale(.65)}25%{opacity:1;transform:scale(1.1)}60%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.cell.tool-destination::before{content:'';position:absolute;width:5px;height:5px;border-radius:50%;background:var(--yellow);left:calc(50% - 2.5px);top:calc(50% - 2.5px);pointer-events:none}
 .board-action-build{color:var(--green);background:#0d2015}
 .board-action-destroy{color:var(--red);background:#240f12}
 .board-action-bomb{animation:bomb-action .9s both;animation-delay:var(--visit-delay,0ms);background:radial-gradient(circle,#ffe57b55,transparent 70%)}
 @keyframes bomb-action{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.1)}45%{opacity:1;transform:scale(.9)}100%{opacity:0;transform:scale(1.2)}}
 @media(prefers-reduced-motion:reduce){.board-action-bomb{animation:none}}
+
+.board-action-ufo{color:#d9efff;background:#1e324433;animation:ufo-abduction .9s both}
+@keyframes ufo-abduction{0%{opacity:0;transform:translateY(20%) scale(.8)}25%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1;transform:translateY(-20%) scale(.7)}100%{opacity:0;transform:translateY(-60%) scale(.2)}}
+.board-action-cataclysm{color:var(--red);background:#ff4a5830;animation:cataclysm-demolition .9s both}
+@keyframes cataclysm-demolition{0%{opacity:0}20%,45%,70%{opacity:1;transform:translateX(-3%)}30%,55%{transform:translateX(3%)}100%{opacity:0;transform:scale(.3)}}
+.territory-warning{pointer-events:none;z-index:8;box-shadow:inset 0 0 0 1px #f4c65d99;background:#f4c65d0a}
+.territory-notice{margin:0;padding:5px 12px;color:var(--yellow);font-size:11px;border-bottom:1px solid #655226}
+@media(prefers-reduced-motion:reduce){.board-action-neutral,.board-action-ufo,.board-action-cataclysm{animation:none}}
+
+.board-action-rain{animation:bomb-action .9s both;animation-delay:var(--visit-delay,0ms);color:var(--yellow);background:radial-gradient(circle,#ffe57b55,transparent 70%)}
+.ecology-choices{border:1px solid var(--line);border-radius:8px;margin:14px 0;padding:10px 12px}
+.ecology-choices legend{font-size:13px;color:var(--muted);padding:0 5px}
+@media(prefers-reduced-motion:reduce){.board-action-rain{animation:none}}
+
+.ecology-choices{display:flex;justify-content:space-evenly;gap:12px}
+.ecology-choice{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:64px;min-height:76px;cursor:pointer;margin:0!important}
+.ecology-choice svg{width:32px;height:32px;fill:none;stroke:var(--yellow);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ecology-choice input{width:20px;height:20px;accent-color:var(--yellow);margin:0;padding:0}
+.ecology-choice:has(input:not(:checked)) svg{opacity:.45}
+.ecology-choice:has(input:disabled){opacity:.35;cursor:default}
+button.territory-notice{display:flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:4px 10px;background:#151109;color:var(--yellow);border:1px solid #655226;align-self:flex-end;margin:3px 8px}
+.territory-notice svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.free-expansion-button{display:flex;align-items:center;gap:4px}
+.free-expansion-button small{font-size:11px;color:var(--yellow)}
+
+.achievement-table{overflow-x:auto}.achievement-table table{width:100%;border-collapse:collapse}.achievement-table th,.achievement-table td{padding:8px;text-align:left;border-bottom:1px solid var(--line)}

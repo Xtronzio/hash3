@@ -1,3 +1,4 @@
+import {archiveTerritoryResult} from './achievements.js';
 import {localCommand} from './local.js';
 const valid=g=>g&&typeof g.id==='string'&&['solo','local'].includes(g.mode)&&Array.isArray(g.players)&&Array.isArray(g.pairs)&&['playing','paused','finished'].includes(g.status);
 export const gamePinKey=(game,uid='')=>game.local||game.mode?`local:${game.id}`:`online:${uid}:${game.id}`;
@@ -28,7 +29,9 @@ export function saveLocalGame(storage,game,now=Date.now()){
   const index=games.findIndex(g=>g.id===saved.id);if(index<0)games.unshift(saved);else games[index]=saved;
   // Save the complete collection before updating the legacy pointer.
   storage.setItem('hash3_locals',JSON.stringify(games));
-  try{storage.setItem('hash3_local',JSON.stringify(saved));}catch{}
+  // The canonical finished game also retains its result if this small archive is full.
+  try{archiveTerritoryResult(storage,saved);}catch{}
+  try{storage.setItem('hash3_local',JSON.stringify({id:saved.id}));}catch{}
   return saved;
 }
 export function selectExpansion(selected,point){return selected&&selected.x===point.x&&selected.y===point.y?{confirm:true,selected}:{confirm:false,selected:point};}
@@ -40,9 +43,10 @@ export function voteCounts(vote){
 export function deleteLocalGame(storage,gameId){
  assertGameDeletionAllowed(storage,{id:gameId,local:true});
  const games=loadLocalGames(storage);if(!games.some(g=>g.id===gameId))throw new Error('Esta partida ya no está guardada.');
+ archiveTerritoryResult(storage,games.find(g=>g.id===gameId));
  const remaining=games.filter(g=>g.id!==gameId);
  storage.setItem('hash3_locals',JSON.stringify(remaining));
  // The collection is authoritative; a failed legacy pointer write cannot resurrect a save.
- try{const old=JSON.parse(storage.getItem('hash3_local'));if(old?.id===gameId)storage.setItem('hash3_local',JSON.stringify(remaining[0]||null));}catch{}
+ try{const old=JSON.parse(storage.getItem('hash3_local'));if(old?.id===gameId)storage.setItem('hash3_local',JSON.stringify(remaining[0]?{id:remaining[0].id}:null));}catch{}
  return remaining;
 }

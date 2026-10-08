@@ -14,18 +14,28 @@ El zoom extensión y los mapas de tableros grandes usan una representación agru
 
 Casita cuando el destino es el hall; flecha sin texto cuando se vuelve a la pantalla anterior. Conservar etiquetas accesibles y título. Determinar el destino real usando la pila de pantallas; no reutilizar una flecha para salir al hall. La casita comparte fila y queda a la derecha.
 
-# Incidencia proporcional de habitantes
-
-Requisito de Jorge, 8 de octubre de 2026: roedores, gusanos, bombas y obreros deben aumentar con la superficie del tablero para conservar su incidencia relativa. Mantener la escala del 3 siempre que sea posible. Los cupos se comparten por zona activa, sin multiplicarlos otra vez por cada jugador. Separar población, aparición por colocaciones y reloj de actuación. Las cifras de calibración propuestas en design/fauna-proporcional.md todavía requieren validación y no son reglas publicadas. Mantener la navegación virtualizada al incorporar esta dinámica.
-
-OVNI: abduce fichas de una zona extensa y conserva todas sus celdas. Cataclismo: demolición total de una zona extensa, retirando sus celdas y fichas, para controlar la superficie. Son desarrollos próximos; no confundir sus efectos ni anunciar que están implementados.
-
-# Grupos del juego y animaciones
-
-Inventario del jugador: cartas para ayudar al jugador y perjudicar al rival. Fauna local: roedores, gusanos y obreros, habitantes con comportamientos característicos. Inventario del territorio: #, lluvia de bombas, OVNI y cataclismo, cartas del propio tablero para controlar ocupación y crecimiento. No presentar bombas, OVNI o cataclismo como fauna. Las acciones que lo requieran muestran una animación breve y elemental, respetando el minimalismo y el renderizado por ventana.
-
-Aclaración de Jorge sobre roedores, 8 de octubre de 2026: hitos propios de 33/66/99 activan grupos de 1/2/3; el grupo aumenta en uno cada 33 colocaciones. Cada roedor hace una visita por movimiento jugado, come una ficha y desaparece; tres movimientos completan hasta tres comidas por roedor en posiciones diferentes. No tienen reloj. Gusanos: comidas cada 33 segundos y retirada inmediata al completar la tercera, a los 99 segundos con alimento continuo. Esta aclaración sustituye la propuesta de población por tiempo para roedores.
-
 # Anclar protege contra borrado
 
 Una partida anclada no se puede borrar ni quitar de Mis partidas. Bloquear menú, gesto y operación de borrado; comprobar el anclaje actualizado también al confirmar y antes de enviar la operación online. Desanclar es requisito previo. Si no se puede verificar el anclaje, conservar el guardado. Anclar no impide abrir, pausar, retomar ni finalizar.
+
+# Reglas de ecología R0.21.14
+
+Tres controles independientes con iconos: Inventario rival (máquina), Fauna / habitantes y Fenómenos territoriales. Persistirlos con la partida. Valores antiguos por defecto activan ecología, sin ejecutar hitos históricos. La inmunidad conserva su función actual; el turno de calma está propuesto, todavía no implementado.
+
+Fauna: contador y cupos compartidos por zona, no por jugador. Presupuesto N/333 con pesos 3/1/1 para roedores/gusanos/proyectos de obras, crédito fraccionario y población acotada. Intervalos de nacimiento 33/99/198 × max(1,N/333), redondeados hacia arriba. El aumento del intervalo mantiene capacidad teórica conjunta de roedores y gusanos en 30,3 % de nuevas colocaciones desde 333 celdas, inferior en tableros pequeños. Los roedores hacen tres visitas por colocaciones, nunca por tiempo; comen una ficha por individuo y visita, excluyen # y la ficha nueva. Gusanos actúan cada 33 segundos y salen inmediatamente con su tercera comida. Obreros construyen y destruyen de manera equilibrada.
+
+Fenómenos: Jorge eligió 33 de cada 333 (9,91 %, no 1/9 exacto), sortear una sola carta en cada nuevo hito 333/666/999… celdas y aviso de 33 segundos. No repetir hitos al reconstruir tras destrucción. Lluvia de bombas demuele terreno y fichas dispersos en grupos de tres; la carta Bomba del jugador conserva el terreno. Cataclismo demuele una región compacta en la que cada celda toca al menos otras dos por los lados; conservar anclajes. OVNI retira esa proporción de fichas ocupadas, sin eliminar terreno. Si no hay región válida, sortear una carta viable. No acumular ráfagas de eventos.
+
+Desde el aviso se suspende la fauna. Tras el impacto recalcular población, descartar excessos y crédito pendiente, reiniciar próximos nacimientos, y dejar 33 segundos y tres colocaciones de recuperación. Congelar avisos y recuperación al pausar. Conservar puntos. No modificar el criterio de navegación: índices por snapshot y solo pantalla más dos celdas. Avisos con icono y cuenta atrás, sin texto explicativo visible; explicaciones en Cómo se juega.
+
+Cartas que seleccionan destinos vacíos: punto amarillo además del marco. Aparición de # con glifo y pulso propios; si coincide con comida de roedor, priorizar #. El mapa de pausa muestra # al acercarse, igual que X/O.
+
+Estas reglas se aplican al motor local. Duelo/Mundo mantienen reglas previas mientras la conexión SQL de Supabase siga bloqueando la actualización.
+
+Ampliación libre acordada: cada tres figuras cobradas concede una, máximo una guardada. Icono 3×3 con ×1; puede gastarse en el turno propio aunque haya huecos. Previsualizar/cancelar no consume el premio ni reinicia el reloj; colocar sí consume uno y deja continuar el mismo turno. No consume créditos normales ni permite usarla a mitad de Doble. Las ampliaciones normales al llenar permanecen. Los premios históricos no se conceden al abrir guardados. Esta vía de crecimiento por mérito evita depender de llenar huecos mientras actúa la ecología.
+
+Límite clásico: sin fauna y sin fenómenos, objetivo aprobado 33.333 CELDAS CONSTRUIDAS reales en cualquier modalidad excepto Mundo. No medir caja envolvente ni bloques históricos. Expansiones normales, libres y Construir celda respetan el cupo. Al alcanzar el cupo, finalizar por puntos inmediatamente, aunque queden huecos (finishReason board-limit). Variantes con ecología mantienen control por habitantes/fenómenos; no aplicarles este límite por inferencia.
+
+Validación del máximo: Jorge descartó 999 y eligió 33.333 como objetivo tras medir 9.999/33.333/99.999. El cupo de la versión en desarrollo es 33.333, pero no publicar el nuevo máximo como garantizado antes de mejorar guardado/cálculo y verificar móviles. El ensayo sintético Node no valida dispositivos ni cuotas reales.
+
+Objetivos de partida acordados: celdas actuales 33/333/3.333/33.333 (con o sin ecología), tiempo total 3/5/10 minutos o movimientos 33/333/3.333/33.333 en modos locales. Tiempo total independiente del reloj del turno; congelar al pausar. Movimientos son colocaciones aceptadas de ambos participantes; Doble suma dos, cartas/ampliaciones cero. Finalizar inmediatamente al alcanzar objetivo, después de puntuar la última colocación. Resumen compacto inmutable en Logros, agrupado por objetivo, modalidad, nivel/dificultad, reloj, ecología e inventario rival; no comparar con finales manuales. Conservar resumen al borrar tablero; anclaje sigue bloqueando borrado. No portar nuevos modos a Duelo/Mundo sin servidor actualizado. Mundo continúa sin límite.

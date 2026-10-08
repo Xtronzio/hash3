@@ -63,3 +63,13 @@ Los tres grupos quedan separados en la ayuda: inventario del jugador, fauna loca
 Anclar protege contra borrado accidental. Menú y gesto bloquean la acción; el borrado local y la confirmación online comprueban el anclaje actual antes de actuar. Para borrar hay que desanclar.
 
 La migración `20261008082437_turn_rodents_neutral_hash.sql` y `tests/turn-inhabitants.sql` están verificadas en PostgreSQL local. Aplicación remota pendiente mientras las conexiones SQL de Supabase agotan el tiempo de espera. No anunciar estos comportamientos como desplegados en Duelo/Mundo hasta completar la migración. La calibración proporcional de gusanos, obras y lluvia de bombas sigue pendiente; la aclaración de roedores sustituye su propuesta de reposición por reloj.
+
+## R0.21.14: ecología proporcional y selección por iconos
+
+Motor local: sorteo de una carta territorial por nuevo hito de 333 celdas, escala 33/333, lluvia destructiva por grupos de tres, Cataclismo con dos vecinos por celda y OVNI proporcional a fichas. Avisos de 33 s, separación de fauna y recuperación de 33 s + 3 colocaciones con recalibración de población. Presupuestos e intervalos de fauna proporcionales; capacidad ideal conjunta 30,3 % de nuevas colocaciones. Tres checks por iconos y persistidos por partida. Correcciones de # en animación/mapa de pausa y destinos de cartas con punto amarillo. Ver design/fauna-proporcional.md para cuentas y límites.
+
+Pendiente: portar estas reglas y opciones a Duelo/Mundo cuando se restablezca SQL; probar equilibrio real en partidas largas. Propuesto por Jorge: segundo uso de Inmunidad como turno de calma, todavía sin implementar.
+
+R0.21.14 también incorpora ampliación libre cada tres figuras, máximo una guardada, con icono ×1. Se gasta al colocar, admite huecos y no consume créditos normales; la ampliación normal se mantiene.
+
+R0.21.14 en desarrollo: objetivos por celdas, tiempo total y colocaciones, final automático y archivo compacto en Logros; búsqueda de ampliaciones desde bordes y guardado sin copia completa antigua. 33.333 requiere validación móvil; portado online pendiente.

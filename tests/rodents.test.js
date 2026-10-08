@@ -6,18 +6,18 @@ import {toolCells} from '../src/practice-tools.js';
 import {frontierEdges} from '../src/frontiers.js';
 import {habitatBlocked,habitatReservations} from '../src/habitat-tools.js';
 import {recordCombo} from '../src/records.js';
-function fixture(){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:150},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,60).map(c=>({...c,id:`food-${c.x},${c.y}`,symbol:'X',owner:'local-x'}));return r;}
+function fixture(size=333){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,60).map(c=>({...c,id:`food-${c.x},${c.y}`,symbol:'X',owner:'local-x'}));return r;}
 function animal(kind='rodent',point={x:0,y:0}){return {id:kind,player:'local-x',kind,...point,eaten:0,phase:0,nextAt:34000,...(kind==='worm'?{body:[point]}:{})};}
 function birth(r,count){r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
-test('Milestones scale groups 1/2/3: three distinct move visits remove up to 3/6/9 fichas',()=>{
- for(const [count,group] of [[33,1],[66,2],[99,3]]){
-  const r=fixture();birth(r,count);assert.equal(r.rodents.length,0);assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].remaining,2);assert.equal(r.cells.filter(c=>c.symbol!=='#').length,60-group);
+test('Surface scales groups 1/2/3: three distinct move visits remove up to 3/6/9 fichas',()=>{
+ for(const [size,group] of [[111,1],[222,2],[333,3]]){
+  const r=fixture(size);birth(r,33);assert.equal(r.rodents.length,0);assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].remaining,2);assert.equal(r.cells.filter(c=>c.symbol!=='#').length,60-group);
   const visits=[...r.rodentVisit.visits];
-  countHabitatPlacement(r,'local-o',{x:14,y:9},1001,()=>0);visits.push(...r.rodentVisit.visits);
-  countHabitatPlacement(r,'local-x',{x:14,y:9},1002,()=>0);visits.push(...r.rodentVisit.visits);
+  countHabitatPlacement(r,'local-o',{x:1,y:1},1001,()=>0);visits.push(...r.rodentVisit.visits);
+  countHabitatPlacement(r,'local-x',{x:1,y:1},1002,()=>0);visits.push(...r.rodentVisit.visits);
   assert.equal(r.rodentRaids.length,0);assert.equal(visits.length,3*group);assert.equal(new Set(visits.map(c=>key(c.x,c.y))).size,3*group);assert.equal(r.cells.filter(c=>c.symbol!=='#').length,60-3*group);
  }
- const r=fixture();birth(r,198);assert.equal(r.bombs.length,1);assert.equal(r.worms.length,1);assert.equal(r.works.length,3);assert.equal(habitatReservations(r).length,18);
+ const r=fixture();birth(r,198);assert.equal(r.bombs.length,0);assert.equal(r.worms.length,1);assert.equal(r.works.length,3);assert.equal(habitatReservations(r).length,18);
 });
 test('Loading historic saves preserves placements and never replays overdue milestones',()=>{
  const r=fixture();delete r.habitatVersion;r.players[0].placements=400;initializeHabitats(r,1000);assert.equal(r.players[0].habitatNext.rodent,429);assert.equal(r.rodents.length,0);const before=structuredClone(r);initializeHabitats(r,2000);assert.deepEqual(r,before);
@@ -29,7 +29,7 @@ test('Rodents ignore time; move visits preserve score and never eat the newly pl
  countHabitatPlacement(r,'local-o',fresh,1000001,()=>0);assert.ok(r.cells.some(c=>c.id==='fresh'));assert.equal(r.players[0].score,70);assert.equal(r.rodentRaids[0].remaining,1);
 });
 test('Doble advances two visits; ticks, cards, expansion and pass never advance visits',()=>{
- let r=createLocal('local','A','B',1000,'normal','untimed');r.players[0].placements=32;r.cells=[{id:'a',x:2,y:0,symbol:'O',owner:'local-o'},{id:'b',x:2,y:1,symbol:'O',owner:'local-o'},{id:'c',x:2,y:2,symbol:'O',owner:'local-o'}];
+ let r=createLocal('local','A','B',1000,'normal','untimed');r.players[0].placements=32;r.rodentRaids=[{id:'existing',player:'local-x',x:0,y:0,count:1,remaining:3,visited:[]}];r.cells=[{id:'a',x:2,y:0,symbol:'O',owner:'local-o'},{id:'b',x:2,y:1,symbol:'O',owner:'local-o'},{id:'c',x:2,y:2,symbol:'O',owner:'local-o'}];
  r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},1100);r=localCommand(r,'move',{x:0,y:0},1200);assert.equal(r.rodentRaids[0].remaining,2);
  const nextPoint=availableCells(r,r.pairs[0])[0];r=localCommand(r,'move',nextPoint,1300);assert.equal(r.rodentRaids[0].remaining,1);assert.equal(r.players[0].placements,34);
  const before=structuredClone(r.rodentRaids);r=localCommand(r,'tick',{},34000,()=>0);assert.deepEqual(r.rodentRaids,before);
@@ -70,6 +70,6 @@ test('Absent food retries the next independent interval; finished games never ad
 test('Clearing preserves earned points and releases broken paid figures for reconstruction',()=>{
  const r=fixture();r.cells=r.cells.slice(0,3);r.forms=figureWindows(r.cells,1,0,'X').map(f=>f.id);r.forms.push('O:línea:30,0;31,0;32,0');r.players[0].score=70;clearHabitatCell(r,{x:1,y:0});assert.equal(r.players[0].score,70);assert.deepEqual(r.forms,['O:línea:30,0;31,0;32,0']);
 });
-test('Status distinguishes per-player arrival counters and combo records exclude timeout scoring',()=>{
- const r=fixture();assert.match(habitatLabel(r,'local-x'),/Roedor 33 · Bomba 66 · Gusano 99 · Obra 198/);const p={};recordCombo(p,{points:70,figures:9,moveId:'a'});recordCombo(p,{points:13,figures:2});recordCombo(p,{points:100,automatic:true});assert.equal(p.bestCombo.points,70);
+test('Status describes shared proportional fauna and combo records exclude timeout scoring',()=>{
+ const r=fixture();assert.match(habitatLabel(r,'local-x'),/fauna proporcional por zona/);const p={};recordCombo(p,{points:70,figures:9,moveId:'a'});recordCombo(p,{points:13,figures:2});recordCombo(p,{points:100,automatic:true});assert.equal(p.bestCombo.points,70);
 });

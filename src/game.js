@@ -1,3 +1,4 @@
+import {expansionFitsLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {isImmune} from './immunity.js';
 import {expansionCrossesFrontier,expansionFrontierContext} from './frontiers.js';
@@ -30,17 +31,19 @@ export function availableCells(room,pair,{ignoreBlocks=false}={}) {
 export function expansionOptions(terrain,active,room) {
   if(!terrain.length)return [{x:active.x,y:active.y}];
   const connected=['solo','local'].includes(room?.mode)?terrain:connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
-  for(const c of connected)for(let ox=-3;ox<=1;ox++)for(let oy=-3;oy<=1;oy++) {
+  // Any block adding terrain touches a boundary (including holes), so interior cells need no candidates.
+  const linked=new Set(connected.map(c=>key(c.x,c.y))),boundary=connected.filter(c=>[[1,0],[-1,0],[0,1],[0,-1]].some(([x,y])=>!linked.has(key(c.x+x,c.y+y))));
+  for(const c of boundary)for(let ox=-3;ox<=1;ox++)for(let oy=-3;oy<=1;oy++) {
     const p={x:c.x+ox,y:c.y+oy};candidates.set(key(p.x,p.y),p);
   }
-  const linked=new Set(connected.map(c=>key(c.x,c.y))),frontierContext=expansionFrontierContext(terrain,active,room);
+  const reservations=habitatReservations(room||{}),frontierContext=expansionFrontierContext(terrain,active,room);
   return [...candidates.values()].filter(p=>{
     let adds=false,touches=false;
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++) {
       const x=p.x+dx,y=p.y+dy;if(!known.has(key(x,y)))adds=true;
       if(linked.has(key(x,y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>linked.has(key(x+a,y+b))))touches=true;
     }
-    return adds&&touches&&!habitatReservations(room||{}).some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
+    return adds&&touches&&expansionFitsLimit(room,known,p)&&!reservations.some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
   });
 }
 const canonical=points=>points.map(([x,y])=>`${x},${y}`).sort().join(';');

@@ -88,3 +88,9 @@ test('Pinning protects local saves, online removal entry points and all delete c
  toggleGamePin(storage,g);deleteLocalGame(storage,g.id);assert.equal(loadLocalGames(storage).length,0);
  assert.throws(()=>assertGameDeletionAllowed({getItem:()=>{throw Error('storage');}},online,'u'),/verificar/);
 });
+
+test('Neutral # has its own glyph in paused map detail, alongside X/O',()=>{
+ const r=createLocal('local','A','B');r.cells=[{id:'n',x:1,y:1,symbol:'#',owner:null}];
+ const model=savedMapModel(r);assert.equal(model.terrain.find(c=>c.x===1&&c.y===1).symbol,'#');
+ assert.match(inspectionCells(model),/data-symbol="#"/);
+});

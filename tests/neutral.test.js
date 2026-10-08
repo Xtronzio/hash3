@@ -29,12 +29,12 @@ test('Machine never counts # as O or scores a pattern through it',()=>{
 });
 test('Legacy rats migrate to move visits once; completed worms release their body at load',()=>{
  const room=createLocal('local','A','B',1000,'normal','untimed');room.habitatVersion=1;room.rodents=[{id:'old',x:0,y:0,player:'local-x',eaten:1,nextAt:33000}];room.worms=[{id:'old-worm',eaten:3,body:[{x:1,y:0}]}];
- initializeHabitats(room,40000);assert.equal(room.habitatVersion,2);assert.equal(room.rodents.length,0);assert.equal(room.rodentRaids[0].remaining,2);assert.equal(room.worms.length,0);
+ initializeHabitats(room,40000);assert.equal(room.habitatVersion,3);assert.equal(room.rodents.length,0);assert.equal(room.rodentRaids[0].remaining,2);assert.equal(room.worms.length,0);
  initializeHabitats(room,90000);assert.equal(room.rodentRaids.length,1);advanceHabitats(room,1000000);assert.equal(room.rodentRaids[0].remaining,2);
 });
 test('An idle legacy save persists its upgrade once without permanent polling work',()=>{
  const room=createLocal('local','A','B',1000,'normal','untimed');room.habitatVersion=1;
- const next=localCommand(room,'tick',{},2000);assert.equal(next.habitatVersion,2);assert.notEqual(next,room);assert.equal(localCommand(next,'tick',{},3000),next);
+ const next=localCommand(room,'tick',{},2000);assert.equal(next.habitatVersion,3);assert.notEqual(next,room);assert.equal(localCommand(next,'tick',{},3000),next);
 });
 test('No-food visits expire after three moves and never build an overdue backlog',()=>{
  const room=createLocal('local','A','B',1000,'normal','untimed');room.players[0].placements=32;
@@ -49,4 +49,9 @@ test('Rodent feedback only animates a new visit of the same running game',()=>{
 test('Automatic territory cards and workers publish minimal animation coordinates once',()=>{
  const previous={id:'a',status:'playing'},next={id:'a',status:'playing',neutralEvent:{id:'n',x:0,y:1},habitatEvent:{id:'h',actions:[{x:2,y:2,kind:'bomb'},{x:3,y:2,kind:'build'}]}};
  const feedback=boardActionFeedback(previous,next);assert.deepEqual(feedback.visits.map(v=>v.kind),['bomb','build','neutral']);assert.equal(boardActionFeedback(next,next),null);assert.equal(boardActionFeedback(null,next),null);
+});
+
+test('Neutral arrival replaces a mouse animation when its cell was eaten in the same move',()=>{
+ const previous={id:'r',status:'playing'},next={id:'r',status:'playing',rodentVisit:{id:'meal',visits:[{x:1,y:1}]},neutralEvent:{id:'n',x:1,y:1}};
+ assert.deepEqual(boardActionFeedback(previous,next).visits,[{x:1,y:1,kind:'neutral'}]);
 });

@@ -43,3 +43,8 @@ test('Existing timed saves retain their pending deadline and paused remaining ti
  const resumed=localCommand(frozen,'resume',{},now+86400000);assert.equal(Date.parse(resumed.pairs[0].deadline),now+86400000+20000);
  const moved=localCommand(resumed,'move',{x:0,y:0},now+86400001);assert.equal(Date.parse(moved.pairs[0].deadline),now+86400001+33000);
 });
+
+test('Legacy pointer references the canonical game without duplicating its board',()=>{
+ const storage=memory(),g=createLocal('solo','A','B',now);saveLocalGame(storage,g,now);
+ assert.deepEqual(JSON.parse(storage.getItem('hash3_local')),{id:g.id});assert.equal(loadLocalGames(storage)[0].id,g.id);
+});
