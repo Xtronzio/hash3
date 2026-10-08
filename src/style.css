@@ -40,3 +40,5 @@ body{padding-bottom:26px}.game{height:calc(100dvh - 26px)}.entry{min-height:calc
 .hall-rules details[open]>summary::before{transform:rotate(90deg)}.hall-rules summary h2{font-size:21px;margin:0;line-height:1.2}
 .hall-rules .rule-section-body{padding:0 0 14px}.hall-rules .rule-inhabitants details{padding:4px 0}.hall-rules summary h3{margin:0}
 .hall-rules summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+.ecology-jump:has(>.ecology-clock)>.ecology-clock{right:9px}.ecology-jump>.ecology-clock+small{position:absolute;right:2px;bottom:2px;font-size:8px;line-height:12px}

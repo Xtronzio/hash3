@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {eventOutlook,eventOutlookMarkup} from '../src/event-outlook.js';
+import {eventOutlook,eventOutlookMarkup,ecologyWarningsMarkup} from '../src/event-outlook.js';
 const now=1700000000000;
 const fresh=()=>createLocal('local','A','B',now,'normal','untimed');
 test('El control descuenta colocaciones reales y respeta los siguientes umbrales recalculados',()=>{
@@ -30,4 +30,12 @@ test('Pausa mantiene las cuentas de intervenciones y recuperación, sin leer fic
 test('Los números explican lo que falta y los avisos expresan cuándo actúan',()=>{
  const game=fresh();let html=eventOutlookMarkup(game,'local-x');assert.match(html,/Faltan<\/small>33<small>colocaciones/);
  game.territoryEvents=[{id:'event',kind:'ufo',dueAt:now+28000}];html=eventOutlookMarkup(game,'local-x');assert.match(html,/<small>En<\/small>/);assert.match(html,/Próximas apariciones · lo que falta/);
+});
+
+test('Active rodents show remaining visits, while offscreen timed events have a visible independent countdown',()=>{
+ const game=fresh();game.rodentRaids=[{id:'r',remaining:2}];game.worms=[{id:'w',nextAt:now+33000}];game.clockNow=now;
+ const html=eventOutlookMarkup(game,'local-x');assert.match(html,/sin espera de 33 s/);assert.match(html,/jugadas de visitas/);
+ for(const field of ['cells','terrain','frontiers'])Object.defineProperty(game,field,{get(){throw Error('Warning scanned board');}});
+ const warnings=ecologyWarningsMarkup(game,now);assert.match(warnings,/Roedores · 2 jugadas pendientes · sin cuenta atrás temporal/);assert.match(warnings,/data-ecology-source="w">33/);assert.equal((warnings.match(/class="ecology-clock/g)||[]).length,1);
+ game.worms[0].remainingMs=12000;assert.match(ecologyWarningsMarkup(game,now+999999),/cuenta atrás detenida/);assert.match(ecologyWarningsMarkup(game,now+999999),/data-ecology-source="w">12/);
 });

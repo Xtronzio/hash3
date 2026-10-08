@@ -1,3 +1,4 @@
+import {rodentIcon} from './rodent-icon.js';
 import {initializeHabitats,countHabitatPlacement,habitatLabel} from './inhabitants.js';
 export const RODENT_SPAWN=33,RODENT_MEALS=3;
 export const initializeRodents=initializeHabitats;
@@ -9,5 +10,5 @@ export function rodentStatus(room,playerId){const p=room.players.find(p=>p.id===
 export const rodentLabel=habitatLabel;
 export function forgetBrokenFigures(room,cell){const k=`${cell.x},${cell.y}`;room.forms=room.forms.filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').includes(k));}
 // One compact line icon, distinct from cards; SVG numbers stay legible on the board.
-export const rodentIcon='<path d="M8 13a4 4 0 1 1 5-5m6 0a4 4 0 1 1 5 5M8 13c0-6 16-6 16 0v6c0 6-16 6-16 0Zm4 2h.01M20 15h.01m-6 5 2 2 2-2M8 19H3m21 0h5"/>';
+export {rodentIcon} from './rodent-icon.js';
 export function rodentMark(r){return `<span class="rodent-mark ${rodentSleeping(r)?'sleeping':''}"><svg viewBox="0 0 32 32" aria-hidden="true">${rodentIcon}</svg><b>${r.eaten}</b>${rodentSleeping(r)?'<small>z</small>':''}</span>`;}

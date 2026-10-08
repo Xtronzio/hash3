@@ -1,9 +1,10 @@
+import {copyText,copyPreparedText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
-import {eventOutlookMarkup} from './event-outlook.js';
+import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
 import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents} from './ecology-navigation.js';
 import {ecologySeconds} from './ecology-clock.js';
 import {matchGoalsMarkup} from './match-goals-ui.js';
-import {loadTerritoryResults,achievementsMarkup} from './achievements.js';
+import {loadTerritoryResults,achievementsMarkup,achievementSelection} from './achievements.js';
 import {canRequestFreeExpansion} from './free-expansion.js';
 import './style.css';
 import './hall.css';
@@ -82,6 +83,7 @@ let superHelpPlan=null;
 const pendingInventoryRefills=new Map();
 const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 let hallMode='world',hallModeSelected=false,hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
+let achievementView=null;
 let metricView='personal',metricMode='solo',metricState={entries:[],loading:false,error:''},metricsRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
 const ecologyFocus={};
@@ -199,7 +201,7 @@ function render() {
     <div class="workspace"><div class="arena">${voteMarkup(room.vote,uid)}
     ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand&&inventorySelection?.tool!=='frontier'?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span>${isLocal()&&own.inventory?.cards.frontier>0?iconButton('practice-tool','frontier',pair.frontierUsed?'Muro ya colocada en esta ampliación':'Colocar Muro antes de ampliar',`class="expansion-frontier" data-tool="frontier" ${canUsePracticeTool(room,uid,'frontier')?'':'disabled'}`):''}${pair.optionalExpansion?iconButton('cancel-free-expansion','back','Cancelar ampliación libre'):''}<button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
     <div class="map-wrap"><div class="board-inventory-status">${inventoryStatus}</div><div class="viewport" tabindex="0" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${habitatButtons}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,habitatButtons,inventoryStatus})}</div>
-    <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?`<button class="free-expansion-button" data-action="request-free-expansion" aria-label="Ampliación libre · ${own.freeExpansions||0} guardadas" title="Ampliación libre: una por cada tres figuras cobradas; las no utilizadas se acumulan" ${canRequestFreeExpansion(room,uid)?'':'disabled'}>${navIcon('expand')}<small>×${own.freeExpansions||0}</small></button>`:''}${isLocal()?iconButton('events','events','Próximos eventos',`aria-expanded="${eventsOpen}" aria-controls="events-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
+    <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button>${isLocal()?ecologyWarningsMarkup(room):''}<nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?`<button class="free-expansion-button" data-action="request-free-expansion" aria-label="Ampliación libre · ${own.freeExpansions||0} guardadas" title="Ampliación libre: una por cada tres figuras cobradas; las no utilizadas se acumulan" ${canRequestFreeExpansion(room,uid)?'':'disabled'}>${navIcon('expand')}<small>×${own.freeExpansions||0}</small></button>`:''}${isLocal()?iconButton('events','events','Próximos eventos',`aria-expanded="${eventsOpen}" aria-controls="events-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
 
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();renderEvents();renderSuperHelp();updateTimer();
@@ -260,7 +262,7 @@ function drawBoard(canExpand,ready,target) {
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
-  const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
+  const habitatPoints=new Map(habitatLocations(room).filter(e=>e.kind!=='rodent'||e.remaining==null).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
   const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
   const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north'})).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
@@ -295,7 +297,7 @@ function drawBoard(canExpand,ready,target) {
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
     const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
-    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.eaten??(habitat.done==null?'':habitat.done+1)):project?habitatMark(project.kind):body?'<span class="worm-trail"></span>':''}</button>`;
+    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.kind==='rodent'?habitat.remaining+'↷':'',habitat):project?habitatMark(project.kind):body?'<span class="worm-trail"></span>':''}</button>`;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
   const density=size<14?overviewGrid(overviewModel(room,own,target,{includeFrontiers:false}).terrain,{x:minX,y:minY,width:maxX-minX+1,height:maxY-minY+1}):null;
@@ -388,7 +390,7 @@ function renderHallDialog() {
   document.querySelector('.hall-dialog')?.remove();
   const local=savedLocal();let markup;
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
-  else if(hallDialog==='achievements')markup=hallDialogFrame('Logros',achievementsMarkup(loadTerritoryResults(localStorage,localGames())),{home:true});
+  else if(hallDialog==='achievements')markup=hallDialogFrame('Logros',achievementsMarkup(loadTerritoryResults(localStorage,localGames()),achievementView||{}),{home:true});
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',`<div class="inventory-catalog">${inventoryMarkup(null,null,{showShortcuts:false})}</div>`,{home:true,actions:inventoryShortcutsMarkup()});
   else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`${metricsModePicker(metricView==='personal'?metricMode:null)}<div class="metrics-classification"><button class="mode-green" data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}">${hallIcon('world')}Clasificación Mundo</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode,showModes:false})}`,{home:true});
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
@@ -397,6 +399,7 @@ function renderHallDialog() {
   if(hallDialog==='games')bindOnlineThumbnails();
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
+  document.querySelector('#achievement-rules')?.addEventListener('change',e=>{achievementView={...achievementView,comparison:e.target.value};renderHallDialog();});
   const form=document.querySelector('#entry-form');
   form?.addEventListener('submit',async e=>{
     e.preventDefault();if(busy)return;
@@ -429,14 +432,28 @@ async function loadProfileAccess(input){
  clearGameView();uid=id;save('hash3_name',result.name);save('hash3_profile_token',token);save('hash3_profile_owner',id);save('hash3_pair',null);save('hash3_room',null);
  myGames={};onlinePreviews.clear();gamesRequest++;metricsRequest++;metricState={entries:[],loading:false,error:''};hallDialog='profile';hallHistory=[];renderHome();notify('Perfil cargado. Tus partidas online están en Mis partidas.');
 }
-async function copyProfileAccess(renew=false){
+async function prepareProfileAccess(renew=false){
  const name=(document.querySelector('#profile-name')?.value||read('hash3_name')||'').trim();if(name.length<2||name.length>18)throw Error('Escribe un apodo de 2 a 18 caracteres.');
- const id=await ensurePlayer(),saved=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
+ let timeout;const id=await Promise.race([ensurePlayer(),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('El servicio de perfiles no responde. Inténtalo cuando vuelva la conexión.')),12000);})]).finally(()=>clearTimeout(timeout)),saved=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
  const result=await profileAccess(renew?'renew':'copy',{name,token:saved});if(!validProfileToken(result.token))throw Error('No se pudo generar el enlace.');
  save('hash3_profile_token',result.token);save('hash3_profile_owner',id);save('hash3_name',name);
- const link=profileUrl(result.token,location.href),field=document.querySelector('#profile-export');field.hidden=false;field.value=link;
- try{await navigator.clipboard.writeText(link);notify(renew?'Nuevo enlace copiado. El anterior ya no permite cargar el perfil.':'Enlace privado copiado. Guárdalo para cargar tu perfil.');}catch{field.focus();field.select();notify('Tu enlace está listo. Cópialo y guárdalo.');}
+ return profileUrl(result.token,location.href);
 }
+async function copyProfileAccess(renew=false){
+ const status=document.querySelector('#profile-copy-status');status.textContent='Preparando enlace…';
+ const task=prepareProfileAccess(renew);
+ const copied=copyPreparedText(task,{fallback:legacyCopyText});
+ // A generation failure must be reported even if the clipboard rejects first.
+ copied.catch(()=>{});
+ try{
+  const link=await task,field=document.querySelector('#profile-export');if(!field)return;
+  field.hidden=false;field.value=link;document.querySelector('[data-action="profile-copy-ready"]').hidden=false;
+  const ok=await copied;status.textContent=ok?'Enlace copiado. Ya puedes pegarlo.':'Enlace preparado. Pulsa Copiar enlace preparado o selecciónalo para copiarlo.';
+  if(!ok){field.focus();field.select();}
+  notify(ok?(renew?'Nuevo enlace copiado. El anterior queda invalidado.':'Enlace privado copiado. Ya puedes pegarlo.'):status.textContent);
+ }catch(error){status.textContent='No se ha podido preparar el enlace. '+error.message;throw error;}
+}
+
 function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
@@ -583,8 +600,14 @@ app.addEventListener('click',async e=>{
       pendingDelete=null;document.querySelector('.delete-dialog')?.remove();renderHallDialog();
     });return;
   }
-  if(action==='hall-achievements'){openHallDialog('achievements','hall-achievements');return;}
+  if(action==='hall-achievements'){achievementView=achievementSelection(loadTerritoryResults(localStorage,localGames()),achievementView||{});openHallDialog('achievements','hall-achievements');return;}
   if(action==='hall-inventory'){openHallDialog('inventory','hall-inventory');return;}
+  if(action==='profile-copy-ready'){
+    const field=document.querySelector('#profile-export');if(!field?.value)return;
+    const ok=await copyText(field.value,{fallback:legacyCopyText});
+    document.querySelector('#profile-copy-status').textContent=ok?'Enlace copiado. Ya puedes pegarlo.':'Selecciona el enlace y usa Copiar en tu dispositivo.';
+    if(!ok){field.focus();field.select();}notify(ok?'Enlace privado copiado. Ya puedes pegarlo.':'Selecciona el enlace y usa Copiar.');return;
+  }
   if(action==='profile-copy'||action==='profile-renew'){await run(()=>copyProfileAccess(action==='profile-renew'));return;}
   if(action==='events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
@@ -651,7 +674,7 @@ app.addEventListener('click',async e=>{
   if(action==='pair-leave'){await run(async()=>{await command('pair_leave',{code:pairLobby.code});pairLobby=null;save('hash3_pair',null);renderHome();});return;}
   if(action==='pair-copy-code'){await copyGameCode(pairLobby.code,'Código de pareja');return;}
   if(action==='copy-room-code'){await copyGameCode(room.code,'Código de sala');return;}
-  if(action==='pair-share'){const url=new URL(location.href);url.search='';url.searchParams.set('pareja',pairLobby.code);try{await navigator.clipboard.writeText(url.href);notify('Invitación de pareja copiada.');}catch{notify('Código de pareja: '+pairLobby.code);}return;}
+  if(action==='pair-share'){const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('pareja',pairLobby.code);await copyGameCode(url.href,'Invitación de pareja');return;}
 
   if(action==='hall-mode'){
     if(!hallModes.some(m=>m.id===b.dataset.mode))return;hallMode=b.dataset.mode;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
@@ -661,6 +684,13 @@ app.addEventListener('click',async e=>{
   if(action==='hall-close'){if(!pendingDelete)closeHallDialog();return;}
   if(action==='hall-ranking'){await openHallRanking();return;}
   if(action==='metrics-view'){metricView=b.dataset.view;renderHallDialog();if(metricView==='world')await refreshWorldRank();return;}
+  if(action==='achievements-mode'||action==='achievements-goal'||action==='achievements-target'){
+    const view=achievementView||{};
+    if(action==='achievements-mode')achievementView={mode:b.dataset.mode};
+    if(action==='achievements-goal')achievementView={mode:view.mode,goal:b.dataset.goal};
+    if(action==='achievements-target')achievementView={...view,target:Number(b.dataset.target),comparison:null};
+    achievementView=achievementSelection(loadTerritoryResults(localStorage,localGames()),achievementView);renderHallDialog();return;
+  }
   if(action==='metrics-mode'){metricView='personal';metricMode=b.dataset.mode;renderHallDialog();return;}
   if(action==='refresh-metrics'){await refreshMetrics();return;}
   if(action==='hall-menu'||action==='hall-profile'||action==='hall-help'||action==='hall-offline'){
@@ -841,12 +871,14 @@ function acceptPair(next){
  pairLobby=next;hallDialog=null;hallHistory=[];room=null;save('hash3_pair',next.code);renderPairLobby();
 }
 async function copyGameCode(code,label){
- try{await navigator.clipboard.writeText(code);notify(label+' copiado.');}
- catch{
-  const field=document.createElement('textarea');field.value=code;field.readOnly=true;field.style.cssText='position:fixed;left:-9999px;top:0';document.body.append(field);field.select();
-  try{notify(document.execCommand('copy')?label+' copiado.':label+': '+code);}catch{notify(label+': '+code);}finally{field.remove();}
+ const copied=await copyText(code,{fallback:legacyCopyText});
+ if(copied)notify(label+' copiado.');
+ else{
+  let field=document.querySelector('#share-export');if(!field){field=document.createElement('textarea');field.id='share-export';field.readOnly=true;field.setAttribute('aria-label',label+' para copiar');document.querySelector('.pair-share-actions,.score-room')?.append(field);}
+  field.value=code;field.focus();field.select();notify('Selecciona el enlace o código y usa Copiar.');
  }
 }
+
 function renderPairLobby(){
  const l=pairLobby,host=l.host===uid;
  app.innerHTML=`<section class="pair-wait"><header><span class="brand heading">#3</span><span class="tag">MUNDO · EN PAREJA</span></header><h1 class="heading">${l.ready?'Pareja preparada':'Esperando duelista'}</h1><p class="instructions">Reuníos aquí antes de entrar en el Mundo común. El turno empieza cuando entréis juntos.</p><div class="pair-code mono">${escape(l.code)}</div><div class="pair-share-actions"><button data-action="pair-copy-code">Copiar código</button><button data-action="pair-share">Copiar enlace</button></div><div class="pair-person"><strong>${escape(l.hostName)}</strong><small>${host?'Tú · preparas la pareja':'Creador de la pareja'}</small></div><div class="pair-person"><strong>${escape(l.guestName||'Esperando duelista…')}</strong><small>${l.guestName?l.ready?'En la antesala':'Esperando conexión':''}</small></div><p class="pair-status" role="status">${l.ready?(host?'Ya estáis los dos. Podéis entrar juntos.':'Tu compañero puede pulsar Entrar al Mundo.'):'Comparte el código o la invitación con tu duelista.'}</p><button class="primary" data-action="pair-start" ${host&&l.ready?'':'disabled'}>Entrar al Mundo</button><button class="ghost pair-back" data-action="pair-leave">${host?'Cancelar pareja':'Salir de la antesala'}</button></section>`;

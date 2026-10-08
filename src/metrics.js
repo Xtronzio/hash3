@@ -19,8 +19,8 @@ function tiles(entries,mode){
  return `<dl class="metric-cards">${fields.map(([label,v])=>`<div><dt>${label}</dt><dd>${typeof v==='string'?v:format(v)}</dd></div>`).join('')}</dl>`;
 }
 export const metricModeClass=mode=>hallModeClass(mode==='local'?'offline':mode);
-export function metricsModePicker(mode='solo'){
- return `<div class="metric-modes" role="group" aria-label="Modalidad de las métricas">${metricModes.map(([id,label,icon])=>`<button class="${metricModeClass(id)}" data-action="metrics-mode" data-mode="${id}" aria-pressed="${id===mode}">${hallIcon(icon)}${label}</button>`).join('')}</div>`;
+export function metricsModePicker(mode='solo',{action='metrics-mode',label='Modalidad de las métricas'}={}){
+ return `<div class="metric-modes" role="group" aria-label="${esc(label)}">${metricModes.map(([id,label,icon])=>`<button class="${metricModeClass(id)}" data-action="${esc(action)}" data-mode="${id}" aria-pressed="${id===mode}">${hallIcon(icon)}${label}</button>`).join('')}</div>`;
 }
 export function metricsMarkup({entries=[],mode='solo',loading=false,error='',showModes=true}={}){
  const selected=entries.filter(e=>e.mode===mode),name=metricModes.find(m=>m[0]===mode)?.[1]||'VS máquina';

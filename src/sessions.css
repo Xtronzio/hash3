@@ -88,3 +88,5 @@ body:has(.inspection-overlay){overflow:hidden}
 
 .inspection-controls{flex-wrap:wrap}.inspection-controls button[data-inspect-action="bomb"],.inspection-controls button[data-inspect-action="worm"],.inspection-controls button[data-inspect-action="work"]{color:var(--yellow)}
 @media(max-width:600px){.inspection-controls>span{flex-basis:100%}}
+
+.achievement-selectors{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}.achievement-selectors button{flex:1;min-width:58px;padding:10px 6px;font-size:13px}.achievement-selectors [aria-pressed="true"]{color:#00e5ff;border-color:#00e5ff;box-shadow:inset 0 0 0 1px #00e5ff}#achievement-rules{width:100%;margin:8px 0 14px}#profile-export{width:100%;font-size:13px;overflow-wrap:anywhere}

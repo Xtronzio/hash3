@@ -87,3 +87,5 @@ button.territory-notice{display:flex;align-items:center;justify-content:center;g
 .free-expansion-button small{font-size:11px;color:var(--yellow)}
 
 .achievement-table{overflow-x:auto}.achievement-table table{width:100%;border-collapse:collapse}.achievement-table th,.achievement-table td{padding:8px;text-align:left;border-bottom:1px solid var(--line)}
+
+.ecology-warnings{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:3px 8px;justify-content:flex-end}.ecology-warning-chip{display:flex;align-items:center;gap:4px;flex:none;min-height:32px;padding:3px 7px;color:var(--yellow);border-color:#655226;background:#151109}.ecology-warning-chip svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ecology-warning-chip small{font-size:10px}.habitat-rodent{color:var(--yellow)}

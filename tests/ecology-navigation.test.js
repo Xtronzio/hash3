@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ecologyTargets,nextEcologyTarget,ecologyNavigationMarkup,ecologyClockEvents,ecologyMapPins,ecologyPinTargets} from '../src/ecology-navigation.js';
-import {habitatIcons,workerHelmet} from '../src/inhabitants.js';
+import {habitatIcons,workerHelmet,habitatMark} from '../src/inhabitants.js';
 import {cellIndex} from '../src/board-window.js';
 const now=1700000000000;
 const room={players:[],cells:[],terrain:[],frontiers:[],rodentRaids:[{id:'r',x:1,y:1,remaining:2}],worms:[],works:[{id:'w',destroy:[{x:2,y:2}],build:[{x:3,y:3}],done:0,nextAt:now+33000}],territoryEvents:[{id:'rain',kind:'rain',region:Array.from({length:33},(_,x)=>({x:x*3,y:4})),nextAt:now+33000},{id:'ufo',kind:'ufo',region:[{x:10,y:8}],nextAt:now+31000}],habitatZones:[{placements:20,next:{rodent:33,worm:99,work:198}}]};
@@ -25,4 +25,9 @@ test('Mapa limita marcadores a 33 y el detalle consulta solo el índice espacial
  const targets=Array.from({length:9999},(_,x)=>({id:String(x),sourceId:String(x),kind:'worm',x,y:0,nextAt:now+33000})),index=cellIndex(targets);
  assert.equal((ecologyMapPins(targets,now).match(/class="ecology-map-pin"/g)||[]).length,33);
  const visible=index.query({x:100,y:-2,width:10,height:4});assert.ok(visible.length<=11);assert.ok(visible.every(p=>p.x>=100&&p.x<=110));
+});
+
+test('Rodent drawing never falls back to a worm, and only timed inhabitants carry seconds',()=>{
+ const rodent=habitatMark('rodent','2↷',{id:'r',remaining:2});assert.ok(rodent.includes(habitatIcons.rodent));assert.ok(!rodent.includes(habitatIcons.worm));assert.doesNotMatch(rodent,/ecology-clock/);
+ const worm=habitatMark('worm','',{id:'w',remainingMs:33000});assert.match(worm,/data-ecology-kind="worm" data-ecology-source="w"/);assert.match(worm,/>33<\/span>s/);
 });
