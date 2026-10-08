@@ -16,14 +16,14 @@ test('Obreros comparten casco, pero signo y color distinguen construcción y des
 });
 test('Avisos discretos distinguen relojes reales, visitas por jugada y futuros intentos de nacimiento',()=>{
  const markup=ecologyNavigationMarkup(room,null,{now});assert.match(markup,/data-ecology-kind="ufo" aria-label="31 segundos"/);
- assert.match(markup,/Visitas restantes por colocaciones">2/);assert.match(markup,/data-ecology-birth="worm"[^>]+>79/);
+ assert.match(markup,/Turnos restantes del ciclo visible">6/);assert.match(markup,/data-ecology-birth="worm"[^>]+>79/);
  assert.doesNotMatch(markup,/data-ecology-kind="rodent" aria-label="\d+ segundos"/);
  const clockRoom={...room};for(const key of ['terrain','cells','frontiers'])Object.defineProperty(clockRoom,key,{get(){throw Error('Clock scanned board');}});
  assert.equal(ecologyClockEvents(clockRoom,'rain').length,1);assert.equal(ecologyClockEvents(clockRoom,'destroy')[0].id,'w');
 });
 test('Mapa limita marcadores a 33 y el detalle consulta solo el índice espacial preparado',()=>{
  const targets=Array.from({length:9999},(_,x)=>({id:String(x),sourceId:String(x),kind:'worm',x,y:0,nextAt:now+33000})),index=cellIndex(targets);
- assert.equal((ecologyMapPins(targets,now).match(/class="ecology-map-pin"/g)||[]).length,33);
+ assert.equal((ecologyMapPins(targets,now).match(/class="ecology-map-pin /g)||[]).length,33);
  const visible=index.query({x:100,y:-2,width:10,height:4});assert.ok(visible.length<=11);assert.ok(visible.every(p=>p.x>=100&&p.x<=110));
 });
 

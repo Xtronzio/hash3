@@ -1,7 +1,7 @@
 import {boardCellLimit,finishAtMatchGoal,CELL_TARGETS} from './board-limits.js';
 import {initializeFreeExpansions,earnFreeExpansion,canRequestFreeExpansion} from './free-expansion.js';
 import {territoryEnabled} from './ecology.js';
-import {recordTerritoryGrowth,territoryPlacementDue} from './territory-tools.js';
+import {recordTerritoryGrowth,territoryPlacementDue,territoryReady} from './territory-tools.js';
 import {advanceHabitats,freezeHabitats,resumeHabitats} from './inhabitants.js';
 import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows,isBlockedCell} from './game.js';
 import {recordMax} from './max.js';
@@ -22,7 +22,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:4,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:5,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -36,8 +36,8 @@ function normalize(room,now) {
   for(const p of room.pairs) {
     const free=availableCells(room,p,{ignoreBlocks:true});
     if(!free.length&&Number.isFinite(boardCellLimit(room))&&!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).length){room.status='finished';room.finishReason='board-limit';room.finishedAt=new Date(now).toISOString();p.pending=0;p.expander=null;delete p.optionalExpansion;return;}
-    if(free.length&&p.optionalExpansion&&room.players.find(v=>v.id===p.expander)?.freeExpansions>0)continue;
-    if(free.length){delete p.optionalExpansion;p.pending=0;p.expander=null;delete p.frontierUsed;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
+    if(free.length&&p.optionalExpansion&&p.strategicExpansion&&(room.players.find(v=>v.id===p.expander)?.inventory?.cards['hint-expand']||0)>0)continue;
+    if(free.length){delete p.strategicExpansion;delete p.optionalExpansion;delete p.strategicExpansion;delete room.practiceHint;p.pending=0;p.expander=null;delete p.frontierUsed;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
     else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
   }
 }
@@ -53,7 +53,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=4;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=5;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -73,18 +73,29 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   const grows=action==='expand'||action==='inventory'&&payload.tool==='activate'||action==='tick'&&p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;
   const places=action==='move'||action==='tick'&&!p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;
-  const mayAnnounce=places&&territoryPlacementDue(room,now,1)||grows&&territoryEnabled(room)&&!room.territoryEvents.length&&Math.floor((terrainOf(room).length+(payload.tool==='activate'?1:9))/333)>room.territoryMilestone;
+  // On the opening threshold, predict only this placement's figures before
+  // advancing timed fauna. The accepted scoring still happens below.
+  let territoryPreview=room;
+  if(action==='move'&&!territoryReady(room)&&territoryEnabled(room)){
+    const symbol=placementSymbol(room,p[p.turn.toLowerCase()]),candidate={...payload,symbol};
+    const earned=figureWindows([...room.cells,candidate],candidate.x,candidate.y,symbol,room.level).filter(f=>!room.forms.includes(f.id)).length;
+    if(earned)territoryPreview={...room,players:room.players.map(player=>player.symbol===symbol?{...player,figures:player.figures+earned}:player)};
+  }
+  const mayAnnounce=places&&territoryPlacementDue(territoryPreview,now,1)||grows&&territoryEnabled(room)&&territoryReady(room)&&!room.territoryEvents.length&&Math.floor((terrainOf(room).length+(payload.tool==='activate'?1:9))/333)>room.territoryMilestone;
   const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=immunityChanged||advanced||original.habitatVersion!==room.habitatVersion;
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='request-free-expansion'){
+    throw new Error('La ampliación voluntaria se solicita con Ampliación inteligente desde 333 figuras.');
+  }
+  if(action==='request-strategic-expansion'){
     const actor=p.turn==='X'?p.x:p.o;
-    if(!canRequestFreeExpansion(room,actor)||room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Necesitas una ampliación libre y estar en tu turno.');
-    p.pending=1;p.optionalExpansion=true;p.expander=actor;delete room.practiceHint;
+    if(!canRequestFreeExpansion(room,actor)||room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Necesitas Ampliación inteligente, 333 figuras en la partida y estar en tu turno.');
+    p.pending=1;p.optionalExpansion=true;p.strategicExpansion=true;p.expander=actor;delete room.practiceHint;
     room.lastEvent={id:id(),kind:'free-expansion-request',player:actor};room.version++;room.updatedAt=new Date(now).toISOString();return room;
   }
   if(action==='cancel-free-expansion'){
     if(!p.optionalExpansion)throw new Error('No hay ampliación libre seleccionada.');
-    delete p.optionalExpansion;p.pending=0;p.expander=null;room.version++;room.updatedAt=new Date(now).toISOString();return room;
+    delete p.optionalExpansion;delete p.strategicExpansion;delete room.practiceHint;p.pending=0;p.expander=null;room.version++;room.updatedAt=new Date(now).toISOString();return room;
   }
   if(action==='inventory'){
     const {tool,playerId}=payload;
@@ -182,8 +193,9 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy,owner:p.expander});
     recordTerritoryGrowth(room,room.terrain.length-known.size,now,random);
-    if(p.optionalExpansion){room.players.find(v=>v.id===p.expander).freeExpansions--;room.practiceTurn={...practiceTurn(room,p.expander),freeExpanded:true};delete p.optionalExpansion;}else p.credits--;
-    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
+    const strategic=p.optionalExpansion;
+    if(strategic){if(!p.strategicExpansion)throw new Error('Usa Ampliación inteligente.');spendCard(room,p.expander,'hint-expand');room.practiceTurn={...practiceTurn(room,p.expander),freeExpanded:true};delete p.optionalExpansion;delete p.strategicExpansion;}else p.credits--;
+    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.pending=0;p.expander=null;if(!strategic)p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
   }else throw new Error('Acción desconocida.');
   delete room.practiceHint;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;

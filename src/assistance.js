@@ -1,18 +1,21 @@
+import {canRequestStrategicExpansion} from './free-expansion.js';
 import {localCommand,machineChoice} from './local.js';
 import {availableCells,expansionOptions,terrainOf,key} from './game.js';
 import {canUsePracticeTool,initializeInventory,spendCard,toolCells,moveDestination} from './practice-tools.js';
 
 export function suggestExpansion(game,playerId){
  const pair=game.pairs[0];
- if(!pair.pending||pair.expander!==playerId)throw new Error('La ayuda de ampliación corresponde a quien está ampliando.');
- return machineChoice({...game,difficulty:'high'},()=>0,{maxTimeMs:250,maxNodes:4500}).payload;
+ if((!pair.pending||pair.expander!==playerId)&&!canRequestStrategicExpansion(game,playerId))throw new Error('Ampliación inteligente requiere una ampliación pendiente o 333 figuras y tu carta.');
+ return machineChoice({...game,difficulty:'high',pairs:[{...pair,pending:1,expander:playerId}]},()=>0,{maxTimeMs:250,maxNodes:4500}).payload;
 }
 export function useExpansionHint(original,playerId,now=Date.now(),suggestion){
  if(!canUsePracticeTool(original,playerId,'hint-expand',now))throw new Error('Usa Ayuda de ampliación mientras te corresponde ampliar.');
  const point=suggestion||suggestExpansion(original,playerId),pair=original.pairs[0];
  if(!expansionOptions(terrainOf(original),pair.terrainAnchor||pair.active,original).some(p=>p.x===point.x&&p.y===point.y))throw new Error('La ampliación sugerida ya no es válida.');
  const game=structuredClone(original);initializeInventory(game);
- const player=game.players.find(p=>p.id===playerId);player.inventory.cards['hint-expand']--;player.practiceHints=(player.practiceHints||0)+1;player.practiceTools=(player.practiceTools||0)+1;
+ const player=game.players.find(p=>p.id===playerId);if(!pair.pending){game.pairs[0].pending=1;game.pairs[0].optionalExpansion=true;game.pairs[0].strategicExpansion=true;game.pairs[0].expander=playerId;}
+ else if(!pair.strategicExpansion)player.inventory.cards['hint-expand']--;
+ player.practiceHints=(player.practiceHints||0)+1;player.practiceTools=(player.practiceTools||0)+1;
  game.practiceHint={action:'expand',player:playerId,x:point.x,y:point.y};game.version++;game.updatedAt=new Date(now).toISOString();return game;
 }
 export function seededRandom(seed){let n=seed>>>0;return ()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}

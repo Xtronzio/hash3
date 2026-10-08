@@ -1,3 +1,5 @@
+import {snapshotMemo} from './snapshot-memo.js';
+import {machineTurnKey} from './machine-turn.js';
 import {copyText,copyPreparedText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
@@ -20,7 +22,7 @@ import {territoryIcons} from './territory-tools.js';
 import {neutralIcon} from './neutral.js';
 import {boardActionFeedback} from './rodent-feedback.js';
 import {habitatMark,habitatIcons} from './inhabitants.js';
-import {habitatLocations,habitatReservations,habitatTargets} from './habitat-tools.js';
+import {habitatLocations,habitatReservations,habitatTargets,rodentTurnsRemaining} from './habitat-tools.js';
 import {rodentMark,rodentSleeping,rodentIcon,rodentLabel} from './rodents.js';
 import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin,assertGameDeletionAllowed} from './sessions.js';
 import {savedMapModel,thumbnailMarkup,bindInspection} from './saved-map.js';
@@ -63,7 +65,7 @@ let pauseMapOpen=false,pauseMapState={},disposeInspection=null,disposeMap=null,t
 const onlinePreviews=new Map();
 const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snapshot)=>onlinePreviews.set(key,{room:snapshot,at:Date.now()}));
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
-let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0;
+let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0,machinePendingKey=null;
 let figureEffect=null,figureTimer,scoreFloatTimer;
 let rodentEffect=null,rodentTimer;
 function startRodentEffect(feedback){
@@ -185,7 +187,7 @@ function render() {
   const scoreList=room.commonWorld?list:rankedPlayers(room.players);
   const targetAvailable=!!(target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair)));
   const jumpButtons=`${iconButton('center','center','Mi territorio')}${iconButton('locate','above','Rival superior',`class="blue" ${targetAvailable?'':'disabled'}`)}`;
-  const habitatButtons=ecologyNavigationMarkup(room,uid),inventoryStatus=inventoryStatusMarkup(room,{playerId:uid});
+  const habitatButtons=ecologyNavigationMarkup(room,uid),availabilityPhase=pair.deadline&&Date.parse(pair.deadline)<=Date.now()?'expired':'active',inventoryStatus=snapshotMemo(room,'inventory:'+uid+':'+availabilityPhase,()=>inventoryStatusMarkup(room,{playerId:uid}));
   const rankRows=players=>players.map(p=>{const index=scoreList.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}<small class="rank-combo">Combo máx. ${comboLabel(p)}</small><small class="rank-rodent">${escape(rodentLabel(room,p.id))}</small></span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
   const title=canExpand?'Estás ampliando':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=room.inventoryEffects?.forced?.find(e=>e.player===uid)?.symbol||own.symbol;
@@ -199,9 +201,9 @@ function render() {
   app.innerHTML=`<section class="game ${hallModeClass(isLocal()?(room.mode==='solo'?'solo':'offline'):room.commonWorld?'world':'duel')} ${inventoryOpen?'inventory-visible':''}">
     <header class="topbar turnbar compact-turnbar"><span class="brand heading" aria-label="#3">#3</span><h1 class="heading turn-state">${title}${expanding?'':` <span class="turn-symbol ${ready?nextSymbol.toLowerCase():turnSymbol.toLowerCase()}">· ${ready?nextSymbol:turnSymbol}</span>`}</h1><div class="turn-clocks">${room.matchGoal?.type==='moves'?`<span class="mono" aria-label="Movimientos de partida">${room.players.reduce((n,p)=>n+(p.placements||0),0)}/${room.matchGoal.target}</span>`:room.cellTarget?`<span class="mono" aria-label="Celdas construidas">${room.terrain.length}/${room.cellTarget}</span>`:''}<span class="turn-timer mono" aria-label="Tiempo restante del turno" ${pair.deadline?'':'hidden'}></span>${room.endsAt?'<span class="duel-clock">FIN <strong id="duel-time" class="mono"></strong></span>':''}</div></header>
     <div class="workspace"><div class="arena">${voteMarkup(room.vote,uid)}
-    ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand&&inventorySelection?.tool!=='frontier'?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span>${isLocal()&&own.inventory?.cards.frontier>0?iconButton('practice-tool','frontier',pair.frontierUsed?'Muro ya colocada en esta ampliación':'Colocar Muro antes de ampliar',`class="expansion-frontier" data-tool="frontier" ${canUsePracticeTool(room,uid,'frontier')?'':'disabled'}`):''}${pair.optionalExpansion?iconButton('cancel-free-expansion','back','Cancelar ampliación libre'):''}<button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
+    ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand&&inventorySelection?.tool!=='frontier'?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span>${isLocal()&&own.inventory?.cards.frontier>0?iconButton('practice-tool','frontier',pair.frontierUsed?'Muro ya colocada en esta ampliación':'Colocar Muro antes de ampliar',`class="expansion-frontier" data-tool="frontier" ${canUsePracticeTool(room,uid,'frontier')?'':'disabled'}`):''}${pair.optionalExpansion?iconButton('cancel-free-expansion','back','Cancelar ampliación estratégica'):''}<button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
     <div class="map-wrap"><div class="board-inventory-status">${inventoryStatus}</div><div class="viewport" tabindex="0" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${habitatButtons}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,habitatButtons,inventoryStatus})}</div>
-    <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button>${isLocal()?ecologyWarningsMarkup(room):''}<nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?`<button class="free-expansion-button" data-action="request-free-expansion" aria-label="Ampliación libre · ${own.freeExpansions||0} guardadas" title="Ampliación libre: una por cada nueve figuras cobradas; máximo una por turno; las no utilizadas se acumulan" ${canRequestFreeExpansion(room,uid)?'':'disabled'}>${navIcon('expand')}<small>×${own.freeExpansions||0}</small></button>`:''}${isLocal()?iconButton('events','events','Próximos eventos',`aria-expanded="${eventsOpen}" aria-controls="events-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
+    <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button>${isLocal()?ecologyWarningsMarkup(room):''}<nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?iconButton('events','events','Próximos eventos',`aria-expanded="${eventsOpen}" aria-controls="events-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
 
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();renderEvents();renderSuperHelp();updateTimer();
@@ -239,7 +241,7 @@ function renderSuperHelp(){
  document.querySelector('[data-action="cancel-super-help"]')?.focus({preventScroll:true});
 }
 function expansionSummary() {
-  const known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),b=selectedExpansion;
+  const known=snapshotMemo(room,'terrain-keys',()=>new Set(terrainOf(room).map(c=>key(c.x,c.y)))),b=selectedExpansion;
   const count=Array.from({length:9},(_,i)=>key(b.x+i%3,b.y+Math.floor(i/3))).filter(k=>!known.has(k)).length;
   return `${count} celda${count!==1?'s':''} nueva${count!==1?'s':''} · ${9-count} existentes`;
 }
@@ -247,7 +249,7 @@ function drawBoard(canExpand,ready,target) {
   const pair=ownPair(),own=ownPlayer(),terrain=terrainOf(room);
   const selection=inventorySelection?.player===uid?inventorySelection:null;
   const activationTargets=selection?.tool==='activate'?toolCells(room,uid,'activate'):[];
-  const choices=canExpand&&!selection?expansionOptions(terrain,pair.terrainAnchor||pair.active,room):[],choiceKeys=new Set(choices.map(c=>key(c.x,c.y)));
+  const choices=canExpand&&!selection?snapshotMemo(room,'expansion:'+pair.id,()=>expansionOptions(terrain,pair.terrainAnchor||pair.active,room)):[],choiceKeys=new Set(choices.map(c=>key(c.x,c.y)));
   const areaSelection=['tornado','bomb','frontier'].includes(selection?.tool),areaOptions=areaSelection?(selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool)):[];
   const areaKeys=new Set(areaOptions.map(c=>key(c.x,c.y)));
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
@@ -262,13 +264,14 @@ function drawBoard(canExpand,ready,target) {
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
-  const habitatPoints=new Map(habitatLocations(room).filter(e=>e.kind!=='rodent'||e.remaining==null).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
+  const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
   const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
   const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north'})).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
   const index=cellIndex(terrain),choiceIndex=cellIndex(choices.filter(c=>!known.has(key(c.x,c.y)))),activationIndex=cellIndex(activationTargets);
   const areaIndex=cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y)))));
   const reservationIndex=cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y))));
+  const liveHabitatIndex=cellIndex(habitatLocations(room));
   const phenomenonIndex=cellIndex(ecologyPinTargets(room,uid).filter(e=>['rain','ufo','cataclysm'].includes(e.kind)));
   const territoryIndex=cellIndex((room.territoryEvents||[]).flatMap(e=>e.region.map(c=>({...c,kind:e.kind,eventId:e.id}))));
   const frontierIndex=cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id}))));
@@ -297,7 +300,7 @@ function drawBoard(canExpand,ready,target) {
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
     const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
-    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.kind==='rodent'?habitat.remaining+'↷':'',habitat):project?habitatMark(project.kind):body?'<span class="worm-trail"></span>':''}</button>`;
+    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.kind==='rodent'?rodentTurnsRemaining(habitat)+'↷':'',habitat):body?'<span class="worm-trail"></span>':''}</button>`;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
   const density=size<14?overviewGrid(overviewModel(room,own,target,{includeFrontiers:false}).terrain,{x:minX,y:minY,width:maxX-minX+1,height:maxY-minY+1}):null;
@@ -308,6 +311,7 @@ function drawBoard(canExpand,ready,target) {
    const visiting=!!rodentEffect&&rodentEffect.until>now,swirling=!!tornadoEffect&&tornadoEffect.until>now;
    if(density){
     const entries=density.query(window).map(c=>({id:'density:'+key(c.x,c.y),markup:`<button class="board-density" data-action="board-overview" style="${style(c)};width:${c.width*size}px;height:${c.height*size}px;background:${c.fill}" aria-label="Acercarse a esta zona del tablero"></button>`}));
+    for(const e of liveHabitatIndex.query(window).slice(0,33))entries.push({id:'inhabitant:'+e.id+':'+e.kind,markup:`<span class="cell inhabitant-overview" style="${style(e)};width:32px;height:32px" aria-label="${e.kind}">${habitatMark(e.kind,e.kind==='rodent'?rodentTurnsRemaining(e)+'↷':'',e)}</span>`});
     nodes=reconcileCells(board,entries,nodes);return;
    }
    const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now}:${swirling}:${visiting}`);
@@ -324,7 +328,7 @@ function drawBoard(canExpand,ready,target) {
     for(const [i,cell] of frontierTiles({...p,side:selection.side||'north'}).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,i===0,valid)});
    }else entries.push({id:'area-preview',markup:`<div class="placement-preview area-preview ${selection.tool==='bomb'?'bomb-preview':'tornado-preview'}" style="left:${(p.x-minX)*size+padding}px;top:${(p.y-minY)*size+padding}px;width:${(selection.tool==='bomb'?1:3)*size}px;height:${(selection.tool==='bomb'?1:3)*size}px" aria-hidden="true"></div>`});}
   }
-  for(const c of reservationIndex.query(window))entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatMark('build')}</div>`});
+  for(const c of reservationIndex.query(window))entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatPoints.has(key(c.x,c.y))?habitatMark('build','',habitatPoints.get(key(c.x,c.y))):'<span class="project-reservation">·</span>'}</div>`});
   for(const cell of frontierIndex.query(window))entries.push({id:'frontier:'+cell.frontierId+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,false,false,true,ready&&selection?.tool==='bomb'&&areaKeys.has(key(cell.x,cell.y)))});
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
@@ -336,7 +340,7 @@ function drawBoard(canExpand,ready,target) {
   }
   for(const e of phenomenonIndex.query(window))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)}" aria-hidden="true">${ecologyIcon(e.kind)}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
   for(const c of territoryIndex.query(window))entries.push({id:'territory-warning:'+c.eventId+key(c.x,c.y),markup:`<span class="cell territory-warning territory-${c.kind}" style="${style(c)}" aria-hidden="true"></span>`});
-  if(visiting)for(const visit of rodentEffect.index.query(window)){
+  if(visiting)for(const visit of rodentEffect.index.query(window).filter(v=>v.kind!=='rodent')){
    const id='board-action:'+visit.kind+key(visit.x,visit.y),path=visit.kind==='neutral'?neutralIcon:visit.kind==='rodent'?rodentIcon:territoryIcons[visit.kind]||habitatIcons[visit.kind];
    entries.push({id,markup:nodes.get(id)?.markup||`<span class="cell board-action ${visit.kind==='rodent'?'rodent-visit':''} board-action-${visit.kind}" style="${style(visit)};--visit-delay:${Math.min(0,rodentEffect.until-now-900)+Math.min(600,(visit.group||0)*60)}ms" aria-hidden="true"><svg viewBox="0 0 ${visit.kind==='neutral'?64:32} ${visit.kind==='neutral'?64:32}" aria-hidden="true">${path}</svg></span>`});
   }
@@ -571,7 +575,7 @@ async function run(operation) {
   if(busy)return;busy=true;
   const buttons=[...app.querySelectorAll('button')].map(b=>[b,b.disabled]);buttons.forEach(([b])=>b.disabled=true);
   try{await operation();connected=true;}catch(error){notify(error.message||'No se ha podido conectar. Inténtalo de nuevo.');}
-  finally{busy=false;if(room)render();else buttons.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}
+  finally{busy=false;if(room){render();scheduleMachine();}else buttons.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}
 }
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
@@ -744,7 +748,7 @@ app.addEventListener('click',async e=>{
   if(action==='finish'){setRankingOpen(false);finishOpen=true;renderFinish();return;}
   if(action==='cancel-finish'){finishOpen=false;document.querySelector('.finish-dialog')?.remove();return;}
   if(action==='confirm-finish'){finishOpen=false;}
-  if(action==='select-expansion'){const choice=selectExpansion(selectedExpansion,{x:Number(b.dataset.x),y:Number(b.dataset.y)});selectedExpansion=choice.selected;if(choice.confirm)action='confirm-expansion';else{render();return;}}
+  if(action==='select-expansion'){const choice=selectExpansion(selectedExpansion,{x:Number(b.dataset.x),y:Number(b.dataset.y)});selectedExpansion=choice.selected;if(choice.confirm)action='confirm-expansion';else{const controls=document.querySelector('.expansion-controls');if(controls){controls.querySelector('span').textContent=expansionSummary();controls.querySelector('[data-action="confirm-expansion"]').disabled=false;}refreshBoard();return;}}
   if(action==='setup-solo'||action==='setup-local'){localReturnDialog=hallDialog;hallHistory=[];closeHallDialog(false);localSetup=action==='setup-solo'?'solo':'local';renderLocalSetup();return;}
   if(action==='cancel-local'){localSetup=null;document.querySelector('.local-dialog')?.remove();if(localReturnDialog){openHallDialog(localReturnDialog);localReturnDialog=null;}return;}
   if(action==='start-local'){
@@ -930,27 +934,32 @@ function updateTimer() {
     if(seconds===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
   }
 }
-function stopMachine(){clearTimeout(machineTimer);machineRequest++;machineWorker?.terminate();machineWorker=null;}
+function stopMachine(){clearTimeout(machineTimer);machineRequest++;machineWorker?.terminate();machineWorker=null;machinePendingKey=null;}
 function scheduleMachine() {
-  stopMachine();
-  if(room?.mode!=='solo'||room.status!=='playing'||document.hidden)return;
-  const p=room.pairs[0];
-  const machineId=localMachineId(room);
-  if(p.pending?p.expander!==machineId:p[p.turn.toLowerCase()]!==machineId)return;
-  const expected=room.id,version=room.version;
+  const turnKey=machineTurnKey(room,document.hidden);
+  if(!turnKey){stopMachine();return;}
+  if(machinePendingKey===turnKey)return;
+  stopMachine();machinePendingKey=turnKey;
+  const expected=room.id;
   machineTimer=setTimeout(()=>{
-    if(room?.id!==expected||room.version!==version||busy||document.hidden)return;
-    const request=machineRequest;
-    const applyChoice=choice=>{if(room?.id===expected&&room.version===version&&request===machineRequest&&!busy&&!document.hidden&&room.status==='playing')accept(localCommand(room,choice.action,choice.payload));};
+    if(machineTurnKey(room,document.hidden)!==turnKey||busy){stopMachine();return;}
+    const request=machineRequest,version=room.version;
+    const applyChoice=choice=>{
+      if(request!==machineRequest||machineTurnKey(room,document.hidden)!==turnKey)return;
+      if(busy){stopMachine();return;}
+      machinePendingKey=null;
+      try{accept(localCommand(room,choice.action,choice.payload));}
+      catch{scheduleMachine();} // A worker may finish after a work changed its destination.
+    };
     const fallback=()=>applyChoice(machineChoice(room,Math.random,{maxTimeMs:40,maxNodes:800}));
     try{
       const worker=new Worker(new URL('./machine-worker.js',import.meta.url),{type:'module'});machineWorker=worker;
       worker.onmessage=({data})=>{
         worker.terminate();if(machineWorker===worker)machineWorker=null;
-        if(request!==machineRequest||room?.id!==expected||room.version!==version)return;
+        if(request!==machineRequest||machineTurnKey(room,document.hidden)!==turnKey)return;
         if(data.error)fallback();else if(data.id===expected&&data.version===version)applyChoice(data.choice);
       };
-      worker.onerror=()=>{worker.terminate();if(machineWorker===worker)machineWorker=null;if(request===machineRequest&&room?.id===expected&&room.version===version)fallback();};
+      worker.onerror=()=>{worker.terminate();if(machineWorker===worker)machineWorker=null;if(request===machineRequest&&machineTurnKey(room,document.hidden)===turnKey)fallback();};
       worker.postMessage({id:expected,room});
     }catch{fallback();}
   },room.lastEvent?.points?1500:650);

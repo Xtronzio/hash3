@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {completeInventoryTurn} from '../src/practice-tools.js';
+import {completeInventoryTurn,practiceTools,MAX_CARDS} from '../src/practice-tools.js';
 import {inventoryTotal,inventoryRefill,inventoryDockMarkup} from '../src/inventory.js';
 const now=1700000000000;
 const start=()=>createLocal('local','A','B',now,'normal','untimed');
@@ -40,7 +40,7 @@ test('La recarga del rival no resalta tu contador; el aviso describe la carta pr
  assert.match(html,/role="status"/);assert.match(html,/Inventario recargado · \+1 Ayuda/);
 });
 test('Mochila llena y turnos automáticos no crean un aviso de recarga',()=>{
- const previous=start();for(const id of ['activate','destroy','tornado','bomb'])previous.players[0].inventory.cards[id]=1;const next=structuredClone(previous);
+ const previous=start();for(const t of practiceTools){if(inventoryTotal(previous,'local-x')===MAX_CARDS)break;previous.players[0].inventory.cards[t.id]=2;}const next=structuredClone(previous);
  for(let i=0;i<1;i++)completeInventoryTurn(next,'local-x',{random:()=>0});
  assert.equal(inventoryRefill(previous,next,'local-x'),null);
  assert.match(inventoryDockMarkup(next,'local-x'),/Recarga lista cuando haya hueco/);

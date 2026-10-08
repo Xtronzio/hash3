@@ -4,7 +4,7 @@ import {proportionalBudget,habitatZone,habitatInterval,HABITAT_FREQUENCIES} from
 import {recordTerritoryGrowth,territoryRegion,advanceTerritory,initializeTerritory,recordTerritoryPlacement} from '../src/territory-tools.js';
 import {countHabitatPlacement} from '../src/inhabitants.js';
 import {key} from '../src/game.js';
-const board=(size=999)=>{const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.map((c,i)=>({...c,id:'f'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));return r;};
+const board=(size=999)=>{const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.map((c,i)=>({...c,id:'f'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players[0].figures=99;r.territoryNextPlacement=1000000;return r;};
 test('100 and 1000 cells receive exactly the same budget density over repeated activations, including fractional animals',()=>{
  for(const kind of ['rodent','worm','bomb','work']){
   const a={},b={};let small=0,large=0;
@@ -17,7 +17,7 @@ test('Two players share zone cadence, and no-food generations stay bounded',()=>
  const r=board(333);r.cells=[];r.players[0].placements=32;
  countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,33);assert.equal(r.rodentRaids[0].count,3);
  countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,34);
- countHabitatPlacement(r,'local-x',{x:1,y:0},2002,()=>0);assert.equal(r.rodentRaids.length,0);
+ for(let turn=2;turn<=9;turn++)countHabitatPlacement(r,turn%2?'local-o':'local-x',{x:1,y:0},2000+turn,()=>0);assert.equal(r.rodentRaids.length,0);
 });
 test('Merged zones combine one fractional budget without replaying old milestones',()=>{
  const r=board(333);r.habitatZones=[{id:'a',x:0,y:0,placements:20,credit:{rodent:.3}},{id:'b',x:2,y:0,placements:10,credit:{rodent:.4}}];
@@ -62,7 +62,7 @@ test('Scaling birth intervals and population limits potential meals below one me
 test('The three complexity settings persist independently and disabled ecology never acts',()=>{
  for(const faunaEnabled of [false,true])for(const territoryEnabled of [false,true]){
   let r=createLocal('solo','A','B',1000,'normal','untimed','medium','X',true,{faunaEnabled,territoryEnabled});
-  r.terrain=board(333).terrain;r.cells=board(333).cells.slice(0,60);r.players[0].placements=32;
+  r.players[0].figures=99;r.territoryNextPlacement=1000000;r.terrain=board(333).terrain;r.cells=board(333).cells.slice(0,60);r.players[0].placements=32;
   countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.rodentRaids.length,faunaEnabled?1:0);assert.equal(r.cells.some(c=>c.symbol==='#'),territoryEnabled);
   assert.equal(recordTerritoryGrowth(r,1,3000,()=>0),territoryEnabled);
   r=localCommand(r,'pause',{},3100);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},10000);
@@ -99,18 +99,35 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  let r=board(999);r.cells=r.cells.slice(0,500);r.territoryMilestone=3;r.territoryNextPlacement=1;
  r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
  r=localCommand(r,'move',{x:8,y:30},34000,()=>0);
- assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,99);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,334);
+ assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,99);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,34);
  r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.territoryEvents[0].nextAt,1023000);
  r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,900);
  r.territoryNextPlacement=1;assert.equal(recordTerritoryPlacement(r,1023001,()=>0),false);assert.equal(r.territoryEvents.length,0);
- r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].region.length,66);
+ r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'cataclysm');assert.equal(r.territoryEvents[0].region.length,Math.floor(900*33/333));
  });
  test('Old large saves receive one future attempt after 33 placements, without historical events or lost residents',()=>{
  const r=board(3333);r.players[0].placements=3000;r.players[1].placements=2900;delete r.territoryActivityVersion;
  initializeTerritory(r);assert.equal(r.territoryNextPlacement,5933);assert.equal(r.territoryEvents.length,0);const saved=structuredClone(r);
  initializeTerritory(r);assert.deepEqual(r,saved);r.players[0].placements+=32;assert.equal(recordTerritoryPlacement(r,10000,()=>0),false);
- r.players[0].placements++;assert.ok(recordTerritoryPlacement(r,10001,()=>0));assert.equal(r.territoryNextPlacement,6266);
+ r.players[0].placements++;assert.ok(recordTerritoryPlacement(r,10001,()=>0));assert.equal(r.territoryNextPlacement,5966);
  });
- test('Additional cycles stay disabled below 333 cells and when territorial phenomena are off',()=>{
- for(const size of [9,332,333]){const r=board(size);r.territoryNextPlacement=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;if(size<333)assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);}
- });
+test('Phenomena require 99 shared figures, respect the switch and work below 333 cells',()=>{
+ for(const size of [99,332,333]){const r=board(size);r.territoryNextPlacement=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=98;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=49;r.players[1].figures=50;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,3*Math.floor(Math.floor(size*33/333)/3));}
+});
+test('Viable phenomena rotate through all three types with constant randomness and saved state',()=>{
+ let r=board(333);const seen=[];
+ for(let n=0;n<6;n++){
+  r.territoryNextPlacement=0;assert.ok(recordTerritoryPlacement(r,1000+n*100000,()=>0));seen.push(r.territoryEvents[0].kind);
+  r=JSON.parse(JSON.stringify(r));r.territoryEvents=[];
+ }
+ assert.deepEqual(seen,['rain','cataclysm','ufo','rain','cataclysm','ufo']);
+});
+
+test('The placement that reaches 99 figures announces without executing a due worm meal',()=>{
+ const r=board(99);r.players[0].figures=98;r.players[0].placements=32;r.territoryNextPlacement=33;
+ r.cells=[{id:'a',x:0,y:0,symbol:'X',owner:'local-x'},{id:'b',x:1,y:0,symbol:'X',owner:'local-x'},{id:'food',x:10,y:2,symbol:'O',owner:'local-o'}];
+ r.worms=[{id:'due',kind:'worm',x:10,y:2,player:'local-x',body:[{x:10,y:2}],eaten:0,nextAt:34000}];
+ const next=localCommand(r,'move',{x:2,y:0},34000,()=>0);
+ assert.equal(next.players[0].figures,99);assert.equal(next.territoryEvents.length,1);assert.equal(next.worms[0].eaten,0);
+ assert.equal(next.territoryNextPlacement,66);
+});

@@ -1,20 +1,16 @@
 import {boardCellLimit} from './board-limits.js';
 import {terrainOf,expansionOptions} from './game.js';
-// Versioned migration preserves saved reserves and only rewards new paid figures.
-export const FREE_EXPANSION_FIGURES=9;
+export const STRATEGIC_EXPANSION_FIGURES=333;
+export const strategicExpansionUnlocked=room=>(room.players||[]).reduce((n,p)=>n+(p.figures||0),0)>=STRATEGIC_EXPANSION_FIGURES;
+// Keep historic reserves in saves, but stop awarding and exposing free growth.
 export function initializeFreeExpansions(room){
- for(const p of room.players){
-  p.freeExpansions??=0;
-  if(p.freeExpansionVersion!==4){p.nextFreeExpansionFigure=(Math.floor((p.figures||0)/FREE_EXPANSION_FIGURES)+1)*FREE_EXPANSION_FIGURES;p.freeExpansionVersion=4;}
-  p.nextFreeExpansionFigure??=(Math.floor((p.figures||0)/FREE_EXPANSION_FIGURES)+1)*FREE_EXPANSION_FIGURES;
- }
+ for(const p of room.players){p.freeExpansions??=0;p.freeExpansionVersion=5;delete p.nextFreeExpansionFigure;}
 }
-export function earnFreeExpansion(player){
- const next=player.nextFreeExpansionFigure??Infinity;if(player.figures<next)return false;
- const earned=1+Math.floor((player.figures-next)/FREE_EXPANSION_FIGURES);
- player.freeExpansions=(player.freeExpansions||0)+earned;player.nextFreeExpansionFigure=next+earned*FREE_EXPANSION_FIGURES;return true;
+export function earnFreeExpansion(){return false;}
+export function canRequestStrategicExpansion(room,playerId){
+ const player=room.players.find(p=>p.id===playerId),pair=room.pairs.find(p=>p.x===playerId||p.o===playerId),state=room.practiceTurn?.player===playerId?room.practiceTurn:null;
+ const used=(state?.used||[]).filter(id=>!['combo','super-hint','immunity'].includes(id)).length,allowance=state?.used.includes('combo')?2:1;
+ return room.status==='playing'&&!!player&&!!pair&&!pair.pending&&pair.turn===player.symbol&&strategicExpansionUnlocked(room)&&(player.inventory?.cards['hint-expand']||0)>0&&used<allowance&&!state?.used.includes('double')&&!(room.practiceTurn?.remaining>1)&&!(room.practiceTurn?.player===playerId&&(room.practiceTurn.freeExpanded||room.practiceTurn.used.includes('hint-expand')))&&terrainOf(room).length<boardCellLimit(room)&&expansionOptions(terrainOf(room),pair.terrainAnchor||pair.active,room).length>0;
 }
-export function canRequestFreeExpansion(room,playerId){
- const player=room.players.find(p=>p.id===playerId),pair=room.pairs.find(p=>p.x===playerId||p.o===playerId);
- return terrainOf(room).length<boardCellLimit(room)&&!!pair&&expansionOptions(terrainOf(room),pair.terrainAnchor||pair.active,room).length>0&&room.status==='playing'&&!!player&&!!pair&&!pair.pending&&pair.turn===player.symbol&&player.freeExpansions>0&&!(room.practiceTurn?.remaining>1)&&!(room.practiceTurn?.player===playerId&&room.practiceTurn.freeExpanded);
-}
+// Compatibility for callers; old free tickets no longer authorize expansion.
+export const canRequestFreeExpansion=canRequestStrategicExpansion;

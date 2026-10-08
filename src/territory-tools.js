@@ -4,21 +4,24 @@ import {territoryEnabled,faunaSuspended} from './ecology.js';
 import {habitatInterval,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {frontierHit} from './frontiers.js';
 
-export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=33000,TERRITORY_PLACEMENTS=333;
+export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=33000,TERRITORY_PLACEMENTS=33;
+export const TERRITORY_MIN_FIGURES=99;
+export const territoryFigures=room=>room.players.reduce((n,p)=>n+(p.figures||0),0);
+export const territoryReady=room=>territoryFigures(room)>=TERRITORY_MIN_FIGURES;
 export const territoryPlacements=room=>room.players.reduce((n,p)=>n+(p.placements??room.cells.filter(c=>c.owner===p.id).length),0);
 export const territoryIcons={rain:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>',ufo:'<ellipse cx="16" cy="15" rx="13" ry="4"/><path d="M9 12a7 7 0 0 1 14 0M10 22l-4 7m10-7v8m6-8 4 7"/>',cataclysm:'<path d="m18 2-8 12 9 2-7 14M2 21l6-3m16 5 6-2M3 8l5 2m16-1 5-3"/>'};
 export function initializeTerritory(room){
  room.territoryEvents||=[];
  // Adopt current terrain without firing historical growth again.
  room.territoryMilestone??=Math.floor(terrainOf(room).length/333);
- if(room.territoryActivityVersion!==1){
-  room.territoryNextPlacement=territoryPlacements(room)+(terrainOf(room).length>=333?33:TERRITORY_PLACEMENTS);
-  room.territoryActivityVersion=1;
+ if(room.territoryActivityVersion!==2){
+  room.territoryNextPlacement=territoryPlacements(room)+TERRITORY_PLACEMENTS;
+  room.territoryActivityVersion=2;
  }
 }
 // Connected patch chosen from a boundary, with every pair's anchor preserved.
 // O(N) command work; never called from pan/pinch or board-window queries.
-export function territoryRegion(room,kind,random=Math.random,count=Math.floor(terrainOf(room).length/333)*33){
+export function territoryRegion(room,kind,random=Math.random,count=Math.floor(terrainOf(room).length*33/333)){
  const terrain=terrainOf(room),known=new Map(terrain.map(c=>[key(c.x,c.y),c]));
  const anchors=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y)));
  const eligible=terrain.filter(c=>kind==='ufo'||!anchors.has(key(c.x,c.y)));
@@ -60,24 +63,28 @@ function announceTerritory(room,now,random,trigger){
  // One draw, no backlog, even if the board currently has no viable target.
  room.territoryMilestone=Math.max(room.territoryMilestone,milestone);
  room.territoryNextPlacement=territoryPlacements(room)+TERRITORY_PLACEMENTS;
- const draw=['rain','cataclysm','ufo'],start=Math.min(2,Math.floor(Math.max(0,random())*3));
- for(let i=0;i<3;i++){
-  const kind=draw[(start+i)%3],count=kind==='ufo'?Math.floor(room.cells.length*33/333):milestone*33;
+ const draw=['rain','cataclysm','ufo'];
+ if(!room.territoryBag?.length){const start=Math.min(2,Math.floor(Math.max(0,random())*3));room.territoryBag=[...draw.slice(start),...draw.slice(0,start)];}
+ const candidates=[...room.territoryBag,...draw.filter(kind=>!room.territoryBag.includes(kind))];
+ for(const kind of candidates){
+  const incidence=Math.floor((kind==='ufo'?room.cells.length:size)*33/333),count=kind==='rain'?3*Math.floor(incidence/3):incidence;
+  if(count<1)continue;
   const region=territoryRegion(room,kind,random,count);
   if(!region.length)continue;
   for(const e of [...(room.worms||[]),...(room.works||[]),...(room.bombs||[])])if(e.remainingMs==null)e.remainingMs=Math.max(0,(e.nextAt||now+33000)-now);
+  room.territoryBag=room.territoryBag.filter(k=>k!==kind);
   room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,trigger,region,x:region[0].x,y:region[0].y,nextAt:now+TERRITORY_WARNING_MS});return true;
  }
  return false;
 }
 export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.random){
- initializeTerritory(room);if(!territoryEnabled(room)||added<=0||faunaSuspended(room,now))return false;
+ initializeTerritory(room);if(!territoryEnabled(room)||!territoryReady(room)||added<=0||faunaSuspended(room,now))return false;
  const milestone=Math.floor(terrainOf(room).length/333);
  if(milestone<=room.territoryMilestone)return false;
  return announceTerritory(room,now,random,'growth');
 }
 export function territoryPlacementDue(room,now=Date.now(),increment=0){
- return territoryEnabled(room)&&terrainOf(room).length>=TERRITORY_MIN_SIZE&&!faunaSuspended(room,now)&&territoryPlacements(room)+increment>=room.territoryNextPlacement;
+ return territoryEnabled(room)&&territoryReady(room)&&!faunaSuspended(room,now)&&territoryPlacements(room)+increment>=room.territoryNextPlacement;
 }
 export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random){
  initializeTerritory(room);if(!territoryPlacementDue(room,now))return false;

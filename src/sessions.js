@@ -25,7 +25,7 @@ export function loadLocalGames(storage,now=Date.now()){
     games.push(imported);
   }}catch{}
   let migrated=!canonical&&games.length>0;
-  for(const game of games)if(game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==3||game.inventoryCadenceVersion!==1||game.territoryActivityVersion!==1||game.players.some(p=>p.freeExpansionVersion!==4)){
+  for(const game of games)if(game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==3||game.inventoryCadenceVersion!==1||game.territoryActivityVersion!==2||game.rodentLifecycleVersion!==1||game.players.some(p=>p.freeExpansionVersion!==5)){
     initializeInventory(game);initializeFreeExpansions(game);initializeHabitats(game,now);migrated=true;
   }
   // Persist conversion/refunds atomically before returning an upgraded map;

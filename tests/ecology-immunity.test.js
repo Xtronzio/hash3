@@ -27,10 +27,10 @@ test('Gusano permanece vivo sin alimento desprotegido y vuelve a comer después 
  assert.equal(r.cells.length,1);assert.equal(r.worms[0].eaten,0);assert.equal(r.worms[0].nextAt,now+53000);
  advanceHabitats(r,now+53000,()=>0);assert.equal(r.cells.length,0);assert.equal(r.worms[0].eaten,1);
 });
-test('Roedores siguen por colocaciones y omiten las fichas protegidas sin acumular comidas',()=>{
+test('Roedores siguen por turnos y omiten las fichas protegidas sin acumular comidas',()=>{
  let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.rodentRaids=[{id:'r',x:0,y:0,count:1,remaining:3,visited:[]}];r=activate(r);
- countHabitatPlacement(r,'local-x',{x:2,y:2},now,()=>0);assert.deepEqual(r.cells.map(c=>c.id),['x']);assert.equal(r.rodentRaids[0].remaining,2);
- countHabitatPlacement(r,'local-o',{x:2,y:1},now,()=>0);assert.equal(r.cells.length,1);assert.equal(r.rodentRaids[0].remaining,1);
+ countHabitatPlacement(r,'local-x',{x:2,y:2},now,()=>0);assert.deepEqual(r.cells.map(c=>c.id),['x','o']);assert.equal(r.rodentRaids[0].phase,'arriving');
+ countHabitatPlacement(r,'local-o',{x:2,y:1},now,()=>0);assert.equal(r.cells.length,1);assert.equal(r.rodentRaids[0].phase,'eating');
 });
 test('Obra protegida pospone el par construir/destruir, conservando el equilibrio',()=>{
  let r=start();r.terrain.find(c=>c.x===1&&c.y===1).owner='local-x';r.works=[{id:'w',kind:'work',done:0,destroy:[{x:1,y:1}],build:[{x:3,y:1}],nextAt:now+20000}];r=activate(r);advanceHabitats(r,now+20000,()=>0);
@@ -42,8 +42,8 @@ test('Pausa conserva exactamente el tiempo restante y el reloj de vencimiento no
 });
 
 test('Frontera admite ampliación libre con huecos; la inmunidad rival se activa durante esa fase',()=>{
- let r=start();r.players[0].freeExpansions=1;r.players[0].inventory.cards.frontier=2;
- r=localCommand(r,'request-free-expansion',{},now);assert.equal(r.pairs[0].optionalExpansion,true);
+ let r=start();r.players[0].figures=333;r.players[0].inventory.cards['hint-expand']=1;r.players[0].inventory.cards.frontier=2;
+ r=localCommand(r,'request-strategic-expansion',{},now);assert.equal(r.pairs[0].optionalExpansion,true);
  assert.equal(canUsePracticeTool(r,'local-x','frontier',now),true);r=localCommand(r,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0,side:'south'},now);
  assert.equal(r.frontiers.length,1);assert.equal(canUsePracticeTool(r,'local-x','frontier',now),false);
  const before=structuredClone(r.pairs);r=activate(r,'local-o');assert.deepEqual(r.pairs,before);assert.equal(immunitySeconds(r,'local-o'),33);

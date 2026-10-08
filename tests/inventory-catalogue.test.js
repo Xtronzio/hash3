@@ -18,14 +18,15 @@ test('Ambos jugadores empiezan con ocho cartas iguales; gastar no recarga inmedi
  r=move(r,1,0);assert.equal(r.players[0].inventory.turns,0);assert.equal(r.players[0].inventory.cards.double,0);
  assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now));assert.equal(r.players[1].inventory.cards.double,1);
 });
-test('Recarga por turno propio pagado; doce cartas, sin premiar esperas ni automáticos',()=>{
+test('Recarga por turno pagado; dieciocho cartas, sin premiar esperas ni automáticos',()=>{
  const r=start(),id='local-x',inv=r.players[0].inventory;
  completeInventoryTurn(r,id,{automatic:true});completeInventoryTurn(r,id,{placed:false});assert.equal(inv.draws,undefined);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,1);assert.equal(inv.cards.activate,1);
- for(let n=0;n<3;n++)completeInventoryTurn(r,id,{random:()=>0});assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),12);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,4);assert.equal(inv.turns,1);
- inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true});assert.equal(inv.draws,4);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,5);assert.equal(inv.cards.frontier,1);assert.equal(inv.turns,0);
+ for(let n=0;n<MAX_CARDS-8;n++)completeInventoryTurn(r,id,{random:()=>0});
+ assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),MAX_CARDS);assert.equal(MAX_CARDS,18);
+ assert.ok(practiceTools.every(t=>inv.cards[t.id]>0));assert.equal(inv.draws,10);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,10);assert.equal(inv.turns,1);
+ inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true});assert.equal(inv.draws,10);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,11);assert.equal(inv.turns,0);
 });
 test('Bloqueo impide la colocación propia inmediata, permite la siguiente y dura dos turnos rivales',()=>{
  let r=card(start(),'block',{x:1,y:1});assert(isBlockedCell(r,'local-x',1,1));assert.throws(()=>move(r,1,1));

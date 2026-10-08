@@ -28,7 +28,7 @@ test('Refunds above normal caps are preserved, cannot duplicate on reload and st
  for(let i=0;i<6;i++)completeInventoryTurn(stored,'local-x');assert.equal(stored.players[0].inventory.draws,undefined);assert.equal(stored.players[0].inventory.cards.frontier,10);
 });
 test('A refunded expander can use one new wall in the same pending phase; no unknown-owner barrier is destroyed',()=>{
- const g=legacy();g.players[0].freeExpansions=1;Object.assign(g.pairs[0],{pending:1,optionalExpansion:true,expander:'local-x',frontierUsed:true});
+ const g=legacy();g.players[0].figures=333;g.players[0].inventory.cards['hint-expand']=1;Object.assign(g.pairs[0],{pending:1,optionalExpansion:true,strategicExpansion:true,expander:'local-x',frontierUsed:true});
  g.frontiers.push({id:'orphan',by:'missing',cells:[{x:8,y:0},{x:8,y:1},{x:8,y:2}]});
  const next=localCommand(g,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0},now);
  assert.equal(g.frontiers.length,4);assert.deepEqual(next.frontiers.map(f=>f.id).slice(0,2),['single','orphan']);
@@ -39,7 +39,7 @@ test('Loading paused, active and finished local saves persists conversion and re
  for(const status of ['paused','playing','finished']){const g=legacy();g.status=status;g.players[0].score=333;g.pauseRemainingMs=12000;g.players[0].freeExpansionVersion=2;g.players[0].figures=13;g.players[0].freeExpansions=4;games.push(g);}
  const unknown={id:'recoverable',partial:'retain'};storage.setItem('hash3_locals',JSON.stringify([...games,unknown]));toggleGamePin(storage,games[0]);const pins=loadGamePins(storage);
  const loaded=loadLocalGames(storage,now+999999);assert.equal(loaded.length,3);
- for(const g of loaded){assert.equal(g.frontiers.length,1);assert.equal(g.players[0].inventory.cards.frontier,1);assert.equal(g.players[0].score,333);assert.equal(g.pauseRemainingMs,12000);assert.equal(g.players[0].freeExpansions,4);assert.equal(g.players[0].nextFreeExpansionFigure,18);assert.equal(g.updatedAt,games.find(old=>old.id===g.id).updatedAt);}
+ for(const g of loaded){assert.equal(g.frontiers.length,1);assert.equal(g.players[0].inventory.cards.frontier,1);assert.equal(g.players[0].score,333);assert.equal(g.pauseRemainingMs,12000);assert.equal(g.players[0].freeExpansions,4);assert.equal(g.players[0].nextFreeExpansionFigure,undefined);assert.equal(g.updatedAt,games.find(old=>old.id===g.id).updatedAt);}
  const first=storage.getItem('hash3_locals');loadLocalGames(storage);assert.equal(storage.getItem('hash3_locals'),first);assert.deepEqual(loadGamePins(storage),pins);assert.deepEqual(JSON.parse(first).at(-1),unknown);
  const original=legacy(),limited=memory();limited.setItem('hash3_locals',JSON.stringify([original]));const blocked={getItem:limited.getItem,setItem:()=>{throw Error('quota');}};
  assert.throws(()=>loadLocalGames(blocked),/quota/);assert.deepEqual(JSON.parse(limited.getItem('hash3_locals'))[0],original);

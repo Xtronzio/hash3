@@ -42,3 +42,22 @@ body{padding-bottom:26px}.game{height:calc(100dvh - 26px)}.entry{min-height:calc
 .hall-rules summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 
 .ecology-jump:has(>.ecology-clock)>.ecology-clock{right:9px}.ecology-jump>.ecology-clock+small{position:absolute;right:2px;bottom:2px;font-size:8px;line-height:12px}
+
+/* Inhabitants persist in game state; animations never lock input or advance it. */
+.visible-inhabitant.habitat-rodent.phase-arriving>svg{animation:inhabitant-watch 1.6s ease-in-out infinite}
+.visible-inhabitant.habitat-rodent.phase-eating>svg{animation:inhabitant-eat .45s ease-in-out infinite}
+.visible-inhabitant.habitat-build>svg,.visible-inhabitant.habitat-destroy>svg{animation:inhabitant-work .8s ease-in-out infinite}
+.visible-inhabitant.habitat-worm>svg{animation:inhabitant-crawl 1.3s ease-in-out infinite}
+.visible-inhabitant.is-frozen>svg{animation-play-state:paused}
+.visible-inhabitant.habitat-build>svg [data-worker-sign],.visible-inhabitant.habitat-destroy>svg [data-worker-sign]{stroke-width:2.8}
+.inhabitant-overview{pointer-events:none;z-index:5}
+.project-reservation{position:absolute;inset:0;display:grid;place-items:center;color:var(--green);pointer-events:none}
+@keyframes inhabitant-watch{50%{transform:translateY(-7%) rotate(-6deg)}}
+@keyframes inhabitant-eat{50%{transform:translateY(6%) rotate(9deg)}}
+@keyframes inhabitant-work{50%{transform:translateY(8%) rotate(-10deg)}}
+@keyframes inhabitant-crawl{50%{transform:translateX(5%) rotate(5deg)}}
+@media(prefers-reduced-motion:reduce){.visible-inhabitant>svg{animation:none!important}}
+
+.game .cell:has(.visible-inhabitant){opacity:1}.game .habitat-rodent{background:#13150be6;border-radius:35%}.ecology-map-pin>svg{transform-box:fill-box;transform-origin:center}
+
+.visible-inhabitant>svg{animation-delay:var(--inhabitant-delay,0ms)!important}

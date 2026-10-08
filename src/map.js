@@ -1,3 +1,4 @@
+import {snapshotMemo} from './snapshot-memo.js';
 import {ecologyPinTargets,ecologyMapPins} from './ecology-navigation.js';
 import {bindBoardNavigation} from './board-navigation.js';
 import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
@@ -12,11 +13,11 @@ export function overviewCells(terrain){
 }
 export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onClose,onNavigate=()=>{},mapState={}}){
   const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('.map-canvas');
-  const model=overviewModel(room,own,target,{includeFrontiers:false});if(!viewport||!big||!model)return;
+  const cacheKey='map:'+own?.id+':'+target?.id,model=snapshotMemo(room,cacheKey,()=>overviewModel(room,own,target,{includeFrontiers:false}));if(!viewport||!big||!model)return;
   const {bounds,terrain,active,ownColor}=model;
-  const barriers=frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'})),visual=[...terrain,...barriers],grid=overviewGrid(terrain,bounds),frontierGrid=frontierOverviewGrid(barriers,bounds),detailIndex=cellIndex(visual),pinIndex=cellIndex(ecologyPinTargets(room,own?.id));
+  const {grid,frontierGrid,detailIndex,pinIndex}=snapshotMemo(room,cacheKey+':indices',()=>{const barriers=frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'}));return {grid:overviewGrid(terrain,bounds),frontierGrid:frontierOverviewGrid(barriers,bounds),detailIndex:cellIndex([...terrain,...barriers]),pinIndex:cellIndex(ecologyPinTargets(room,own?.id))};});
   const coarse=box=>[...grid.query(box),...frontierGrid.query(box)];
-  const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(coarse(bounds));}
+  const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(coarse(bounds))+ecologyMapPins(pinIndex.query(bounds),room.clockNow??Date.now(),9);const pinScale=Math.max(bounds.width,bounds.height)/80*.45;for(const pin of mini.querySelectorAll('.ecology-map-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${pinScale})`);}
   let fitted={...bounds},camera=mapState.box?clampCamera(mapState.box,bounds):{...bounds},aspect=null;
   let initialized=false,lastTerrainWindow=null;
   const initialize=()=>{if(initialized)return;initialized=true;

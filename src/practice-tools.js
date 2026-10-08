@@ -1,3 +1,4 @@
+import {canRequestStrategicExpansion} from './free-expansion.js';
 import {migrateLegacyWalls} from './wall-migration.js';
 import {boardCellLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
@@ -5,7 +6,7 @@ import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
 import {expansionFrontierContext,edgeKey} from './frontiers.js';
-export const REFILL_TURNS=1,MAX_CARDS=12,MAX_PER_CARD=2;
+export const REFILL_TURNS=1,MAX_CARDS=18,MAX_PER_CARD=2;
 export const practiceTools=[
   {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
@@ -20,7 +21,7 @@ export const practiceTools=[
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos, conservando símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
   {id:'frontier',label:'Muro',description:'Solo quien está ampliando puede usarlo, una vez por ampliación. Coloca una casilla de muro en un hueco sin construir junto al territorio; después coloca la ampliación 3×3. El muro lleva un rombo violeta y bloquea construir o ampliar sobre esa casilla. No consume una herramienta del turno de fichas; solo Bomba rompe el muro.',button:'Colocar muro y después ampliar'},
-  {id:'hint-expand',group:'help',label:'Ayuda de ampliación',description:'Durante la ampliación propone una ubicación 3×3 favorable para tus próximas figuras, respetando los muros. Tú confirmas o eliges otra.',button:'Sugerir ampliación'},
+  {id:'hint-expand',group:'help',label:'Ampliación inteligente',description:'Propone un 3×3 favorable al quedarte sin movimientos. Desde 333 figuras cobradas en la partida también permite ampliar por estrategia aunque queden huecos. Tú confirmas o eliges otra; la ampliación voluntaria gasta la carta al colocarla.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
@@ -92,7 +93,8 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
     if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierOptions(game,'north',playerId).length>0;
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
-  if(['hint-expand','frontier'].includes(tool)||p[p.turn.toLowerCase()]!==playerId)return false;
+  if(tool==='hint-expand')return canRequestStrategicExpansion(game,playerId)&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now);
+  if(tool==='frontier'||p[p.turn.toLowerCase()]!==playerId)return false;
   if(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now))return false;
   if(!inventoryTools.some(t=>t.id===tool)||toolStock(game,playerId,tool)<=0)return false;
   const state=practiceTurn(game,playerId);

@@ -35,7 +35,7 @@ test('Los hitos repetibles 3, 33 y 333 avanzan juntos y sus premios nunca se pie
  earn(r,300);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':111,'immunity-3':30,'immunity-33':33});
  assert.equal(immunityFor(r,'local-x').earned,122);assert.equal(inventoryTotal(r,'local-x'),182);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((s,n)=>s+n),8);
- for(const id of ['activate','destroy','tornado','bomb'])r.players[0].inventory.cards[id]=1;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,0);
+ for(const id of ['activate','destroy','tornado','bomb','frontier'])r.players[0].inventory.cards[id]=2;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,0);
 });
 test('El árbitro cuenta la colocación real, sus bonus y cada ficha de Doble por separado',()=>{
  let r=move(scoringRoom(),16,0);assert.equal(r.lastEvent.points,33);assert.equal(immunityFor(r,'local-x').combos,1);

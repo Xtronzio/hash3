@@ -9,13 +9,18 @@ import {recordCombo} from '../src/records.js';
 function fixture(size=333){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,60).map(c=>({...c,id:`food-${c.x},${c.y}`,symbol:'X',owner:'local-x'}));return r;}
 function animal(kind='rodent',point={x:0,y:0}){return {id:kind,player:'local-x',kind,...point,eaten:0,phase:0,nextAt:34000,...(kind==='worm'?{body:[point]}:{})};}
 function birth(r,count){r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
-test('Surface scales groups 1/2/3: three distinct move visits remove up to 3/6/9 fichas',()=>{
+test('Visible roedores scale 1/2/3; three meals occupy nine completed turns with separate locations',()=>{
  for(const [size,group] of [[111,1],[222,2],[333,3]]){
-  const r=fixture(size);birth(r,33);assert.equal(r.rodents.length,0);assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].remaining,2);assert.equal(r.cells.filter(c=>c.symbol!=='#').length,60-group);
-  const visits=[...r.rodentVisit.visits];
-  countHabitatPlacement(r,'local-o',{x:1,y:1},1001,()=>0);visits.push(...r.rodentVisit.visits);
-  countHabitatPlacement(r,'local-x',{x:1,y:1},1002,()=>0);visits.push(...r.rodentVisit.visits);
-  assert.equal(r.rodentRaids.length,0);assert.equal(visits.length,3*group);assert.equal(new Set(visits.map(c=>key(c.x,c.y))).size,3*group);assert.equal(r.cells.filter(c=>c.symbol!=='#').length,60-3*group);
+  const r=fixture(size);r.territoryEnabled=false;birth(r,33);r.worms=[];
+  assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].members.length,group);assert.equal(r.cells.length,60);
+  const visits=[];let oldId;
+  for(let turn=1;turn<=9;turn++){
+   countHabitatPlacement(r,turn%2?'local-o':'local-x',{x:14,y:3},1000+turn,()=>0);
+   if(r.rodentVisit?.id!==oldId&&r.rodentVisit){visits.push(...r.rodentVisit.visits);oldId=r.rodentVisit.id;}
+   if(turn<9){assert.equal(r.rodentRaids[0].phase,turn%3===1?'arriving':turn%3===2?'eating':'hidden');assert.equal(r.rodentRaids[0].members.length,turn%3===0?0:group);}
+   assert.equal(r.cells.length,60-group*Math.floor((turn+1)/3));
+  }
+  assert.equal(r.rodentRaids.length,0);assert.equal(visits.length,3*group);assert.equal(new Set(visits.map(c=>key(c.x,c.y))).size,3*group);
  }
  const r=fixture();birth(r,198);assert.equal(r.bombs.length,0);assert.equal(r.worms.length,1);assert.equal(r.works.length,3);assert.equal(habitatReservations(r).length,18);
 });
@@ -26,12 +31,12 @@ test('Rodents ignore time; move visits preserve score and never eat the newly pl
  const r=fixture();birth(r,33);r.worms=[];r.players[0].score=70;const before=structuredClone(r);
  assert.equal(advanceHabitats(r,1000000,()=>0),false);assert.equal(r.cells.length,before.cells.length);assert.deepEqual(r.rodentRaids,before.rodentRaids);
  const fresh={id:'fresh',x:14,y:9,symbol:'O',owner:'local-o'};r.cells.push(fresh);
- countHabitatPlacement(r,'local-o',fresh,1000001,()=>0);assert.ok(r.cells.some(c=>c.id==='fresh'));assert.equal(r.players[0].score,70);assert.equal(r.rodentRaids[0].remaining,1);
+ countHabitatPlacement(r,'local-o',fresh,1000001,()=>0);assert.ok(r.cells.some(c=>c.id==='fresh'));assert.equal(r.players[0].score,70);assert.equal(r.rodentRaids[0].turn,1);
 });
-test('Doble advances two visits; ticks, cards, expansion and pass never advance visits',()=>{
+test('Doble advances one completed turn; clocks and cards never advance the visible cycle',()=>{
  let r=createLocal('local','A','B',1000,'normal','untimed');r.players[0].placements=32;r.rodentRaids=[{id:'existing',player:'local-x',x:0,y:0,count:1,remaining:3,visited:[]}];r.cells=[{id:'a',x:2,y:0,symbol:'O',owner:'local-o'},{id:'b',x:2,y:1,symbol:'O',owner:'local-o'},{id:'c',x:2,y:2,symbol:'O',owner:'local-o'}];
- r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},1100);r=localCommand(r,'move',{x:0,y:0},1200);assert.equal(r.rodentRaids[0].remaining,2);
- const nextPoint=availableCells(r,r.pairs[0])[0];r=localCommand(r,'move',nextPoint,1300);assert.equal(r.rodentRaids[0].remaining,1);assert.equal(r.players[0].placements,34);
+ r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},1100);r=localCommand(r,'move',{x:0,y:0},1200);assert.equal(r.rodentRaids[0].turn??0,0);
+ const nextPoint=availableCells(r,r.pairs[0])[0];r=localCommand(r,'move',nextPoint,1300);assert.equal(r.rodentRaids[0].turn,1);assert.equal(r.players[0].placements,34);
  const before=structuredClone(r.rodentRaids);r=localCommand(r,'tick',{},34000,()=>0);assert.deepEqual(r.rodentRaids,before);
 });
 test('Worm walks adjacent cells including diagonals, blocks body and disappears with its third meal at 99 seconds',()=>{

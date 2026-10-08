@@ -1,10 +1,11 @@
 import {rodentIcon} from './rodent-icon.js';
-import {initializeHabitats,countHabitatPlacement,habitatLabel} from './inhabitants.js';
+import {initializeHabitats,countHabitatPlacement,habitatLabel,visitRodents} from './inhabitants.js';
 export const RODENT_SPAWN=33,RODENT_MEALS=3;
 export const initializeRodents=initializeHabitats;
 export const rodentSleeping=r=>r.remainingMs!=null;
-export function stepRodent(room,playerId,{placed=false,now=Date.now(),random=Math.random}={}){
- if(placed){const p=room.players.find(p=>p.id===playerId),point=p?.lastMove||room.lastEvent?.move||room.pairs.find(p=>p.x===playerId||p.o===playerId)?.active;if(point)countHabitatPlacement(room,playerId,point,now,random);}
+export function stepRodent(room,playerId,{placed=false,completed=true,now=Date.now(),random=Math.random}={}){
+ if(placed){const p=room.players.find(p=>p.id===playerId),point=p?.lastMove||room.lastEvent?.move||room.pairs.find(p=>p.x===playerId||p.o===playerId)?.active;if(point)countHabitatPlacement(room,playerId,point,now,random,{completed});}
+ else if(completed){const point=room.pairs.find(p=>p.x===playerId||p.o===playerId)?.active;if(point)visitRodents(room,point,now,random);}
 }
 export function rodentStatus(room,playerId){const p=room.players.find(p=>p.id===playerId),next=p?.habitatNext?.rodent??(Math.floor((p?.placements||0)/33)+1)*33;return {placements:p?.placements||0,next,remaining:next-(p?.placements||0),animal:room.rodents?.find(r=>r.player===playerId)||null};}
 export const rodentLabel=habitatLabel;

@@ -32,17 +32,24 @@ test('Los números explican lo que falta y los avisos expresan cuándo actúan',
  game.territoryEvents=[{id:'event',kind:'ufo',dueAt:now+28000}];html=eventOutlookMarkup(game,'local-x');assert.match(html,/<small>En<\/small>/);assert.match(html,/Próximas apariciones · lo que falta/);
 });
 
-test('Active rodents show remaining visits, while offscreen timed events have a visible independent countdown',()=>{
+test('Active rodents show remaining turns, while offscreen timed events have a visible independent countdown',()=>{
  const game=fresh();game.rodentRaids=[{id:'r',remaining:2}];game.worms=[{id:'w',nextAt:now+33000}];game.clockNow=now;
- const html=eventOutlookMarkup(game,'local-x');assert.match(html,/sin espera de 33 s/);assert.match(html,/jugadas de visitas/);
+ const html=eventOutlookMarkup(game,'local-x');assert.match(html,/tres visitas en nueve turnos/);assert.match(html,/turnos restantes/);
  for(const field of ['cells','terrain','frontiers'])Object.defineProperty(game,field,{get(){throw Error('Warning scanned board');}});
- const warnings=ecologyWarningsMarkup(game,now);assert.match(warnings,/Roedores · 2 jugadas pendientes · sin cuenta atrás temporal/);assert.match(warnings,/data-ecology-source="w">33/);assert.equal((warnings.match(/class="ecology-clock/g)||[]).length,1);
+ const warnings=ecologyWarningsMarkup(game,now);assert.match(warnings,/Roedores · 6 turnos pendientes · sin cuenta atrás temporal/);assert.match(warnings,/data-ecology-source="w">33/);assert.equal((warnings.match(/class="ecology-clock/g)||[]).length,1);
  game.worms[0].remainingMs=12000;assert.match(ecologyWarningsMarkup(game,now+999999),/cuenta atrás detenida/);assert.match(ecologyWarningsMarkup(game,now+999999),/data-ecology-source="w">12/);
 });
 
  test('The additional phenomenon cycle reports remaining shared placements without reading cells',()=>{
- const g=fresh();g.terrain=Array(999);g.players[0].placements=12;g.players[1].placements=5;g.territoryNextPlacement=33;
+ const g=fresh();g.players[0].figures=99;g.terrain=Array(999);g.players[0].placements=12;g.players[1].placements=5;g.territoryNextPlacement=33;
  Object.defineProperty(g,'cells',{get(){throw Error('clock scanned cells');}});
  const row=eventOutlook(g,'local-x').rows.find(e=>e.trigger==='placements');assert.equal(row.remaining,16);assert.equal(row.unit,'colocaciones entre ambos');assert.equal(row.requiresSize,false);
  assert.match(eventOutlookMarkup(g,'local-x'),/Ciclo de actividad/);
  });
+
+test('Activity countdown shows figures before 99 and shared placements after the opening',()=>{
+ const g=fresh();g.players[0].figures=48;g.players[1].figures=50;
+ assert.match(eventOutlookMarkup(g,'local-x'),/Faltan<\/small>1<small>figuras entre ambos/);
+ g.players[0].figures=49;assert.equal(eventOutlook(g,'local-x').rows.find(e=>e.trigger==='placements').requiresFigures,false);
+ assert.match(eventOutlookMarkup(g,'local-x'),/Ciclo de actividad/);
+});
