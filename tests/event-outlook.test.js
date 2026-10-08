@@ -27,3 +27,7 @@ test('Pausa mantiene las cuentas de intervenciones y recuperación, sin leer fic
  Object.defineProperty(game,'cells',{get(){throw Error('Leyó fichas');}});
  const view=eventOutlook(game,'local-x',now+999999);assert.equal(view.timed[0].seconds,12);assert.equal(view.recovery.seconds,15);
 });
+test('Los números explican lo que falta y los avisos expresan cuándo actúan',()=>{
+ const game=fresh();let html=eventOutlookMarkup(game,'local-x');assert.match(html,/Faltan<\/small>33<small>colocaciones/);
+ game.territoryEvents=[{id:'event',kind:'ufo',dueAt:now+28000}];html=eventOutlookMarkup(game,'local-x');assert.match(html,/<small>En<\/small>/);assert.match(html,/Próximas apariciones · lo que falta/);
+});

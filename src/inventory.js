@@ -102,21 +102,23 @@ export function immunityActionsMarkup(game){
  return `<button class="immunity-quick ${p.symbol.toLowerCase()} ${seconds?'is-active':''}" data-action="practice-tool" data-tool="immunity" data-player="${p.id}" aria-label="${label}" title="${label}" ${canUsePracticeTool(game,p.id,'immunity')?'':'disabled'}>${toolIcon('immunity')}<small ${seconds?`data-immunity-clock="${p.id}"`:''}>${seconds||'×'+stock}</small></button>`;}).join('');
 }
 
-export function inventoryStatusMarkup(game,{paused=false}={}){
+export function inventoryStatusMarkup(game,{paused=false,playerId}={}){
  if(!['solo','local'].includes(game.mode))return '';
- const effects=activeInventoryEffects(game),quickPlayers=paused?[]:game.mode==='solo'?[localHumanId(game)]:game.players.map(p=>p.id);
- const kinds=['combo','double','rival','block','shield','hint'];
- for(const kind of ['hint-expand','frontier'])if(effects.some(e=>e.tool===kind))kinds.push(kind);
- if(paused||effects.some(e=>e.tool==='immunity'&&!quickPlayers.includes(e.player)))kinds.push('immunity');
- const icons=kinds.map(kind=>{
-  const matching=effects.filter(e=>e.tool===kind&&(kind!=='immunity'||!quickPlayers.includes(e.player)));
-  const name=kind==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===kind).label;
-  if(!matching.length)return `<span class="inventory-effect is-inactive" role="img" aria-label="${name} · sin efecto activo" title="${name} · sin efecto activo">${toolIcon(kind)}</span>`;
-  return matching.map(e=>{
-   const detail=kind==='frontier'?`${e.count} frontera${e.count===1?'':'s'}`:e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
-   const label=`${name} · ${e.symbol} · ${detail}${paused?' · pausado':''}`;
-   return `<span class="inventory-effect is-active ${e.symbol.toLowerCase()}" data-inventory-effect="${kind}" data-effect-player="${e.player}" role="img" aria-label="${label}" title="${label}">${toolIcon(kind)}<small ${kind==='immunity'?`data-immunity-clock="${e.player}"`:''}>${kind==='frontier'?e.count:e.remaining??'•'}</small><b class="effect-owner" aria-hidden="true">${e.symbol}</b></span>`;
-  }).join('');
+ const pair=game.pairs[0],actor=playerId|| (game.mode==='solo'?localHumanId(game):pair.pending?pair.expander:pair.turn==='X'?pair.x:pair.o);
+ const player=game.players.find(p=>p.id===actor);if(!player)return '';
+ const effects=activeInventoryEffects(game),cards=inventoryFor(game,actor).cards;
+ // Prepared only when a game snapshot renders; never during pan, zoom or clock ticks.
+ const catalog=[...practiceTools].sort((a,b)=>Number(cards[b.id]>0)-Number(cards[a.id]>0));
+ const shortcuts=catalog.map(t=>{
+  const stock=cards[t.id]||0,enabled=!paused&&stock>0&&canUsePracticeTool(game,actor,t.id);
+  const label=`${t.label} · ${stock} carta${stock===1?'':'s'}${paused?' · pausado':enabled?' · usar ahora':['frontier','hint-expand'].includes(t.id)?' · al ampliar':' · no disponible en este turno'}`;
+  return `<button class="inventory-effect inventory-shortcut ${stock?'has-stock':'is-inactive'} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="${t.group==='help'?'practice-hint':'practice-tool'}" data-tool="${t.id}" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(t.id)}<small>×${stock}</small></button>`;
  }).join('');
- return `<div class="inventory-effects-bar" role="group" aria-label="Efectos del inventario">${icons}${paused?'':immunityActionsMarkup(game)}</div>`;
+ const pending=effects.filter(e=>e.tool!=='frontier'&&(e.tool!=='immunity'||paused||game.mode==='solo'&&e.player!==actor)).map(e=>{
+  const name=e.tool==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===e.tool).label;
+  const detail=e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
+  const label=`${name} · ${e.symbol} · ${detail}${paused?' · pausado':''}`;
+  return `<span class="inventory-effect inventory-pending-effect is-active ${e.symbol.toLowerCase()}" data-inventory-effect="${e.tool}" data-effect-player="${e.player}" role="img" aria-label="${label}" title="${label}">${toolIcon(e.tool)}<small ${e.tool==='immunity'?`data-immunity-clock="${e.player}"`:''}>${e.remaining??'•'}</small></span>`;
+ }).join('');
+ return `<div class="inventory-effects-bar" role="group" aria-label="Accesos rápidos al inventario"><div class="inventory-shortcuts" role="group" aria-label="Cartas de ${player.symbol}">${shortcuts}</div><div class="inventory-active-effects" role="group" aria-label="Efectos en curso">${pending}${paused?'':immunityActionsMarkup(game)}</div></div>`;
 }

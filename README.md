@@ -404,3 +404,15 @@ Control inferior junto a inventario y ampliación: colocaciones hasta intentos d
 La selección del Tornado conserva las fichas visibles y destaca únicamente el marco 3×3, sin cubrir todo el tablero con destinos opacos. Se mantiene intacta la animación de mezcla. No cambia reglas de aparición, escalado, protección ni navegación.
 
 Validación R0.21.17: 248 pruebas automatizadas y compilación correcta para GitHub Pages y raíz. Pruebas de indicadores simultáneos, caducidad, conservación al pausar y previsión de umbrales sin recorrer fichas durante los relojes.
+
+## Accesos rápidos y enlace de perfil — R0.21.18
+
+La barra superior contiene las cartas propias con su cantidad, encendidas con stock y accionables cuando las reglas lo permiten; se actualiza al recargar. Los efectos en curso usan borde discontinuo. La frontera ya colocada sigue representada en el terreno y la navegación ecológica, sin la antigua X/O en la barra de cartas. Se mantiene la correspondencia tablero/minimapa, la consulta en pausa y la navegación virtualizada con dos celdas de margen.
+
+Próximos eventos indica explícitamente «Faltan» para colocaciones o casillas y «En N s» para intervenciones anunciadas. No cambia frecuencias, presupuesto ni suspensión de fauna.
+
+Perfil permite copiar un enlace privado reutilizable, renovarlo e importar uno, o abrirlo directamente. El enlace lleva únicamente un secreto aleatorio en el fragmento; su hash y el apodo se guardan con permisos de servidor. La recuperación usa sesiones Auth del mismo UUID y mantiene el acceso a las partidas online. Las partidas locales y sus logros permanecen en el dispositivo. Renovar invalida el enlace anterior; un enlace inválido conserva la sesión actual.
+
+Servicio: `supabase/functions/profile-link`, desplegado con autenticación personalizada. Copiar/renovar/sincronizar requieren JWT válido; recuperar requiere el secreto privado. No necesita migraciones SQL ni cambia las reglas del motor online. Tests cubren recuperación, renovación, rechazo de metadatos editables, rollback de sesión, stock y contadores restantes.
+
+Validación: 254 pruebas pasan. Servicio desplegado y comprobado el rechazo de enlaces inválidos sin autenticación. La prueba real de crear una sesión anónima devuelve HTTP 504 Gateway Timeout en Supabase; recuperación completa queda pendiente de disponibilidad del servicio Auth. El asesor de seguridad de Supabase tampoco pudo conectar a la base de datos. No se hicieron cambios de esquema.

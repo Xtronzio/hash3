@@ -57,3 +57,11 @@ Inventario arriba, fauna y fenómenos abajo, con la misma correspondencia en tab
 Próximos eventos se abre desde el icono inferior junto a inventario y ampliación. Distinguir colocaciones de zona, colocaciones propias, casillas hasta el siguiente múltiplo nuevo de 333, y segundos reales de eventos anunciados. Mostrar intentos de fauna condicionados por presupuesto, población y alimento; no prometer nacimientos ni atribuir reloj a roedores o #. Respetar pausa y recuperación de 33 s y 3 colocaciones. No predecir el fenómeno aleatorio antes de anunciarlo.
 
 Tornado: preservar su animación de mezcla actual. Al seleccionar no cubrir las fichas con botones opacos ni marcar todo el tablero como un destino; mantener únicamente el marco 3×3 y puntos discretos exteriores, sin cambiar opciones legales ni el margen de dos celdas.
+
+# Accesos de inventario y perfiles R0.21.18
+
+La barra superior ofrece las cartas del jugador actual con stock ×N; con stock se ilumina y cuando se puede usar permite activarla sin abrir la bolsa. Actualizar en cada snapshot y recarga. Frontera colocada es territorio, no una carta disponible ni un efecto pendiente en esta barra; quitar las X/O superpuestas. Efectos reales en curso con borde discontinuo, separados del stock. Mismo inventario sobre tablero y mapa, pausa solo consulta. Una fila con desplazamiento horizontal; nunca recorrer el tablero desde pan, zoom o relojes para decidir disponibilidad. Inmunidad conserva sus accesos fuera de turno para ambos jugadores.
+
+Próximos eventos muestra Faltan N colocaciones/casillas (restantes) y En N s para avisos ya activos. Mantener sus unidades, condiciones y los umbrales previos.
+
+Perfil: Guardar tu acceso / Cargar mi acceso. Enlace privado reutilizable en fragmento #perfil, restringido al origen y ruta del juego. Restaura la identidad Supabase original y apodo, sin incrustar JWT, refresh tokens ni claves de servidor. Solo guardar hash de 256 bits en app_metadata administrados por servicio; nunca autorizar con user_metadata. Renovación invalida el enlace previo; copia reutiliza y no sustituye un enlace desconocido. Operaciones copiar/renovar/sincronizar verifican JWT en servidor; restaurar verifica el secreto. Instalar sesión solo después de validar, recuperar la anterior si falla. No promete sincronización de partidas locales; estas permanecen en su dispositivo.

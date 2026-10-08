@@ -42,3 +42,14 @@ test('Preparar indicadores no recorre las celdas ni el terreno y omite efectos v
  assert.deepEqual(activeInventoryEffects(game).map(e=>e.tool),['shield']);
  assert.match(inventoryStatusMarkup(game,{paused:true}),/Escudo · O · 2 turnos rivales · pausado/);
 });
+test('Accesos directos siguen el stock y permiten usar cartas instantáneas sin la bolsa',()=>{
+ let game=fresh();game=localCommand(game,'move',{x:0,y:0},now);game=localCommand(game,'move',{x:1,y:0},now);game.players[0].inventory.cards.tornado=1;
+ let html=inventoryStatusMarkup(game,{playerId:'local-x'});
+ assert.match(html,/<button[^>]+is-ready[^>]+data-action="practice-tool" data-tool="tornado"[^>]*>[^]*?<small>×1<\/small>/);
+ assert.ok(!html.includes('effect-owner'));
+ game.players[0].inventory.cards.tornado=0;html=inventoryStatusMarkup(game,{playerId:'local-x'});
+ assert.match(html,/<button[^>]+is-inactive[^>]+data-tool="tornado"[^>]+disabled/);
+ game.players[0].inventory.cards.frontier=1;game.frontiers=[{by:'local-o',x:5,y:5}];
+ html=inventoryStatusMarkup(game,{playerId:'local-x'});assert.ok(!html.includes('data-inventory-effect="frontier"'));assert.match(html,/Frontera · 1 carta · al ampliar/);
+ html=inventoryStatusMarkup(game,{playerId:'local-o'});assert.match(html,/aria-label="Cartas de O"/);
+});

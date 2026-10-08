@@ -1,3 +1,4 @@
+import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {eventOutlookMarkup} from './event-outlook.js';
 import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents} from './ecology-navigation.js';
 import {ecologySeconds} from './ecology-clock.js';
@@ -39,7 +40,7 @@ import {selectFrontier,rotateFrontier,frontierTiles,frontierCells,frontierGroups
 import {frontierAnchors} from './area-tools.js';
 import {useExpansionHint,planSuperHelp,suggestExpansion,executeSuperHelp} from './assistance.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon,hallReturnButton} from './hall.js';
-import {client, ensurePlayer, command} from './api.js';
+import {client, ensurePlayer, command, profileAccess} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, playableTerrain, availableCells} from './game.js';
 
 import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
@@ -182,7 +183,7 @@ function render() {
   const scoreList=room.commonWorld?list:rankedPlayers(room.players);
   const targetAvailable=!!(target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair)));
   const jumpButtons=`${iconButton('center','center','Mi territorio')}${iconButton('locate','above','Rival superior',`class="blue" ${targetAvailable?'':'disabled'}`)}`;
-  const habitatButtons=ecologyNavigationMarkup(room,uid),inventoryStatus=inventoryStatusMarkup(room);
+  const habitatButtons=ecologyNavigationMarkup(room,uid),inventoryStatus=inventoryStatusMarkup(room,{playerId:uid});
   const rankRows=players=>players.map(p=>{const index=scoreList.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}<small class="rank-combo">Combo máx. ${comboLabel(p)}</small><small class="rank-rodent">${escape(rodentLabel(room,p.id))}</small></span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
   const title=canExpand?'Estás ampliando':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=room.inventoryEffects?.forced?.find(e=>e.player===uid)?.symbol||own.symbol;
@@ -411,15 +412,30 @@ function renderHallDialog() {
   });
   const preference=document.querySelector('#preference'),pairField=document.querySelector('#pair-code-field');
   if(pairField){const refreshPairField=()=>{pairField.hidden=preference.value!=='pair';const button=document.querySelector('#entry-form button[value="world"]');button.textContent=preference.value==='new'?'Crear pareja':preference.value==='pair'?'Unirme a la pareja':'Entrar en Mundo';};preference.addEventListener('change',refreshPairField);if(pairUrlCode){preference.value='pair';document.querySelector('#pair-code').value=pairUrlCode;}refreshPairField();}
-  document.querySelector('#profile-form')?.addEventListener('submit',e=>{
+  document.querySelector('#profile-form')?.addEventListener('submit',async e=>{
     e.preventDefault();const name=document.querySelector('#profile-name').value.trim();
     if(name.length<2||name.length>18){notify('El apodo debe tener entre 2 y 18 caracteres.');return;}
-    save('hash3_name',name);closeHallDialog(false);renderHome();document.querySelector('[data-action="hall-profile"]')?.focus();notify('Apodo guardado.');
+    save('hash3_name',name);try{if(read('hash3_profile_token'))await profileAccess('sync',{name});}catch(error){notify(error.message);return;}closeHallDialog(false);renderHome();document.querySelector('[data-action="hall-profile"]')?.focus();notify('Apodo guardado.');
   });
+  document.querySelector('#profile-import')?.addEventListener('submit',async e=>{e.preventDefault();if(busy)return;await run(()=>loadProfileAccess(document.querySelector('#profile-link').value));});
   const dialog=document.querySelector('.hall-dialog');
   dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
   (document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]')).focus();
   updateOfflineStatus();renderDeleteGame();
+}
+async function loadProfileAccess(input){
+ const token=profileToken(input,location.href);if(!token)throw Error('Pega un enlace privado válido de #3.');
+ const result=await profileAccess('restore',{token}),id=await restoreProfile(client,result);
+ clearGameView();uid=id;save('hash3_name',result.name);save('hash3_profile_token',token);save('hash3_profile_owner',id);save('hash3_pair',null);save('hash3_room',null);
+ myGames={};onlinePreviews.clear();gamesRequest++;metricsRequest++;metricState={entries:[],loading:false,error:''};hallDialog='profile';hallHistory=[];renderHome();notify('Perfil cargado. Tus partidas online están en Mis partidas.');
+}
+async function copyProfileAccess(renew=false){
+ const name=(document.querySelector('#profile-name')?.value||read('hash3_name')||'').trim();if(name.length<2||name.length>18)throw Error('Escribe un apodo de 2 a 18 caracteres.');
+ const id=await ensurePlayer(),saved=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
+ const result=await profileAccess(renew?'renew':'copy',{name,token:saved});if(!validProfileToken(result.token))throw Error('No se pudo generar el enlace.');
+ save('hash3_profile_token',result.token);save('hash3_profile_owner',id);save('hash3_name',name);
+ const link=profileUrl(result.token,location.href),field=document.querySelector('#profile-export');field.hidden=false;field.value=link;
+ try{await navigator.clipboard.writeText(link);notify(renew?'Nuevo enlace copiado. El anterior ya no permite cargar el perfil.':'Enlace privado copiado. Guárdalo para cargar tu perfil.');}catch{field.focus();field.select();notify('Tu enlace está listo. Cópialo y guárdalo.');}
 }
 function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}}
 function persistLocal(next){
@@ -493,7 +509,7 @@ function renderPaused(){
  const inspection=savedMapModel(room,own);
  const inspectButton=(action,kind,label)=>`<button data-inspect-action="${action}" aria-label="${label}" title="${label}">${navIcon(kind)}</button>`;
  const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.active?inspectButton('own','center','Mi territorio'):''}${inspection.target?inspectButton('rival','above','Rival superior'):''}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
- const mapStatus=inventoryStatusMarkup(room,{paused:true}),mapEcology=`<nav class="inspection-controls ecology-controls" aria-label="Fauna y fenómenos del territorio">${ecologyNavigationMarkup(room,uid,{inspection:true})}</nav>`;
+ const mapStatus=inventoryStatusMarkup(room,{paused:true,playerId:uid}),mapEcology=`<nav class="inspection-controls ecology-controls" aria-label="Fauna y fenómenos del territorio">${ecologyNavigationMarkup(room,uid,{inspection:true})}</nav>`;
  const canvas='<svg class="inspection-canvas" tabindex="0" role="img" aria-label="Tablero guardado: arrastra o pellizca para inspeccionar. Con teclado, flechas para moverte y más o menos para acercar."></svg>';
  const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${mapStatus}${canvas}${mapEcology}</section>`:'';
  disposeInspection?.();disposeInspection=null;
@@ -569,6 +585,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='hall-achievements'){openHallDialog('achievements','hall-achievements');return;}
   if(action==='hall-inventory'){openHallDialog('inventory','hall-inventory');return;}
+  if(action==='profile-copy'||action==='profile-renew'){await run(()=>copyProfileAccess(action==='profile-renew'));return;}
   if(action==='events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
   if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;inventorySelection=null;render();return;}
@@ -772,7 +789,11 @@ window.addEventListener('online',poll);
 window.addEventListener('resize',()=>{if(room?.status==='playing'){blinkId=null;if(mapInteracting)mapDeferred=true;else render();}});
 setInterval(poll,1800);
 async function init(){
+  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
+  if(hasProfile)history.replaceState(null,'',location.pathname+location.search);
   renderHome();
+  if(incoming){await loadProfileAccess(profileUrl(incoming,location.href));return;}
+  if(hasProfile)throw Error('El enlace de perfil no es válido. Tu perfil actual se conserva.');
   const pendingPair=read('hash3_pair');if(pendingPair&&navigator.onLine){try{uid=await ensurePlayer();acceptPair(await command('pair_get',{code:pendingPair}));return;}catch{save('hash3_pair',null);}}
   try{
     if(sessionStorage.getItem('hash3_restore_local')==='1'){
