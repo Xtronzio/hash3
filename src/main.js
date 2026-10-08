@@ -684,11 +684,12 @@ app.addEventListener('click',async e=>{
   if(action==='hall-close'){if(!pendingDelete)closeHallDialog();return;}
   if(action==='hall-ranking'){await openHallRanking();return;}
   if(action==='metrics-view'){metricView=b.dataset.view;renderHallDialog();if(metricView==='world')await refreshWorldRank();return;}
-  if(action==='achievements-mode'||action==='achievements-goal'||action==='achievements-target'){
+  if(action==='achievements-mode'||action==='achievements-goal'||action==='achievements-target'||action==='achievements-metric'){
     const view=achievementView||{};
-    if(action==='achievements-mode')achievementView={mode:b.dataset.mode};
-    if(action==='achievements-goal')achievementView={mode:view.mode,goal:b.dataset.goal};
+    if(action==='achievements-mode')achievementView={mode:b.dataset.mode,metric:view.metric};
+    if(action==='achievements-goal')achievementView={mode:view.mode,goal:b.dataset.goal,metric:view.metric};
     if(action==='achievements-target')achievementView={...view,target:Number(b.dataset.target),comparison:null};
+    if(action==='achievements-metric')achievementView={...view,metric:b.dataset.metric};
     achievementView=achievementSelection(loadTerritoryResults(localStorage,localGames()),achievementView);renderHallDialog();return;
   }
   if(action==='metrics-mode'){metricView='personal';metricMode=b.dataset.mode;renderHallDialog();return;}

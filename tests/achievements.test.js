@@ -17,3 +17,9 @@ test('Empty selections retain buttons and archived legacy board results remain a
  const legacy=record('Legacy','local','cells',33);delete legacy.goalType;delete legacy.target;assert.match(achievementsMarkup([legacy]),/<th scope="row">Legacy/);
  assert.equal(achievementSelection(results,{mode:'local',goal:'time',target:33}).target,180);assert.match(achievementsMarkup(results,{mode:'world'}),/Mundo es continuo/);
 });
+
+test('One selected statistic is displayed at a time without a wide mixed table',()=>{
+ const r=record('Player','local','cells',33);r.players[0].placements=18;r.players[0].max=124.444;
+ const html=achievementsMarkup([r],{mode:'local',metric:'placements'});assert.match(html,/<th>Colocaciones<\/th>/);assert.doesNotMatch(html,/<th>Puntos<\/th>|<th>#MAX<\/th>/);assert.match(html,/<td>18<\/td>/);
+ const max=achievementsMarkup([r],{mode:'local',metric:'max'});assert.match(max,/<td>124,44<\/td>/);assert.doesNotMatch(max,/124,444/);
+});
