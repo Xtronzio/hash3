@@ -55,6 +55,7 @@ for(const [kind,shape] of [['L',[[0,0],[1,0],[0,1]]],['L',[[0,0],[1,0],[2,0],[0,
 }
 export const shapeTemplates=[...templates.values()];
 export function figureWindows(cells,x,y,symbol,level='normal') {
+  if(!['X','O'].includes(symbol))return [];
   const occupied=new Set(cells.filter(c=>c.symbol===symbol).map(c=>key(c.x,c.y))),found=new Map();
   const add=(kind,points)=>{const id=symbol+':'+kind+':'+canonical(points);found.set(id,{id,kind,size:points.length,points});};
   for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]) {

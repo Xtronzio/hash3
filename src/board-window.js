@@ -55,7 +55,7 @@ export function reconcileCells(container,entries,previous=new Map()){
 // Spatially query the grouped tiles, never the complete terrain during navigation.
 export function overviewGrid(terrain,bounds,resolution=128){
  const step=Math.max(1,Math.ceil(Math.max(bounds.width,bounds.height)/resolution)),tiles=new Map();
- const priority=p=>p.fill==='var(--blue)'?5:p.fill==='var(--yellow)'?4:p.frontier||p.fill==='var(--red)'||p.fill==='var(--green)'?3:p.fill==='#7b8492'?2:1;
+ const priority=p=>p.fill==='var(--blue)'?5:p.fill==='var(--yellow)'?4:p.frontier||p.fill==='var(--red)'||p.fill==='var(--green)'?3:p.fill==='#7b8492'||p.fill==='#c5cbd4'?2:1;
  for(const p of terrain){
   const x=Math.floor((p.x-bounds.x)/step),y=Math.floor((p.y-bounds.y)/step),k=`${x},${y}`,old=tiles.get(k);
   if(!old||priority(p)>priority(old))tiles.set(k,{...p,x,y});

@@ -9,7 +9,7 @@ export function savedMapModel(room,own){
   const target=own?immediateAbove((room.players||[]).filter(p=>!p.bot),own.id,!!room.commonWorld):null;
   const model=overviewModel(room,own,target);if(!model)return null;
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
-  return {...model,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':'#343e4c'};})};
+  return {...model,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?'#c5cbd4':'#343e4c'};})};
 }
 export function thumbnailMarkup(room){
   const model=savedMapModel(room);if(!model)return '<span class="saved-map-pending" aria-label="Mapa no disponible">—</span>';

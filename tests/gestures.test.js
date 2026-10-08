@@ -41,3 +41,8 @@ test('Ranking header supports down to open and up to close without toggle clicks
  h.send('pointerdown',100,100,opts);h.send('pointermove',100,50,opts);h.send('pointerup',100,50,opts);
  assert.deepEqual(h.ranking,[true,false]);
 });
+
+test('Pinned rows never reveal deletion; right swipe still allows unpinning',()=>{
+ const h=harness();h.open.add('is-pinned');h.send('pointerdown',140,100);h.send('pointermove',50,100);h.send('pointerup',50,100);assert.ok(!h.open.has('is-revealed'));
+ h.send('pointerdown',50,100);h.send('pointermove',140,100);h.send('pointerup',140,100);assert.ok(h.open.has('is-pin-revealed'));
+});

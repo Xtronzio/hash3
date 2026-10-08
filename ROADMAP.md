@@ -40,10 +40,26 @@ Implementada en R0.16.9 para VS máquina y Sin conexión con la aclaración de J
 
 Decisión de Jorge del 6 de octubre de 2026: Escudo protege una celda concreta con una ficha propia; Inmunidad protege todo el territorio frente a ataques de inventario. Guardada no se gasta. Cada activación consume una unidad de reserva y termina tras una ronda rival completa aunque no haya ataques. Las unidades restantes no se activan automáticamente. La función propuesta inicialmente como Espía queda integrada en Inmunidad; no se desarrollará como otra carta ni como aviso previo independiente. Los guardados de R0.16.8 convierten las cartas largas en unidades de una ronda, conservando los premios restantes.
 
-## Catástrofes para partidas persistentes (pendiente de valorar)
+## OVNI y cataclismo: próximos desarrollos
 
-Propuesta de Jorge, 8 de octubre de 2026: terremoto que retire celdas y fichas para reducir parte del tablero, posible destrucción más extensa, y OVNI que abduzca muchas fichas. El OVNI solo roba fichas; conserva las celdas y los puntos anteriores. No activar todavía: definir frecuencia, zonas, protección de jugadores y reglas de continuidad antes de implementarlo. La navegación virtualizada es necesaria por sí misma y no depende de estas catástrofes.
+Decisión de Jorge, 8 de octubre de 2026: incorporar próximamente el OVNI y el cataclismo. El OVNI abduce las fichas de una zona extensa y conserva sus celdas. El cataclismo demuele por completo una zona extensa: desaparecen tanto sus fichas como sus celdas; su finalidad es controlar el tamaño del mapa. Pendientes de implementación: superficie afectada proporcional, frecuencia, continuidad de territorios y tratamiento de fronteras, reservas y habitantes de la zona. La navegación virtualizada sigue siendo necesaria por sí misma. No anunciar estas acciones como disponibles.
 
 ## Fauna vigente desde R0.21
 
 Sustituye el ciclo antiguo de Roedores descrito arriba: roedor cada 33 colocaciones, bomba automática cada 66, gusano cada 99, obras cada 198. Ciclos de 33 segundos; roedor tres comidas y retirada, gusano tres comidas y retirada en el ciclo siguiente, tres parejas constructor/destructor con tres intervenciones por pareja. La ayuda de R0.21.12 refleja estos ciclos y sus iconos.
+
+## Fauna proporcional: cálculo y propuesta, 8 de octubre de 2026
+
+Nuevo requisito: toda la fauna y los obreros deben crecer con la superficie para mantener la incidencia. El 198 de las obras fue una elección del asistente a partir del m.c.m. de 33, 66 y 99; no procede de un cálculo de equilibrio de obreros. La capacidad actual es de hasta 33 fichas retiradas por cada 198 colocaciones (16,67 % de las colocaciones), sin garantía de alimento ni de ejecución completa.
+
+El cálculo y la calibración propuesta están en [design/fauna-proporcional.md](design/fauna-proporcional.md). Se propone población objetivo por zona activa, compartida entre jugadores, con reposición y límites por alimento/terreno disponible. La referencia inicial propuesta es 333 celdas: 3 roedores, 1 bomba, 1 gusano y 3 parejas de obreros. Triplicar superficie triplica población. Esta calibración aún no modifica el código ni la ayuda publicada; debe probarse antes de sustituir los hitos vigentes. Evitar multiplicar sin límite cada aparición por colocaciones: en tableros grandes puede crear una demanda de consumo superior a las nuevas fichas.
+
+## R0.21.13: comportamientos y protección de guardados
+
+Implementado en el motor local: roedores por movimiento, grupos de 1/2/3 en hitos 33/66/99 (y sucesivos), tres visitas por grupo; cada visita consume una ficha por roedor en posiciones diferentes y se muestra 0,9 segundos. No se recuperan comidas ausentes. Gusanos se retiran con su tercera comida, liberando su rastro a los 99 segundos si encuentran alimento. La ficha neutral # del territorio aparece cada 33 colocaciones como calibración inicial, prioriza completar/bloquear figuras, no pertenece a X/O ni puntúa y deja un hueco legal. Borrar/Bomba la eliminan; Tornado puede desplazarla. El motor de la máquina reconoce su símbolo como obstáculo.
+
+Los tres grupos quedan separados en la ayuda: inventario del jugador, fauna local (roedores/gusanos/obreros) e inventario del territorio (#/lluvia de bombas y próximos OVNI/cataclismo). Animaciones mínimas para comidas, #, explosiones y ejecución de obras; índices espaciales y ventana de pantalla más dos celdas conservados.
+
+Anclar protege contra borrado accidental. Menú y gesto bloquean la acción; el borrado local y la confirmación online comprueban el anclaje actual antes de actuar. Para borrar hay que desanclar.
+
+La migración `20261008082437_turn_rodents_neutral_hash.sql` y `tests/turn-inhabitants.sql` están verificadas en PostgreSQL local. Aplicación remota pendiente mientras las conexiones SQL de Supabase agotan el tiempo de espera. No anunciar estos comportamientos como desplegados en Duelo/Mundo hasta completar la migración. La calibración proporcional de gusanos, obras y lluvia de bombas sigue pendiente; la aclaración de roedores sustituye su propuesta de reposición por reloj.

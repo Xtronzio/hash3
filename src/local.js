@@ -59,7 +59,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   }
   if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
-  const habitatChanged=advanceHabitats(room,now,random);
+  const habitatChanged=advanceHabitats(room,now,random)||original.habitatVersion!==room.habitatVersion;
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='inventory'){
     const {tool,playerId}=payload;

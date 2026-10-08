@@ -1,22 +1,27 @@
 import {terrainOf,connectedTerrain,key} from './game.js';
 import {frontierReachable,frontierSegments,nearbyFrontierCells,frontierHit,edgeKey} from './frontiers.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
+import {placeNeutral,NEUTRAL_FREQUENCY} from './neutral.js';
 export const HABITAT_INTERVAL=33000;
 export const HABITAT_FREQUENCIES={rodent:33,bomb:66,worm:99,work:198};
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
 const choose=(all,random)=>all.length?all[Math.min(all.length-1,Math.floor(Math.max(0,random())*all.length))]:null;
 const uuid=()=>crypto.randomUUID();
 export function initializeHabitats(room,now=Date.now()){
- room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];
- if(room.habitatVersion===1)return;
+ room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
+ if(room.habitatVersion===2)return;
+ if(room.habitatVersion===1){
+  room.rodentRaids.push(...room.rodents.map(r=>({id:r.id,player:r.player,x:r.x,y:r.y,count:1,remaining:Math.max(0,3-(r.eaten||0)),visited:[]})).filter(r=>r.remaining>0));
+  room.rodents=[];room.worms=room.worms.filter(w=>(w.eaten||0)<3);room.habitatVersion=2;return;
+ }
  for(const p of room.players){
   p.placements??=room.cells.filter(c=>c.owner===p.id).length;
   p.habitatNext=Object.fromEntries(Object.entries(HABITAT_FREQUENCIES).map(([kind,n])=>[kind,(Math.floor(p.placements/n)+1)*n]));
   p.rodentNextSpawn=p.habitatNext.rodent;
  }
- // Adopt surviving animals without replaying historic milestones or old 33-meal cycles.
- room.rodents=room.rodents.map(r=>({...r,eaten:Math.min(2,r.eaten||0),phase:0,nextAt:now+HABITAT_INTERVAL}));
- room.habitatVersion=1;room.habitatLastCheck=now;
+ // Adopt remaining visits without replaying historic milestones.
+ room.rodentRaids.push(...room.rodents.map(r=>({id:r.id,player:r.player,x:r.x,y:r.y,count:1,remaining:3-Math.min(2,r.eaten||0),visited:[]})));
+ room.rodents=[];room.habitatVersion=2;room.habitatLastCheck=now;
 }
 function areaAt(room,point){return frontierReachable(terrainOf(room),point,room);}
 function occupiedByOther(room,point,id){return room.rodents.some(r=>r.id!==id&&same(r,point))||room.worms.some(w=>w.id!==id&&(w.body||[]).some(c=>same(c,point)))||habitatReservations(room).some(c=>same(c,point));}
@@ -66,18 +71,38 @@ function project(room,point,player,random,now){
 export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=Math.random){
  initializeHabitats(room,now);const p=room.players.find(p=>p.id===playerId);if(!p)return;
  p.placements++;room.eatenCells=room.eatenCells.filter(c=>!same(c,point));
- for(const r of room.rodents.filter(r=>same(r,point))){const target=foodFor(room,r,random,{exclude:room.cells.find(c=>same(c,point))?.id});if(target){r.x=target.x;r.y=target.y;}else{const free=areaAt(room,r).filter(c=>!same(c,point)&&!occupiedByOther(room,c,r.id));const c=choose(free,random);if(c){r.x=c.x;r.y=c.y;}}}
  for(const [kind,frequency]of Object.entries(HABITAT_FREQUENCIES)){
   if(p.placements<p.habitatNext[kind])continue;
   // A milestone is consumed once even when no legal spawn exists; no deferred floods.
   p.habitatNext[kind]=(Math.floor(p.placements/frequency)+1)*frequency;
+  if(kind==='rodent'){room.rodentRaids.push({id:uuid(),player:playerId,...point,count:Math.floor(p.placements/33),remaining:3,visited:[]});continue;}
   if(kind==='work'){project(room,point,playerId,random,now);continue;}
   if(kind==='bomb'){const blast=automaticBlast(room,point,random);if(blast)room.bombs.push({id:uuid(),player:playerId,...blast[0],blast,nextAt:now+HABITAT_INTERVAL});continue;}
   const r={id:uuid(),player:playerId,kind,x:point.x,y:point.y,eaten:0,phase:0,nextAt:now+HABITAT_INTERVAL};
   const food=foodFor(room,r,random,{exclude:room.cells.find(c=>same(c,point))?.id});
   if(food){r.x=food.x;r.y=food.y;if(kind==='worm'){r.body=[{x:r.x,y:r.y}];room.worms.push(r);}else room.rodents.push(r);}
  }
+ visitRodents(room,point,now,random);
+ if(p.placements%NEUTRAL_FREQUENCY===0)placeNeutral(room,areaAt(room,point),now,random,point);
  p.rodentNextSpawn=p.habitatNext.rodent;
+}
+function visitRodents(room,point,now,random){
+ if(!room.rodentRaids.length)return;
+ const area=new Set(areaAt(room,point).map(c=>key(c.x,c.y))),visits=[];
+ let food=room.cells.filter(c=>area.has(key(c.x,c.y))&&!same(c,point)&&['X','O'].includes(c.symbol)&&!occupiedByOther(room,c));
+ for(const raid of room.rodentRaids){
+  if(!area.has(key(raid.x,raid.y)))continue;
+  const seen=new Set(raid.visited.map(c=>key(c.x,c.y)));
+  const candidates=food.filter(c=>!seen.has(key(c.x,c.y)));
+  for(let i=0,n=Math.min(raid.count,candidates.length);i<n;i++){
+   const c=choose(candidates,random);candidates.splice(candidates.indexOf(c),1);
+   clearHabitatCell(room,c);visits.push({x:c.x,y:c.y,cellId:c.id,symbol:c.symbol,owner:c.owner});raid.visited.push({x:c.x,y:c.y});
+   food=food.filter(f=>f.id!==c.id);
+  }
+  raid.remaining--;
+ }
+ room.rodentRaids=room.rodentRaids.filter(r=>r.remaining>0);
+ if(visits.length)room.rodentVisit={id:uuid(),kind:'rodent',at:now,visits};
 }
 function activeAt(room,point){
  if(['solo','local'].includes(room.mode))return true;
@@ -85,16 +110,16 @@ function activeAt(room,point){
  return room.pairs.some(pair=>area.has(key((pair.terrainAnchor||pair.active).x,(pair.terrainAnchor||pair.active).y))&&room.players.some(p=>(p.id===pair.x||p.id===pair.o)&&p.active!==false&&!p.bot));
 }
 export function freezeHabitats(room,now=Date.now()){
- initializeHabitats(room,now);for(const e of [...room.rodents,...room.worms,...room.works,...room.bombs])e.remainingMs=Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
+ initializeHabitats(room,now);for(const e of [...room.worms,...room.works,...room.bombs])e.remainingMs=Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
  room.habitatLastCheck=now;
 }
 export function resumeHabitats(room,now=Date.now()){
- initializeHabitats(room,now);for(const e of [...room.rodents,...room.worms,...room.works,...room.bombs]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
+ initializeHabitats(room,now);for(const e of [...room.worms,...room.works,...room.bombs]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
 }
 export function advanceHabitats(room,now=Date.now(),random=Math.random){
  initializeHabitats(room,now);if(room.status!=='playing')return false;
- let changed=false;
- for(const e of [...room.rodents,...room.worms,...room.works,...room.bombs]){
+ let changed=false;const actions=[];
+ for(const e of [...room.worms,...room.works,...room.bombs]){
   const point=e.kind==='work'?e.destroy[e.done]:e;
   if(!point)continue;
   if(!activeAt(room,point)){if(e.remainingMs==null)e.remainingMs=Math.max(0,e.nextAt-Math.min(now,room.habitatLastCheck??now));continue;}
@@ -105,10 +130,10 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random){
   if(e.kind==='work'){
    const remove=e.destroy[e.done],add=e.build[e.done];
    const valid=terrainOf(room).some(c=>same(c,remove))&&!room.cells.some(c=>same(c,remove))&&!terrainOf(room).some(c=>same(c,add));
-   if(valid){room.terrain=terrainOf(room).filter(c=>!same(c,remove));room.terrain.push({...add});e.done++;changed=true;}
+   if(valid){room.terrain=terrainOf(room).filter(c=>!same(c,remove));room.terrain.push({...add});actions.push({...remove,kind:'destroy'},{...add,kind:'build'});e.done++;changed=true;}
    else{room.works=room.works.filter(w=>w.id!==e.id);changed=true;}
   }else if(e.blast){
-   for(const c of e.blast)clearHabitatCell(room,c);
+   for(const c of e.blast){clearHabitatCell(room,c);actions.push({...c,kind:'bomb'});}
    const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>!frontierHit(f,hit));
    room.bombs=room.bombs.filter(b=>b.id!==e.id);changed=true;
   }else{
@@ -117,20 +142,20 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random){
    if(e.kind==='worm'&&e.eaten>0)food=foodFor(room,e,random,{adjacent:true});
    else food||=foodFor(room,e,random);
    if(!food)continue;
-   clearHabitatCell(room,food);e.x=food.x;e.y=food.y;e.eaten++;changed=true;
-   if(e.kind==='worm'){e.body.push({x:e.x,y:e.y});e.body=[...new Map(e.body.map(c=>[key(c.x,c.y),c])).values()].slice(-3);}
+   clearHabitatCell(room,food);actions.push({x:food.x,y:food.y,kind:'worm'});e.x=food.x;e.y=food.y;e.eaten++;changed=true;
+   if(e.kind==='worm'){e.body.push({x:e.x,y:e.y});e.body=[...new Map(e.body.map(c=>[key(c.x,c.y),c])).values()].slice(-3);if(e.eaten>=3)room.worms=room.worms.filter(w=>w.id!==e.id);}
    else if(e.eaten>=3)room.rodents=room.rodents.filter(r=>r.id!==e.id);
    else{const target=foodFor(room,e,random);if(target){e.x=target.x;e.y=target.y;}}
   }
  }
  room.works=room.works.filter(w=>w.done<3);
  room.habitatLastCheck=now;
- if(changed){room.habitatEvent={id:uuid(),kind:'habitat',at:now};}
+ if(changed){room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions};}
  return changed;
 }
 export function habitatLabel(room,playerId){
  const p=room.players.find(p=>p.id===playerId),count=p?.placements||0;
- const rats=(room.rodents||[]).filter(e=>e.player===playerId).length,worms=(room.worms||[]).filter(e=>e.player===playerId).length;
+ const rats=room.habitatVersion!==2?(room.rodents||[]).filter(e=>e.player===playerId).length:(room.rodentRaids||[]).filter(e=>e.player===playerId).reduce((n,r)=>n+r.count,0),worms=(room.worms||[]).filter(e=>e.player===playerId).length;
  return `Fichas ${count} · Roedor ${33-count%33} · Bomba ${66-count%66} · Gusano ${99-count%99} · Obra ${198-count%198}${rats||worms?` · activos R${rats}/G${worms}`:''}`;
 }
 export const habitatIcons={worm:'<path d="M3 25c1-7 7-9 12-5 4 3 7 2 7-2v-6c-3-2-2-7 2-8s7 3 4 7l-1 2v5c0 8-7 11-13 8l-5-3c-2-1-4 0-6 2Z"/><path d="m9 18-2 4m8-2-2 5m7-3 1 5m1-8 5 2m-5-6h5"/><circle cx="25.5" cy="7.5" r="1" fill="currentColor" stroke="none"/>',build:'<path d="M5 25V13m22 12V13M3 13h26M7 13V9a9 9 0 0 1 18 0v4M12 3v10m8-10v10M10 23h12m-6-6v12"/>',destroy:'<path d="m6 4 22 24M4 11l8-8 5 5-8 8ZM6 27h7m4 0h9m-11-5 3-4m-8 4-2-3"/>',bomb:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>'};

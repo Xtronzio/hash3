@@ -6,6 +6,7 @@ export function swipeDirection(dx,dy,axis,threshold=44){
 export function bindGestures(root,{setRankingOpen}){
  let gesture=null,suppressUntil=0;
  const reveal=(row,open)=>{
+  if(open===true&&row.classList.contains('is-pinned'))open=false;
   root.querySelectorAll('.saved-game.is-revealed,.saved-game.is-pin-revealed').forEach(other=>{if(other!==row)reveal(other,false);});
   row.classList.toggle('is-revealed',open===true);
   row.classList.toggle('is-pin-revealed',open==='pin');

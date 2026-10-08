@@ -71,7 +71,7 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false}={}){
   }
   if(tool==='block')return game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))?[]:availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
-  return game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c));
+  return game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c)&&(c.symbol!=='#'||tool==='erase'));
 }
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];

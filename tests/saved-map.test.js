@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {savedMapModel,thumbnailMarkup,inspectionCells,bindInspection} from '../src/saved-map.js';
-import {loadGamePins,toggleGamePin,saveLocalGame,loadLocalGames,deleteLocalGame} from '../src/sessions.js';
+import {loadGamePins,toggleGamePin,saveLocalGame,loadLocalGames,deleteLocalGame,assertGameDeletionAllowed} from '../src/sessions.js';
 import {createLocal,localCommand} from '../src/local.js';
 import {gamesMarkup} from '../src/session-ui.js';
 
@@ -77,4 +77,14 @@ test('Large-map pinch coalesces camera frames without rebuilding cells, and canc
    listeners.get('panel:click')({target:{closest:()=>({dataset:{inspectAction:'fit'}})}});flush();assert.deepEqual(state.box,initial);assert.equal(JSON.stringify(room),original);assert.equal(builds,1);
    dispose();assert.ok(disconnected);assert.equal(listeners.size,0);
  }finally{dispose?.();for(const [k,v]of Object.entries(previous)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
+});
+
+test('Pinning protects local saves, online removal entry points and all delete controls until unpinned',()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},g=createLocal('local','A','B',1000);
+ saveLocalGame(storage,g,1000);toggleGamePin(storage,g);const before=storage.getItem('hash3_locals');
+ assert.throws(()=>deleteLocalGame(storage,g.id),/anclada/);assert.equal(storage.getItem('hash3_locals'),before);
+ const html=gamesMarkup({local:[g],pins:loadGamePins(storage)});assert.match(html,/<button disabled[^>]*data-action="delete-game"/);assert.match(html,/class="delete-game-button" disabled/);
+ const online={id:'remote',local:false};toggleGamePin(storage,online,'u');assert.throws(()=>assertGameDeletionAllowed(storage,online,'u'),/anclada/);assert.doesNotThrow(()=>assertGameDeletionAllowed(storage,online,'other'));
+ toggleGamePin(storage,g);deleteLocalGame(storage,g.id);assert.equal(loadLocalGames(storage).length,0);
+ assert.throws(()=>assertGameDeletionAllowed({getItem:()=>{throw Error('storage');}},online,'u'),/verificar/);
 });

@@ -11,7 +11,7 @@ const settings={
 };
 const directions=[[1,0],[0,1],[1,1],[1,-1]];
 const STOP=Symbol('search-budget');
-const symbolNumber=s=>s==='X'?1:2;
+const symbolNumber=s=>s==='X'?1:s==='O'?2:3;
 const formId=(symbol,kind,indices,cells)=>`${symbol===1?'X':'O'}:${kind}:`+indices.map(i=>key(cells[i].x,cells[i].y)).sort().join(';');
 
 // Compile the legal terrain once. Search updates pattern counts in place and
@@ -46,7 +46,7 @@ class Position {
     const add=(indices,line=false,kind='línea')=>{
       if(indices.some(i=>i===undefined))return;
       const id=(line?'line:':'shape:')+[...indices].sort((a,b)=>a-b).join(',');if(known.has(id))return;known.add(id);
-      const p={indices,line,paid:[false,...[1,2].map(s=>this.paid.has(formId(s,kind,indices,this.cells)))],frontier:indices.some(i=>i>=this.legalSize),size:indices.length,x:0,o:0};for(const i of indices){if(this.board[i]===1)p.x++;else if(this.board[i]===2)p.o++;}
+      const p={indices,line,paid:[false,...[1,2].map(s=>this.paid.has(formId(s,kind,indices,this.cells)))],frontier:indices.some(i=>i>=this.legalSize),size:indices.length,neutral:indices.some(i=>this.board[i]===3),x:0,o:0};for(const i of indices){if(this.board[i]===1)p.x++;else if(this.board[i]===2)p.o++;}
       this.patterns.push(p);for(const i of indices)this.at[i].push(p);
     };
     for(const i of [...this.free,...this.cells.map((_,i)=>i).slice(this.legalSize)]){
@@ -57,12 +57,12 @@ class Position {
     this.rays=this.cells.map(c=>directions.map(([dx,dy])=>[-1,1].map(sign=>this.index.get(key(c.x+sign*dx,c.y+sign*dy))??-1)));
     this.neighbors=this.cells.map(c=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>this.index.get(key(c.x+dx,c.y+dy))).filter(i=>i!==undefined));
     this.potential=this.patterns.reduce((sum,p)=>sum+this.patternValue(p),0);
-    let seed=0x12345678;this.zobrist=this.cells.map(()=>[0,1,2].map(()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed|0;}));
-    this.zobrist2=this.cells.map(()=>[0,1,2].map(()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed|0;}));
+    let seed=0x12345678;this.zobrist=this.cells.map(()=>[0,1,2,3].map(()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed|0;}));
+    this.zobrist2=this.cells.map(()=>[0,1,2,3].map(()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed|0;}));
     this.hash=0;this.hash2=0;this.board.forEach((s,i)=>{if(s){this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];}});
   }
   patternValue(p){
-    if(p.x&&p.o)return 0;
+    if(p.neutral||p.x&&p.o)return 0;
     const count=p.x||p.o,missing=p.size-count;
     if(!count||!missing)return 0;
     if(p.paid[p.x?1:2])return 0;
@@ -71,7 +71,7 @@ class Position {
   }
   gain(i,s){
     let points=0,figures=0;const completed=[];
-    for(const p of this.at[i])if(!p.line&&(s===1?p.x:p.o)===p.size-1&&!(s===1?p.o:p.x)){
+    for(const p of this.at[i])if(!p.neutral&&!p.line&&(s===1?p.x:p.o)===p.size-1&&!(s===1?p.o:p.x)){
       if(!p.paid[s]){points+=p.size;figures++;}if(this.advanced)completed.push(p.indices);
     }
     for(let d=0;d<4;d++){
@@ -90,6 +90,7 @@ class Position {
   future(i,s){
     let value=0;
     for(const p of this.at[i]){
+      if(p.neutral)continue;
       const own=s===1?p.x:p.o,other=s===1?p.o:p.x;
       if(!other&&own<p.size-1)value+=(own+1)**2/p.size;
       if(!own&&other)value+=other*0.3;

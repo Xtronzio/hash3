@@ -47,3 +47,14 @@
 @keyframes tornado-zone{0%,30%,60%{background:#00e5ff26;box-shadow:inset 0 0 0 2px #00e5ff80}15%,45%,75%{background:#b88bff20;box-shadow:inset 0 0 0 1px #b88bff60}100%{background:transparent;box-shadow:none}}
 @keyframes tornado-piece{0%{transform:translate(0,0) rotate(0deg);opacity:1}25%{transform:translate(calc(var(--tornado-dx)*.15 + var(--tornado-spin)*10px),calc(var(--tornado-dy)*.2 - 9px)) rotate(calc(var(--tornado-spin)*80deg));opacity:.35}50%{transform:translate(calc(var(--tornado-dx)*.6 - var(--tornado-spin)*9px),calc(var(--tornado-dy)*.45 + 8px)) rotate(calc(var(--tornado-spin)*210deg));opacity:1}75%{transform:translate(calc(var(--tornado-dx)*.9 + var(--tornado-spin)*4px),calc(var(--tornado-dy)*.85 - 4px)) rotate(calc(var(--tornado-spin)*315deg));opacity:.45}100%{transform:translate(var(--tornado-dx),var(--tornado-dy)) rotate(calc(var(--tornado-spin)*360deg));opacity:1}}
 @media(prefers-reduced-motion:reduce){.game .tornado-piece{animation:none;transform:translate(var(--tornado-dx),var(--tornado-dy))}.game .tornado-zone{animation:none;background:#00e5ff18;box-shadow:inset 0 0 0 2px #00e5ff80}}
+.cell.neutral{color:#c5cbd4;background:#20252d}
+.rodent-visit{pointer-events:none;z-index:9;color:var(--yellow);background:#161109;animation:rodent-visit .9s both;animation-delay:var(--visit-delay,0ms)}
+.rodent-visit svg{width:72%;height:72%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@keyframes rodent-visit{0%{opacity:0;transform:scale(.35)}20%,65%{opacity:1;transform:scale(1)}45%{transform:scale(.8) rotate(-12deg)}100%{opacity:0;transform:scale(.2) rotate(15deg)}}
+@media(prefers-reduced-motion:reduce){.rodent-visit{animation:none}}
+.board-action-neutral{color:#c5cbd4;background:#20252d}
+.board-action-build{color:var(--green);background:#0d2015}
+.board-action-destroy{color:var(--red);background:#240f12}
+.board-action-bomb{animation:bomb-action .9s both;animation-delay:var(--visit-delay,0ms);background:radial-gradient(circle,#ffe57b55,transparent 70%)}
+@keyframes bomb-action{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.1)}45%{opacity:1;transform:scale(.9)}100%{opacity:0;transform:scale(1.2)}}
+@media(prefers-reduced-motion:reduce){.board-action-bomb{animation:none}}

@@ -171,3 +171,5 @@
 .row>.navigation-return.saved-games-home,.footer-actions>.navigation-return.saved-games-home{margin-left:auto;order:2}
 .symbol-option input:focus-visible+.symbol-option-face{outline:2px solid var(--mode-color,#e3e5e9);outline-offset:3px}
 .lobby .symbol-choice{margin:24px 0;--mode-color:#ff4a58}
+
+.rule-neutral .rule-inhabitant-title svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}

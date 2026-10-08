@@ -7,10 +7,12 @@ import {maxLabel} from './max.js';
 import {navigationPaths} from './navigation-icons.js';
 import {metricsMarkup,metricsModePicker,localMetrics} from './metrics.js';
 import {comboLabel} from './records.js';
+import {neutralIcon} from './neutral.js';
+import {boardActionFeedback} from './rodent-feedback.js';
 import {habitatMark,habitatIcons} from './inhabitants.js';
 import {habitatLocations,habitatReservations,habitatTargets} from './habitat-tools.js';
 import {rodentMark,rodentSleeping,rodentIcon,rodentLabel} from './rodents.js';
-import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin} from './sessions.js';
+import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin,assertGameDeletionAllowed} from './sessions.js';
 import {savedMapModel,thumbnailMarkup,bindInspection} from './saved-map.js';
 import {createSnapshotQueue} from './snapshot-queue.js';
 import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
@@ -52,6 +54,11 @@ const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snaps
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
 let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0;
 let figureEffect=null,figureTimer,scoreFloatTimer;
+let rodentEffect=null,rodentTimer;
+function startRodentEffect(feedback){
+ clearTimeout(rodentTimer);rodentEffect=feedback?{...feedback,until:performance.now()+900,index:cellIndex(feedback.visits)}:null;
+ if(feedback)rodentTimer=setTimeout(()=>{rodentEffect=null;scheduleBoard(true);},900);
+}
 let tornadoEffect=null,tornadoTimer;
 function clearTornadoEffect(){clearTimeout(tornadoTimer);tornadoEffect=null;}
 function startTornadoEffect(feedback){
@@ -93,7 +100,7 @@ function pinSavedGame(row){
  try{const pinned=toggleGamePin(localStorage,{...game,local},uid);renderHallDialog();document.querySelector(`.saved-game[data-id="${CSS.escape(game.id)}"] [data-action="toggle-game-menu"]`)?.focus({preventScroll:true});notify(pinned?'Partida anclada.':'Partida desanclada.');}catch{notify('No se ha podido guardar el anclaje en este navegador.');}
 }
 bindGestures(app,{setRankingOpen});
-const mark = symbol => symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
+const mark = symbol => symbol==='#'?`<svg viewBox="0 0 64 64" aria-hidden="true">${neutralIcon}</svg>`:symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice');n.textContent=message; n.classList.add('visible');
   clearTimeout(noticeTimer); noticeTimer=setTimeout(()=>n.classList.remove('visible'),5000);
@@ -124,10 +131,10 @@ function accept(next) {
   if(next.not_modified)return;
   if(next.mode)next=reconcileLocalBoard(next);
   if(room?.id===next.id&&next.version<room.version)return;
-  const tornado=tornadoFeedback(room,next);clearTornadoEffect();
+  const rodentVisit=boardActionFeedback(room,next),tornado=tornadoFeedback(room,next);clearTornadoEffect();
   const previousRoom=room,feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
-  if(changed)resetInventoryFeedback();
+  if(changed){resetInventoryFeedback();startRodentEffect(null);}
   if(changed){pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
@@ -141,6 +148,7 @@ function accept(next) {
   const pair=ownPair(),show=feedback&&pair&&[pair.x,pair.o].includes(feedback.player);
   if(show)startFigureEffect(feedback);
   if(tornado)startTornadoEffect(tornado);
+  if(rodentVisit)startRodentEffect(rodentVisit);
   if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);scheduleMachine();
 }
 function render() {
@@ -260,8 +268,8 @@ function drawBoard(canExpand,ready,target) {
   const cellMarkup=pos=>{
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
     const isTarget=c&&c.id===target?.lastMove?.id,last=c&&c.id===own.lastMove?.id;
-    const color=c?(myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
-    const owner=c?playerNames.get(c.owner):'';
+    const color=c?(c.symbol==='#'?'neutral':myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
+    const owner=c?(c.symbol==='#'?'el tablero':playerNames.get(c.owner)):'';
     const select=canExpand&&choiceKeys.has(key(x,y));
     const targeting=!!selection,source=selection?.source,chosen=source&&c?.id===source.id;
     const removable=targeting&&ready&&(areaSelection?areaKeys.has(key(x,y)):active&&(source?!c&&!blockedKeys.has(key(x,y))&&!sourceBlocked.has(key(x,y)):targets.has(key(x,y))));
@@ -284,13 +292,13 @@ function drawBoard(canExpand,ready,target) {
   refreshBoard=()=>{
    if(!board.isConnected)return;
    const now=performance.now(),window=viewportCellWindow(viewport,layout);
-   const swirling=!!tornadoEffect&&tornadoEffect.until>now;
+   const visiting=!!rodentEffect&&rodentEffect.until>now,swirling=!!tornadoEffect&&tornadoEffect.until>now;
    if(density){
     const entries=density.query(window).map(c=>({id:'density:'+key(c.x,c.y),markup:`<button class="board-density" data-action="board-overview" style="${style(c)};width:${c.width*size}px;height:${c.height*size}px;background:${c.fill}" aria-label="Acercarse a esta zona del tablero"></button>`}));
     nodes=reconcileCells(board,entries,nodes);return;
    }
-   const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now}:${swirling}`);
-   const extras=`${swirling}:${!!figureEffect&&figureEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
+   const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now}:${swirling}:${visiting}`);
+   const extras=`${visiting}:${swirling}:${!!figureEffect&&figureEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
    if(visible===lastEntries&&extras===lastExtras)return;
    lastEntries=visible;lastExtras=extras;
    const entries=[...visible];
@@ -313,10 +321,14 @@ function drawBoard(canExpand,ready,target) {
     const b=selectedExpansion;
     entries.push({id:'preview',markup:`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`});
   }
+  if(visiting)for(const visit of rodentEffect.index.query(window)){
+   const id='board-action:'+visit.kind+key(visit.x,visit.y),path=visit.kind==='neutral'?neutralIcon:visit.kind==='rodent'?rodentIcon:habitatIcons[visit.kind];
+   entries.push({id,markup:nodes.get(id)?.markup||`<span class="cell rodent-visit board-action-${visit.kind}" style="${style(visit)};--visit-delay:${Math.min(0,rodentEffect.until-now-900)}ms" aria-hidden="true"><svg viewBox="0 0 ${visit.kind==='neutral'?64:32} ${visit.kind==='neutral'?64:32}" aria-hidden="true">${path}</svg></span>`});
+  }
   if(swirling)for(const [i,m] of tornadoEffect.moves.entries()){
    const left=Math.min(m.from.x,m.to.x),top=Math.min(m.from.y,m.to.y);
    if(left>window.x+window.width||top>window.y+window.height||Math.max(m.from.x,m.to.x)+1<window.x||Math.max(m.from.y,m.to.y)+1<window.y)continue;
-   const color=myPairIds.has(m.owner)?m.symbol.toLowerCase():'foreign';
+   const color=m.symbol==='#'?'neutral':myPairIds.has(m.owner)?m.symbol.toLowerCase():'foreign';
    entries.push({id:'tornado:'+m.id,markup:nodes.get('tornado:'+m.id)?.markup||`<span class="cell tornado-piece ${color}" style="${style(m.from)};--tornado-dx:${(m.to.x-m.from.x)*size}px;--tornado-dy:${(m.to.y-m.from.y)*size}px;--tornado-spin:${i%2?-1:1};--tornado-delay:${Math.min(0,tornadoEffect.until-now-900)}ms" aria-hidden="true">${mark(m.symbol)}</span>`});
   }
   nodes=reconcileCells(board,entries,nodes);
@@ -529,14 +541,15 @@ app.addEventListener('click',async e=>{
   if(action==='invalid-cell'){if(!busy&&room?.status==='playing'&&ownPair()?.turn===ownPlayer()?.symbol&&!ownPair()?.pending){b.classList.remove('invalid-flash');void b.offsetWidth;b.classList.add('invalid-flash');setTimeout(()=>b.classList.remove('invalid-flash'),360);}return;}
   if(action==='delete-game'){
     const local=b.dataset.local==='true',game=local?localGames().find(g=>g.id===b.dataset.id):myGames.online?.find(g=>g.id===b.dataset.id);
-    if(!game)return;pendingDelete={...game,local};renderDeleteGame();return;
+    if(!game)return;try{assertGameDeletionAllowed(localStorage,{...game,local},uid);}catch(error){notify(error.message);return;}pendingDelete={...game,local};renderDeleteGame();return;
   }
   if(action==='cancel-delete'){pendingDelete=null;document.querySelector('.delete-dialog')?.remove();return;}
   if(action==='confirm-delete'){
     const target=pendingDelete;if(!target)return;
     await run(async()=>{
+      assertGameDeletionAllowed(localStorage,target,uid);
       if(target.local)deleteLocalGame(localStorage,target.id);
-      else {uid=await ensurePlayer();await previewRequests.get(`${uid}:${target.id}`)?.catch(()=>{});await command('remove_game',{code:target.code});myGames.online=myGames.online?.filter(g=>g.id!==target.id)||[];}
+      else {uid=await ensurePlayer();await previewRequests.get(`${uid}:${target.id}`)?.catch(()=>{});assertGameDeletionAllowed(localStorage,target,uid);await command('remove_game',{code:target.code});myGames.online=myGames.online?.filter(g=>g.id!==target.id)||[];}
       pendingDelete=null;document.querySelector('.delete-dialog')?.remove();renderHallDialog();
     });return;
   }

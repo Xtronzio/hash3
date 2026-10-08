@@ -2,6 +2,12 @@ import {localCommand} from './local.js';
 const valid=g=>g&&typeof g.id==='string'&&['solo','local'].includes(g.mode)&&Array.isArray(g.players)&&Array.isArray(g.pairs)&&['playing','paused','finished'].includes(g.status);
 export const gamePinKey=(game,uid='')=>game.local||game.mode?`local:${game.id}`:`online:${uid}:${game.id}`;
 export function loadGamePins(storage){try{const pins=JSON.parse(storage.getItem('hash3_game_pins'));return Array.isArray(pins)?pins.filter(p=>typeof p==='string'):[];}catch{return [];}}
+export function assertGameDeletionAllowed(storage,game,uid=''){
+ let pins;
+ try{pins=JSON.parse(storage.getItem('hash3_game_pins')||'[]');if(!Array.isArray(pins))throw new Error();}
+ catch{throw new Error('No se puede verificar el anclaje. La partida no se ha borrado.');}
+ if(pins.includes(gamePinKey(game,uid)))throw new Error('Partida anclada: desánclala antes de borrarla.');
+}
 export function toggleGamePin(storage,game,uid=''){
  const pins=loadGamePins(storage),id=gamePinKey(game,uid),pinned=!pins.includes(id),next=pinned?[...pins,id]:pins.filter(p=>p!==id);
  storage.setItem('hash3_game_pins',JSON.stringify(next));return pinned;
@@ -32,6 +38,7 @@ export function voteCounts(vote){
 }
 
 export function deleteLocalGame(storage,gameId){
+ assertGameDeletionAllowed(storage,{id:gameId,local:true});
  const games=loadLocalGames(storage);if(!games.some(g=>g.id===gameId))throw new Error('Esta partida ya no está guardada.');
  const remaining=games.filter(g=>g.id!==gameId);
  storage.setItem('hash3_locals',JSON.stringify(remaining));
