@@ -39,7 +39,7 @@ test('Loading paused, active and finished local saves persists conversion and re
  for(const status of ['paused','playing','finished']){const g=legacy();g.status=status;g.players[0].score=333;g.pauseRemainingMs=12000;g.players[0].freeExpansionVersion=2;g.players[0].figures=13;g.players[0].freeExpansions=4;games.push(g);}
  const unknown={id:'recoverable',partial:'retain'};storage.setItem('hash3_locals',JSON.stringify([...games,unknown]));toggleGamePin(storage,games[0]);const pins=loadGamePins(storage);
  const loaded=loadLocalGames(storage,now+999999);assert.equal(loaded.length,3);
- for(const g of loaded){assert.equal(g.frontiers.length,1);assert.equal(g.players[0].inventory.cards.frontier,1);assert.equal(g.players[0].score,333);assert.equal(g.pauseRemainingMs,12000);assert.equal(g.players[0].freeExpansions,4);assert.equal(g.players[0].nextFreeExpansionFigure,15);assert.equal(g.updatedAt,games.find(old=>old.id===g.id).updatedAt);}
+ for(const g of loaded){assert.equal(g.frontiers.length,1);assert.equal(g.players[0].inventory.cards.frontier,1);assert.equal(g.players[0].score,333);assert.equal(g.pauseRemainingMs,12000);assert.equal(g.players[0].freeExpansions,4);assert.equal(g.players[0].nextFreeExpansionFigure,18);assert.equal(g.updatedAt,games.find(old=>old.id===g.id).updatedAt);}
  const first=storage.getItem('hash3_locals');loadLocalGames(storage);assert.equal(storage.getItem('hash3_locals'),first);assert.deepEqual(loadGamePins(storage),pins);assert.deepEqual(JSON.parse(first).at(-1),unknown);
  const original=legacy(),limited=memory();limited.setItem('hash3_locals',JSON.stringify([original]));const blocked={getItem:limited.getItem,setItem:()=>{throw Error('quota');}};
  assert.throws(()=>loadLocalGames(blocked),/quota/);assert.deepEqual(JSON.parse(limited.getItem('hash3_locals'))[0],original);
@@ -48,6 +48,6 @@ test('Old fauna counters shorten proportionally once, without creating residents
  const g=createLocal('local','A','B',now,'normal','untimed');delete g.habitatFrequencyVersion;
  g.habitatZones=[{x:0,y:0,placements:20,next:{rodent:33,worm:99,work:198,bomb:66},credit:{worm:.4,work:.7}}];
  g.worms=[{id:'live',x:0,y:0,body:[{x:0,y:0}],eaten:1,nextAt:now+28000}];const before=structuredClone(g.worms);
- initializeHabitats(g,now+1000);assert.equal(g.habitatZones[0].next.rodent,33);assert.equal(g.habitatZones[0].next.worm,73);assert.equal(g.habitatZones[0].next.work,109);assert.deepEqual(g.habitatZones[0].credit,{worm:.4,work:.7});assert.deepEqual(g.worms,before);assert.equal(g.works.length,0);
+ initializeHabitats(g,now+1000);assert.equal(g.habitatZones[0].next.rodent,33);assert.equal(g.habitatZones[0].next.worm,47);assert.equal(g.habitatZones[0].next.work,80);assert.deepEqual(g.habitatZones[0].credit,{worm:.4,work:.7});assert.deepEqual(g.worms,before);assert.equal(g.works.length,0);
  const saved=structuredClone(g);initializeHabitats(g,now+999999);assert.deepEqual(g,saved);
 });

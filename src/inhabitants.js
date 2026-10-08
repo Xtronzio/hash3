@@ -7,7 +7,7 @@ import {frontierReachable,frontierSegments,nearbyFrontierCells,frontierHit,edgeK
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {placeNeutral,NEUTRAL_FREQUENCY} from './neutral.js';
 import {habitatZone,habitatInterval,proportionalBudget,HABITAT_REFERENCE,HABITAT_WEIGHTS,HABITAT_FREQUENCIES} from './habitat-budget.js';
-import {initializeTerritory,advanceTerritory} from './territory-tools.js';
+import {initializeTerritory,advanceTerritory,recordTerritoryPlacement} from './territory-tools.js';
 export const HABITAT_INTERVAL=33000;
 export {HABITAT_FREQUENCIES} from './habitat-budget.js';
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
@@ -18,13 +18,17 @@ export function initializeHabitats(room,now=Date.now()){
  room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
  if(!faunaEnabled(room)){room.rodents=[];room.rodentRaids=[];room.worms=[];room.works=[];}
  if(!territoryEnabled(room)){room.territoryEvents=[];room.bombs=[];}
- if(room.habitatFrequencyVersion!==2){
-  // Shorten saved remaining placement counts proportionally, without replaying
-  // past births or changing residents, food, fractional credit or live clocks.
-  for(const zone of room.habitatZones)for(const [kind,previous]of Object.entries({worm:99,work:198})){
-   if(Number.isFinite(zone.next?.[kind]))zone.next[kind]=zone.placements+Math.max(1,Math.ceil((zone.next[kind]-zone.placements)*HABITAT_FREQUENCIES[kind]/previous));
+ if(room.habitatFrequencyVersion!==3){
+  // Rescale remaining attempts once, without adding animals or replaying births.
+  const previous=room.habitatFrequencyVersion===2?{rodent:33,bomb:66,worm:66,work:99}:{rodent:33,bomb:66,worm:99,work:198};
+  for(const zone of room.habitatZones){
+   const size=frontierReachable(terrainOf(room),zone,room).length;
+   for(const [kind,frequency]of Object.entries(previous))if(Number.isFinite(zone.next?.[kind])){
+    const oldInterval=Math.ceil(frequency*Math.max(1,size/333)),interval=habitatInterval(HABITAT_FREQUENCIES[kind],size);
+    zone.next[kind]=zone.placements+Math.max(1,Math.ceil((zone.next[kind]-zone.placements)*interval/oldInterval));
+   }
   }
-  room.habitatFrequencyVersion=2;
+  room.habitatFrequencyVersion=3;
  }
  if(room.habitatVersion===3)return;
  if(room.habitatVersion===2){let remaining=Math.ceil(terrainOf(room).length*3/333);room.rodentRaids=room.rodentRaids.flatMap(r=>{const count=Math.min(r.count,remaining);remaining-=count;return count?[{...r,count}]:[];});room.habitatVersion=3;return;}
@@ -92,8 +96,9 @@ function project(room,point,player,random,now){
 export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=Math.random){
  initializeHabitats(room,now);const p=room.players.find(p=>p.id===playerId);if(!p)return;
  const area=areaAt(room,point),zone=habitatZone(room,area,HABITAT_FREQUENCIES),areaSet=new Set(area.map(c=>key(c.x,c.y)));
- const suspended=faunaSuspended(room,now);if(room.ecologyRecovery?.moves>0)room.ecologyRecovery.moves--;
- p.placements++;zone.placements++;room.eatenCells=room.eatenCells.filter(c=>!same(c,point));
+ const previouslySuspended=faunaSuspended(room,now);if(room.ecologyRecovery?.moves>0)room.ecologyRecovery.moves--;
+ p.placements++;zone.placements++;recordTerritoryPlacement(room,now,random);
+ const suspended=previouslySuspended||faunaSuspended(room,now);room.eatenCells=room.eatenCells.filter(c=>!same(c,point));
  for(const [kind,frequency]of Object.entries(HABITAT_FREQUENCIES)){
   p.habitatNext[kind]=(Math.floor(p.placements/frequency)+1)*frequency;
   if(!faunaEnabled(room)||suspended)continue;

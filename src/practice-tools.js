@@ -5,7 +5,7 @@ import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
 import {expansionFrontierContext,edgeKey} from './frontiers.js';
-export const REFILL_TURNS=3,MAX_CARDS=8,MAX_PER_CARD=2;
+export const REFILL_TURNS=1,MAX_CARDS=12,MAX_PER_CARD=2;
 export const practiceTools=[
   {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
@@ -42,6 +42,7 @@ export function initializeInventory(game){
       player.inventory.received[t.id]??=Math.max(startingCards.has(t.id)?1:0,player.inventory.cards[t.id]);
     }
   }
+  if(game.inventoryCadenceVersion!==1){for(const p of game.players)p.inventory.turns=Math.min(REFILL_TURNS,p.inventory.turns||0);game.inventoryCadenceVersion=1;}
   migrateLegacyWalls(game);
   game.inventoryEffects||={blocks:[],shields:[]};
   game.inventoryEffects.blocks||=[];game.inventoryEffects.shields||=[];game.inventoryEffects.forced||=[];

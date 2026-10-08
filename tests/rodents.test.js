@@ -23,7 +23,7 @@ test('Loading historic saves preserves placements and never replays overdue mile
  const r=fixture();delete r.habitatVersion;r.players[0].placements=400;initializeHabitats(r,1000);assert.equal(r.players[0].habitatNext.rodent,429);assert.equal(r.rodents.length,0);const before=structuredClone(r);initializeHabitats(r,2000);assert.deepEqual(r,before);
 });
 test('Rodents ignore time; move visits preserve score and never eat the newly placed ficha',()=>{
- const r=fixture();birth(r,33);r.players[0].score=70;const before=structuredClone(r);
+ const r=fixture();birth(r,33);r.worms=[];r.players[0].score=70;const before=structuredClone(r);
  assert.equal(advanceHabitats(r,1000000,()=>0),false);assert.equal(r.cells.length,before.cells.length);assert.deepEqual(r.rodentRaids,before.rodentRaids);
  const fresh={id:'fresh',x:14,y:9,symbol:'O',owner:'local-o'};r.cells.push(fresh);
  countHabitatPlacement(r,'local-o',fresh,1000001,()=>0);assert.ok(r.cells.some(c=>c.id==='fresh'));assert.equal(r.players[0].score,70);assert.equal(r.rodentRaids[0].remaining,1);

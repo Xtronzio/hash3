@@ -35,7 +35,7 @@ test('Los hitos repetibles 3, 33 y 333 avanzan juntos y sus premios nunca se pie
  earn(r,300);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':111,'immunity-3':30,'immunity-33':33});
  assert.equal(immunityFor(r,'local-x').earned,122);assert.equal(inventoryTotal(r,'local-x'),182);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((s,n)=>s+n),8);
- completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,0);
+ for(const id of ['activate','destroy','tornado','bomb'])r.players[0].inventory.cards[id]=1;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,0);
 });
 test('El árbitro cuenta la colocación real, sus bonus y cada ficha de Doble por separado',()=>{
  let r=move(scoringRoom(),16,0);assert.equal(r.lastEvent.points,33);assert.equal(immunityFor(r,'local-x').combos,1);
@@ -129,7 +129,7 @@ test('Los guardados antiguos empiezan sin inmunidad y conservan stock, puntaje y
 });
 test('El premio avisa aunque se haya gastado otra carta; la bolsa suma inmunidades y el inventario cuenta lo que falta',()=>{
  const before=earn(scoringRoom(),332),next=move(card(before,'rival'),16,0),refill=inventoryRefill(before,next,'local-x');
- assert.equal(refill.added,34);assert.equal(refill.message,'Inmunidad disponible · +34 protecciones de 33 segundos');
+ assert.equal(refill.added,35);assert.equal(refill.message,'Inmunidad disponible · +34 protecciones de 33 segundos · +1 Construir celda');
  assert.match(inventoryDockMarkup(next,'local-x',{refill}),/is-refilled/);
  assert.match(inventoryDockMarkup(next,'local-x',{refill}),/Inmunidad disponible/);
  assert.match(inventoryMarkup(next,'local-x'),/Faltan 333 combos/);assert.match(inventoryMarkup(next,'local-x'),/×174/);
@@ -170,7 +170,7 @@ test('Guardar protecciones durante muchas rondas no las gasta ni las activa auto
 
 test('Cada colocación que avanza combos genera un aviso, aunque todavía no entregue una protección',()=>{
  const before=scoringRoom(),next=move(before,16,0);
- assert.equal(inventoryRefill(before,next,'local-x'),null);
+ assert.equal(inventoryRefill(before,next,'local-x').added,1);
  assert.deepEqual(immunityComboNotice(before,next,'local-x'),{player:'local-x',message:'Combo de inmunidad · faltan 2 para otra protección'});
  assert.equal(immunityComboNotice(before,next,'local-o'),null);
  assert.equal(immunityComboNotice(null,next,'local-x'),null);

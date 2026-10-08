@@ -8,7 +8,7 @@ test('El control descuenta colocaciones reales y respeta los siguientes umbrales
  let game=fresh();game=localCommand(game,'move',{x:0,y:0},now);
  let rows=eventOutlook(game,'local-x').rows;
  assert.equal(rows.find(e=>e.kind==='rodent').remaining,32);
- assert.equal(rows.find(e=>e.kind==='worm').remaining,65);
+ assert.equal(rows.find(e=>e.kind==='worm').remaining,32);
  assert.equal(rows.find(e=>e.kind==='neutral').remaining,32);
  game.habitatZones[0].next.worm=333;game.habitatZones[0].placements=305;
  assert.equal(eventOutlook(game,'local-x').rows.find(e=>e.kind==='worm').remaining,28);
@@ -39,3 +39,10 @@ test('Active rodents show remaining visits, while offscreen timed events have a 
  const warnings=ecologyWarningsMarkup(game,now);assert.match(warnings,/Roedores · 2 jugadas pendientes · sin cuenta atrás temporal/);assert.match(warnings,/data-ecology-source="w">33/);assert.equal((warnings.match(/class="ecology-clock/g)||[]).length,1);
  game.worms[0].remainingMs=12000;assert.match(ecologyWarningsMarkup(game,now+999999),/cuenta atrás detenida/);assert.match(ecologyWarningsMarkup(game,now+999999),/data-ecology-source="w">12/);
 });
+
+ test('The additional phenomenon cycle reports remaining shared placements without reading cells',()=>{
+ const g=fresh();g.terrain=Array(999);g.players[0].placements=12;g.players[1].placements=5;g.territoryNextPlacement=33;
+ Object.defineProperty(g,'cells',{get(){throw Error('clock scanned cells');}});
+ const row=eventOutlook(g,'local-x').rows.find(e=>e.trigger==='placements');assert.equal(row.remaining,16);assert.equal(row.unit,'colocaciones entre ambos');assert.equal(row.requiresSize,false);
+ assert.match(eventOutlookMarkup(g,'local-x'),/Ciclo de actividad/);
+ });

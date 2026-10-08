@@ -1,7 +1,7 @@
 import {boardCellLimit,finishAtMatchGoal,CELL_TARGETS} from './board-limits.js';
 import {initializeFreeExpansions,earnFreeExpansion,canRequestFreeExpansion} from './free-expansion.js';
 import {territoryEnabled} from './ecology.js';
-import {recordTerritoryGrowth} from './territory-tools.js';
+import {recordTerritoryGrowth,territoryPlacementDue} from './territory-tools.js';
 import {advanceHabitats,freezeHabitats,resumeHabitats} from './inhabitants.js';
 import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows,isBlockedCell} from './game.js';
 import {recordMax} from './max.js';
@@ -22,7 +22,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:3,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:4,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -53,7 +53,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=3;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=4;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -72,7 +72,8 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   const grows=action==='expand'||action==='inventory'&&payload.tool==='activate'||action==='tick'&&p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;
-  const mayAnnounce=grows&&territoryEnabled(room)&&!room.territoryEvents.length&&Math.floor((terrainOf(room).length+(payload.tool==='activate'?1:9))/333)>room.territoryMilestone;
+  const places=action==='move'||action==='tick'&&!p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;
+  const mayAnnounce=places&&territoryPlacementDue(room,now,1)||grows&&territoryEnabled(room)&&!room.territoryEvents.length&&Math.floor((terrainOf(room).length+(payload.tool==='activate'?1:9))/333)>room.territoryMilestone;
   const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=immunityChanged||advanced||original.habitatVersion!==room.habitatVersion;
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='request-free-expansion'){
@@ -181,7 +182,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy,owner:p.expander});
     recordTerritoryGrowth(room,room.terrain.length-known.size,now,random);
-    if(p.optionalExpansion){room.players.find(v=>v.id===p.expander).freeExpansions--;delete p.optionalExpansion;}else p.credits--;
+    if(p.optionalExpansion){room.players.find(v=>v.id===p.expander).freeExpansions--;room.practiceTurn={...practiceTurn(room,p.expander),freeExpanded:true};delete p.optionalExpansion;}else p.credits--;
     room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
     room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
   }else throw new Error('Acción desconocida.');

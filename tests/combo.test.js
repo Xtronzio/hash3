@@ -8,7 +8,7 @@ const now=1700000000000;
 const start=(mode='local',clock='untimed')=>createLocal(mode,'A','B',now,'normal',clock,'high','X',true);
 const card=(r,tool,playerId='local-x',point={},t=now)=>localCommand(r,'inventory',{tool,playerId,...point},t);
 const move=(r,x,y,t=now)=>localCommand(r,'move',{x,y},t,()=>0);
-const earnCombo=r=>{r.players[0].inventory.cards.hint=0;for(let i=0;i<3;i++)completeInventoryTurn(r,'local-x',{random:()=>.999});return r;};
+const earnCombo=r=>{r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>.999});return r;};
 
 test('Combo entra en la recarga; mantiene ocho cartas iniciales y el contador suma la nueva carta',()=>{
  const r=start();assert.ok(practiceTools.some(t=>t.id==='combo'));assert.equal(inventoryTotal(r,'local-x'),8);

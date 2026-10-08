@@ -1,15 +1,20 @@
 import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {terrainOf,key} from './game.js';
-import {territoryEnabled} from './ecology.js';
+import {territoryEnabled,faunaSuspended} from './ecology.js';
 import {habitatInterval,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {frontierHit} from './frontiers.js';
 
-export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=33000;
+export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=33000,TERRITORY_PLACEMENTS=333;
+export const territoryPlacements=room=>room.players.reduce((n,p)=>n+(p.placements??room.cells.filter(c=>c.owner===p.id).length),0);
 export const territoryIcons={rain:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>',ufo:'<ellipse cx="16" cy="15" rx="13" ry="4"/><path d="M9 12a7 7 0 0 1 14 0M10 22l-4 7m10-7v8m6-8 4 7"/>',cataclysm:'<path d="m18 2-8 12 9 2-7 14M2 21l6-3m16 5 6-2M3 8l5 2m16-1 5-3"/>'};
 export function initializeTerritory(room){
  room.territoryEvents||=[];
  // Adopt current terrain without firing historical growth again.
  room.territoryMilestone??=Math.floor(terrainOf(room).length/333);
+ if(room.territoryActivityVersion!==1){
+  room.territoryNextPlacement=territoryPlacements(room)+(terrainOf(room).length>=333?33:TERRITORY_PLACEMENTS);
+  room.territoryActivityVersion=1;
+ }
 }
 // Connected patch chosen from a boundary, with every pair's anchor preserved.
 // O(N) command work; never called from pan/pinch or board-window queries.
@@ -50,21 +55,33 @@ export function territoryRegion(room,kind,random=Math.random,count=Math.floor(te
  }
  return []; // A narrow/fragmented map has no legal compact demolition region.
 }
-export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.random){
- initializeTerritory(room);if(!territoryEnabled(room)||added<=0||room.territoryEvents.length)return false;
- const milestone=Math.floor(terrainOf(room).length/333);
- if(milestone<=room.territoryMilestone)return false;
+function announceTerritory(room,now,random,trigger){
+ const size=terrainOf(room).length,milestone=Math.floor(size/333);
+ // One draw, no backlog, even if the board currently has no viable target.
+ room.territoryMilestone=Math.max(room.territoryMilestone,milestone);
+ room.territoryNextPlacement=territoryPlacements(room)+TERRITORY_PLACEMENTS;
  const draw=['rain','cataclysm','ufo'],start=Math.min(2,Math.floor(Math.max(0,random())*3));
  for(let i=0;i<3;i++){
   const kind=draw[(start+i)%3],count=kind==='ufo'?Math.floor(room.cells.length*33/333):milestone*33;
   const region=territoryRegion(room,kind,random,count);
   if(!region.length)continue;
-  room.territoryMilestone=milestone;
   for(const e of [...(room.worms||[]),...(room.works||[]),...(room.bombs||[])])if(e.remainingMs==null)e.remainingMs=Math.max(0,(e.nextAt||now+33000)-now);
-  room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,region,x:region[0].x,y:region[0].y,nextAt:now+TERRITORY_WARNING_MS});return true;
+  room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,trigger,region,x:region[0].x,y:region[0].y,nextAt:now+TERRITORY_WARNING_MS});return true;
  }
- // No food/region: consume the milestone without creating a delayed flood.
- room.territoryMilestone=milestone;return false;
+ return false;
+}
+export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.random){
+ initializeTerritory(room);if(!territoryEnabled(room)||added<=0||faunaSuspended(room,now))return false;
+ const milestone=Math.floor(terrainOf(room).length/333);
+ if(milestone<=room.territoryMilestone)return false;
+ return announceTerritory(room,now,random,'growth');
+}
+export function territoryPlacementDue(room,now=Date.now(),increment=0){
+ return territoryEnabled(room)&&terrainOf(room).length>=TERRITORY_MIN_SIZE&&!faunaSuspended(room,now)&&territoryPlacements(room)+increment>=room.territoryNextPlacement;
+}
+export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random){
+ initializeTerritory(room);if(!territoryPlacementDue(room,now))return false;
+ return announceTerritory(room,now,random,'placements');
 }
 export function advanceTerritory(room,now=Date.now()){
  initializeTerritory(room);if(room.status!=='playing'||!territoryEnabled(room))return [];
