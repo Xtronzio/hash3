@@ -3,6 +3,7 @@ import {availableCells,figureWindows} from './game.js';
 import {practiceTools,practiceTurn,canUsePracticeTool,inventoryFor,initializeInventory,spendCard,placementSymbol,REFILL_TURNS,MAX_CARDS,toolAllowance,pendingTools} from './practice-tools.js';
 import {hallIcon} from './hall.js';
 import {immunityFor,immunityStock,immunityProgress,immunityRemaining,immunitySeconds} from './immunity.js';
+import {activeInventoryEffects} from './inventory-status.js';
 export const hintIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 21c0-3-4-5-4-10a10 10 0 0 1 20 0c0 5-4 7-4 10M11 25h10m-9 4h8M16 5v5m-5 4 5-4 5 4M16 10v11"/></svg>';
 const toolIcons={destroy:'<rect x="4" y="4" width="24" height="24" rx="2" stroke-dasharray="3 3"/><path d="M10 16h12"/>',activate:'<rect x="4" y="4" width="24" height="24" rx="2" stroke-dasharray="3 3"/><path d="M16 10v12m-6-6h12"/>',immunity:'<path d="m16 2 13 7v14l-13 7-13-7V9L16 2Z"/><rect x="9" y="9" width="14" height="14" rx="1"/><path d="M9 14h14M9 18h14m-9-9v14m4-14v14"/>',combo:'<rect x="2" y="3" width="11" height="16" rx="2"/><rect x="19" y="13" width="11" height="16" rx="2"/><path d="M9 23h13m-4-4 4 4-4 4M22 3v6m-3-3h6"/>',double:'<rect x="3" y="6" width="16" height="20" rx="2"/><rect x="13" y="3" width="16" height="20" rx="2"/><path d="m18 9 6 8m0-8-6 8"/>',rival:'<path d="m3 5 8 8m0-8-8 8M15 9h13m-5-5 5 5-5 5"/><circle cx="23" cy="24" r="6"/>',opposite:'<path d="M5 11h20m-5-5 5 5-5 5M27 23H7m5-5-5 5 5 5"/><circle cx="7" cy="5" r="2"/>',erase:'<path d="m9 25-6-6 15-15 11 11-10 10H9Zm3-15 11 11M9 29h20"/>',shift:'<rect x="11" y="11" width="10" height="10" rx="2"/><path d="M16 2v7m-4-3 4-4 4 4M16 30v-7m-4 3 4 4 4-4M2 16h7m-3-4-4 4 4 4M30 16h-7m3-4 4 4-4 4"/>',block:'<rect x="6" y="14" width="20" height="15" rx="2"/><path d="M10 14V9a6 6 0 0 1 12 0v5M16 20v4"/>',shield:'<path d="M16 3 4 8v8c0 6 7 11 12 14 5-3 12-8 12-14V8L16 3Z"/><path d="m10 16 4 4 8-9"/>'};
 Object.assign(toolIcons,{
@@ -99,4 +100,23 @@ export function immunityActionsMarkup(game){
  const players=game.mode==='solo'?game.players.filter(p=>p.id===localHumanId(game)):game.players;
  return players.map(p=>{const seconds=immunitySeconds(game,p.id),stock=immunityStock(game,p.id),label=`Inmunidad ${p.symbol} · ${seconds?seconds+' segundos restantes':stock+' guardadas · activar 33 segundos'}`;
  return `<button class="immunity-quick ${p.symbol.toLowerCase()} ${seconds?'is-active':''}" data-action="practice-tool" data-tool="immunity" data-player="${p.id}" aria-label="${label}" title="${label}" ${canUsePracticeTool(game,p.id,'immunity')?'':'disabled'}>${toolIcon('immunity')}<small ${seconds?`data-immunity-clock="${p.id}"`:''}>${seconds||'×'+stock}</small></button>`;}).join('');
+}
+
+export function inventoryStatusMarkup(game,{paused=false}={}){
+ if(!['solo','local'].includes(game.mode))return '';
+ const effects=activeInventoryEffects(game),quickPlayers=paused?[]:game.mode==='solo'?[localHumanId(game)]:game.players.map(p=>p.id);
+ const kinds=['combo','double','rival','block','shield','hint'];
+ for(const kind of ['hint-expand','frontier'])if(effects.some(e=>e.tool===kind))kinds.push(kind);
+ if(paused||effects.some(e=>e.tool==='immunity'&&!quickPlayers.includes(e.player)))kinds.push('immunity');
+ const icons=kinds.map(kind=>{
+  const matching=effects.filter(e=>e.tool===kind&&(kind!=='immunity'||!quickPlayers.includes(e.player)));
+  const name=kind==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===kind).label;
+  if(!matching.length)return `<span class="inventory-effect is-inactive" role="img" aria-label="${name} · sin efecto activo" title="${name} · sin efecto activo">${toolIcon(kind)}</span>`;
+  return matching.map(e=>{
+   const detail=kind==='frontier'?`${e.count} frontera${e.count===1?'':'s'}`:e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
+   const label=`${name} · ${e.symbol} · ${detail}${paused?' · pausado':''}`;
+   return `<span class="inventory-effect is-active ${e.symbol.toLowerCase()}" data-inventory-effect="${kind}" data-effect-player="${e.player}" role="img" aria-label="${label}" title="${label}">${toolIcon(kind)}<small ${kind==='immunity'?`data-immunity-clock="${e.player}"`:''}>${kind==='frontier'?e.count:e.remaining??'•'}</small><b class="effect-owner" aria-hidden="true">${e.symbol}</b></span>`;
+  }).join('');
+ }).join('');
+ return `<div class="inventory-effects-bar" role="group" aria-label="Efectos del inventario">${icons}${paused?'':immunityActionsMarkup(game)}</div>`;
 }

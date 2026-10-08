@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createLocal,localCommand} from '../src/local.js';
+import {activeInventoryEffects} from '../src/inventory-status.js';
+import {inventoryStatusMarkup} from '../src/inventory.js';
+const now=1700000000000;
+const fresh=()=>createLocal('local','A','B',now,'normal','untimed');
+test('Tres cartas simultáneas se mantienen según su efecto, aunque ya no estén en la bolsa',()=>{
+ let game=fresh();
+ for(const point of [{x:0,y:0},{x:1,y:0}])game=localCommand(game,'move',point,now);
+ game=localCommand(game,'inventory',{playerId:'local-x',tool:'block',x:2,y:0},now);
+ game=localCommand(game,'move',{x:0,y:1},now);
+ game=localCommand(game,'inventory',{playerId:'local-o',tool:'shield',x:1,y:0},now);
+ game=localCommand(game,'move',{x:1,y:1},now);
+ game=localCommand(game,'inventory',{playerId:'local-x',tool:'double'},now);
+ assert.deepEqual(activeInventoryEffects(game).map(e=>e.tool).sort(),['block','double','shield']);
+ assert.equal(game.players[0].inventory.cards.block,0);
+ const html=inventoryStatusMarkup(game);assert.equal((html.match(/data-inventory-effect=/g)||[]).length,3);
+ game=localCommand(game,'move',{x:2,y:2},now);
+ assert.equal(activeInventoryEffects(game).find(e=>e.tool==='double').remaining,1);
+ game=localCommand(game,'move',{x:2,y:1},now);
+ assert.ok(!activeInventoryEffects(game).some(e=>e.tool==='double'));
+ const paused=localCommand(game,'pause',{},now);
+ assert.deepEqual(activeInventoryEffects(paused),activeInventoryEffects(game));
+});
+test('Rival, ayuda e inmunidad muestran el tiempo o acción pendientes y no inventan efectos instantáneos',()=>{
+ const game=fresh();game.practiceTurn={player:'local-x',used:['erase','tornado'],remaining:1};
+ assert.deepEqual(activeInventoryEffects(game),[]);
+ game.inventoryEffects.forced=[{by:'local-x',player:'local-o',symbol:'X'}];
+ game.practiceHint={x:0,y:0,player:'local-o'};
+ game.inventoryEffects.immunities=[{player:'local-x',expiresAt:now+28000}];
+ assert.deepEqual(activeInventoryEffects(game,now).map(e=>e.tool).sort(),['hint','immunity','rival']);
+ assert.equal(activeInventoryEffects(game,now).find(e=>e.tool==='immunity').remaining,28);
+ assert.ok(!activeInventoryEffects(game,now+28000).some(e=>e.tool==='immunity'));
+ game.status='paused';game.inventoryEffects.immunities[0].remainingMs=12000;
+ assert.equal(activeInventoryEffects(game,now+999999).find(e=>e.tool==='immunity').remaining,12);
+ game.status='finished';assert.deepEqual(activeInventoryEffects(game),[]);
+});
+test('Preparar indicadores no recorre las celdas ni el terreno y omite efectos vencidos',()=>{
+ const game=fresh();game.inventoryEffects.blocks=[{by:'local-x',remaining:0}];game.inventoryEffects.shields=[{by:'local-o',remaining:2,cell:'s'}];
+ for(const key of ['cells','terrain'])Object.defineProperty(game,key,{get(){throw Error('Recorrido completo del tablero');}});
+ assert.deepEqual(activeInventoryEffects(game).map(e=>e.tool),['shield']);
+ assert.match(inventoryStatusMarkup(game,{paused:true}),/Escudo · O · 2 turnos rivales · pausado/);
+});

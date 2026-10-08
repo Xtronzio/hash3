@@ -394,3 +394,11 @@ Iconos de habitantes y fenómenos en tablero y mapas activos/pausados; pulsacion
 Inmunidad dura 33 segundos de partida activa y se invoca fuera del turno, sin consumir herramienta. Protege fichas, sus celdas, celdas propias vacías construidas y fronteras por propietario, mientras los eventos siguen en zonas no protegidas. El rival puede activar la suya independientemente. Pausa conserva el tiempo restante. Los fenómenos completamente protegidos se consumen; habitantes supervivientes pueden afectar tras el vencimiento. Nuevas reglas del motor solo en VS máquina y Sin conexión; servidor Duelo/Mundo pendiente.
 
 Cómo se juega presenta todos los apartados cerrados, incluidos los habitantes y fenómenos; cada título abre su explicación con controles nativos accesibles.
+
+## Inventario visible y próximos eventos — R0.21.17
+
+Efectos activos del inventario arriba en tablero y mapas activos/pausados; fauna y fenómenos abajo. Los iconos distinguen propietario X/O y muestran duración o acciones pendientes. Las cartas gastadas de efecto instantáneo no se presentan como protecciones o acciones aún activas.
+
+Control inferior junto a inventario y ampliación: colocaciones hasta intentos de fauna y #, casillas hasta el siguiente nuevo umbral territorial de 333 y segundos reales de intervenciones anunciadas. Respeta suspensión y recuperación; informa de intentos sujetos a población, tamaño y alimento y no predice el fenómeno aleatorio. Indicadores preparados por snapshot y relojes sin recorrer terreno ni fichas.
+
+La selección del Tornado conserva las fichas visibles y destaca únicamente el marco 3×3, sin cubrir todo el tablero con destinos opacos. Se mantiene intacta la animación de mezcla. No cambia reglas de aparición, escalado, protección ni navegación.

@@ -1,0 +1,27 @@
+.inventory-effects-bar{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:4px;margin:0;flex:none;min-width:0}
+.board-inventory-status{position:absolute;top:8px;left:8px;right:88px;z-index:3;pointer-events:none}
+.inventory-effect{position:relative;display:grid;place-items:center;width:34px;height:36px;flex:none;border:1px solid #343943;border-radius:7px;background:#101216;color:#858a94}
+.inventory-effect.is-inactive{opacity:.3}
+.inventory-effect.is-active{border-color:currentColor}.inventory-effect.x{color:var(--red)}.inventory-effect.o{color:var(--green)}
+.inventory-effect svg,.inventory-effects-bar .immunity-quick svg{display:block;width:23px;height:23px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.inventory-effect small{position:absolute;right:1px;bottom:0;background:#101216;padding:0 2px;font-size:10px;line-height:11px;font-variant-numeric:tabular-nums}
+.inventory-effect .effect-owner{position:absolute;left:2px;top:0;font-size:8px;line-height:10px}
+.inventory-effect.is-active{pointer-events:auto}
+.inventory-effects-bar .immunity-quick{pointer-events:auto;width:36px;height:36px;min-height:36px;flex:none;padding:5px;background:#101216;border-color:#343943}
+.inventory-effects-bar .immunity-quick.is-active{opacity:1;border-color:currentColor}
+.game .world-map .inventory-effect>svg{width:23px;height:23px;flex:none;min-height:0}
+.game .ecology-controls,.inspection-panel .ecology-controls{justify-content:flex-end;flex-wrap:wrap}
+@media(max-width:360px){.inventory-effect{width:30px}.inventory-effects-bar{gap:3px}}
+
+.events-sheet{position:absolute;bottom:100%;left:0;right:0;z-index:16;max-height:min(55dvh,480px);display:flex;flex-direction:column;background:#111820;border:1px solid #465364;border-radius:12px 12px 0 0;padding:0 12px 10px;box-shadow:0 -5px 18px #0005}
+.event-outlook-body{overflow:auto;overscroll-behavior:contain;min-height:0}
+.event-outlook-body h3{font-size:12px;color:#b8c5d8;margin:8px 0}
+.event-outlook-list{padding:0;margin:0;list-style:none}
+.event-outlook-row{display:flex;align-items:center;gap:9px;min-height:52px;padding:6px 0;border-bottom:1px solid #283241;font-size:12px}
+.event-outlook-row>span:nth-child(2){flex:1;min-width:0}
+.event-outlook-icons{display:flex;flex-wrap:wrap;gap:2px;width:54px;flex:none;color:var(--yellow)}
+.event-outlook-icons svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.event-outlook-row small{display:block;font-size:10px;line-height:1.35;color:#858a94;font-weight:400;margin-top:2px}
+.event-outlook-row>b{max-width:100px;text-align:right;font-size:15px;font-variant-numeric:tabular-nums;flex:none}
+.event-outlook-row.is-disabled{opacity:.4}
+.event-outlook-note{font-size:10px;line-height:1.5;color:#858a94;margin:10px 0 2px}

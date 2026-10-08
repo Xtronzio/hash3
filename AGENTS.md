@@ -49,3 +49,11 @@ Inmunidad dura 33 segundos de partida activa. Cada jugador puede invocarla en cu
 Localizadores de fauna, obras separadas construir/destruir, lluvia, OVNI, cataclismo, # y fronteras en tablero y mapas activos/pausados. Ciclar ubicaciones de identidad estable; lluvia recorre grupos de tres. Representantes de fenómenos conservan una celda real, nunca la media en un hueco. Casco común con + verde / − rojo en todas las superficies. Mostrar solo iconos y cifras: segundos reales hasta intervenciones temporales; colocaciones hasta intentos de nacimiento y visitas restantes de roedores. No inventar relojes de tiempo para apariciones que dependen de colocaciones ni para fronteras manuales. Preparar índices por snapshot, consultar ventana durante navegación, hasta 33 marcadores en mapas; los relojes no leen terreno ni fichas.
 
 Cómo se juega: todos los apartados principales y fichas de fauna/fenómenos empiezan colapsados. Usar details/summary accesibles; abrir de forma independiente sin expandir todo ni crear botones de retorno nuevos.
+
+# Indicadores y previsión R0.21.17
+
+Inventario arriba, fauna y fenómenos abajo, con la misma correspondencia en tablero, mapa activo y pausado. Indicadores de efectos reales por propietario X/O; stock y cartas instantáneas gastadas no representan efectos pendientes. Al finalizar Doble, expirar Escudo/Bloqueo/Inmunidad, consumir Ficha rival o retirar una ayuda/frontera, actualizar su indicador. Preparar desde los registros de efectos por snapshot sin recorrer fichas ni terreno durante navegación o relojes.
+
+Próximos eventos se abre desde el icono inferior junto a inventario y ampliación. Distinguir colocaciones de zona, colocaciones propias, casillas hasta el siguiente múltiplo nuevo de 333, y segundos reales de eventos anunciados. Mostrar intentos de fauna condicionados por presupuesto, población y alimento; no prometer nacimientos ni atribuir reloj a roedores o #. Respetar pausa y recuperación de 33 s y 3 colocaciones. No predecir el fenómeno aleatorio antes de anunciarlo.
+
+Tornado: preservar su animación de mezcla actual. Al seleccionar no cubrir las fichas con botones opacos ni marcar todo el tablero como un destino; mantener únicamente el marco 3×3 y puntos discretos exteriores, sin cambiar opciones legales ni el margen de dos celdas.

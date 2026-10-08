@@ -75,3 +75,8 @@
 
 .board-frontier-cell.is-bomb-target{pointer-events:auto;touch-action:manipulation;padding:0;border-radius:0;cursor:pointer;outline:2px solid var(--yellow);outline-offset:-5px}
 .board-frontier-cell.is-bomb-target:hover{background:#30203f}
+
+/* Tornado selection preserves the pieces and highlights only its 3×3 frame. */
+.game .cell.tornado-anchor{background:transparent;outline:0;border:0;font-size:18px;opacity:.5}
+.game .cell.tornado-anchor:hover{background:#f4c65d08;opacity:1}
+.game .tornado-preview{background:#f4c65d08;border-width:2px;box-shadow:none}
