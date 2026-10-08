@@ -34,7 +34,12 @@ export function initializeInventory(game){
   game.inventoryVersion=2;
   for(const player of game.players){
     player.inventory||={cards:initialCards(),turns:0};
-    for(const t of practiceTools)player.inventory.cards[t.id]??=0;
+    player.inventory.received||={};
+    for(const t of practiceTools){
+      player.inventory.cards[t.id]??=0;
+      // Seed known initial/held cards once; no retroactive draws on old saves.
+      player.inventory.received[t.id]??=Math.max(startingCards.has(t.id)?1:0,player.inventory.cards[t.id]);
+    }
   }
   game.inventoryEffects||={blocks:[],shields:[]};
   game.inventoryEffects.blocks||=[];game.inventoryEffects.shields||=[];game.inventoryEffects.forced||=[];
@@ -120,8 +125,10 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   const inv=game.players.find(p=>p.id===playerId).inventory;inv.turns=Math.min(REFILL_TURNS,inv.turns+1);
   const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD);
   if(inv.turns>=REFILL_TURNS&&Object.values(inv.cards).reduce((a,b)=>a+b,0)<MAX_CARDS&&eligible.length){
-    const draw=eligible[Math.min(eligible.length-1,Math.floor(Math.max(0,random())*eligible.length))];
-    inv.cards[draw.id]++;inv.turns=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;
+    const minimum=Math.min(...eligible.map(t=>inv.received[t.id]));
+    const balanced=eligible.filter(t=>inv.received[t.id]===minimum);
+    const draw=balanced[Math.min(balanced.length-1,Math.floor(Math.max(0,random())*balanced.length))];
+    inv.cards[draw.id]++;inv.received[draw.id]++;inv.turns=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;
   }
 }
 export function moveDestination(game,playerId,cell){

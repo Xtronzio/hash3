@@ -18,13 +18,13 @@ test('Ambos jugadores empiezan con ocho cartas iguales; gastar no recarga inmedi
  r=move(r,1,0);assert.equal(r.players[0].inventory.turns,1);assert.equal(r.players[0].inventory.cards.double,0);
  assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now));assert.equal(r.players[1].inventory.cards.double,1);
 });
-test('Recarga aleatoria cada cuatro turnos propios; mochila llena y máximo dos por tipo',()=>{
+test('Recarga equilibrada cada cuatro turnos propios; mochila llena y turnos pagados',()=>{
  let r=start(),id='local-x',inv=r.players[0].inventory;
  for(let n=0;n<4;n++)completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.turns,4);assert.equal(inv.draws,undefined);
  inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true,random:()=>0});assert.equal(inv.draws,undefined);
  completeInventoryTurn(r,id,{placed:false,random:()=>0});assert.equal(inv.draws,undefined);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,1);assert.equal(inv.cards.double,2);assert.equal(inv.turns,0);
- inv.cards.erase=0;inv.cards.hint=0;for(let n=0;n<4;n++)completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.cards.double,2);assert.equal(inv.cards.opposite,2);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,1);assert.equal(inv.cards.activate,1);assert.equal(inv.turns,0);
+ inv.cards.erase=0;inv.cards.hint=0;for(let n=0;n<4;n++)completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.cards.destroy,1);assert.equal(inv.cards.double,1);assert.equal(inv.cards.opposite,1);
 });
 test('Bloqueo impide la colocación propia inmediata, permite la siguiente y dura dos turnos rivales',()=>{
  let r=card(start(),'block',{x:1,y:1});assert(isBlockedCell(r,'local-x',1,1));assert.throws(()=>move(r,1,1));
@@ -98,4 +98,23 @@ test('Dificultad, figuras, reloj e inventario son independientes y sobreviven a 
   assert.equal(r.machineInventory,enabled);assert.equal(r.timeMode,timeMode);assert.equal(r.difficulty,difficulty);assert.equal(r.level,level);
   if(timeMode==='untimed')assert.equal(r.pairs[0].deadline,null);else assert.equal(Date.parse(r.pairs[0].deadline),now+86400000+32000);
  }
+});
+
+test('Even adversarial constant randomness introduces Bomba and Tornado within eight available refills',()=>{
+ const r=start(),inv=r.players[0].inventory;inv.cards.hint=0;const draws=[];
+ for(let n=0;n<24;n++){
+  for(let turn=0;turn<4;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
+  draws.push(inv.lastDraw);inv.cards[inv.lastDraw]=0;
+ }
+ assert.ok(draws.slice(0,8).includes('bomb'));assert.ok(draws.slice(0,8).includes('tornado'));
+ assert.equal(new Set(draws.slice(0,8)).size,8);assert.equal(new Set(draws.slice(8,24)).size,practiceTools.length);
+ assert.ok(Math.max(...Object.values(inv.received))-Math.min(...Object.values(inv.received))<=1);
+});
+test('Fair refill survives saves, never exceeds stock caps and cannot draw a third copy',()=>{
+ let r=start(),inv=r.players[0].inventory;inv.cards.hint=0;
+ for(let turn=0;turn<4;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
+ const history=structuredClone(inv.received);r=localCommand(r,'pause',{},now);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},now+1000);inv=r.players[0].inventory;assert.deepEqual(inv.received,history);
+ for(const t of practiceTools){inv.cards[t.id]=0;inv.received[t.id]=10;}inv.cards.double=2;inv.received.double=0;
+ for(let turn=0;turn<4;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,2);assert.notEqual(inv.lastDraw,'double');assert.ok(Object.values(inv.cards).reduce((a,b)=>a+b,0)<=8);
+ delete inv.received;initializeInventory(r);assert.ok(practiceTools.every(t=>Number.isInteger(inv.received[t.id])));assert.equal(inv.cards.double,2);
 });

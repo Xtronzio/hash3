@@ -45,6 +45,7 @@ test('Removing the last playable empty cell enters expansion, which can restore 
 test('Destruction cleans an empty-cell reservation, draws through refill and normalizes old saves to zero stock',()=>{
  const r=start();r.inventoryEffects.blocks=[{x:1,y:1,by:'local-o',remaining:2}];const next=destroy(r);assert.equal(next.inventoryEffects.blocks.length,0);
  const fresh=createLocal('local','A','B',now,'normal','untimed');assert.equal(fresh.players[0].inventory.cards.destroy,0);delete fresh.players[0].inventory.cards.destroy;initializeInventory(fresh);assert.equal(fresh.players[0].inventory.cards.destroy,0);
+ for(const t of practiceTools)fresh.players[0].inventory.received[t.id]=0;
  fresh.players[0].inventory.cards.hint=0;const index=practiceTools.findIndex(t=>t.id==='destroy');for(let i=0;i<4;i++)completeInventoryTurn(fresh,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(fresh.players[0].inventory.cards.destroy,1);
 });
 test('Inventory machine destroys an empty scoring threat through the same referee',()=>{

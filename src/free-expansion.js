@@ -4,8 +4,9 @@ export function initializeFreeExpansions(room){
  for(const p of room.players){p.freeExpansions??=0;p.nextFreeExpansionFigure??=(Math.floor((p.figures||0)/3)+1)*3;}
 }
 export function earnFreeExpansion(player){
- if(player.figures<(player.nextFreeExpansionFigure??Infinity))return false;
- player.freeExpansions=1;player.nextFreeExpansionFigure=(Math.floor(player.figures/3)+1)*3;return true;
+ const next=player.nextFreeExpansionFigure??Infinity;if(player.figures<next)return false;
+ const earned=1+Math.floor((player.figures-next)/3);
+ player.freeExpansions=(player.freeExpansions||0)+earned;player.nextFreeExpansionFigure=next+earned*3;return true;
 }
 export function canRequestFreeExpansion(room,playerId){
  const player=room.players.find(p=>p.id===playerId),pair=room.pairs.find(p=>p.x===playerId||p.o===playerId);

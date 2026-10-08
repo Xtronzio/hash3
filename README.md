@@ -416,3 +416,11 @@ Perfil permite copiar un enlace privado reutilizable, renovarlo e importar uno, 
 Servicio: `supabase/functions/profile-link`, desplegado con autenticación personalizada. Copiar/renovar/sincronizar requieren JWT válido; recuperar requiere el secreto privado. No necesita migraciones SQL ni cambia las reglas del motor online. Tests cubren recuperación, renovación, rechazo de metadatos editables, rollback de sesión, stock y contadores restantes.
 
 Validación: 254 pruebas pasan. Servicio desplegado y comprobado el rechazo de enlaces inválidos sin autenticación. La prueba real de crear una sesión anónima devuelve HTTP 504 Gateway Timeout en Supabase; recuperación completa queda pendiente de disponibilidad del servicio Auth. El asesor de seguridad de Supabase tampoco pudo conectar a la base de datos. No se hicieron cambios de esquema.
+
+## Ampliaciones acumulables y recargas equilibradas — R0.21.19
+
+Se elimina el límite de una ampliación libre guardada. Cada nuevo grupo de tres figuras cobradas añade una a la reserva; una jugada que cruce varios umbrales obtiene todas. Las guardadas se conservan y solo se descuenta una al colocar una ampliación. Vista previa, cancelar y pausar conservan la reserva. No se recalculan premios históricos perdidos por el límite anterior. Los límites del tablero siguen vigentes.
+
+La recarga conserva su intervalo de cuatro turnos propios pagados, máximo de ocho cartas y dos por tipo. Sortea entre las cartas elegibles menos recibidas por ese jugador, para evitar largas ausencias y repeticiones desiguales. Las ocho herramientas adicionales, incluidas Bomba y Tornado, llegan en las primeras ocho recargas disponibles de una partida nueva (como máximo 32 turnos propios pagados con hueco). Los guardados mantienen el reparto futuro a partir de su stock conocido; no se inventan sorteos pasados. Bolsa llena espera hueco.
+
+Pruebas: acumulación de varios premios, pausa/guardado, gasto de una unidad, reparto incluso con azar constante, persistencia del historial y límite de dos copias.
