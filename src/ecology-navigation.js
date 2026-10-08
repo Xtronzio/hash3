@@ -5,7 +5,7 @@ import {rodentIcon} from './rodents.js';
 import {neutralIcon} from './neutral.js';
 import {frontierFootprint} from './frontiers.js';
 import {ecologySeconds} from './ecology-clock.js';
-export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Destructores',bomb:'Bombas antiguas',rain:'Lluvia de bombas',ufo:'OVNI',cataclysm:'Cataclismo',neutral:'Ficha neutral #',frontier:'Fronteras'};
+export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Destructores',bomb:'Bombas antiguas',rain:'Lluvia de bombas',ufo:'OVNI',cataclysm:'Cataclismo',neutral:'Ficha neutral #',frontier:'Muros'};
 export const ecologyColors={build:'var(--green)',destroy:'var(--red)',frontier:'var(--frontier)',neutral:'#e3e5e9'};
 const center=points=>{
  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const p of points){left=Math.min(left,p.x);top=Math.min(top,p.y);right=Math.max(right,p.x);bottom=Math.max(bottom,p.y);}
@@ -25,7 +25,7 @@ export function ecologyTargets(room,kind,playerId){
 }
 export function nextEcologyTarget(items,previousId){if(!items.length)return null;const last=items.findIndex(e=>e.id===previousId);return items[(last+1)%items.length];}
 export function ecologyIcon(kind){
- const path=kind==='rodent'?rodentIcon:kind==='neutral'?neutralIcon:kind==='frontier'?'<path d="m4 10 4 4-4 4-4-4Zm12 0 4 4-4 4-4-4Zm12 0 4 4-4 4-4-4Z"/>':territoryIcons[kind]||habitatIcons[kind];
+ const path=kind==='rodent'?rodentIcon:kind==='neutral'?neutralIcon:kind==='frontier'?'<rect x="4" y="4" width="24" height="24"/><path d="m16 8 8 8-8 8-8-8Z"/>':territoryIcons[kind]||habitatIcons[kind];
  return `<svg viewBox="0 0 ${kind==='neutral'?'64 64':'32 32'}" aria-hidden="true">${path||''}</svg>`;
 }
 export function ecologyClockEvents(room,kind){

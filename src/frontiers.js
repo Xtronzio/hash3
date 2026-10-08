@@ -1,10 +1,10 @@
 const key=(x,y)=>`${x},${y}`;
 export const frontierDirections=['north','east','south','west'];
-// The selected empty expansion cell is the fixed end of the 3×1 wall.
+// New walls occupy one unbuilt cell. Saved cell arrays and edge barriers retain
+// their original footprint and blocking semantics.
 export function frontierTiles({x,y,side='north'}){
  if(!Number.isInteger(x)||!Number.isInteger(y)||!frontierDirections.includes(side))return [];
- const [dx,dy]={north:[0,-1],east:[1,0],south:[0,1],west:[-1,0]}[side];
- return Array.from({length:3},(_,i)=>({x:x+i*dx,y:y+i*dy}));
+ return [{x,y}];
 }
 export function frontierFootprint(frontier,room){
  if(frontier.cells)return frontier.cells;
@@ -68,14 +68,11 @@ export function frontierLine({a,b}){
  return a.x===b.x?{x1:a.x,y1:Math.max(a.y,b.y),x2:a.x+1,y2:Math.max(a.y,b.y)}:{x1:Math.max(a.x,b.x),y1:a.y,x2:Math.max(a.x,b.x),y2:a.y+1};
 }
 export function frontierMarkup(room){
- return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>`<g><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/><path d="M${c.x+.5} ${c.y+.2}l.3 .3-.3 .3-.3-.3Z" fill="none" vector-effect="non-scaling-stroke"/><title>Frontera · solo se rompe con Bomba</title></g>`).join('')}</g>`;
+ return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>`<g><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/><path d="M${c.x+.5} ${c.y+.2}l.3 .3-.3 .3-.3-.3Z" fill="none" vector-effect="non-scaling-stroke"/><title>Muro · solo se rompe con Bomba</title></g>`).join('')}</g>`;
 }
 export const frontierDiamond='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 9-9 9-9-9Z"/></svg>';
 
-// Preserve the selected pivot across exact 90-degree clockwise rotations.
-export function rotateFrontier(selection){const i=frontierDirections.indexOf(selection.side||'north');return {...selection,side:frontierDirections[(i+1)%4]};}
-
-// A second tap on the chosen expansion anchor places the current orientation.
+// A second tap on the chosen expansion anchor places the chosen single cell.
 export function selectFrontier(selection,point,anchors){
  if(selection.point?.x===point.x&&selection.point?.y===point.y)return {selected:selection,confirm:true};
  const anchor=anchors.find(a=>a.x===point.x&&a.y===point.y);

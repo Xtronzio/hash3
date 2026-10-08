@@ -71,3 +71,11 @@ Perfil: Guardar tu acceso / Cargar mi acceso. Enlace privado reutilizable en fra
 Ampliaciones libres: eliminar el tope de una guardada; sumar una por cada nuevo grupo de tres figuras cobradas, incluidos varios grupos cruzados en una sola jugada. Conservar el próximo umbral almacenado y la reserva, sin conceder premios históricos al migrar. Gastar exactamente una al colocar; vista previa y cancelación no gastan. Mantener turno, créditos normales y límite del tablero.
 
 Recargas: conservar cuatro turnos propios pagados, ocho cartas guardadas y dos por tipo. Priorizar los tipos elegibles menos recibidos; sortear solo entre los empatados. Registrar `inventory.received` por jugador y conservarlo al guardar. Inicializar una sola vez con las cartas iniciales y las presentes en guardados, sin inventar sorteos antiguos. Así las ocho cartas adicionales, incluida Bomba y Tornado, aparecen antes de repetir los ocho tipos iniciales en partidas nuevas con huecos de recarga. Bolsa llena sigue esperando hueco; turnos automáticos y ampliaciones no recargan. No cambia el uso, daño, animación ni navegación de las cartas.
+
+# Muro y frecuencia R0.21.20
+
+Jorge sustituye la carta Frontera por Muro: una sola casilla sin construir adyacente al territorio, sin giro. Conservar id interno `frontier`, stock y barreras guardadas (arrays de tres celdas y segmentos antiguos) con su geometría y reglas. Un muro nuevo bloquea construir y ampliar sobre su casilla. Mantener propietario, protección, bomba, una carta por fase y uso exclusivo del expander sin consumir turno ni reiniciar reloj.
+
+Inventario superior de tablero y mapas: blanco con stock, cian cuando usable o con efecto activo; agotadas atenuadas. Colores independientes del símbolo X/O, que sigue en etiquetas accesibles. Mantener navegación y preparación por snapshot.
+
+Recarga cada tres turnos propios pagados (sustituye cuatro), conservando sorteo equilibrado, ocho cartas y dos por tipo. Ampliación libre: una por cada nueva figura cobrada (sustituye grupos de tres), acumulación sin tope. Migrar el próximo umbral una sola vez a figuras actuales + 1, conservar reservas sin premios históricos. Mantener colocación/cancelación, créditos, turno y límites.

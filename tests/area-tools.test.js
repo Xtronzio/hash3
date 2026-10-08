@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {canUsePracticeTool,initializeInventory,completeInventoryTurn,toolCells,practiceTools} from '../src/practice-tools.js';
 import {tornadoOptions,bombBlast,frontierOptions,frontierAnchors} from '../src/area-tools.js';
-import {frontierReachable,frontierEdges,frontierMarkup,frontierTiles,frontierCells,rotateFrontier,selectFrontier} from '../src/frontiers.js';
+import {frontierReachable,frontierEdges,frontierMarkup,frontierTiles,frontierCells,selectFrontier} from '../src/frontiers.js';
 import {expansionOptions,terrainOf,figureWindows} from '../src/game.js';
 import {activateImmunity} from '../src/immunity.js';
 import {savedMapModel,inspectionCells,thumbnailMarkup} from '../src/saved-map.js';
@@ -42,16 +42,16 @@ test('Bomb removes paid forms only when broken, respects protection and never sp
  activateImmunity(r,'local-o');const next=card(r,'bomb',{x:1,y:1});assert.deepEqual(next.cells.filter(c=>c.owner==='local-o'),r.cells.filter(c=>c.owner==='local-o'));assert.equal(next.players[0].score,99);
  assert.throws(()=>card(r,'bomb',{x:50,y:50}));assert.equal(r.players[0].inventory.cards.bomb,1);
 });
-test('Frontier occupies three unbuilt cells, survives pause and other tools, blocks expansion across its face and can be bombed',()=>{
+test('Wall occupies one unbuilt cell, survives pause and other tools, blocks expansion across its face and can be bombed',()=>{
  const r=expanding(),next=card(r,'frontier',{x:3,y:0,side:'south'});
- assert.deepEqual(next.frontiers[0].cells,[{x:3,y:0},{x:3,y:1},{x:3,y:2}]);assert.deepEqual(next.cells,r.cells);assert.deepEqual(next.terrain,r.terrain);
+ assert.deepEqual(next.frontiers[0].cells,[{x:3,y:0}]);assert.deepEqual(next.cells,r.cells);assert.deepEqual(next.terrain,r.terrain);
  assert.ok(!expansionOptions(next.terrain,next.pairs[0].active,next).some(p=>p.x===3&&p.y===0));
  assert.ok(expansionOptions(next.terrain,next.pairs[0].active,next).some(p=>p.y<0));
  let saved=localCommand(JSON.parse(JSON.stringify(localCommand(next,'pause',{},now))),'resume',{},now+1000);assert.deepEqual(saved.frontiers,next.frontiers);
  saved=localCommand(saved,'expand',{x:0,y:-1},now);delete saved.practiceTurn;saved.players[0].inventory.cards.destroy=1;
  saved=card(saved,'destroy',{x:1,y:-1});assert.equal(saved.frontiers.length,1);delete saved.practiceTurn;
  const bombed=card(saved,'bomb',{x:3,y:0});assert.equal(bombed.frontiers.length,0);assert.equal(bombed.terrain.length,saved.terrain.length);
- assert.match(inspectionCells(savedMapModel(next,r.players[0])),/map-frontiers/);assert.match(thumbnailMarkup(next),/Frontera/);
+ assert.match(inspectionCells(savedMapModel(next,r.players[0])),/map-frontiers/);assert.match(thumbnailMarkup(next),/Muro/);
 });
 test('An internal frontier blocks animal passage both ways, but an alternative path can go around it',()=>{
  const terrain=Array.from({length:18},(_,i)=>({x:i%6,y:Math.floor(i/6)})),room={frontiers:[{id:'f',by:'local-x',edges:frontierEdges({x:0,y:0,side:'east'})}]};
@@ -68,37 +68,32 @@ test('Frontier rejects existing terrain, overlap, remote placement and reserved 
  for(const point of [{x:0,y:0,side:'east'},{x:3,y:0,side:'invalid'},{x:30,y:0,side:'south'}])assert.throws(()=>card(r,'frontier',point));
  assert.deepEqual(r,before);
  const next=card(r,'frontier',{x:3,y:0,side:'south'});delete next.practiceTurn;next.players[0].inventory.cards.frontier=1;
- const saved=structuredClone(next);assert.throws(()=>card(next,'frontier',{x:3,y:2,side:'north'}));assert.deepEqual(next,saved);
- r.works=[{done:0,destroy:[{x:0,y:2}],build:[{x:3,y:1}]}];assert.throws(()=>card(r,'frontier',{x:3,y:0,side:'south'}));
+ const saved=structuredClone(next);assert.throws(()=>card(next,'frontier',{x:3,y:0,side:'north'}));assert.deepEqual(next,saved);
+ r.works=[{done:0,destroy:[{x:0,y:2}],build:[{x:3,y:0}]}];assert.throws(()=>card(r,'frontier',{x:3,y:0,side:'south'}));
 });
 test('New cards enter refill at zero stock in old saves, preserve eight starting cards and obey expiry, pause, stock and Combo',()=>{
  const r=createLocal('local','A','B',now,'normal','untimed');assert.equal(Object.values(r.players[0].inventory.cards).reduce((a,b)=>a+b,0),8);
  for(const t of ['tornado','bomb','frontier','hint-expand','super-hint']){assert.equal(r.players[0].inventory.cards[t],0);delete r.players[0].inventory.cards[t];}
  initializeInventory(r);assert.equal(r.players[0].inventory.cards['super-hint'],0);
  for(const t of practiceTools)r.players[0].inventory.received[t.id]=0;
- const index=practiceTools.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<4;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
+ const index=practiceTools.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<3;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
  const ready=fill(start());for(const t of ['tornado','bomb','frontier']){assert.equal(canUsePracticeTool(localCommand(ready,'pause',{},now),'local-x',t,now),false);assert.equal(canUsePracticeTool({...ready,timeMode:'timed',pairs:[{...ready.pairs[0],deadline:new Date(now).toISOString()}]},'local-x',t,now),false);}
 });
 
-test('A 3×1 frontier turns 90 degrees around its first cell through all four orientations',()=>{
- let selection={side:'north',point:{x:3,y:3},tool:'frontier'};
- const expected=[[[3,3],[3,2],[3,1]],[[3,3],[4,3],[5,3]],[[3,3],[3,4],[3,5]],[[3,3],[2,3],[1,3]]];
- for(let i=0;i<4;i++){
-  assert.deepEqual(frontierTiles({...selection.point,side:selection.side}).map(c=>[c.x,c.y]),expected[i]);
-  selection=rotateFrontier(selection);assert.deepEqual(selection.point,{x:3,y:3});
- }
- assert.equal(selection.side,'north');
+test('A new wall occupies the chosen cell independently of legacy direction hints',()=>{
+ for(const side of ['north','east','south','west'])assert.deepEqual(frontierTiles({x:3,y:3,side}),[{x:3,y:3}]);
+ assert.deepEqual(frontierTiles({x:3.5,y:3}),[]);assert.deepEqual(frontierTiles({x:3,y:3,side:'invalid'}),[]);
 });
-test('A frontier is three purple diamond cells, adds no terrain, survives save and is removed as a whole by Bomb',()=>{
+test('A wall is one purple diamond cell, adds no terrain, survives save and is removed as a whole by Bomb',()=>{
  const r=expanding(),next=card(r,'frontier',{x:3,y:0,side:'south'});
  assert.deepEqual(frontierCells(next),frontierTiles({x:3,y:0,side:'south'}));assert.deepEqual(next.terrain,r.terrain);assert.deepEqual(next.cells,r.cells);
- assert.equal(frontierCells(next).length,3);assert.ok(frontierCells(next).every(c=>!r.terrain.some(t=>t.x===c.x&&t.y===c.y)));
- const markup=frontierMarkup(next);assert.equal((markup.match(/<rect /g)||[]).length,3);assert.equal((markup.match(/<path /g)||[]).length,3);assert.doesNotMatch(markup,/<line|var\(--yellow\)/);assert.match(markup,/--frontier/);
+ assert.equal(frontierCells(next).length,1);assert.ok(frontierCells(next).every(c=>!r.terrain.some(t=>t.x===c.x&&t.y===c.y)));
+ const markup=frontierMarkup(next);assert.equal((markup.match(/<rect /g)||[]).length,1);assert.equal((markup.match(/<path /g)||[]).length,1);assert.doesNotMatch(markup,/<line|var\(--yellow\)/);assert.match(markup,/--frontier/);
  const restored=localCommand(JSON.parse(JSON.stringify(next)),'expand',{x:0,y:-1},now);delete restored.practiceTurn;
- const bombed=card(restored,'bomb',{x:3,y:1},()=>0);assert.equal(bombed.frontiers.length,0);assert.deepEqual(bombed.terrain,restored.terrain);
+ const bombed=card(restored,'bomb',{x:3,y:0},()=>0);assert.equal(bombed.frontiers.length,0);assert.deepEqual(bombed.terrain,restored.terrain);
  assert.ok(expansionOptions(bombed.terrain,bombed.pairs[0].active,bombed).some(p=>p.x===3&&p.y===0));
 });
-test('All selectable + anchors have a valid 3×1 orientation and walls block building and expansions over their cells',()=>{
+test('All selectable + anchors have a valid single-cell position and walls block building and expansions over their cells',()=>{
  const r=expanding(),anchors=frontierAnchors(r,'local-x');assert.ok(anchors.length>0);
  assert.ok(anchors.every(a=>!r.terrain.some(c=>c.x===a.x&&c.y===a.y)));
  assert.ok(anchors.every(a=>['north','east','south','west'].some(side=>frontierOptions(r,side,'local-x').some(p=>p.x===a.x&&p.y===a.y))));
@@ -112,7 +107,7 @@ test('Saved old edge barriers remain readable and bombable',()=>{
  assert.equal(frontierCells(r).length,3);assert.doesNotMatch(frontierMarkup(r),/<line/);
  assert.equal(card(r,'bomb',{x:2,y:0}).frontiers.length,0);
 });
-test('An automatic bomb breaks all three unbuilt frontier cells without building or deleting terrain',()=>{
+test('An automatic bomb breaks the unbuilt wall cell without building or deleting terrain',()=>{
  const r=card(expanding(),'frontier',{x:3,y:0,side:'south'}),terrain=structuredClone(r.terrain);
  r.bombs=[{id:'auto',player:'local-x',x:3,y:0,blast:frontierCells(r),nextAt:now+1000}];
  advanceHabitats(r,now+1000);assert.equal(r.frontiers.length,0);assert.equal(r.bombs.length,0);assert.deepEqual(r.terrain,terrain);
@@ -140,17 +135,20 @@ test('Only the expander can place Frontier before the 3×3; it preserves the pha
 });
 
 
-test('Frontier selection starts valid, keeps the rotated pivot on second tap and changes to another anchor',()=>{
- const r=expanding(),anchors=frontierAnchors(r,'local-x');
- const anchor=anchors.find(a=>!frontierOptions(r,'north','local-x').some(p=>p.x===a.x&&p.y===a.y));
- assert.ok(anchor);
- const first=selectFrontier({player:'local-x',tool:'frontier'},anchor,anchors);
- assert.equal(first.confirm,false);
- assert.ok(frontierOptions(r,first.selected.side,'local-x').some(p=>p.x===anchor.x&&p.y===anchor.y));
- assert.equal(frontierTiles({...first.selected.point,side:first.selected.side}).length,3);
- const rotated=rotateFrontier(first.selected),second=selectFrontier(rotated,anchor,anchors);
- assert.equal(second.confirm,true);assert.deepEqual(second.selected,rotated);
- const other=anchors.find(a=>a.x!==anchor.x||a.y!==anchor.y);
- const changed=selectFrontier(rotated,other,anchors);assert.equal(changed.confirm,false);assert.deepEqual(changed.selected.point,{x:other.x,y:other.y});
- const invalid=selectFrontier(rotated,{x:100000,y:100000},anchors);assert.equal(invalid.confirm,false);assert.deepEqual(invalid.selected,rotated);
+test('Wall selection previews one valid cell, confirms on second tap and changes anchors without rotation',()=>{
+ const r=expanding(),anchors=frontierAnchors(r,'local-x'),anchor=anchors[0];assert.ok(anchor);
+ const first=selectFrontier({player:'local-x',tool:'frontier'},anchor,anchors);assert.equal(first.confirm,false);
+ assert.deepEqual(frontierTiles(first.selected.point),[{x:anchor.x,y:anchor.y}]);
+ const second=selectFrontier(first.selected,anchor,anchors);assert.equal(second.confirm,true);assert.deepEqual(second.selected,first.selected);
+ const other=anchors.find(a=>a.x!==anchor.x||a.y!==anchor.y),changed=selectFrontier(first.selected,other,anchors);
+ assert.equal(changed.confirm,false);assert.deepEqual(changed.selected.point,{x:other.x,y:other.y});
+ const invalid=selectFrontier(first.selected,{x:100000,y:100000},anchors);assert.equal(invalid.confirm,false);assert.deepEqual(invalid.selected,first.selected);
+});
+test('Saved three-cell walls retain their shape, blocking and bomb removal when new cards become single-cell walls',()=>{
+ const r=expanding();r.frontiers=[{id:'saved',by:'local-x',cells:[{x:3,y:0},{x:3,y:1},{x:3,y:2}]}];
+ const wall=card(r,'frontier',{x:-1,y:0});assert.equal(wall.frontiers[1].cells.length,1);assert.deepEqual(wall.frontiers[0],r.frontiers[0]);
+ const resumed=localCommand(JSON.parse(JSON.stringify(localCommand(wall,'pause',{},now))),'resume',{},now+1000);
+ assert.deepEqual(resumed.frontiers,wall.frontiers);assert.ok(expansionOptions(resumed.terrain,resumed.pairs[0].active,resumed).every(p=>!frontierCells(resumed).some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)));
+ let enlarged=localCommand(resumed,'expand',{x:0,y:-1},now+1000);delete enlarged.practiceTurn;
+ enlarged=card(enlarged,'bomb',{x:3,y:1});assert.equal(enlarged.frontiers.length,1);assert.equal(enlarged.frontiers[0].id,wall.frontiers[1].id);
 });

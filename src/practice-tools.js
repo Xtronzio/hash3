@@ -4,7 +4,7 @@ import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
 import {expansionFrontierContext,edgeKey} from './frontiers.js';
-export const REFILL_TURNS=4,MAX_CARDS=8,MAX_PER_CARD=2;
+export const REFILL_TURNS=3,MAX_CARDS=8,MAX_PER_CARD=2;
 export const practiceTools=[
   {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
@@ -17,14 +17,14 @@ export const practiceTools=[
   {id:'activate',label:'Construir celda',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos, conservando símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
-  {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a una frontera también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe las fronteras alcanzadas. Después coloca tu ficha.',button:'Elegir centro'},
-  {id:'frontier',label:'Frontera',description:'Solo quien está ampliando puede usarla, una vez por ampliación. Primero coloca y gira el muro 3×1 en tres huecos sin construir; después coloca la ampliación 3×3. Cada celda lleva un rombo violeta. No consume una herramienta del turno de fichas; solo Bomba rompe el muro.',button:'Colocar muro y después ampliar'},
-  {id:'hint-expand',group:'help',label:'Ayuda de ampliación',description:'Durante la ampliación propone una ubicación 3×3 favorable para tus próximas figuras, respetando las fronteras. Tú confirmas o eliges otra.',button:'Sugerir ampliación'},
+  {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
+  {id:'frontier',label:'Muro',description:'Solo quien está ampliando puede usarlo, una vez por ampliación. Coloca una casilla de muro en un hueco sin construir junto al territorio; después coloca la ampliación 3×3. El muro lleva un rombo violeta y bloquea construir o ampliar sobre esa casilla. No consume una herramienta del turno de fichas; solo Bomba rompe el muro.',button:'Colocar muro y después ampliar'},
+  {id:'hint-expand',group:'help',label:'Ayuda de ampliación',description:'Durante la ampliación propone una ubicación 3×3 favorable para tus próximas figuras, respetando los muros. Tú confirmas o eliges otra.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
 export const pendingTools=[];
-export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus fronteras durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
+export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
 // Keep eight starting cards; the rest enter through the refill draw.
 const startingCards=new Set(['double','opposite','rival','erase','shift','block','shield','hint']);
@@ -86,7 +86,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='immunity')return toolStock(game,playerId,tool)>0&&!isImmune(game,playerId,now)&&game.players.some(v=>v.id===playerId);
   if(p.pending){
     if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
-    if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&['north','east','south','west'].some(side=>frontierOptions(game,side,playerId).length);
+    if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierOptions(game,'north',playerId).length>0;
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
   if(['hint-expand','frontier'].includes(tool)||p[p.turn.toLowerCase()]!==playerId)return false;

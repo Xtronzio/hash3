@@ -424,3 +424,9 @@ Se elimina el límite de una ampliación libre guardada. Cada nuevo grupo de tre
 La recarga conserva su intervalo de cuatro turnos propios pagados, máximo de ocho cartas y dos por tipo. Sortea entre las cartas elegibles menos recibidas por ese jugador, para evitar largas ausencias y repeticiones desiguales. Las ocho herramientas adicionales, incluidas Bomba y Tornado, llegan en las primeras ocho recargas disponibles de una partida nueva (como máximo 32 turnos propios pagados con hueco). Los guardados mantienen el reparto futuro a partir de su stock conocido; no se inventan sorteos pasados. Bolsa llena espera hueco.
 
 Pruebas: acumulación de varios premios, pausa/guardado, gasto de una unidad, reparto incluso con azar constante, persistencia del historial y límite de dos copias.
+
+## Muro, contraste y más recursos — R0.21.20
+
+La carta Muro sustituye Frontera y ocupa una casilla sin construir junto al territorio, sin giro. Mantiene el uso durante ampliación, bloqueo y rotura con Bomba. Las barreras existentes conservan su geometría al cargar partidas.
+
+Accesos de inventario blancos con stock y cian cuando utilizables o activos, en tablero y mapas activos/pausados. Recarga cada tres turnos propios pagados, con reparto equilibrado, ocho cartas guardadas y dos por tipo. Una ampliación libre por figura cobrada, acumulable. La migración conserva reservas y no premia figuras históricas. Se mantiene la ventana visible más dos celdas y los índices preparados por snapshot.

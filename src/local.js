@@ -88,7 +88,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='inventory'){
     const {tool,playerId}=payload;
     if(['hint','hint-expand','super-hint'].includes(tool))throw new Error('Activa Ayuda desde el inventario.');
-    if(!canUsePracticeTool(room,playerId,tool,now))throw new Error(tool==='frontier'?'Frontera solo puede usarla quien está ampliando, una vez antes de colocar el 3×3 y sin agotar el reloj.':'Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
+    if(!canUsePracticeTool(room,playerId,tool,now))throw new Error(tool==='frontier'?'Muro solo puede usarlo quien está ampliando, una vez antes de colocar el 3×3 y sin agotar el reloj.':'Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
     if(['tornado','bomb','frontier'].includes(tool)){
       const result=applyAreaTool(room,playerId,tool,payload,random);
@@ -177,7 +177,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!automatic&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now)throw new Error('Tiempo agotado: se colocará una ampliación automáticamente.');
     if(!p.pending||!p.optionalExpansion&&availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Usa las celdas vacías antes de ampliar.');
     const {x,y}=payload;
-    if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio, añadir celdas y respetar las fronteras.');
+    if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio, añadir celdas y respetar los muros.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy,owner:p.expander});
     recordTerritoryGrowth(room,room.terrain.length-known.size,now,random);

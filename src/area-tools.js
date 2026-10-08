@@ -44,12 +44,12 @@ export function frontierOptions(room,side='north',actor){
  if(!frontierDirections.includes(side))return [];
  const protectedKeys=protectedTerritoryKeys(room);
  const terrain=area(room),known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),linked=new Set(terrain.map(c=>key(c.x,c.y))),existing=new Set(frontierCells(room).map(c=>key(c.x,c.y))),points=new Map();
- for(const c of terrain)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]])for(let i=0;i<3;i++){
-  const offset=frontierTiles({x:0,y:0,side})[i],p={x:c.x+dx-offset.x,y:c.y+dy-offset.y,side};points.set(key(p.x,p.y),p);
+ for(const c of terrain)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){
+  const p={x:c.x+dx,y:c.y+dy,side};points.set(key(p.x,p.y),p);
  }
  return [...points.values()].filter(p=>{const cells=frontierTiles(p);return cells.every(c=>!protectedKeys.has(key(c.x,c.y))&&!known.has(key(c.x,c.y))&&!existing.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y))&&cells.some(c=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>linked.has(key(c.x+dx,c.y+dy))));});
 }
-export function frontierAnchors(room,actor){return [...new Map(frontierDirections.flatMap(side=>frontierOptions(room,side,actor)).map(c=>[key(c.x,c.y),c])).values()];}
+export function frontierAnchors(room,actor){return frontierOptions(room,'north',actor);}
 function pruneBrokenForms(room){
  const symbols=new Map(room.cells.map(c=>[key(c.x,c.y),c.symbol]));
  room.forms=(room.forms||[]).filter(f=>f.slice(f.lastIndexOf(':')+1).split(';').every(k=>symbols.get(k)===f[0]));
@@ -68,17 +68,17 @@ export function applyAreaTool(room,actor,tool,point,random=Math.random){
   changed.push(...slots);
   for(const p of room.players)if(p.lastMove){const c=room.cells.find(c=>c.id===p.lastMove.id);if(c)p.lastMove={...c};}
  }else if(tool==='bomb'){
-  if(!bombTargets(room).some(c=>c.x===point.x&&c.y===point.y))throw new Error('Elige una ficha o una celda junto a una frontera, sin protección.');
+  if(!bombTargets(room).some(c=>c.x===point.x&&c.y===point.y))throw new Error('Elige una ficha o una celda junto a un muro, sin protección.');
   const blast=bombBlast(room,point,random);if(blast.length!==3)throw new Error('La bomba necesita tres celdas adyacentes sin protección.');
   const hit=new Set(blast.map(c=>key(c.x,c.y)));room.cells=old.filter(c=>!hit.has(key(c.x,c.y)));changed.push(...blast);
-  // One hit breaks the complete three-cell barrier; no other card removes it.
+  // One hit breaks the complete wall, including saved three-cell barriers; no other card removes it.
   room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by)||!frontierHit(f,hit));
   room.inventoryEffects.blocks=room.inventoryEffects.blocks.filter(e=>!hit.has(key(e.x,e.y)));
   for(const p of room.players)if(p.lastMove&&!room.cells.some(c=>c.id===p.lastMove.id))delete p.lastMove;
  }else if(tool==='frontier'){
-  if(!frontierOptions(room,point.side,actor).some(p=>p.x===point.x&&p.y===point.y))throw new Error('El muro necesita tres huecos sin construir, junto a tu territorio y sin otra barrera.');
-  room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),by:actor,point:{x:point.x,y:point.y},side:point.side,cells:frontierTiles(point)});
-  if(!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,room).length)throw new Error('Esta frontera cerraría todas las salidas de ampliación. Elige otra cara.');
+  if(!frontierOptions(room,point.side,actor).some(p=>p.x===point.x&&p.y===point.y))throw new Error('El muro necesita un hueco sin construir, junto a tu territorio y sin otra barrera.');
+  room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),by:actor,point:{x:point.x,y:point.y},cells:frontierTiles(point)});
+  if(!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,room).length)throw new Error('Este muro cerraría todas las salidas de ampliación. Elige otra casilla.');
  }else throw new Error('Herramienta de zona desconocida.');
  if(tool!=='frontier')pruneBrokenForms(room);
  room.inventoryEffects.shields=room.inventoryEffects.shields.filter(e=>room.cells.some(c=>c.id===e.cell));
