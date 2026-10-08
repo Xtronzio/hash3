@@ -50,6 +50,6 @@ test('Accesos directos siguen el stock y permiten usar cartas instantáneas sin 
  game.players[0].inventory.cards.tornado=0;html=inventoryStatusMarkup(game,{playerId:'local-x'});
  assert.match(html,/<button[^>]+is-inactive[^>]+data-tool="tornado"[^>]+disabled/);
  game.players[0].inventory.cards.frontier=1;game.frontiers=[{by:'local-o',x:5,y:5}];
- html=inventoryStatusMarkup(game,{playerId:'local-x'});assert.ok(!html.includes('data-inventory-effect="frontier"'));assert.match(html,/Muro · 1 carta · al ampliar/);
+ html=inventoryStatusMarkup(game,{playerId:'local-x'});assert.ok(!html.includes('data-inventory-effect="frontier"'));assert.match(html,/Muro · 1 carta · usar ahora/);
  html=inventoryStatusMarkup(game,{playerId:'local-o'});assert.match(html,/aria-label="Cartas de O"/);
 });

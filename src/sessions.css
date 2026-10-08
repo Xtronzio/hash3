@@ -89,6 +89,9 @@ body:has(.inspection-overlay){overflow:hidden}
 .inspection-controls{flex-wrap:wrap}.inspection-controls button[data-inspect-action="bomb"],.inspection-controls button[data-inspect-action="worm"],.inspection-controls button[data-inspect-action="work"]{color:var(--yellow)}
 @media(max-width:600px){.inspection-controls>span{flex-basis:100%}}
 
-.achievement-selectors{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}.achievement-selectors button{flex:1;min-width:58px;padding:10px 6px;font-size:13px}.achievement-selectors [aria-pressed="true"]{color:#00e5ff;border-color:#00e5ff;box-shadow:inset 0 0 0 1px #00e5ff}#achievement-rules{width:100%;margin:8px 0 14px}#profile-export{width:100%;font-size:13px;overflow-wrap:anywhere}
+.achievement-selectors{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}.achievement-selectors button{flex:1;min-width:58px;padding:10px 6px;font-size:13px}.achievement-selectors [aria-pressed="true"]{color:var(--mode-color);border-color:var(--mode-color);box-shadow:inset 0 0 0 1px var(--mode-color)}#achievement-rules{width:100%;margin:8px 0 14px}#profile-export{width:100%;font-size:13px;overflow-wrap:anywhere}
 
 .achievement-data button{flex:1 1 28%;font-size:12px}.territory-achievement table{table-layout:fixed}.territory-achievement th:first-child{width:38%}.territory-achievement th,.territory-achievement td{overflow-wrap:anywhere;font-size:13px;padding:8px 5px}
+
+.achievement-panel.mode-red{--mode-color:var(--red)}.achievement-panel.mode-cyan{--mode-color:#00e5ff}.achievement-panel.mode-green{--mode-color:var(--green)}.achievement-panel.mode-silver,.achievement-panel .metric-modes .mode-silver{--mode-color:#fff}
+.achievement-selectors button:focus-visible{outline-color:var(--mode-color)}

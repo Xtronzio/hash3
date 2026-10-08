@@ -136,3 +136,10 @@ Jorge fija tres unidades máximas por tipo de carta normal, 48 entre los 16 tipo
 El muro morado y todos los efectos del tablero quedan en un contexto de apilado propio, bajo minimapa, herramientas de navegación y controles externos, también durante zoom y al soltarlo. No elevar cada control con z-index arbitrarios. Mantener recorte al área del tablero.
 
 Fluidez prioritaria: eventos rápidos de mapa/scroll/pellizco se agrupan en un único pintado por frame, conservando siempre la última cámara y vaciando el último frame al soltar. Cancelar frames al desmontar. Memorizar por snapshot modelos e índices de terreno, habitantes, fenómenos, muros y densidad; reutilizar el dibujo estático del minimapa. Navegar consulta solo ventana más margen; relojes solo cifras. Conservar animaciones, celdas legales y coordenadas. Ensayos de eventos y tamaños grandes no garantizan todos los móviles.
+
+
+# Muro como carta normal R0.21.27
+
+Jorge autoriza colocar Muro durante el turno propio aunque haya huecos y no exista ampliación pendiente. Sigue siendo una casilla sin construir adyacente al territorio, con propietario y rombo violeta, sin alterar terreno ni puntos. En colocación normal gasta una carta y el cupo de herramienta, permite continuar con la ficha, respeta Combo, reloj, pausa y repetición por tipo. Mantener la posibilidad previa de colocar un muro en la fase de ampliación del expander, una vez por fase; no obliga a iniciar una ampliación para usar la carta. Texto, accesos rápidos, mochila y ayuda deben reflejar esta disponibilidad normal. Usar ruleVersion 7 para resultados nuevos; partidas locales activas adoptan las reglas, finales históricos permanecen. No calcular destinos desde navegación o reloj.
+
+Logros conserva el código de modalidad en todos sus selectores de objetivo, límite y dato: Duelo rojo, Sin conexión blanco, VS máquina cian y Mundo verde. Actualizar color y foco al cambiar modalidad, incluso cuando todavía no hay resultados; no dejar cian fijo en los botones secundarios.

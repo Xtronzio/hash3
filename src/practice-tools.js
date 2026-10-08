@@ -20,7 +20,7 @@ export const practiceTools=[
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos, conservando símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
-  {id:'frontier',label:'Muro',description:'Solo quien está ampliando puede usarlo, una vez por ampliación. Coloca una casilla de muro en un hueco sin construir junto al territorio; después coloca la ampliación 3×3. El muro lleva un rombo violeta y bloquea construir o ampliar sobre esa casilla. No consume una herramienta del turno de fichas; solo Bomba rompe el muro.',button:'Colocar muro y después ampliar'},
+  {id:'frontier',label:'Muro',description:'Coloca una casilla de muro en un hueco sin construir junto al territorio, durante tu turno y sin necesitar una ampliación. Cuenta como herramienta y después colocas tu ficha. El rombo violeta bloquea construir o ampliar sobre esa casilla; solo Bomba lo rompe. También puedes colocarlo una vez antes de una ampliación pendiente que te corresponda.',button:'Elegir casilla de muro'},
   {id:'hint-expand',group:'help',label:'Ampliación inteligente',description:'Propone un 3×3 favorable al quedarte sin movimientos. Desde 333 figuras cobradas en la partida también permite ampliar por estrategia aunque queden huecos. Tú confirmas o eliges otra; la ampliación voluntaria gasta la carta al colocarla.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
@@ -95,14 +95,14 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
   if(tool==='hint-expand')return canRequestStrategicExpansion(game,playerId)&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now);
-  if(tool==='frontier'||p[p.turn.toLowerCase()]!==playerId)return false;
+  if(p[p.turn.toLowerCase()]!==playerId)return false;
   if(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now))return false;
   if(!inventoryTools.some(t=>t.id===tool)||toolStock(game,playerId,tool)<=0)return false;
   const state=practiceTurn(game,playerId);
   if(state.used.includes(tool))return false;
   if(tool==='super-hint')return availableCells(game,p).length>0;
   if(tool==='combo'){
-    const ordinary=practiceTools.filter(t=>!['combo','super-hint','hint-expand','frontier'].includes(t.id)&&toolStock(game,playerId,t.id)>0).length;
+    const ordinary=practiceTools.filter(t=>!['combo','super-hint','hint-expand'].includes(t.id)&&toolStock(game,playerId,t.id)>0).length;
     return state.used.every(id=>id==='super-hint')&&availableCells(game,p).length>0&&ordinary>=2;
   }
   if(!toolAllowance(game,playerId).remaining)return false;
@@ -118,7 +118,7 @@ export function spendCard(game,playerId,tool){
   if(tool==='immunity')spendImmunity(game,playerId);else player.inventory.cards[tool]--;
   player.practiceTools=(player.practiceTools||0)+1;
   if(tool==='immunity')return;
-  if(tool==='frontier'){game.pairs[0].frontierUsed=true;return;}
+  if(tool==='frontier'&&game.pairs[0].pending){game.pairs[0].frontierUsed=true;return;}
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
 export function completeInventoryTurn(game,playerId,{automatic=false,placed=true,random=Math.random}={}){

@@ -643,7 +643,7 @@ app.addEventListener('click',async e=>{
   if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notify(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
   if(action==='practice-tool'){
     const tool=b.dataset.tool,toolPlayer=b.dataset.player||uid;
-    if(!canUsePracticeTool(room,toolPlayer,tool)){notify(tool==='frontier'?'Muro se usa cuando te corresponde ampliar.':'Herramienta no disponible en este turno.');return;}
+    if(!canUsePracticeTool(room,toolPlayer,tool)){notify('Herramienta no disponible en este turno.');return;}
     inventoryCardChoice={player:toolPlayer,tool,at:performance.now(),applied:false};inventorySelection=null;
     if(!['double','rival','combo','immunity'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:toolPlayer});inventoryOpen=false;accept(next);});return;
@@ -662,7 +662,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='confirm-area-tool'){
     const selection=inventorySelection;if(!selection?.point)return;
-    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,side:selection.side||'north'});inventorySelection=null;accept(next);notify(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?'Muro colocada. Ahora sitúa tu ampliación 3×3.':`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
+    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,side:selection.side||'north'});inventorySelection=null;accept(next);notify(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?(next.pairs[0].pending?'Muro colocado. Ahora sitúa tu ampliación 3×3.':'Muro colocado. Coloca tu ficha.'):`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
   }
   if(action==='inventory-target'){
     const selection=inventorySelection;

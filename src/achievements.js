@@ -1,4 +1,4 @@
-import {metricsModePicker,metricModes} from './metrics.js';
+import {metricsModePicker,metricModes,metricModeClass} from './metrics.js';
 import {CELL_TARGETS} from './board-limits.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const valid=r=>['board-limit','time-limit','move-limit'].includes(r?.kind)&&typeof r.game==='string'&&Number.isFinite(r.limit)&&(r.kind!=='board-limit'||r.size>=r.limit)&&Array.isArray(r.players);
@@ -32,17 +32,17 @@ export function achievementSelection(results=[],view={}){
 }
 export function achievementsMarkup(results=[],view={}){
  const selected=achievementSelection(results,view),{mode,goal,target,comparison,metric}=selected;
- let html=metricsModePicker(mode,{action:'achievements-mode',label:'Modalidad de los logros'});
- if(mode==='world')return html+'<p>Mundo es continuo. Consulta sus resultados en Ranking y métricas.</p>';
+ let html=`<div class="achievement-panel ${metricModeClass(mode)}">`+metricsModePicker(mode,{action:'achievements-mode',label:'Modalidad de los logros'});
+ if(mode==='world')return html+'<p>Mundo es continuo. Consulta sus resultados en Ranking y métricas.</p></div>';
  html+=`<div class="achievement-selectors" role="group" aria-label="Objetivo de los logros">${Object.entries(goalLabels).map(([id,label])=>`<button data-action="achievements-goal" data-goal="${id}" aria-pressed="${id===goal}">${label}</button>`).join('')}</div><div class="achievement-selectors" role="group" aria-label="Límite de los logros">${targets(goal).map(n=>`<button data-action="achievements-target" data-target="${n}" aria-pressed="${n===target}">${number(goal==='time'?n/60:n)}${goal==='time'?' min':''}</button>`).join('')}</div>`;
  const matching=results.filter(r=>valid(r)&&r.mode===mode&&goalType(r)===goal&&goalTarget(r)===target),groups=new Map();
  for(const r of matching){const key=territoryComparisonKey(r);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
- if(!matching.length)return html+`<p>No hay partidas completadas para esta selección. Al alcanzar ${number(goal==='time'?target/60:target)} ${goal==='time'?'minutos':goal==='moves'?'movimientos':'celdas'}, se guardará aquí el resultado.</p>`;
+ if(!matching.length)return html+`<p>No hay partidas completadas para esta selección. Al alcanzar ${number(goal==='time'?target/60:target)} ${goal==='time'?'minutos':goal==='moves'?'movimientos':'celdas'}, se guardará aquí el resultado.</p></div>`;
  if(groups.size>1)html+=`<label for="achievement-rules">Reglas de la partida</label><select id="achievement-rules">${[...groups].map(([key,games])=>`<option value="${esc(key)}" ${key===comparison?'selected':''}>${esc(settingsLabel(games[0]))} · ${games.length} partida${games.length===1?'':'s'} · ${esc(games[0].ruleVersion||'reglas originales')}${games[0].declaredGoal?' · objetivo '+esc(games[0].declaredGoal):''}</option>`).join('')}</select>`;
  html+=`<div class="achievement-selectors achievement-data" role="group" aria-label="Dato de los logros">${Object.entries(metrics).map(([id,label])=>`<button data-action="achievements-metric" data-metric="${id}" aria-pressed="${id===metric}">${label}</button>`).join('')}</div>`;
  const games=groups.get(comparison),r=games[0];
  const rows=games.flatMap(g=>g.players.filter(p=>g.mode!=='solo'||p.id===g.humanId).map(p=>({...p,completedAt:g.completedAt,game:g.game}))).sort((a,b)=>b.score-a.score||b.figures-a.figures||Date.parse(a.completedAt)-Date.parse(b.completedAt));
  const title=goal==='time'?`Tiempo · ${number(target/60)} minutos`:goal==='moves'?`Movimientos · ${number(target)}`:`Territorio completo · ${number(target)}`;
  html+=`<section class="territory-achievement"><h3 class="heading">${title}</h3><p>${esc(settingsLabel(r))}</p><div class="achievement-table"><table><thead><tr><th>Jugador</th><th>${metrics[metric]}</th><th>Fecha</th></tr></thead><tbody>${rows.map(p=>`<tr><th scope="row">${esc(p.name)}</th><td>${number(metric==='max'&&p.max!=null?Math.round(p.max*100)/100:p[metric])}</td><td>${esc(new Date(p.completedAt).toLocaleDateString('es-ES'))}</td></tr>`).join('')}</tbody></table></div></section><p class="muted">Solo se comparan partidas con las mismas reglas. Los resultados se conservan en este navegador aunque borres el tablero guardado.</p>`;
- return html;
+ return html+'</div>';
 }

@@ -115,7 +115,7 @@ test('An automatic bomb breaks the unbuilt wall cell without building or deletin
 test('Only the expander can place Frontier before the 3×3; it preserves the phase, deadline and next-turn allowance',()=>{
  for(const timeMode of ['timed','untimed']){
   let r=createLocal('local','A','B',now,'normal',timeMode);r.players[0].inventory.cards.frontier=2;r.players[1].inventory.cards.frontier=1;
-  assert.equal(canUsePracticeTool(r,'local-x','frontier',now),false);assert.throws(()=>card(r,'frontier',{x:3,y:0,side:'south'}),/quien está ampliando/);
+  assert.equal(canUsePracticeTool(r,'local-x','frontier',now),true);
   for(const cell of [...r.terrain])r=localCommand(r,'move',cell,now);
   assert.equal(r.pairs[0].pending,1);assert.equal(r.pairs[0].expander,'local-x');assert.equal(r.pairs[0].turn,'O');
   assert.equal(canUsePracticeTool(r,'local-x','frontier',now),true);assert.equal(canUsePracticeTool(r,'local-o','frontier',now),false);
