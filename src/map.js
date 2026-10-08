@@ -1,4 +1,4 @@
-import {habitatMapPins} from './inhabitants.js';
+import {ecologyPinTargets,ecologyMapPins} from './ecology-navigation.js';
 import {bindBoardNavigation} from './board-navigation.js';
 import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
@@ -14,7 +14,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('.map-canvas');
   const model=overviewModel(room,own,target,{includeFrontiers:false});if(!viewport||!big||!model)return;
   const {bounds,terrain,active,ownColor}=model;
-  const barriers=frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'})),visual=[...terrain,...barriers],grid=overviewGrid(terrain,bounds),frontierGrid=frontierOverviewGrid(barriers,bounds),detailIndex=cellIndex(visual);
+  const barriers=frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'})),visual=[...terrain,...barriers],grid=overviewGrid(terrain,bounds),frontierGrid=frontierOverviewGrid(barriers,bounds),detailIndex=cellIndex(visual),pinIndex=cellIndex(ecologyPinTargets(room,own?.id));
   const coarse=box=>[...grid.query(box),...frontierGrid.query(box)];
   const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(coarse(bounds));}
   let fitted={...bounds},camera=mapState.box?clampCamera(mapState.box,bounds):{...bounds},aspect=null;
@@ -22,7 +22,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   const initialize=()=>{if(initialized)return;initialized=true;
   big.innerHTML='<g class="map-terrain"></g>'+'<rect class="map-view" fill="#ffffff06" stroke="#e3e5e9" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>'+(active?`<rect x="${active.x}" y="${active.y}" width="3" height="3" rx=".08" fill="${ownColor}" fill-opacity=".12" stroke="#e3e5e9" stroke-width="2.5" vector-effect="non-scaling-stroke"/><g class="map-own-pin"><circle r="7" fill="${ownColor}" stroke="#090d12" stroke-width="3"/><circle r="2" fill="#fff"/></g>`:'')+(model.target?'<g class="map-rival-pin"><path d="M0 -9 9 0 0 9 -9 0Z" fill="var(--blue)" stroke="#090d12" stroke-width="3"/></g>':'');
   panel.querySelector('.map-summary').innerHTML=`${terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${bounds.width-4} × ${bounds.height-4}</span>`;
-  big.insertAdjacentHTML('beforeend',habitatMapPins(room));
+  big.insertAdjacentHTML('beforeend','<g class="map-ecology"></g>');
   };
   const update=(immediate=false)=>{
     onNavigate(immediate===true);
@@ -42,7 +42,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
     }
     const window={x:Math.floor(camera.x)-1,y:Math.floor(camera.y)-1,width:Math.ceil(camera.width)+2,height:Math.ceil(camera.height)+2};
     const windowKey=JSON.stringify(window);
-    if(windowKey!==lastTerrainWindow){lastTerrainWindow=windowKey;big.querySelector('.map-terrain').innerHTML=overviewCells(window.width*window.height<=20000?detailIndex.query(window):coarse(window));}
+    if(windowKey!==lastTerrainWindow){lastTerrainWindow=windowKey;big.querySelector('.map-ecology').innerHTML=ecologyMapPins(pinIndex.query(window));big.querySelector('.map-terrain').innerHTML=overviewCells(window.width*window.height<=20000?detailIndex.query(window):coarse(window));}
     big.setAttribute('viewBox',`${camera.x} ${camera.y} ${camera.width} ${camera.height}`);
     const view=overviewView(bounds,{x:(viewport.scrollLeft-layout.padding)/layout.size+layout.minX,y:(viewport.scrollTop-layout.padding)/layout.size+layout.minY,width:viewport.clientWidth/layout.size,height:viewport.clientHeight/layout.size});
     const box=big.querySelector('.map-view');for(const [k,v] of Object.entries(view))box.setAttribute(k,v);
@@ -51,7 +51,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
       for(const [selector,position] of [['.map-own-pin',active?{x:active.x+1.5,y:active.y+1.5}:null],['.map-rival-pin',model.target]]){
         const pin=big.querySelector(selector);if(pin&&position)pin.setAttribute('transform',`translate(${position.x} ${position.y}) scale(${1/scale})`);
       }
-      for(const pin of big.querySelectorAll('.map-rodent-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${1/scale})`);
+      for(const pin of big.querySelectorAll('.ecology-map-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${1/scale})`);
     }
   };
   const setCamera=next=>{camera=next;mapState.box={...next};update();};
@@ -101,9 +101,11 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
     else{const point=pairPoints()[0];mapDrag={...point,box:{...camera}};mapPinch=null;mapMoved=true;}
   };
   big.addEventListener('pointerup',e=>endMap(e));big.addEventListener('pointercancel',e=>endMap(e,true));big.addEventListener('lostpointercapture',e=>endMap(e,true));
+  const focus=e=>{const rect=big.getBoundingClientRect(),width=Math.min(fitted.width,Math.max(3,rect.width/36)),height=width*rect.height/rect.width;if(rect.width&&rect.height)setCamera(clampCamera({x:e.detail.x-width/2,y:e.detail.y-height/2,width,height},bounds));};
+  panel.addEventListener('map-focus',focus);
   const open=()=>update();panel.addEventListener('map-open',open);
   const observer=new ResizeObserver(update);observer.observe(big);
   viewport.addEventListener('scroll',update,{passive:true});requestAnimationFrame(update);
   const disposeNavigation=bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting,update:()=>update(true)});
-  return ()=>{panel.removeEventListener('map-open',open);observer.disconnect();viewport.removeEventListener('scroll',update);disposeNavigation?.();};
+  return ()=>{panel.removeEventListener('map-focus',focus);panel.removeEventListener('map-open',open);observer.disconnect();viewport.removeEventListener('scroll',update);disposeNavigation?.();};
 }

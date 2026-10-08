@@ -9,7 +9,7 @@ import {recordCombo} from './records.js';
 import {initializeRodents,stepRodent} from './rodents.js';
 import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
-import {activateImmunity,recordImmunityCombo} from './immunity.js';
+import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,resumeImmunities} from './immunity.js';
 import {applyAreaTool} from './area-tools.js';
 export const TURN_SECONDS=33;
 const id=()=>crypto.randomUUID();
@@ -22,7 +22,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',version:1,ruleVersion:2,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:3,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -53,12 +53,12 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  initializeInventory(room);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=3;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
     if(room.status!=='playing')throw new Error('La partida no está en curso.');
-    advanceHabitats(room,now,random);freezeHabitats(room,now);
+    advanceHabitats(room,now,random);freezeHabitats(room,now);freezeImmunities(room,now);
     if(room.matchGoal?.type==='time')room.matchRemainingMs=Math.max(0,Date.parse(room.endsAt)-now);
     room.pauseRemainingMs=room.timeMode==='untimed'?null:Math.max(0,Date.parse(p.deadline)-now);
     room.status='paused';room.pausedAt=new Date(now).toISOString();p.deadline=null;room.updatedAt=room.pausedAt;room.version++;return room;
@@ -66,14 +66,14 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='resume'){
     if(room.status==='playing')return original;
     if(room.status!=='paused')throw new Error('La partida no está pausada.');
-    resumeHabitats(room,now);if(room.matchGoal?.type==='time'){room.endsAt=new Date(now+(room.matchRemainingMs??room.matchGoal.target*1000)).toISOString();delete room.matchRemainingMs;}room.status='playing';normalize(room,now);p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
+    resumeHabitats(room,now);resumeImmunities(room,now);if(room.matchGoal?.type==='time'){room.endsAt=new Date(now+(room.matchRemainingMs??room.matchGoal.target*1000)).toISOString();delete room.matchRemainingMs;}room.status='playing';normalize(room,now);p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
     delete room.pauseRemainingMs;delete room.pausedAt;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   const grows=action==='expand'||action==='inventory'&&payload.tool==='activate'||action==='tick'&&p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;
   const mayAnnounce=grows&&territoryEnabled(room)&&!room.territoryEvents.length&&Math.floor((terrainOf(room).length+(payload.tool==='activate'?1:9))/333)>room.territoryMilestone;
-  const habitatChanged=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce})||original.habitatVersion!==room.habitatVersion;
+  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=immunityChanged||advanced||original.habitatVersion!==room.habitatVersion;
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='request-free-expansion'){
     const actor=p.turn==='X'?p.x:p.o;
@@ -96,7 +96,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     }else if(['double','rival','combo','immunity'].includes(tool)){
       spendCard(room,playerId,tool);
       if(tool==='double')room.practiceTurn.remaining=2;else if(tool==='rival')room.inventoryEffects.forced.push({player:p[p.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
-      else if(tool==='immunity')activateImmunity(room,playerId);
+      else if(tool==='immunity')activateImmunity(room,playerId,now);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool};
     }else{
       const {x,y}=payload;
@@ -104,7 +104,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       const index=room.cells.findIndex(c=>c.x===x&&c.y===y);
       const old=index>=0?room.cells[index]:null;
       let changed=null;
-      if(tool==='activate'){room.terrain=[...terrainOf(room),{x,y}];recordTerritoryGrowth(room,1,now,random);}
+      if(tool==='activate'){room.terrain=[...terrainOf(room),{x,y,owner:playerId}];recordTerritoryGrowth(room,1,now,random);}
       if(tool==='destroy'){
         const anchor=p.terrainAnchor||p.active;
         const remaining=connectedTerrain(terrainOf(room),anchor).filter(c=>c.x!==x||c.y!==y);
@@ -136,7 +136,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       }
       spendCard(room,playerId,tool);
     }
-    delete room.practiceHint;if(tool==='destroy'||tool==='activate')normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
+    if(tool!=='immunity')delete room.practiceHint;if(tool==='destroy'||tool==='activate')normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   let automatic=false;
   if(action==='tick') {
@@ -179,7 +179,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const {x,y}=payload;
     if(!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).some(c=>c.x===x&&c.y===y))throw new Error('La ampliación debe tocar tu territorio, añadir celdas y respetar las fronteras.');
     const known=new Set(room.terrain.map(c=>key(c.x,c.y)));
-    for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy});
+    for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)if(!known.has(key(x+dx,y+dy)))room.terrain.push({x:x+dx,y:y+dy,owner:p.expander});
     recordTerritoryGrowth(room,room.terrain.length-known.size,now,random);
     if(p.optionalExpansion){room.players.find(v=>v.id===p.expander).freeExpansions--;delete p.optionalExpansion;}else p.credits--;
     room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.pending=0;p.expander=null;p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();

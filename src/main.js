@@ -1,3 +1,5 @@
+import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents} from './ecology-navigation.js';
+import {ecologySeconds} from './ecology-clock.js';
 import {matchGoalsMarkup} from './match-goals-ui.js';
 import {loadTerritoryResults,achievementsMarkup} from './achievements.js';
 import {canRequestFreeExpansion} from './free-expansion.js';
@@ -10,7 +12,7 @@ import {maxLabel} from './max.js';
 import {navigationPaths} from './navigation-icons.js';
 import {metricsMarkup,metricsModePicker,localMetrics} from './metrics.js';
 import {comboLabel} from './records.js';
-import {ecologyChoicesMarkup,territoryWarningMarkup} from './ecology-ui.js';
+import {ecologyChoicesMarkup} from './ecology-ui.js';
 import {territoryIcons} from './territory-tools.js';
 import {neutralIcon} from './neutral.js';
 import {boardActionFeedback} from './rodent-feedback.js';
@@ -29,7 +31,7 @@ import './game-chrome.css';
 import {overviewMarkup,overviewModel} from './map-overview.js';
 import {extensionView,clampBoardZoom} from './map-camera.js';
 import {cellIndex,viewportCellWindow,cachedCellWindow,reconcileCells,overviewGrid} from './board-window.js';
-import {inventoryMarkup,inventoryShortcutsMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
+import {immunityActionsMarkup,inventoryMarkup,inventoryShortcutsMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,toolAllowance} from './practice-tools.js';
 import {selectFrontier,rotateFrontier,frontierTiles,frontierCells,frontierGroups,frontierDiamond} from './frontiers.js';
 import {frontierAnchors} from './area-tools.js';
@@ -42,7 +44,7 @@ import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHuman
 import {scoreFeedback,scoreBreakdown} from './feedback.js';
 import {tornadoFeedback} from './tornado-feedback.js';
 import {needsLocalTick} from './local-clock.js';
-import {isImmune} from './immunity.js';
+import {isImmune,immunitySeconds} from './immunity.js';
 import {VERSION_LABEL} from './version.js';
 import {startUpdates} from './updates.js';
 
@@ -79,8 +81,7 @@ const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'
 let hallMode='world',hallModeSelected=false,hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
 let metricView='personal',metricMode='solo',metricState={entries:[],loading:false,error:''},metricsRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
-const habitatFocus={rodent:0,bomb:0,worm:0,work:0};
-const habitatNames={rodent:'Roedores',bomb:'Bombas',worm:'Gusanos',work:'Obras'};
+const ecologyFocus={};
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
 const urlRival = new URL(location.href).searchParams.get('rival') || '';
 const pairUrlCode=new URL(location.href).searchParams.get('pareja')||'';
@@ -139,7 +140,7 @@ function accept(next) {
   const rodentVisit=boardActionFeedback(room,next),tornado=tornadoFeedback(room,next);clearTornadoEffect();
   const previousRoom=room,feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
-  if(changed){resetInventoryFeedback();startRodentEffect(null);}
+  if(changed){for(const k of Object.keys(ecologyFocus))delete ecologyFocus[k];resetInventoryFeedback();startRodentEffect(null);}
   if(changed){pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};previousTarget=null;activeKey=null;figureEffect=null;clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
@@ -179,7 +180,7 @@ function render() {
   const scoreList=room.commonWorld?list:rankedPlayers(room.players);
   const targetAvailable=!!(target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair)));
   const jumpButtons=`${iconButton('center','center','Mi territorio')}${iconButton('locate','above','Rival superior',`class="blue" ${targetAvailable?'':'disabled'}`)}`;
-  const habitatButtons=['rodent','bomb','worm',...(room.works?.length?['work']:[])].map(kind=>{const targets=habitatTargets(room,kind,uid);return iconButton('locate-'+kind,kind==='work'?'build':kind,`Localizar ${habitatNames[kind].toLowerCase()} · ${targets.length} activos`,`class="yellow" ${targets.length?'':'disabled'}`);}).join('');
+  const habitatButtons=ecologyNavigationMarkup(room,uid)+immunityActionsMarkup(room);
   const rankRows=players=>players.map(p=>{const index=scoreList.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}<small class="rank-combo">Combo máx. ${comboLabel(p)}</small><small class="rank-rodent">${escape(rodentLabel(room,p.id))}</small></span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
   const title=canExpand?'Estás ampliando':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=room.inventoryEffects?.forced?.find(e=>e.player===uid)?.symbol||own.symbol;
@@ -194,7 +195,7 @@ function render() {
     <header class="topbar turnbar compact-turnbar"><span class="brand heading" aria-label="#3">#3</span><h1 class="heading turn-state">${title}${expanding?'':` <span class="turn-symbol ${ready?nextSymbol.toLowerCase():turnSymbol.toLowerCase()}">· ${ready?nextSymbol:turnSymbol}</span>`}</h1><div class="turn-clocks">${room.matchGoal?.type==='moves'?`<span class="mono" aria-label="Movimientos de partida">${room.players.reduce((n,p)=>n+(p.placements||0),0)}/${room.matchGoal.target}</span>`:room.cellTarget?`<span class="mono" aria-label="Celdas construidas">${room.terrain.length}/${room.cellTarget}</span>`:''}<span class="turn-timer mono" aria-label="Tiempo restante del turno" ${pair.deadline?'':'hidden'}></span>${room.endsAt?'<span class="duel-clock">FIN <strong id="duel-time" class="mono"></strong></span>':''}</div></header>
     <div class="workspace"><div class="arena">${voteMarkup(room.vote,uid)}
     ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand&&inventorySelection?.tool!=='frontier'?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span>${isLocal()&&own.inventory?.cards.frontier>0?iconButton('practice-tool','frontier',pair.frontierUsed?'Frontera ya colocada en esta ampliación':'Colocar Frontera antes de ampliar',`class="expansion-frontier" data-tool="frontier" ${canUsePracticeTool(room,uid,'frontier')?'':'disabled'}`):''}${pair.optionalExpansion?iconButton('cancel-free-expansion','back','Cancelar ampliación libre'):''}<button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
-    ${territoryWarningMarkup(room)}<div class="map-wrap"><div class="viewport" tabindex="0" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${habitatButtons}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,habitatButtons})}</div>
+    <div class="map-wrap"><div class="viewport" tabindex="0" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${habitatButtons}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,habitatButtons})}</div>
     <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button><nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?`<button class="free-expansion-button" data-action="request-free-expansion" aria-label="Ampliación libre · ${own.freeExpansions||0} guardadas" title="Ampliación libre: cada tres figuras, máximo una guardada" ${canRequestFreeExpansion(room,uid)?'':'disabled'}>${navIcon('expand')}<small>×${own.freeExpansions||0}</small></button>`:''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
 
   </section>`;
@@ -263,6 +264,7 @@ function drawBoard(canExpand,ready,target) {
   const index=cellIndex(terrain),choiceIndex=cellIndex(choices.filter(c=>!known.has(key(c.x,c.y)))),activationIndex=cellIndex(activationTargets);
   const areaIndex=cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y)))));
   const reservationIndex=cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y))));
+  const phenomenonIndex=cellIndex(ecologyPinTargets(room,uid).filter(e=>['rain','ufo','cataclysm'].includes(e.kind)));
   const territoryIndex=cellIndex((room.territoryEvents||[]).flatMap(e=>e.region.map(c=>({...c,kind:e.kind,eventId:e.id}))));
   const frontierIndex=cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id}))));
   const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
@@ -327,6 +329,7 @@ function drawBoard(canExpand,ready,target) {
     const b=selectedExpansion;
     entries.push({id:'preview',markup:`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`});
   }
+  for(const e of phenomenonIndex.query(window))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)}" aria-hidden="true">${ecologyIcon(e.kind)}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
   for(const c of territoryIndex.query(window))entries.push({id:'territory-warning:'+c.eventId+key(c.x,c.y),markup:`<span class="cell territory-warning territory-${c.kind}" style="${style(c)}" aria-hidden="true"></span>`});
   if(visiting)for(const visit of rodentEffect.index.query(window)){
    const id='board-action:'+visit.kind+key(visit.x,visit.y),path=visit.kind==='neutral'?neutralIcon:visit.kind==='rodent'?rodentIcon:territoryIcons[visit.kind]||habitatIcons[visit.kind];
@@ -487,7 +490,7 @@ function renderPaused(){
  const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
  const inspection=savedMapModel(room,own);
  const inspectButton=(action,kind,label)=>`<button data-inspect-action="${action}" aria-label="${label}" title="${label}">${navIcon(kind)}</button>`;
- const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.active?inspectButton('own','center','Mi territorio'):''}${inspection.target?inspectButton('rival','above','Rival superior'):''}${['rodent','bomb','worm',...(room.works?.length?['work']:[])].map(kind=>habitatTargets(room,kind,uid).length?inspectButton(kind,kind==='work'?'build':kind,`Localizar ${habitatNames[kind].toLowerCase()}`):'').join('')}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
+ const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.active?inspectButton('own','center','Mi territorio'):''}${inspection.target?inspectButton('rival','above','Rival superior'):''}${ecologyNavigationMarkup(room,uid,{inspection:true})}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
  const canvas='<svg class="inspection-canvas" tabindex="0" role="img" aria-label="Tablero guardado: arrastra o pellizca para inspeccionar. Con teclado, flechas para moverte y más o menos para acercar."></svg>';
  const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${canvas}</section>`:'';
  disposeInspection?.();disposeInspection=null;
@@ -574,10 +577,10 @@ app.addEventListener('click',async e=>{
   if(action==='cancel-super-help'){superHelpPlan=null;render();return;}
   if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notify(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
   if(action==='practice-tool'){
-    const tool=b.dataset.tool;
-    if(!canUsePracticeTool(room,uid,tool)){notify(tool==='frontier'?'Frontera se usa cuando te corresponde ampliar.':'Herramienta no disponible en este turno.');return;}
+    const tool=b.dataset.tool,toolPlayer=b.dataset.player||uid;
+    if(!canUsePracticeTool(room,toolPlayer,tool)){notify(tool==='frontier'?'Frontera se usa cuando te corresponde ampliar.':'Herramienta no disponible en este turno.');return;}
     if(!['double','rival','combo','immunity'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
-    await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:uid});inventoryOpen=false;accept(next);});return;
+    await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:toolPlayer});inventoryOpen=false;accept(next);});return;
   }
   if(action==='cancel-tool-selection'){inventorySelection=null;render();return;}
   if(action==='rotate-frontier'){if(inventorySelection?.tool==='frontier'){inventorySelection=rotateFrontier(inventorySelection);render();}return;}
@@ -649,14 +652,14 @@ app.addEventListener('click',async e=>{
   if(action==='cancel-leave'){leaveOpen=false;document.querySelector('.leave-dialog')?.remove();return;}
   if(action==='return-room'){const code=b.dataset.code||room?.code;await run(async()=>{uid=await ensurePlayer();const next=await command('join',{code,name:read('hash3_name')||ownPlayer()?.name||'Jugador'});closeHallDialog(false);accept(next);});return;}
   if(action==='ranking'){setRankingOpen(!rankOpen);return;}
+  if(action==='locate-ecology'){
+    const kind=b.dataset.ecologyKind,item=nextEcologyTarget(ecologyTargets(room,kind,uid),ecologyFocus[kind]);if(!item)return;
+    ecologyFocus[kind]=item.id;
+    const map=b.closest('.world-map');if(map){map.dispatchEvent(new CustomEvent('map-focus',{detail:{x:item.x+.5,y:item.y+.5}}));return;}
+    rankOpen=false;worldMapOpen=false;zoom=1;render();center(item.x,item.y);return;
+  }
   if(action==='locate-territory'){const event=room.territoryEvents?.find(e=>e.id===b.dataset.id);if(event){zoom=1;render();center(event.x+.5,event.y+.5);}return;}
   if(action==='center'){rankOpen=false;worldMapOpen=false;zoom=1;render();const p=ownPair();center(p.active.x+1,p.active.y+1);document.querySelector('.game-minimap')?.focus({preventScroll:true});return;}
-  if(['locate-rodent','locate-bomb','locate-worm','locate-work'].includes(action)){
-    const kind=action.slice(7),items=habitatTargets(room,kind,uid);if(!items.length){notify(`No hay ${habitatNames[kind].toLowerCase()} activos.`);return;}
-    const item=items[habitatFocus[kind]++%items.length];rankOpen=false;worldMapOpen=false;zoom=1;render();center(item.x,item.y);
-    const seconds=Math.max(0,Math.ceil((item.remainingMs??item.nextAt-Date.now())/1000));
-    notify(kind==='bomb'?`Bomba · ${item.remainingMs!=null?'pausada':`explota en ${seconds} s`} · vacía tres celdas.`:kind==='work'?`${item.kind==='build'?'Constructor':'Destructor'} · ${(item.done||0)+1}/3`:`${kind==='worm'?'Gusano':'Roedor'} · ${item.eaten||0}/3 comidas · ${item.remainingMs!=null?'pausado':item.eaten>=3?`se retira en ${seconds} s`:`próxima comida en ${seconds} s`}.`);return;
-  }
   if(action==='locate'){const target=above(),pair=room.pairs.find(p=>p.id===target?.pair),move=target?.lastMove||(pair?{x:pair.active.x+1,y:pair.active.y+1}:null);if(move){rankOpen=false;worldMapOpen=false;zoom=1;render();center(move.x,move.y);document.querySelector('.game-minimap')?.focus({preventScroll:true});}return;}
   if(action==='plus'||action==='minus'||action==='zoom-level'){changeMapZoom(action==='zoom-level'?(zoom<.75?1:zoom<1.3?1.6:.55):zoom*(action==='plus'?1.25:.8));return;}
   if(action==='board-overview'){
@@ -851,6 +854,13 @@ function renderLocalSetup() {
 function updateTimer() {
   if(!room||room.status!=='playing')return;
   for(const node of document.querySelectorAll('.territory-countdown')){const event=room.territoryEvents?.find(e=>e.id===node.dataset.territoryId);if(event){const seconds=Math.max(0,Math.ceil((event.remainingMs??event.nextAt-Date.now())/1000));node.textContent=seconds;node.setAttribute('aria-label',`${seconds} segundos`);}}
+  const clockNow=Date.now(),clocks=new Map();
+  for(const node of document.querySelectorAll('.ecology-clock')){
+    const kind=node.dataset.ecologyKind;if(!clocks.has(kind))clocks.set(kind,ecologyClockEvents(room,kind));
+    const events=clocks.get(kind).filter(e=>!node.dataset.ecologySource||e.id===node.dataset.ecologySource);
+    if(events.length){const seconds=Math.min(...events.map(e=>ecologySeconds(e,clockNow)));node.textContent=seconds;node.setAttribute('aria-label',`${seconds} segundos`);}
+  }
+  for(const node of document.querySelectorAll('[data-immunity-clock]')){const seconds=immunitySeconds(room,node.dataset.immunityClock,clockNow);node.textContent=seconds;node.setAttribute('aria-label',`${seconds} segundos de inmunidad`);}
   const p=ownPair(),node=document.querySelector('.turn-timer');
   const duel=document.querySelector('#duel-time');if(duel&&room.endsAt){const left=Math.max(0,Math.ceil((Date.parse(room.endsAt)-Date.now())/1000));duel.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);}
   if(node){node.hidden=!p?.deadline;if(node.hidden){node.textContent='';node.classList.remove('urgent');}}

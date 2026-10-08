@@ -385,3 +385,12 @@ Al seleccionar Bomba, cada celda legal de una frontera se convierte en un botón
 ## Bomba con doble pulsación — R0.21.11
 
 El primer toque selecciona el centro de Bomba y el segundo sobre la misma celda la aplica, tanto sobre fichas como sobre fronteras. Tocar otra celda cambia el centro sin gastar la carta. El botón Aplicar sigue disponible.
+
+
+## Avisos, localizadores e inmunidad temporal — R0.21.16
+
+Iconos de habitantes y fenómenos en tablero y mapas activos/pausados; pulsaciones sucesivas recorren ubicaciones, incluyendo grupos de tres de lluvia. Obreros con casco común y + verde / − rojo. Contadores discretos en segundos para intervenciones temporales y por colocaciones para futuros intentos de nacimiento; fronteras manuales. Índices espaciales por snapshot, hasta 33 marcadores en mapas, sin recorrer terreno durante navegación ni actualización del reloj.
+
+Inmunidad dura 33 segundos de partida activa y se invoca fuera del turno, sin consumir herramienta. Protege fichas, sus celdas, celdas propias vacías construidas y fronteras por propietario, mientras los eventos siguen en zonas no protegidas. El rival puede activar la suya independientemente. Pausa conserva el tiempo restante. Los fenómenos completamente protegidos se consumen; habitantes supervivientes pueden afectar tras el vencimiento. Nuevas reglas del motor solo en VS máquina y Sin conexión; servidor Duelo/Mundo pendiente.
+
+Cómo se juega presenta todos los apartados cerrados, incluidos los habitantes y fenómenos; cada título abre su explicación con controles nativos accesibles.

@@ -1,3 +1,4 @@
+import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {terrainOf,key} from './game.js';
 import {territoryEnabled} from './ecology.js';
 import {habitatInterval} from './habitat-budget.js';
@@ -72,6 +73,8 @@ export function advanceTerritory(room,now=Date.now()){
   if(event.remainingMs!=null||event.nextAt>now)continue;
   const actual=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
   const hit=new Set(event.region.filter(c=>actual.has(key(c.x,c.y))).map(c=>key(c.x,c.y)));
+  const protectedKeys=event.kind==='ufo'?new Set(room.cells.filter(c=>isImmune(room,c.owner,now)).map(c=>key(c.x,c.y))):protectedTerritoryKeys(room,now);
+  for(const k of protectedKeys)hit.delete(k);
   if(event.kind!=='ufo')for(const p of room.pairs){const a=p.terrainAnchor||p.active;hit.delete(key(a.x,a.y));}
   if(event.kind==='cataclysm'){const neighbors=c=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>key(c.x+dx,c.y+dy));let pruning=true;while(pruning){pruning=false;for(const c of event.region){const k=key(c.x,c.y);if(hit.has(k)&&neighbors(c).filter(n=>hit.has(n)).length<2){hit.delete(k);pruning=true;}}}}
   const removed=new Set(room.cells.filter(c=>hit.has(key(c.x,c.y))).map(c=>c.id));
@@ -82,12 +85,12 @@ export function advanceTerritory(room,now=Date.now()){
   if(event.kind!=='ufo'){
    // An anchor could have moved since the warning; protect it again at execution.
    room.terrain=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y)));
-   room.frontiers=(room.frontiers||[]).filter(f=>!frontierHit(f,hit));
+   room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by,now)||!frontierHit(f,hit));
    room.worms=(room.worms||[]).filter(w=>!w.body.some(c=>hit.has(key(c.x,c.y))));
    room.works=(room.works||[]).filter(w=>![...w.destroy.slice(w.done),...w.build.slice(w.done)].some(c=>hit.has(key(c.x,c.y))));
    room.bombs=(room.bombs||[]).filter(b=>!b.blast.some(c=>hit.has(key(c.x,c.y))));
    room.rodentRaids=(room.rodentRaids||[]).filter(r=>!hit.has(key(r.x,r.y)));
-  }else room.eatenCells.push(...event.region.filter(c=>actual.has(key(c.x,c.y))));
+  }else room.eatenCells.push(...event.region.filter(c=>hit.has(key(c.x,c.y))));
   if(room.inventoryEffects){
    room.inventoryEffects.shields=(room.inventoryEffects.shields||[]).filter(s=>!removed.has(s.cell));
    room.inventoryEffects.blocks=(room.inventoryEffects.blocks||[]).filter(c=>!hit.has(key(c.x,c.y)));

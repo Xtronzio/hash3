@@ -1,3 +1,4 @@
+import {ecologyPinTargets,ecologyTargets,nextEcologyTarget,ecologyMapPins} from './ecology-navigation.js';
 import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
 import {frontierCells,frontierMarkup} from './frontiers.js';
 import {overviewCells} from './map.js';
@@ -12,7 +13,7 @@ export function savedMapModel(room,own){
   const target=own?immediateAbove((room.players||[]).filter(p=>!p.bot),own.id,!!room.commonWorld):null;
   const model=overviewModel(room,own,target);if(!model)return null;
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
-  return {...model,frontierCells:frontierCells(room),terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?'#c5cbd4':'#343e4c'};})};
+  return {...model,ecologyPins:ecologyPinTargets(room,own?.id),ecologyTargets:Object.fromEntries(['rodent','worm','build','destroy','bomb','rain','ufo','cataclysm','neutral','frontier'].map(kind=>[kind,ecologyTargets(room,kind,own?.id)])),frontierCells:frontierCells(room),terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?'#c5cbd4':'#343e4c'};})};
 }
 export function thumbnailMarkup(room){
   const model=savedMapModel(room);if(!model)return '<span class="saved-map-pending" aria-label="Mapa no disponible">—</span>';
@@ -34,7 +35,8 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
   const terrainIndex=cellIndex(model.terrain),coarse=overviewGrid(model.terrain,bounds);
   // Both layers share the camera; preparation is once per snapshot, never during pan.
   const barrierCells=model.frontierCells||[],barrierIndex=cellIndex(barrierCells),barrierGrid=frontierOverviewGrid(barrierCells,bounds);
-  svg.innerHTML='<g class="inspection-terrain"></g>';let lastWindow=null;
+  const pinIndex=cellIndex(model.ecologyPins||[]);
+  svg.innerHTML='<g class="inspection-terrain"></g><g class="inspection-ecology"></g>';let lastWindow=null;
   let camera=state.box?clampCamera(state.box,bounds):{...bounds},fitted={...bounds},aspect=null,drag=null,pinch=null,frame=0,disposed=false;
   const pointers=new Map(),listeners=[];
   const listen=(node,type,fn,options)=>{node.addEventListener(type,fn,options);listeners.push(()=>node.removeEventListener(type,fn,options));};
@@ -48,11 +50,12 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
     state.box={...camera};
     const box={x:Math.floor(camera.x)-2,y:Math.floor(camera.y)-2,width:Math.ceil(camera.width)+4,height:Math.ceil(camera.height)+4},detail=box.width*box.height<=4096,key=JSON.stringify([box,detail]);
     if(key!==lastWindow){
-      lastWindow=key;
+      lastWindow=key;svg.querySelector('.inspection-ecology').innerHTML=ecologyMapPins(pinIndex.query(box));
       const terrain=svg.querySelector('.inspection-terrain');
       if(detail)terrain.innerHTML=inspectionCells({...model,terrain:terrainIndex.query(box),frontiers:frontierMarkup({frontiers:[{cells:barrierIndex.query(box)}]})});
       else terrain.innerHTML=overviewCells([...coarse.query(box),...barrierGrid.query(box).map(c=>({...c,frontier:true,fill:'#b88bff'}))])+inspectionCells({...model,terrain:[],frontiers:''});
     }
+    const scale=rect.width/camera.width;for(const pin of svg.querySelectorAll('.ecology-map-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${1/scale})`);
     svg.setAttribute('viewBox',`${camera.x} ${camera.y} ${camera.width} ${camera.height}`);
     svg.classList.toggle('show-symbols',rect.width/camera.width>=14);
   };
@@ -66,7 +69,8 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
     setCamera(clampCamera({x:position.x-width/2,y:position.y-height/2,width,height},bounds));
   };
   listen(panel,'click',e=>{
-    const action=e.target.closest('[data-inspect-action]')?.dataset.inspectAction;if(!action)return;
+    const control=e.target.closest('[data-inspect-action]'),action=control?.dataset.inspectAction;if(!action)return;
+    if(action==='ecology'){const kind=control.dataset.ecologyKind,item=nextEcologyTarget(model.ecologyTargets?.[kind]||[],state[kind+'Id']);if(item){state[kind+'Id']=item.id;focus({x:item.x+.5,y:item.y+.5});}return;}
     if(action==='fit')setCamera({...fitted});
     if(action==='own'&&model.active)focus({x:model.active.x+1.5,y:model.active.y+1.5});
     if(action==='rival')focus(model.target);

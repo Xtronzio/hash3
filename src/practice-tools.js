@@ -1,7 +1,7 @@
 import {boardCellLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game.js';
-import {immunityStock,spendImmunity,initializeImmunity,isImmune,completeImmunityRound} from './immunity.js';
+import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
 import {expansionFrontierContext,edgeKey} from './frontiers.js';
 export const REFILL_TURNS=4,MAX_CARDS=8,MAX_PER_CARD=2;
@@ -24,7 +24,7 @@ export const practiceTools=[
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
 export const pendingTools=[];
-export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege todo tu territorio durante una ronda. Cada 3, 33 y 333 combos de al menos 33 puntos ganas 1, 3 y 33 protecciones; las guardas y activas de una en una.',button:'Activar 1 ronda'}];
+export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus fronteras durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
 // Keep eight starting cards; the rest enter through the refill draw.
 const startingCards=new Set(['double','opposite','rival','erase','shift','block','shield','hint']);
@@ -45,7 +45,7 @@ export function toolStock(game,playerId,tool){return tool==='immunity'?immunityS
 export function practiceTurn(game,playerId){return game.practiceTurn?.player===playerId?game.practiceTurn:{player:playerId,used:[],remaining:1};}
 export function toolAllowance(game,playerId){
   const state=practiceTurn(game,playerId),combo=state.used.includes('combo');
-  const limit=combo?2:1,used=state.used.filter(id=>!['combo','super-hint'].includes(id)).length;
+  const limit=combo?2:1,used=state.used.filter(id=>!['combo','super-hint','immunity'].includes(id)).length;
   return {combo,limit,used,remaining:Math.max(0,limit-used)};
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
@@ -67,11 +67,10 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false}={}){
     return [...holes.values()];
   }
   if(tool==='destroy'){
-    if(game.players.some(v=>v.id!==playerId&&isImmune(game,v.id)))return [];
-    const occupied=new Set(game.cells.map(c=>key(c.x,c.y)));
-    return terrainOf(game).filter(c=>linked.has(key(c.x,c.y))&&!occupied.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&!game.rodents?.some(r=>r.x===c.x&&r.y===c.y));
+    const protectedKeys=protectedTerritoryKeys(game),occupied=new Set(game.cells.map(c=>key(c.x,c.y)));
+    return terrainOf(game).filter(c=>linked.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!occupied.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&!game.rodents?.some(r=>r.x===c.x&&r.y===c.y));
   }
-  if(tool==='block')return game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))?[]:availableCells(game,p).filter(c=>!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));
+  if(tool==='block'){const protectedKeys=protectedTerritoryKeys(game);return availableCells(game,p).filter(c=>!protectedKeys.has(key(c.x,c.y))&&!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));}
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
   return game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c)&&(c.symbol!=='#'||tool==='erase'));
 }
@@ -79,9 +78,10 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p)return false;
   if(game.mode==='solo'&&playerId!==(game.humanId||p.x)&&game.machineInventory!==true)return false;
+  if(tool==='immunity')return toolStock(game,playerId,tool)>0&&!isImmune(game,playerId,now)&&game.players.some(v=>v.id===playerId);
   if(p.pending){
     if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
-    if(tool==='frontier')return !p.frontierUsed&&!availableCells(game,p,{ignoreBlocks:true}).length&&['north','east','south','west'].some(side=>frontierOptions(game,side,playerId).length);
+    if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&['north','east','south','west'].some(side=>frontierOptions(game,side,playerId).length);
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
   if(['hint-expand','frontier'].includes(tool)||p[p.turn.toLowerCase()]!==playerId)return false;
@@ -92,11 +92,9 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='super-hint')return availableCells(game,p).length>0;
   if(tool==='combo'){
     const ordinary=practiceTools.filter(t=>!['combo','super-hint','hint-expand','frontier'].includes(t.id)&&toolStock(game,playerId,t.id)>0).length;
-    const immunity=!isImmune(game,playerId)&&immunityTools.some(t=>toolStock(game,playerId,t.id)>0)?1:0;
-    return state.used.every(id=>id==='super-hint')&&availableCells(game,p).length>0&&ordinary+immunity>=2;
+    return state.used.every(id=>id==='super-hint')&&availableCells(game,p).length>0&&ordinary>=2;
   }
   if(!toolAllowance(game,playerId).remaining)return false;
-  if(tool==='immunity')return !isImmune(game,playerId)&&availableCells(game,p,{ignoreBlocks:true}).length>0;
   if(tool==='double')return availableCells(game,p).length>=2;
   if(tool==='rival')return !game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))&&!game.inventoryEffects?.forced?.some(e=>e.player!==playerId);
   if(tool==='hint')return availableCells(game,p).length>0;
@@ -108,6 +106,7 @@ export function spendCard(game,playerId,tool){
   initializeInventory(game);const player=game.players.find(p=>p.id===playerId);
   if(tool==='immunity')spendImmunity(game,playerId);else player.inventory.cards[tool]--;
   player.practiceTools=(player.practiceTools||0)+1;
+  if(tool==='immunity')return;
   if(tool==='frontier'){game.pairs[0].frontierUsed=true;return;}
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }

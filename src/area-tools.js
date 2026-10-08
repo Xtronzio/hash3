@@ -1,6 +1,6 @@
 import {habitatBlocked} from './habitat-tools.js';
 import {terrainOf,playableTerrain,key,expansionOptions} from './game.js';
-import {isImmune} from './immunity.js';
+import {isImmune,protectedTerritoryKeys} from './immunity.js';
 import {frontierTiles,frontierDirections,frontierCells,nearbyFrontierCells,frontierHit} from './frontiers.js';
 
 const directions=Array.from({length:9},(_,i)=>[i%3-1,Math.floor(i/3)-1]).filter(([x,y])=>x||y);
@@ -42,12 +42,12 @@ export function bombBlast(room,point,random=Math.random,context=bombContext(room
 }
 export function frontierOptions(room,side='north',actor){
  if(!frontierDirections.includes(side))return [];
- if(room.players.some(p=>p.id!==actor&&isImmune(room,p.id)))return [];
+ const protectedKeys=protectedTerritoryKeys(room);
  const terrain=area(room),known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),linked=new Set(terrain.map(c=>key(c.x,c.y))),existing=new Set(frontierCells(room).map(c=>key(c.x,c.y))),points=new Map();
  for(const c of terrain)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]])for(let i=0;i<3;i++){
   const offset=frontierTiles({x:0,y:0,side})[i],p={x:c.x+dx-offset.x,y:c.y+dy-offset.y,side};points.set(key(p.x,p.y),p);
  }
- return [...points.values()].filter(p=>{const cells=frontierTiles(p);return cells.every(c=>!known.has(key(c.x,c.y))&&!existing.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y))&&cells.some(c=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>linked.has(key(c.x+dx,c.y+dy))));});
+ return [...points.values()].filter(p=>{const cells=frontierTiles(p);return cells.every(c=>!protectedKeys.has(key(c.x,c.y))&&!known.has(key(c.x,c.y))&&!existing.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y))&&cells.some(c=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>linked.has(key(c.x+dx,c.y+dy))));});
 }
 export function frontierAnchors(room,actor){return [...new Map(frontierDirections.flatMap(side=>frontierOptions(room,side,actor)).map(c=>[key(c.x,c.y),c])).values()];}
 function pruneBrokenForms(room){

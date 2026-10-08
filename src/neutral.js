@@ -1,3 +1,4 @@
+import {protectedTerritoryKeys} from './immunity.js';
 import {key,shapeTemplates} from './game.js';
 import {habitatBlocked} from './habitat-tools.js';
 
@@ -22,7 +23,8 @@ export function neutralThreat(point,cells){
 export function placeNeutral(room,area,now=Date.now(),random=Math.random,focus=null){
  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
  const blocks=new Set((room.inventoryEffects?.blocks||[]).filter(e=>e.remaining>0).map(e=>key(e.x,e.y)));
- const options=area.filter(c=>!cells.has(key(c.x,c.y))&&!blocks.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
+ const protectedKeys=protectedTerritoryKeys(room,now);
+ const options=area.filter(c=>!protectedKeys.has(key(c.x,c.y))&&!cells.has(key(c.x,c.y))&&!blocks.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
  if(options.length<2)return null; // Keep a legal place for the next player.
  let best=-1,candidates=[];
  const nearby=focus?options.filter(c=>Math.max(Math.abs(c.x-focus.x),Math.abs(c.y-focus.y))<=3):options;

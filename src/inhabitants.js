@@ -1,3 +1,4 @@
+import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {faunaEnabled,territoryEnabled,faunaSuspended} from './ecology.js';
 import {terrainOf,connectedTerrain,key} from './game.js';
 import {frontierReachable,frontierSegments,nearbyFrontierCells,frontierHit,edgeKey} from './frontiers.js';
@@ -34,7 +35,7 @@ function areaAt(room,point){return frontierReachable(terrainOf(room),point,room)
 function occupiedByOther(room,point,id){return room.rodents.some(r=>r.id!==id&&same(r,point))||room.worms.some(w=>w.id!==id&&(w.body||[]).some(c=>same(c,point)))||habitatReservations(room).some(c=>same(c,point));}
 function foodFor(room,r,random,{adjacent=false,exclude=null}={}){
  const area=new Set(areaAt(room,r).map(c=>key(c.x,c.y)));
- const candidates=room.cells.filter(c=>c.id!==exclude&&area.has(key(c.x,c.y))&&!occupiedByOther(room,c,r.id)&&(!adjacent||(Math.max(Math.abs(c.x-r.x),Math.abs(c.y-r.y))===1&&diagonalAllowed(room,r,c))));
+ const candidates=room.cells.filter(c=>c.id!==exclude&&area.has(key(c.x,c.y))&&!isImmune(room,c.owner)&&!occupiedByOther(room,c,r.id)&&(!adjacent||(Math.max(Math.abs(c.x-r.x),Math.abs(c.y-r.y))===1&&diagonalAllowed(room,r,c))));
  return choose(candidates,random);
 }
 function diagonalAllowed(room,a,b){
@@ -44,6 +45,7 @@ function diagonalAllowed(room,a,b){
  return ![edgeKey({a,b:mid1}),edgeKey({a:mid1,b}),edgeKey({a,b:mid2}),edgeKey({a:mid2,b})].some(e=>blocked.has(e));
 }
 export function clearHabitatCells(room,points){
+ const protectedKeys=protectedTerritoryKeys(room);points=points.filter(c=>!protectedKeys.has(key(c.x,c.y)));
  const hit=new Set(points.map(c=>key(c.x,c.y))),removed=room.cells.filter(c=>hit.has(key(c.x,c.y)));
  room.cells=room.cells.filter(c=>!hit.has(key(c.x,c.y)));
  const ids=new Set(removed.map(c=>c.id));
@@ -110,7 +112,7 @@ function visitRodents(room,point,now,random){
  if(!room.rodentRaids.length)return;
  const area=new Set(areaAt(room,point).map(c=>key(c.x,c.y))),visits=[];
  const occupied=new Set([...room.rodents,...room.worms.flatMap(w=>w.body||[]),...habitatReservations(room)].map(c=>key(c.x,c.y))),removed=new Set();
- const food=room.cells.filter(c=>area.has(key(c.x,c.y))&&!same(c,point)&&['X','O'].includes(c.symbol)&&!occupied.has(key(c.x,c.y)));
+ const food=room.cells.filter(c=>area.has(key(c.x,c.y))&&!same(c,point)&&['X','O'].includes(c.symbol)&&!isImmune(room,c.owner)&&!occupied.has(key(c.x,c.y)));
  for(const raid of room.rodentRaids){
   if(!area.has(key(raid.x,raid.y)))continue;
   const seen=new Set(raid.visited.map(c=>key(c.x,c.y)));
@@ -131,16 +133,16 @@ function activeAt(room,point){
  return room.pairs.some(pair=>area.has(key((pair.terrainAnchor||pair.active).x,(pair.terrainAnchor||pair.active).y))&&room.players.some(p=>(p.id===pair.x||p.id===pair.o)&&p.active!==false&&!p.bot));
 }
 export function freezeHabitats(room,now=Date.now()){
- initializeHabitats(room,now);for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
- if(room.ecologyRecovery)room.ecologyRecovery.remainingMs=Math.max(0,room.ecologyRecovery.until-now);
+ initializeHabitats(room,now);for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=e.remainingMs??Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
+ if(room.ecologyRecovery)room.ecologyRecovery.remainingMs=room.ecologyRecovery.remainingMs??Math.max(0,room.ecologyRecovery.until-now);
  room.habitatLastCheck=now;
 }
 export function resumeHabitats(room,now=Date.now()){
  initializeHabitats(room,now);if(room.ecologyRecovery?.remainingMs!=null){room.ecologyRecovery.until=now+room.ecologyRecovery.remainingMs;delete room.ecologyRecovery.remainingMs;}for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
 }
 export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppressFauna=false}={}){
- initializeHabitats(room,now);if(room.status!=='playing')return false;
- const actions=advanceTerritory(room,now);let changed=actions.length>0;
+ initializeHabitats(room,now);if(room.status!=='playing')return false;room.clockNow=now;
+ const eventCount=room.territoryEvents.length,actions=advanceTerritory(room,now);let changed=actions.length>0||eventCount!==room.territoryEvents.length;
  if(actions.length||suppressFauna||!faunaEnabled(room)||faunaSuspended(room,now)){if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions};return changed;}
  if(room.ecologyRecovery){delete room.ecologyRecovery;changed=true;}
  for(const e of [...room.worms,...room.works,...room.bombs]){
@@ -153,16 +155,17 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppress
   e.nextAt=now+HABITAT_INTERVAL;
   if(e.kind==='work'){
    const remove=e.destroy[e.done],add=e.build[e.done];
+   if(protectedTerritoryKeys(room).has(key(remove.x,remove.y)))continue;
    const valid=terrainOf(room).some(c=>same(c,remove))&&!room.cells.some(c=>same(c,remove))&&!terrainOf(room).some(c=>same(c,add));
    if(valid){room.terrain=terrainOf(room).filter(c=>!same(c,remove));room.terrain.push({...add});actions.push({...remove,kind:'destroy'},{...add,kind:'build'});e.done++;changed=true;}
    else{room.works=room.works.filter(w=>w.id!==e.id);changed=true;}
   }else if(e.blast){
-   for(const c of e.blast){clearHabitatCell(room,c);actions.push({...c,kind:'bomb'});}
-   const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>!frontierHit(f,hit));
+   const protectedKeys=protectedTerritoryKeys(room);for(const c of e.blast)if(!protectedKeys.has(key(c.x,c.y))){clearHabitatCell(room,c);actions.push({...c,kind:'bomb'});}
+   const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by)||!frontierHit(f,hit));
    room.bombs=room.bombs.filter(b=>b.id!==e.id);changed=true;
   }else{
    if(e.kind==='worm'&&e.eaten>=3){room.worms=room.worms.filter(w=>w.id!==e.id);changed=true;continue;}
-   let food=room.cells.find(c=>same(c,e)&&!occupiedByOther(room,c,e.id));
+   let food=room.cells.find(c=>same(c,e)&&!isImmune(room,c.owner)&&!occupiedByOther(room,c,e.id));
    if(e.kind==='worm'&&e.eaten>0)food=foodFor(room,e,random,{adjacent:true});
    else food||=foodFor(room,e,random);
    if(!food)continue;
@@ -183,9 +186,10 @@ export function habitatLabel(room,playerId){
  return `Fichas ${count} · fauna proporcional por zona${rats||worms?` · activos R${rats}/G${worms}`:''}`;
 
 }
-export const habitatIcons={worm:'<path d="M3 25c1-7 7-9 12-5 4 3 7 2 7-2v-6c-3-2-2-7 2-8s7 3 4 7l-1 2v5c0 8-7 11-13 8l-5-3c-2-1-4 0-6 2Z"/><path d="m9 18-2 4m8-2-2 5m7-3 1 5m1-8 5 2m-5-6h5"/><circle cx="25.5" cy="7.5" r="1" fill="currentColor" stroke="none"/>',build:'<path d="M5 25V13m22 12V13M3 13h26M7 13V9a9 9 0 0 1 18 0v4M12 3v10m8-10v10M10 23h12m-6-6v12"/>',destroy:'<path d="m6 4 22 24M4 11l8-8 5 5-8 8ZM6 27h7m4 0h9m-11-5 3-4m-8 4-2-3"/>',bomb:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>'};
+export const workerHelmet='<path data-worker="helmet" d="M4 14h24M6 14v-3a10 10 0 0 1 20 0v3M12 3v11m8-11v11"/>';
+export const habitatIcons={worm:'<path d="M3 25c1-7 7-9 12-5 4 3 7 2 7-2v-6c-3-2-2-7 2-8s7 3 4 7l-1 2v5c0 8-7 11-13 8l-5-3c-2-1-4 0-6 2Z"/><path d="m9 18-2 4m8-2-2 5m7-3 1 5m1-8 5 2m-5-6h5"/><circle cx="25.5" cy="7.5" r="1" fill="currentColor" stroke="none"/>',build:workerHelmet+'<path data-worker-sign="plus" d="M10 24h12m-6-6v12"/>',destroy:workerHelmet+'<path data-worker-sign="minus" d="M10 24h12"/>',bomb:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>'};
 export function habitatMark(kind,label=''){return `<span class="habitat-mark habitat-${kind}"><svg viewBox="0 0 32 32" aria-hidden="true">${habitatIcons[kind]||habitatIcons.worm}</svg>${label?`<b>${label}</b>`:''}</span>`;}
 export function habitatMapPins(room){
  const items=[...(room.rodents||[]).map(r=>({...r,kind:'rodent'})),...(room.worms||[]).map(w=>({...w,kind:'worm'})),...(room.works||[]).flatMap(w=>[{...w,...w.destroy[w.done],kind:'destroy'},{...w,...w.build[w.done],kind:'build'}]),...(room.bombs||[]).map(b=>({...b,kind:'bomb'}))];
- return items.filter(e=>Number.isFinite(e.x)).map(e=>`<g class="map-rodent-pin" data-x="${e.x+.5}" data-y="${e.y+.5}"><title>${e.kind==='rodent'?'Roedor':e.kind==='worm'?'Gusano':e.kind==='bomb'?'Bomba automática':e.kind==='build'?'Constructor':'Destructor'} · ${e.eaten??e.done??0}/3</title><circle r="13" fill="#151109" stroke="${e.kind==='build'?'var(--green)':e.kind==='destroy'?'var(--red)':'var(--yellow)'}" stroke-width="2"/><svg x="-10" y="-10" width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="var(--yellow)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${habitatIcons[e.kind]||'<path d="M7 14c0-8 18-8 18 0v7c0 7-18 7-18 0ZM10 11a4 4 0 1 0-4 4m16-4a4 4 0 1 1 4 4M12 17h.01M20 17h.01m-6 4 2 2 2-2"/>'}</svg></g>`).join('');
+ return items.filter(e=>Number.isFinite(e.x)).map(e=>`<g class="map-rodent-pin" data-x="${e.x+.5}" data-y="${e.y+.5}"><title>${e.kind==='rodent'?'Roedor':e.kind==='worm'?'Gusano':e.kind==='bomb'?'Bomba automática':e.kind==='build'?'Constructor':'Destructor'} · ${e.eaten??e.done??0}/3</title><circle r="13" fill="#151109" stroke="${e.kind==='build'?'var(--green)':e.kind==='destroy'?'var(--red)':'var(--yellow)'}" stroke-width="2"/><svg x="-10" y="-10" width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="${e.kind==='build'?'var(--green)':e.kind==='destroy'?'var(--red)':'var(--yellow)'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${habitatIcons[e.kind]||'<path d="M7 14c0-8 18-8 18 0v7c0 7-18 7-18 0ZM10 11a4 4 0 1 0-4 4m16-4a4 4 0 1 1 4 4M12 17h.01M20 17h.01m-6 4 2 2 2-2"/>'}</svg></g>`).join('');
 }
