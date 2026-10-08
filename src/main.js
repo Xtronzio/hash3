@@ -947,6 +947,7 @@ function showScore(feedback,comboNotice=null) {
 }
 
 function renderEvents(){
+ document.querySelector('[data-action="events"]')?.setAttribute('aria-expanded',String(eventsOpen));
  document.querySelector('.events-sheet')?.remove();if(!eventsOpen||room?.status!=='playing')return;
  document.querySelector('.game-dock').insertAdjacentHTML('beforeend',`<section class="events-sheet" id="events-panel" role="region" aria-labelledby="events-title"><div class="inventory-sheet-heading"><h2 class="heading" id="events-title">Próximos eventos</h2><button data-action="close-events" aria-label="Cerrar próximos eventos">×</button></div><div class="event-outlook-body">${eventOutlookMarkup(room,uid)}</div></section>`);
 }
