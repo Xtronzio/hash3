@@ -65,3 +65,16 @@ export function overviewGrid(terrain,bounds,resolution=128){
   return index.query({x:(box.x-bounds.x)/step,y:(box.y-bounds.y)/step,width:box.width/step,height:box.height/step}).map(p=>({...p,x:bounds.x+p.x*step,y:bounds.y+p.y*step,width:step,height:step}));
  }};
 }
+
+// Group frontier markers without moving them onto a terrain tile. Keep one
+// actual frontier cell per coarse tile, bounded by the overview resolution.
+export function frontierOverviewGrid(cells,bounds,resolution=128){
+ const step=Math.max(1,Math.ceil(Math.max(bounds.width,bounds.height)/resolution)),representatives=new Map();
+ for(const cell of cells){
+  const x=Math.floor((cell.x-bounds.x)/step),y=Math.floor((cell.y-bounds.y)/step),id=`${x},${y}`,centerX=bounds.x+(x+.5)*step,centerY=bounds.y+(y+.5)*step;
+  const distance=(cell.x+.5-centerX)**2+(cell.y+.5-centerY)**2,old=representatives.get(id);
+  if(!old||distance<old.distance)representatives.set(id,{...cell,distance});
+ }
+ const index=cellIndex([...representatives.values()]);
+ return {step,query:box=>index.query(box)};
+}

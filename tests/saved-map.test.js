@@ -56,22 +56,24 @@ test('Inspection preserves the saved state, distinguishes both teams and empties
  assert.match(inspectionCells(model),/inspection-symbols/);assert.match(inspectionCells(model),/<circle cx="20.5"/);assert.match(thumbnailMarkup(r),/viewBox="-11 -4 34 12"/);assert.equal(JSON.stringify(r),before);
  assert.equal(savedMapModel(null),null);assert.equal(savedMapModel({...r,terrain:[]}),null);assert.match(thumbnailMarkup(null),/Mapa no disponible/);
 });
-test('Large-map pinch coalesces camera frames without rebuilding cells, and cancellation leaves navigation usable',()=>{
+test('Large-map pinch coalesces visible-window redraws without rescanning the snapshot, and cancellation remains usable',()=>{
  const previous=Object.fromEntries(['requestAnimationFrame','cancelAnimationFrame','ResizeObserver'].map(k=>[k,globalThis[k]]));
- const frames=new Map();let nextFrame=0,disconnected=false,builds=0;
+ const frames=new Map();let nextFrame=0,disconnected=false,builds=0,windowBuilds=0,drawn='';
  globalThis.requestAnimationFrame=fn=>{frames.set(++nextFrame,fn);return nextFrame;};globalThis.cancelAnimationFrame=id=>frames.delete(id);
  globalThis.ResizeObserver=class{observe(){}disconnect(){disconnected=true;}};
  const listeners=new Map(),classes=new Set(),attributes={},captures=new Set(),states=[];
- const svg={isConnected:true,getBoundingClientRect:()=>({left:0,top:0,width:390,height:650}),classList:{toggle:(c,on)=>on?classes.add(c):classes.delete(c)},setAttribute:(k,v)=>attributes[k]=v,focus(){},setPointerCapture:id=>captures.add(id),hasPointerCapture:id=>captures.has(id),releasePointerCapture:id=>captures.delete(id),addEventListener:(k,fn)=>listeners.set(k,fn),removeEventListener:(k)=>listeners.delete(k),set innerHTML(value){builds++;}};
+ const layer={set innerHTML(value){windowBuilds++;drawn=value;}};
+ const svg={querySelector:()=>layer,isConnected:true,getBoundingClientRect:()=>({left:0,top:0,width:390,height:650}),classList:{toggle:(c,on)=>on?classes.add(c):classes.delete(c)},setAttribute:(k,v)=>attributes[k]=v,focus(){},setPointerCapture:id=>captures.add(id),hasPointerCapture:id=>captures.has(id),releasePointerCapture:id=>captures.delete(id),addEventListener:(k,fn)=>listeners.set(k,fn),removeEventListener:(k)=>listeners.delete(k),set innerHTML(value){builds++;}};
  const panel={querySelector:()=>svg,addEventListener:(k,fn)=>listeners.set('panel:'+k,fn),removeEventListener:k=>listeners.delete('panel:'+k)};
  const send=(type,id,x,y)=>listeners.get(type)?.({button:0,pointerId:id,clientX:x,clientY:y,preventDefault(){}}),flush=()=>{const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn());};
  const room={terrain:Array.from({length:2000},(_,i)=>({x:i%50-25,y:Math.floor(i/50)-20})),cells:[],pairs:[]},original=JSON.stringify(room),state={};
  let dispose;
  try{
-   dispose=bindInspection(panel,savedMapModel(room),state,v=>states.push(v));const initial={...state.box};
+   const model=savedMapModel(room);dispose=bindInspection(panel,model,state,v=>states.push(v));const initial={...state.box},initialBuilds=windowBuilds;
+   model.terrain=new Proxy(model.terrain,{get(target,prop){if(prop===Symbol.iterator)throw Error('Full terrain scan during navigation');return Reflect.get(target,prop);}});
    send('pointerdown',1,130,320);send('pointerdown',2,260,320);
    for(let i=0;i<30;i++){send('pointermove',1,130-i,320);send('pointermove',2,260+i,320);}
-   assert.equal(frames.size,1);flush();assert.ok(state.box.width<initial.width);assert.equal(builds,1);
+   assert.equal(frames.size,1);assert.equal(windowBuilds,initialBuilds);flush();assert.equal(windowBuilds,initialBuilds+1);assert.ok((drawn.match(/<rect/g)||[]).length<=4098);assert.ok(state.box.width<initial.width);assert.equal(builds,1);
    send('pointercancel',2,289,320);send('pointermove',1,90,370);flush();send('pointerup',1,90,370);assert.deepEqual(states,[true,false]);
    send('pointerdown',3,100,100);send('pointerup',3,100,100);assert.deepEqual(states,[true,false,true,false]);
    listeners.get('panel:click')({target:{closest:()=>({dataset:{inspectAction:'fit'}})}});flush();assert.deepEqual(state.box,initial);assert.equal(JSON.stringify(room),original);assert.equal(builds,1);

@@ -73,3 +73,5 @@ Pendiente: portar estas reglas y opciones a Duelo/Mundo cuando se restablezca SQ
 R0.21.14 también incorpora ampliación libre cada tres figuras, máximo una guardada, con icono ×1. Se gasta al colocar, admite huecos y no consume créditos normales; la ampliación normal se mantiene.
 
 R0.21.14 en desarrollo: objetivos por celdas, tiempo total y colocaciones, final automático y archivo compacto en Logros; búsqueda de ampliaciones desde bordes y guardado sin copia completa antigua. 33.333 requiere validación móvil; portado online pendiente.
+
+R0.21.15: las fronteras del minimapa usan una capa agrupada independiente con coordenadas reales, sin desplazar ni pintar grandes teselas de terreno como muros.

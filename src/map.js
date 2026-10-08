@@ -4,18 +4,19 @@ import {overviewModel,overviewPoint,overviewView} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {rodentIcon,rodentSleeping} from './rodents.js';
 import {frontierCells} from './frontiers.js';
-import {cellIndex,overviewGrid} from './board-window.js';
+import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
 export function overviewCells(terrain){
  const paths=new Map();
- for(const p of terrain){const group=p.fill+(p.eaten?' eaten':''),part=p.frontier&&!p.width?`M${p.x+.5} ${p.y+.08}l.42 .42-.42 .42-.42-.42Z`:`M${p.x+.07} ${p.y+.07}h${(p.width||1)-.14}v${(p.height||1)-.14}h-${(p.width||1)-.14}Z`;if(!paths.has(group))paths.set(group,{fill:p.fill,eaten:p.eaten,d:''});paths.get(group).d+=part;}
+ for(const p of terrain){const group=p.fill+(p.eaten?' eaten':''),part=p.frontier?`M${p.x+.5} ${p.y+.08}l.42 .42-.42 .42-.42-.42Z`:`M${p.x+.07} ${p.y+.07}h${(p.width||1)-.14}v${(p.height||1)-.14}h-${(p.width||1)-.14}Z`;if(!paths.has(group))paths.set(group,{fill:p.fill,eaten:p.eaten,d:''});paths.get(group).d+=part;}
  return [...paths.values()].map(p=>`<path fill="${p.fill}" d="${p.d}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".09"':''}/>`).join('');
 }
 export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onClose,onNavigate=()=>{},mapState={}}){
   const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('.map-canvas');
   const model=overviewModel(room,own,target,{includeFrontiers:false});if(!viewport||!big||!model)return;
   const {bounds,terrain,active,ownColor}=model;
-  const visual=[...terrain,...frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'}))],grid=overviewGrid(visual,bounds),detailIndex=cellIndex(visual);
-  const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(grid.query(bounds));}
+  const barriers=frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'})),visual=[...terrain,...barriers],grid=overviewGrid(terrain,bounds),frontierGrid=frontierOverviewGrid(barriers,bounds),detailIndex=cellIndex(visual);
+  const coarse=box=>[...grid.query(box),...frontierGrid.query(box)];
+  const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(coarse(bounds));}
   let fitted={...bounds},camera=mapState.box?clampCamera(mapState.box,bounds):{...bounds},aspect=null;
   let initialized=false,lastTerrainWindow=null;
   const initialize=()=>{if(initialized)return;initialized=true;
@@ -41,7 +42,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
     }
     const window={x:Math.floor(camera.x)-1,y:Math.floor(camera.y)-1,width:Math.ceil(camera.width)+2,height:Math.ceil(camera.height)+2};
     const windowKey=JSON.stringify(window);
-    if(windowKey!==lastTerrainWindow){lastTerrainWindow=windowKey;big.querySelector('.map-terrain').innerHTML=overviewCells(window.width*window.height<=20000?detailIndex.query(window):grid.query(window));}
+    if(windowKey!==lastTerrainWindow){lastTerrainWindow=windowKey;big.querySelector('.map-terrain').innerHTML=overviewCells(window.width*window.height<=20000?detailIndex.query(window):coarse(window));}
     big.setAttribute('viewBox',`${camera.x} ${camera.y} ${camera.width} ${camera.height}`);
     const view=overviewView(bounds,{x:(viewport.scrollLeft-layout.padding)/layout.size+layout.minX,y:(viewport.scrollTop-layout.padding)/layout.size+layout.minY,width:viewport.clientWidth/layout.size,height:viewport.clientHeight/layout.size});
     const box=big.querySelector('.map-view');for(const [k,v] of Object.entries(view))box.setAttribute(k,v);
