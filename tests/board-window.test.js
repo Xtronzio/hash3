@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cellIndex,viewportWindow,viewportCellWindow,cachedCellWindow,reconcileCells} from '../src/board-window.js';
+import {cellIndex,viewportWindow,viewportCellWindow,cachedCellWindow,reconcileCells,overviewGrid} from '../src/board-window.js';
 import {clampBoardZoom} from '../src/map-camera.js';
 
 test('Large terrain renders only the viewport and margin, including negative and distant coordinates',()=>{
@@ -14,6 +14,25 @@ test('Large terrain renders only the viewport and margin, including negative and
  assert.deepEqual(index.query({x:999999,y:-1000001,width:3,height:3}),[{x:1000000,y:-1000000}]);
  assert.equal(index.query({x:50000,y:50000,width:10,height:10}).length,0);
  assert.equal(index.query({x:-1000001,y:-1000001,width:2000003,height:2000003}).length,cells.length);
+});
+
+test('Distant overlays use nearby buckets rather than walking all tools and frontiers during pan',()=>{
+ let visits=0;
+ const overlays=Array.from({length:100000},(_,i)=>({get x(){visits++;return i%1000-500;},y:Math.floor(i/1000)-50}));
+ const index=cellIndex(overlays);visits=0;
+ const result=index.query({x:400,y:30,width:10,height:10});
+ assert.equal(result.length,100);assert.ok(visits<3000);
+ visits=0;assert.equal(index.query({x:50000,y:-50000,width:10,height:10}).length,0);assert.equal(visits,0);
+});
+
+test('Fitting a million-cell board stays bounded and coarse tiles retain target and symbol colours',()=>{
+ const terrain=Array.from({length:1000000},(_,i)=>({x:i%1000-500,y:Math.floor(i/1000)-500,fill:'#343e4c'}));
+ terrain.push({x:0,y:0,fill:'var(--red)'},{x:1,y:1,fill:'var(--blue)'});
+ const bounds={x:-500,y:-500,width:1000,height:1000},grid=overviewGrid(terrain,bounds);
+ const all=grid.query(bounds);assert.ok(all.length<=128*128);
+ const local=grid.query({x:0,y:0,width:15,height:15});assert.ok(local.length<=9);
+ assert.ok(local.some(p=>p.fill==='var(--blue)'));assert.ok(local.every(p=>p.width===grid.step&&p.height===grid.step));
+ assert.deepEqual(grid.query({x:1000000,y:-1000000,width:10,height:10}),[]);
 });
 test('During pinch the rendered window follows the transformed pixels and fills newly exposed terrain',()=>{
  const viewport={scrollLeft:400,scrollTop:300,clientWidth:400,clientHeight:300};

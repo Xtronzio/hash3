@@ -161,5 +161,13 @@
 .symbol-option-face strong{display:block;color:#f2f3f4;font-size:16px}
 .symbol-option-face small{display:block;font-size:11px;color:#b4b8c0;margin-top:3px}
 .symbol-option input:checked+.symbol-option-face{border-color:var(--mode-color,#e3e5e9);box-shadow:inset 0 0 0 1px var(--mode-color,#e3e5e9);background:color-mix(in srgb,var(--mode-color,#e3e5e9) 7%,#111319)}
+.rule-inhabitants{display:grid;gap:14px;margin:18px 0}
+.rule-inhabitants section{border:1px solid #343842;border-radius:9px;padding:14px}
+.rule-inhabitant-title{display:flex;align-items:center;gap:12px;font-size:16px;color:#f2f3f4}
+.rule-inhabitant-title svg{width:32px;height:32px;flex:none;fill:none;stroke:var(--yellow);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[data-inhabitant="build"] .rule-inhabitant-title svg{stroke:var(--green)}
+[data-inhabitant="destroy"] .rule-inhabitant-title svg{stroke:var(--red)}
+.navigation-return{width:48px;min-height:48px;padding:10px;flex:none}
+.row>.navigation-return.saved-games-home,.footer-actions>.navigation-return.saved-games-home{margin-left:auto;order:2}
 .symbol-option input:focus-visible+.symbol-option-face{outline:2px solid var(--mode-color,#e3e5e9);outline-offset:3px}
 .lobby .symbol-choice{margin:24px 0;--mode-color:#ff4a58}

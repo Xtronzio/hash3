@@ -39,3 +39,11 @@ Implementada en R0.16.9 para VS máquina y Sin conexión con la aclaración de J
 ## Inmunidad del territorio y Escudo de una celda
 
 Decisión de Jorge del 6 de octubre de 2026: Escudo protege una celda concreta con una ficha propia; Inmunidad protege todo el territorio frente a ataques de inventario. Guardada no se gasta. Cada activación consume una unidad de reserva y termina tras una ronda rival completa aunque no haya ataques. Las unidades restantes no se activan automáticamente. La función propuesta inicialmente como Espía queda integrada en Inmunidad; no se desarrollará como otra carta ni como aviso previo independiente. Los guardados de R0.16.8 convierten las cartas largas en unidades de una ronda, conservando los premios restantes.
+
+## Catástrofes para partidas persistentes (pendiente de valorar)
+
+Propuesta de Jorge, 8 de octubre de 2026: terremoto que retire celdas y fichas para reducir parte del tablero, posible destrucción más extensa, y OVNI que abduzca muchas fichas. El OVNI solo roba fichas; conserva las celdas y los puntos anteriores. No activar todavía: definir frecuencia, zonas, protección de jugadores y reglas de continuidad antes de implementarlo. La navegación virtualizada es necesaria por sí misma y no depende de estas catástrofes.
+
+## Fauna vigente desde R0.21
+
+Sustituye el ciclo antiguo de Roedores descrito arriba: roedor cada 33 colocaciones, bomba automática cada 66, gusano cada 99, obras cada 198. Ciclos de 33 segundos; roedor tres comidas y retirada, gusano tres comidas y retirada en el ciclo siguiente, tres parejas constructor/destructor con tres intervenciones por pareja. La ayuda de R0.21.12 refleja estos ciclos y sus iconos.

@@ -19,20 +19,23 @@ import './mobile-game.css';
 import './map-overview.css';
 import './inventory-sheet.css';
 import './game-chrome.css';
-import {overviewMarkup} from './map-overview.js';
+import {overviewMarkup,overviewModel} from './map-overview.js';
 import {extensionView,clampBoardZoom} from './map-camera.js';
-import {cellIndex,viewportCellWindow,cachedCellWindow,reconcileCells} from './board-window.js';
+import {cellIndex,viewportCellWindow,cachedCellWindow,reconcileCells,overviewGrid} from './board-window.js';
 import {inventoryMarkup,inventoryShortcutsMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
-import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,moveDestination,isShielded,toolAllowance} from './practice-tools.js';
+import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,toolAllowance} from './practice-tools.js';
 import {selectFrontier,rotateFrontier,frontierTiles,frontierCells,frontierGroups,frontierDiamond} from './frontiers.js';
 import {frontierAnchors} from './area-tools.js';
 import {useExpansionHint,planSuperHelp,suggestExpansion,executeSuperHelp} from './assistance.js';
-import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon} from './hall.js';
+import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon,hallReturnButton} from './hall.js';
 import {client, ensurePlayer, command} from './api.js';
-import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, playableTerrain, availableCells,isBlockedCell} from './game.js';
+import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, playableTerrain, availableCells} from './game.js';
 
 import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
 import {scoreFeedback,scoreBreakdown} from './feedback.js';
+import {tornadoFeedback} from './tornado-feedback.js';
+import {needsLocalTick} from './local-clock.js';
+import {isImmune} from './immunity.js';
 import {VERSION_LABEL} from './version.js';
 import {startUpdates} from './updates.js';
 
@@ -49,6 +52,13 @@ const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snaps
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
 let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0;
 let figureEffect=null,figureTimer,scoreFloatTimer;
+let tornadoEffect=null,tornadoTimer;
+function clearTornadoEffect(){clearTimeout(tornadoTimer);tornadoEffect=null;}
+function startTornadoEffect(feedback){
+ clearTornadoEffect();if(!feedback)return;
+ tornadoEffect={...feedback,until:performance.now()+900,positions:new Set(feedback.affected.map(p=>key(p.x,p.y))),moving:new Set(feedback.moves.map(m=>m.id))};
+ tornadoTimer=setTimeout(()=>{tornadoEffect=null;scheduleBoard(true);},900);
+}
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,inventoryOpen=false,inventorySelection=null;
 let inventoryRefillEffect=null,inventoryRefillTimer;
 let superHelpPlan=null;
@@ -114,6 +124,7 @@ function accept(next) {
   if(next.not_modified)return;
   if(next.mode)next=reconcileLocalBoard(next);
   if(room?.id===next.id&&next.version<room.version)return;
+  const tornado=tornadoFeedback(room,next);clearTornadoEffect();
   const previousRoom=room,feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
   if(changed)resetInventoryFeedback();
@@ -129,6 +140,7 @@ function accept(next) {
   previousTarget=targetId||null;
   const pair=ownPair(),show=feedback&&pair&&[pair.x,pair.o].includes(feedback.player);
   if(show)startFigureEffect(feedback);
+  if(tornado)startTornadoEffect(tornado);
   if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);scheduleMachine();
 }
 function render() {
@@ -220,7 +232,9 @@ function drawBoard(canExpand,ready,target) {
   const areaSelection=['tornado','bomb','frontier'].includes(selection?.tool),areaOptions=areaSelection?(selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool)):[];
   const areaKeys=new Set(areaOptions.map(c=>key(c.x,c.y)));
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
-  const all=[...terrain,...frontierCells(room),...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,side:selection.side||'north'}):[]),...habitatReservations(room),...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
+  const barriers=frontierCells(room),reservations=habitatReservations(room);
+  const barrierKeys=new Set(barriers.map(c=>key(c.x,c.y)));
+  const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,side:selection.side||'north'}):[]),...reservations,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   for(const c of all){minX=Math.min(minX,c.x);minY=Math.min(minY,c.y);maxX=Math.max(maxX,c.x);maxY=Math.max(maxY,c.y);}
   const viewport=document.querySelector('.viewport');
@@ -234,46 +248,63 @@ function drawBoard(canExpand,ready,target) {
   const targets=selection?new Set(toolCells(room,uid,selection.tool,{side:selection.side||'north'}).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
   const index=cellIndex(terrain),choiceIndex=cellIndex(choices.filter(c=>!known.has(key(c.x,c.y)))),activationIndex=cellIndex(activationTargets);
+  const areaIndex=cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y)))));
+  const reservationIndex=cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y))));
+  const frontierIndex=cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id}))));
+  const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
+  const habitatBlocks=new Set([...barrierKeys,...wormBody,...reservations.map(c=>key(c.x,c.y))]);
+  const blockedFor=id=>new Set([...habitatBlocks,...(room.inventoryEffects?.blocks||[]).filter(e=>e.remaining>0&&(e.by===id?e.fresh:!isImmune(room,id))).map(e=>key(e.x,e.y))]);
+  const blockedKeys=blockedFor(uid),sourceBlocked=selection?.source?blockedFor(selection.source.owner):null;
+  const reservedKeys=new Set((room.inventoryEffects?.blocks||[]).filter(e=>e.by===uid&&e.remaining>0).map(e=>key(e.x,e.y)));
   let nodes=new Map();
   const cellMarkup=pos=>{
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
     const isTarget=c&&c.id===target?.lastMove?.id,last=c&&c.id===own.lastMove?.id;
     const color=c?(myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
-    const owner=c?room.players.find(p=>p.id===c.owner)?.name:'';
+    const owner=c?playerNames.get(c.owner):'';
     const select=canExpand&&choiceKeys.has(key(x,y));
     const targeting=!!selection,source=selection?.source,chosen=source&&c?.id===source.id;
-    const removable=targeting&&ready&&(areaSelection?areaKeys.has(key(x,y)):active&&(source?moveDestination(room,uid,pos)&&moveDestination(room,source.owner,pos):targets.has(key(x,y))));
+    const removable=targeting&&ready&&(areaSelection?areaKeys.has(key(x,y)):active&&(source?!c&&!blockedKeys.has(key(x,y))&&!sourceBlocked.has(key(x,y)):targets.has(key(x,y))));
     const habitat=habitatPoints.get(key(x,y)),project=projects.get(key(x,y)),body=wormBody.has(key(x,y));
-    const blocked=isBlockedCell(room,uid,x,y),reserved=!c&&room.inventoryEffects?.blocks.some(e=>e.x===x&&e.y===y&&e.by===uid&&e.remaining>0);
+    const blocked=blockedKeys.has(key(x,y)),reserved=!c&&reservedKeys.has(key(x,y));
     const playable=active&&ready&&!c&&!blocked&&!targeting;
+    const swirling=tornadoEffect&&tornadoEffect.until>performance.now()&&tornadoEffect.positions.has(key(x,y));
+    const moving=swirling&&c&&tornadoEffect.moving.has(c.id);
+    const swirlStyle=swirling?`--tornado-delay:${Math.min(0,tornadoEffect.until-performance.now()-900)}ms;`:'';
     const glowing=figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y));
     const glowStyle=glowing?`--figure-color:${figureEffect.symbol==='X'?'var(--red)':'var(--green)'};--figure-duration:${Math.max(1,figureEffect.until-performance.now())}ms;`:'';
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
-    const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${isShielded(room,c)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
-    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable?'tool-target':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${isShielded(room,c)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.eaten??(habitat.done==null?'':habitat.done+1)):project?habitatMark(project.kind):body?'<span class="worm-trail"></span>':''}</button>`;
+    const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
+    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable?'tool-target':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.eaten??(habitat.done==null?'':habitat.done+1)):project?habitatMark(project.kind):body?'<span class="worm-trail"></span>':''}</button>`;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
+  const density=size<14?overviewGrid(overviewModel(room,own,target,{includeFrontiers:false}).terrain,{x:minX,y:minY,width:maxX-minX+1,height:maxY-minY+1}):null;
   let lastEntries=null,lastExtras=null;
   refreshBoard=()=>{
    if(!board.isConnected)return;
    const now=performance.now(),window=viewportCellWindow(viewport,layout);
-   const visible=visibleCells.query(window,!!figureEffect&&figureEffect.until>now);
-   const extras=`${!!figureEffect&&figureEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
+   const swirling=!!tornadoEffect&&tornadoEffect.until>now;
+   if(density){
+    const entries=density.query(window).map(c=>({id:'density:'+key(c.x,c.y),markup:`<button class="board-density" data-action="board-overview" style="${style(c)};width:${c.width*size}px;height:${c.height*size}px;background:${c.fill}" aria-label="Acercarse a esta zona del tablero"></button>`}));
+    nodes=reconcileCells(board,entries,nodes);return;
+   }
+   const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now}:${swirling}`);
+   const extras=`${swirling}:${!!figureEffect&&figureEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
    if(visible===lastEntries&&extras===lastExtras)return;
    lastEntries=visible;lastExtras=extras;
    const entries=[...visible];
    entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
   if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Construir celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
   if(areaSelection){
-   for(const point of areaOptions)if(!known.has(key(point.x,point.y))&&!(selection.tool==='bomb'&&frontierCells(room).some(c=>c.x===point.x&&c.y===point.y))&&point.x>=window.x&&point.x<=window.x+window.width&&point.y>=window.y&&point.y<=window.y+window.height)entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell tool-target area-anchor ${selection.tool==='frontier'?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':selection.tool==='bomb'?'Bomba':'muro 3×1'} en ${point.x}, ${point.y}">${selection.tool==='frontier'?'+':'◇'}</button>`});
+   for(const point of areaIndex.query(window))entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell tool-target area-anchor ${selection.tool==='frontier'?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':selection.tool==='bomb'?'Bomba':'muro 3×1'} en ${point.x}, ${point.y}">${selection.tool==='frontier'?'+':'◇'}</button>`});
    if(selection.point){const p=selection.point;if(selection.tool==='frontier'){
-    const valid=toolCells(room,uid,'frontier',{side:selection.side||'north'}).some(a=>a.x===p.x&&a.y===p.y);
+    const valid=targets.has(key(p.x,p.y));
     for(const [i,cell] of frontierTiles({...p,side:selection.side||'north'}).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,i===0,valid)});
    }else entries.push({id:'area-preview',markup:`<div class="placement-preview area-preview ${selection.tool==='bomb'?'bomb-preview':''}" style="left:${(p.x-minX)*size+padding}px;top:${(p.y-minY)*size+padding}px;width:${(selection.tool==='bomb'?1:3)*size}px;height:${(selection.tool==='bomb'?1:3)*size}px" aria-hidden="true"></div>`});}
   }
-  for(const c of habitatReservations(room))if(!known.has(key(c.x,c.y))&&c.x>=window.x&&c.x<=window.x+window.width&&c.y>=window.y&&c.y<=window.y+window.height)entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatMark('build')}</div>`});
-  for(const frontier of frontierGroups(room))for(const cell of frontier.cells)if(cell.x>=window.x&&cell.x<=window.x+window.width&&cell.y>=window.y&&cell.y<=window.y+window.height)entries.push({id:'frontier:'+frontier.id+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,false,false,true,ready&&selection?.tool==='bomb'&&areaKeys.has(key(cell.x,cell.y)))});
+  for(const c of reservationIndex.query(window))entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatMark('build')}</div>`});
+  for(const cell of frontierIndex.query(window))entries.push({id:'frontier:'+cell.frontierId+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,false,false,true,ready&&selection?.tool==='bomb'&&areaKeys.has(key(cell.x,cell.y)))});
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
     entries.push({id:'score',markup:nodes.get('score')?.markup||`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`});
@@ -282,12 +313,15 @@ function drawBoard(canExpand,ready,target) {
     const b=selectedExpansion;
     entries.push({id:'preview',markup:`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`});
   }
+  if(swirling)for(const [i,m] of tornadoEffect.moves.entries()){
+   const left=Math.min(m.from.x,m.to.x),top=Math.min(m.from.y,m.to.y);
+   if(left>window.x+window.width||top>window.y+window.height||Math.max(m.from.x,m.to.x)+1<window.x||Math.max(m.from.y,m.to.y)+1<window.y)continue;
+   const color=myPairIds.has(m.owner)?m.symbol.toLowerCase():'foreign';
+   entries.push({id:'tornado:'+m.id,markup:nodes.get('tornado:'+m.id)?.markup||`<span class="cell tornado-piece ${color}" style="${style(m.from)};--tornado-dx:${(m.to.x-m.from.x)*size}px;--tornado-dy:${(m.to.y-m.from.y)*size}px;--tornado-spin:${i%2?-1:1};--tornado-delay:${Math.min(0,tornadoEffect.until-now-900)}ms" aria-hidden="true">${mark(m.symbol)}</span>`});
+  }
   nodes=reconcileCells(board,entries,nodes);
   };
-  if(size<14){
-   board.innerHTML=`<svg class="board-overview" data-action="board-overview" viewBox="${minX} ${minY} ${maxX-minX+1} ${maxY-minY+1}" style="left:${padding}px;top:${padding}px;width:${(maxX-minX+1)*size}px;height:${(maxY-minY+1)*size}px" role="img" aria-label="Vista completa del tablero. Toca una zona para acercarte.">${thumbnailMarkup(room).replace(/^.*?<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>`;
-   refreshBoard=()=>{};
-  }else refreshBoard();
+  refreshBoard();
 }
 function center(x,y) {
   const v=document.querySelector('.viewport');if(!v)return;
@@ -320,7 +354,7 @@ function openHallDialog(kind,returnAction='hall-play') {
   if(hallDialog&&hallDialog!==kind)hallHistory.push(hallDialog);hallReturnAction=returnAction;hallDialog=kind;renderHallDialog();
 }
 function hallDialogFrame(title,body,{home=false,actions=''}={}) {
-  return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer">${actions}${home?iconButton('hall-home','home','Volver al inicio','class="saved-games-home"'): `<button class="text-icon-button" data-action="hall-close">${hallIcon('back')}Volver</button>`}</div></section></div>`;
+  return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer">${actions}${hallReturnButton(home||!hallHistory.length?'hall-home':'hall-close',{previous:!home&&hallHistory.length>0})}</div></section></div>`;
 }
 function rankingRows(players,byMax=false) {
   return `<ol class="hall-ranking-list">${rankedPlayers(players.filter(p=>!p.bot),byMax).map((p,i)=>`<li><span class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</span><span>${escape(p.name)}<small>${p.figures} figuras · ${p.symbol||'—'}</small></span><strong class="mono">${byMax?maxLabel(p)+' #MAX':p.score}</strong></li>`).join('')}</ol>`;
@@ -332,7 +366,7 @@ function renderHallDialog() {
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',`<div class="inventory-catalog">${inventoryMarkup(null,null,{showShortcuts:false})}</div>`,{home:true,actions:inventoryShortcutsMarkup()});
   else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`${metricsModePicker(metricView==='personal'?metricMode:null)}<div class="metrics-classification"><button class="mode-green" data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}">${hallIcon('world')}Clasificación Mundo</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode,showModes:false})}`,{home:true});
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
-  }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local});
+  }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local,hasPrevious:hallHistory.length>0});
   app.insertAdjacentHTML('beforeend',markup);
   if(hallDialog==='games')bindOnlineThumbnails();
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
@@ -366,7 +400,7 @@ function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
-function clearGameView(){disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+function clearGameView(){clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
 function goToHall(){
  if(room?.status!=='paused')throw new Error('Pausa la partida antes de volver al hall.');
  if(isLocal())persistLocal(room);
@@ -470,7 +504,7 @@ function renderLobby() {
     <p class="instructions">Nivel <strong>${room.level==='advanced'?'Avanzado':'Normal'}</strong> · ${room.level==='advanced'?'Figuras básicas y grupos unidos por los lados.':'Líneas, L, cruces y cuadrados.'} Todas las figuras nuevas suman.</p>
     ${finished?`<p class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · Combo máx.: puntos de una sola jugada, incluidos bonus. Los datos nuevos se registran desde esta versión.</p>`:''}<ol class="player-list">${(finished?list:players).map((p,i)=>`<li><span>${finished?`${i+1}. `:''}${escape(p.name)}${p.id===uid?' · tú':''}${p.id===room.host?' <span class="host">ANFITRIÓN</span>':''}</span><span class="${p.symbol?.toLowerCase()||'muted'}">${finished?`${p.score} ptos · ${p.figures} figuras<span class="result-metrics">#MAX ${maxLabel(p)} · Combo máx. ${comboLabel(p)}</span>`:duel&&room.hostSymbol&&(p.id===room.host||!teams)?(p.id===room.host?room.hostSymbol:room.hostSymbol==='X'?'O':'X'):'Listo'}</span></li>`).join('')}</ol>
     ${!finished?`<p class="instructions">${host?duel?room.timeMode==='untimed'?'Al iniciar se forman las parejas, respetando el símbolo del creador. Cada uno mueve cuando pueda.':'Al iniciar se forman las parejas, respetando el símbolo del creador, y arranca el reloj del duelo.':'Al iniciar se sortean las parejas y los símbolos. Quien no tenga rival juega contra la máquina.': 'El anfitrión iniciará la partida cuando estéis todos.'}</p>${host?`<button class="primary" data-action="start" ${!canStart?'disabled':''} style="width:100%">Iniciar partida</button>${!canStart?`<p class="instructions">${teams?'Necesitamos un número par de al menos 4 jugadores.':'Necesitamos exactamente 2 jugadores para el duelo.'}</p>`:''}`:''}`:''}
-    <div class="footer-actions">${finished?'<button class="ghost small" data-action="home">Volver al inicio</button><button class="ghost small" data-action="go-games">Mis partidas</button>':'<button class="ghost small" data-action="go-games">Mis partidas</button><button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host&&!room.commonWorld?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
+    <div class="footer-actions">${finished?`<button class="ghost small" data-action="go-games">Mis partidas</button>${hallReturnButton('home')}`:'<button class="ghost small" data-action="go-games">Mis partidas</button><button class="ghost small danger" data-action="abandon">Abandonar sala</button>'}${!finished&&host&&!room.commonWorld?'<button class="ghost small danger" data-action="finish">Cerrar sala para todos</button>':''}</div></section>`;
   document.querySelectorAll('[name="lobby-symbol"]').forEach(input=>input.addEventListener('change',async()=>{if(busy)return;save('hash3_symbol',input.value);await run(async()=>accept(await command('choose_symbol',{code:room.code,symbol:input.value})));}));
   renderFinish();renderLeave();renderInventory();
 }
@@ -538,7 +572,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='confirm-area-tool'){
     const selection=inventorySelection;if(!selection?.point)return;
-    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,side:selection.side||'north'});inventorySelection=null;accept(next);notify(selection.tool==='frontier'?'Frontera colocada. Ahora sitúa tu ampliación 3×3.':`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
+    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,side:selection.side||'north'});inventorySelection=null;accept(next);notify(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?'Frontera colocada. Ahora sitúa tu ampliación 3×3.':`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
   }
   if(action==='inventory-target'){
     const selection=inventorySelection;
@@ -566,7 +600,7 @@ app.addEventListener('click',async e=>{
     await run(async()=>{const vote=action.startsWith('vote-');rankOpen=false;const next=isLocal()?localCommand(room,action):await command(vote?'vote':action,{code:room.code,voteId:room.vote?.id,yes:action==='vote-yes'});accept(next);});return;
   }
   if(action==='close-ranking'){setRankingOpen(false);return;}
-  if(action==='map'||action==='close-map'){worldMapOpen=action==='map';if(worldMapOpen&&rankOpen){rankOpen=false;render();}document.querySelector('.world-map').hidden=!worldMapOpen;document.querySelector(worldMapOpen?'.world-map [data-action="close-map"]':'.game-minimap')?.focus({preventScroll:true});return;}
+  if(action==='map'||action==='close-map'){worldMapOpen=action==='map';if(worldMapOpen&&rankOpen){rankOpen=false;render();}document.querySelector('.world-map').hidden=!worldMapOpen;if(worldMapOpen)document.querySelector('.world-map').dispatchEvent(new Event('map-open'));document.querySelector(worldMapOpen?'.world-map [data-action="close-map"]':'.game-minimap')?.focus({preventScroll:true});return;}
   if(action==='pair-start'){await run(async()=>{acceptPair(await command('pair_start',{code:pairLobby.code}));});return;}
   if(action==='pair-leave'){await run(async()=>{await command('pair_leave',{code:pairLobby.code});pairLobby=null;save('hash3_pair',null);renderHome();});return;}
   if(action==='pair-copy-code'){await copyGameCode(pairLobby.code,'Código de pareja');return;}
@@ -745,7 +779,7 @@ function machineInventorySelector(enabled=false){
 }
 function renderRoomSetup(){
  document.querySelector('.room-dialog')?.remove();const setup=roomSetup;
- app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog game-mode-dialog ${hallModeClass(setup.kind)}" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2>${symbolSelector(setup.symbol,'duel-symbol')}<p>El creador elige su símbolo. X siempre empieza; en 1 contra 1 tu rival recibe el contrario.</p><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>33 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row"><button data-action="cancel-room">Volver</button><button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
+ app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop room-dialog"><section class="dialog game-mode-dialog ${hallModeClass(setup.kind)}" role="dialog" aria-modal="true" aria-labelledby="room-title"><h2 class="heading" id="room-title">Crear duelo</h2>${symbolSelector(setup.symbol,'duel-symbol')}<p>El creador elige su símbolo. X siempre empieza; en 1 contra 1 tu rival recibe el contrario.</p><label for="duel-format">Jugadores</label><select id="duel-format"><option value="solo" ${setup.format==='solo'?'selected':''}>1 contra 1</option><option value="teams" ${setup.format==='teams'?'selected':''}>Equipos X contra O</option></select>${timeModeSelector('room-time-mode',setup.timeMode)}${setup.timeMode==='timed'?`<label for="duel-minutes">Duración total</label><select id="duel-minutes">${[3,5,10].map(n=>`<option value="${n}" ${setup.minutes===n?'selected':''}>${n} minutos</option>`).join('')}</select><p>33 segundos por turno. El reloj total empieza al iniciar y, al terminar, gana X u O por puntos.</p>`:'<p>Sin límite por turno ni duración total. Cada jugada se guarda y queda esperando al rival. Podéis mover en momentos distintos y finalizar cuando decidáis.</p>'}${levelSelector('room-level',setup.level)}<p>Las pausas y reanudaciones se deciden por mayoría absoluta de los humanos activos.</p><div class="row">${hallReturnButton('cancel-room',{previous:true})}<button class="primary" data-action="create-room">Crear duelo</button></div></section></div>`);
  document.querySelectorAll('[name="duel-symbol"]').forEach(input=>input.addEventListener('change',()=>{roomSetup.symbol=input.value;save('hash3_symbol',input.value);}));
  document.querySelector('#room-level').addEventListener('change',e=>{roomSetup.level=e.target.value;});
  document.querySelector('#duel-format').addEventListener('change',e=>{roomSetup.format=e.target.value;});
@@ -787,7 +821,7 @@ function renderFinish() {
 }
 function renderLocalSetup() {
   document.querySelector('.local-dialog')?.remove();
-  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog game-mode-dialog ${hallModeClass(hallMode==='offline'?'offline':'solo')}" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2>${hallNameField(read('hash3_name'),{id:'local-name',label:localSetup==='solo'?'Tu apodo':'Tu nombre',placeholder:localSetup==='solo'?'Tú':'Jugador 1'})}${localSetup==='solo'?machineDifficultySelector(read('hash3_difficulty')):''}${localSetup==='local'?'<label for="second-name">Otro jugador</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}${localSetup==='solo'?machineInventorySelector(read('hash3_machine_inventory')==='true'):''}${timeModeSelector('local-time-mode',read('hash3_local_time_mode')==='untimed'?'untimed':'timed')}${symbolSelector(read('hash3_symbol'),'local-symbol')}<p>X siempre empieza. ${localSetup==='solo'?'La máquina juega con el símbolo contrario al tuyo.':'El otro jugador usa el símbolo contrario. Pasad el dispositivo después de cada turno.'} <span id="local-time-hint"></span> Puedes pausar y volver al hall sin perder la partida.</p><div class="row"><button data-action="cancel-local">Volver</button><button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
+  app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop local-dialog"><section class="dialog game-mode-dialog ${hallModeClass(hallMode==='offline'?'offline':'solo')}" role="dialog" aria-modal="true" aria-labelledby="local-title" data-mode="${localSetup}"><h2 class="heading" id="local-title">${localSetup==='solo'?'Contra la máquina':'Dos en este dispositivo'}</h2>${hallNameField(read('hash3_name'),{id:'local-name',label:localSetup==='solo'?'Tu apodo':'Tu nombre',placeholder:localSetup==='solo'?'Tú':'Jugador 1'})}${localSetup==='solo'?machineDifficultySelector(read('hash3_difficulty')):''}${localSetup==='local'?'<label for="second-name">Otro jugador</label><input id="second-name" placeholder="Jugador 2" maxlength="18">':''}${levelSelector('local-level')}${localSetup==='solo'?machineInventorySelector(read('hash3_machine_inventory')==='true'):''}${timeModeSelector('local-time-mode',read('hash3_local_time_mode')==='untimed'?'untimed':'timed')}${symbolSelector(read('hash3_symbol'),'local-symbol')}<p>X siempre empieza. ${localSetup==='solo'?'La máquina juega con el símbolo contrario al tuyo.':'El otro jugador usa el símbolo contrario. Pasad el dispositivo después de cada turno.'} <span id="local-time-hint"></span> Puedes pausar y volver al hall sin perder la partida.</p><div class="row">${hallReturnButton('cancel-local',{previous:!!localReturnDialog})}<button class="primary" data-action="start-local">Empezar</button></div></section></div>`);
   document.querySelectorAll('[name="machine-difficulty"]').forEach(input=>input.addEventListener('change',()=>{document.querySelector('#machine-level-hint').textContent=machineLevelHints[input.value];}));
   const localClock=document.querySelector('#local-time-mode'),refreshClock=()=>{document.querySelector('#local-time-hint').textContent=localClock.value==='untimed'?'Sin límite por turno ni jugadas automáticas. Cada jugador espera a que juegue su rival.':'33 segundos por turno. Al agotarse se coloca una ficha automática; la pausa conserva el tiempo restante.';};
   localClock.addEventListener('change',refreshClock);refreshClock();
@@ -831,7 +865,7 @@ function scheduleMachine() {
 }
 setInterval(()=>{
   updateTimer();
-  if(isLocal()&&room.status==='playing'&&!busy&&!document.hidden) {
+  if(isLocal()&&!busy&&!document.hidden&&needsLocalTick(room)) {
     const previous=room.lastEvent?.id,next=localCommand(room,'tick');if(next!==room){accept(next);if(next.lastEvent?.id!==previous&&!next.lastEvent?.points)notify(next.lastEvent?.kind==='expand'?'Tiempo agotado: ampliación automática.':'Tiempo agotado: jugada automática en una celda vacía.');}
   }
 },500);
