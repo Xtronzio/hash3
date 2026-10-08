@@ -92,3 +92,6 @@ button.territory-notice{display:flex;align-items:center;justify-content:center;g
 
 /* Coordinates on direct board layers are absolute; nested badges stay local. */
 .game .board>.cell{position:absolute}
+/* Board layers cannot escape above minimap, navigation or surrounding chrome. */
+.game .viewport{isolation:isolate;z-index:0}
+.game .board{isolation:isolate}

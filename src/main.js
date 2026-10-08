@@ -254,35 +254,41 @@ function expansionSummary() {
   return `${count} celda${count!==1?'s':''} nueva${count!==1?'s':''} · ${9-count} existentes`;
 }
 function drawBoard(canExpand,ready,target) {
-  const pair=ownPair(),own=ownPlayer(),terrain=terrainOf(room);
+  const pair=ownPair(),own=ownPlayer(),terrain=snapshotMemo(room,'board-terrain',()=>terrainOf(room));
   const selection=inventorySelection?.player===uid?inventorySelection:null;
-  const activationTargets=selection?.tool==='activate'?toolCells(room,uid,'activate'):[];
+  const activationTargets=selection?.tool==='activate'?snapshotMemo(room,'board-activation:'+uid,()=>toolCells(room,uid,'activate')):[];
   const choices=canExpand&&!selection?snapshotMemo(room,'expansion:'+pair.id,()=>expansionOptions(terrain,pair.terrainAnchor||pair.active,room)):[],choiceKeys=new Set(choices.map(c=>key(c.x,c.y)));
-  const areaSelection=['tornado','bomb','frontier'].includes(selection?.tool),areaOptions=areaSelection?(selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool)):[];
+  const areaSelection=['tornado','bomb','frontier'].includes(selection?.tool),areaOptions=areaSelection?snapshotMemo(room,'board-area:'+uid+':'+selection.tool,()=>selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool)):[];
   const areaKeys=new Set(areaOptions.map(c=>key(c.x,c.y)));
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
-  const barriers=frontierCells(room),reservations=habitatReservations(room);
+  const barriers=snapshotMemo(room,'board-barriers',()=>frontierCells(room)),reservations=snapshotMemo(room,'board-reservations',()=>habitatReservations(room));
   const barrierKeys=new Set(barriers.map(c=>key(c.x,c.y)));
-  const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,side:selection.side||'north'}):[]),...reservations,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
-  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-  for(const c of all){minX=Math.min(minX,c.x);minY=Math.min(minY,c.y);maxX=Math.max(maxX,c.x);maxY=Math.max(maxY,c.y);}
+  const {minX,minY,maxX,maxY}=snapshotMemo(room,'board-bounds:'+uid+':'+canExpand+':'+selection?.tool+':'+selection?.point?.x+','+selection?.point?.y,()=>{
+    const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,side:selection.side||'north'}):[]),...reservations,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const c of all){minX=Math.min(minX,c.x);minY=Math.min(minY,c.y);maxX=Math.max(maxX,c.x);maxY=Math.max(maxY,c.y);}
+    return {minX,minY,maxX,maxY};
+  });
   const viewport=document.querySelector('.viewport');
   const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,viewport.clientWidth/2,viewport.clientHeight/2);Object.assign(layout,{minX,minY,size,padding,previewScale:1,minZoom:room.commonWorld?.55:.3});
   const board=document.querySelector('.board');board.replaceChildren();
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
-  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
-  const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
-  const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
+  const {cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten}=snapshotMemo(room,'board-model:'+pair.id,()=>{
+    const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
+    const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
+    const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
+    return {cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten};
+  });
   const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north'})).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
-  const index=cellIndex(terrain),choiceIndex=cellIndex(choices.filter(c=>!known.has(key(c.x,c.y)))),activationIndex=cellIndex(activationTargets);
+  const index=snapshotMemo(room,'board-index',()=>cellIndex(terrain)),choiceIndex=cellIndex(choices.filter(c=>!known.has(key(c.x,c.y)))),activationIndex=cellIndex(activationTargets);
   const areaIndex=cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y)))));
   const reservationIndex=cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y))));
-  const liveHabitatIndex=cellIndex(habitatLocations(room));
-  const phenomenonIndex=cellIndex(ecologyPinTargets(room,uid).filter(e=>['rain','ufo','cataclysm'].includes(e.kind)));
-  const territoryIndex=cellIndex((room.territoryEvents||[]).flatMap(e=>territoryRenderRegion(room,e).map(c=>({...c,kind:e.kind,eventId:e.id}))));
-  const frontierIndex=cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id}))));
+  const liveHabitatIndex=snapshotMemo(room,'board-inhabitants',()=>cellIndex(habitatLocations(room)));
+  const phenomenonIndex=snapshotMemo(room,'board-phenomena:'+uid,()=>cellIndex(ecologyPinTargets(room,uid).filter(e=>['rain','ufo','cataclysm'].includes(e.kind))));
+  const territoryIndex=snapshotMemo(room,'board-warnings',()=>cellIndex((room.territoryEvents||[]).flatMap(e=>territoryRenderRegion(room,e).map(c=>({...c,kind:e.kind,eventId:e.id})))));
+  const frontierIndex=snapshotMemo(room,'board-walls',()=>cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id})))));
   const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
   const habitatBlocks=new Set([...barrierKeys,...wormBody,...reservations.map(c=>key(c.x,c.y))]);
   const blockedFor=id=>new Set([...habitatBlocks,...(room.inventoryEffects?.blocks||[]).filter(e=>e.remaining>0&&(e.by===id?e.fresh:!isImmune(room,id))).map(e=>key(e.x,e.y))]);
@@ -311,7 +317,7 @@ function drawBoard(canExpand,ready,target) {
     return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.kind==='rodent'?rodentTurnsRemaining(habitat)+'↷':'',habitat):body?'<span class="worm-trail"></span>':''}</button>`;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
-  const density=size<14?overviewGrid(overviewModel(room,own,target,{includeFrontiers:false}).terrain,{x:minX,y:minY,width:maxX-minX+1,height:maxY-minY+1}):null;
+  const density=size<14?snapshotMemo(room,'board-density:'+uid+':'+target?.id,()=>{const model=overviewModel(room,own,target,{includeFrontiers:false});return overviewGrid(model.terrain,model.bounds);}):null;
   let lastEntries=null,lastExtras=null;
   refreshBoard=()=>{
    if(!board.isConnected)return;

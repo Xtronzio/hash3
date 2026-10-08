@@ -6,6 +6,7 @@ import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {rodentIcon,rodentSleeping} from './rodents.js';
 import {frontierCells} from './frontiers.js';
 import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
+import {navigationFrame} from './navigation-frame.js';
 export function overviewCells(terrain){
  const paths=new Map();
  for(const p of terrain){const group=p.fill+(p.eaten?' eaten':''),part=p.frontier?`M${p.x+.5} ${p.y+.08}l.42 .42-.42 .42-.42-.42Z`:`M${p.x+.07} ${p.y+.07}h${(p.width||1)-.14}v${(p.height||1)-.14}h-${(p.width||1)-.14}Z`;if(!paths.has(group))paths.set(group,{fill:p.fill,eaten:p.eaten,d:''});paths.get(group).d+=part;}
@@ -17,7 +18,7 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   const {bounds,terrain,active,ownColor}=model;
   const {grid,frontierGrid,detailIndex,pinIndex}=snapshotMemo(room,cacheKey+':indices',()=>{const barriers=frontierCells(room).map(c=>({...c,frontier:true,fill:'#b88bff'}));return {grid:overviewGrid(terrain,bounds),frontierGrid:frontierOverviewGrid(barriers,bounds),detailIndex:cellIndex([...terrain,...barriers]),pinIndex:cellIndex(ecologyPinTargets(room,own?.id))};});
   const coarse=box=>[...grid.query(box),...frontierGrid.query(box)];
-  const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=overviewCells(coarse(bounds))+ecologyMapPins(pinIndex.query(bounds),room.clockNow??Date.now(),9);const pinScale=Math.max(bounds.width,bounds.height)/80*.45;for(const pin of mini.querySelectorAll('.ecology-map-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${pinScale})`);}
+  const mini=document.querySelector('.game-minimap svg');if(mini){mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);mini.innerHTML=snapshotMemo(room,cacheKey+':mini',()=>overviewCells(coarse(bounds))+ecologyMapPins(pinIndex.query(bounds),room.clockNow??Date.now(),9));const pinScale=Math.max(bounds.width,bounds.height)/80*.45;for(const pin of mini.querySelectorAll('.ecology-map-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${pinScale})`);}
   let fitted={...bounds},camera=mapState.box?clampCamera(mapState.box,bounds):{...bounds},aspect=null;
   let initialized=false,lastTerrainWindow=null;
   const initialize=()=>{if(initialized)return;initialized=true;
@@ -55,7 +56,8 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
       for(const pin of big.querySelectorAll('.ecology-map-pin'))pin.setAttribute('transform',`translate(${pin.dataset.x} ${pin.dataset.y}) scale(${1/scale})`);
     }
   };
-  const setCamera=next=>{camera=next;mapState.box={...next};update();};
+  const frame=navigationFrame(update),schedule=()=>frame.queue();
+  const setCamera=next=>{camera=next;mapState.box={...next};schedule();};
   const centerPoint=()=>({x:camera.x+camera.width/2,y:camera.y+camera.height/2});
   const jump=(clientX,clientY)=>{
     const point=overviewPoint(camera,big.getBoundingClientRect(),clientX,clientY);if(!point)return;
@@ -98,15 +100,15 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
     const tap=!cancelled&&!mapMoved&&mapPointers.size===1;
     mapPointers.delete(e.pointerId);
     if(big.hasPointerCapture(e.pointerId))big.releasePointerCapture(e.pointerId);
-    if(!mapPointers.size){mapDrag=null;mapPinch=null;if(tap)jump(e.clientX,e.clientY);interacting(false);}
+    if(!mapPointers.size){mapDrag=null;mapPinch=null;if(tap)jump(e.clientX,e.clientY);frame.flush();interacting(false);}
     else{const point=pairPoints()[0];mapDrag={...point,box:{...camera}};mapPinch=null;mapMoved=true;}
   };
   big.addEventListener('pointerup',e=>endMap(e));big.addEventListener('pointercancel',e=>endMap(e,true));big.addEventListener('lostpointercapture',e=>endMap(e,true));
   const focus=e=>{const rect=big.getBoundingClientRect(),width=Math.min(fitted.width,Math.max(3,rect.width/36)),height=width*rect.height/rect.width;if(rect.width&&rect.height)setCamera(clampCamera({x:e.detail.x-width/2,y:e.detail.y-height/2,width,height},bounds));};
   panel.addEventListener('map-focus',focus);
-  const open=()=>update();panel.addEventListener('map-open',open);
-  const observer=new ResizeObserver(update);observer.observe(big);
-  viewport.addEventListener('scroll',update,{passive:true});requestAnimationFrame(update);
+  const open=()=>frame.flush();panel.addEventListener('map-open',open);
+  const observer=new ResizeObserver(schedule);observer.observe(big);
+  viewport.addEventListener('scroll',schedule,{passive:true});schedule();
   const disposeNavigation=bindBoardNavigation({viewport,layout,zoom,changeZoom,interacting,update:()=>update(true)});
-  return ()=>{panel.removeEventListener('map-focus',focus);panel.removeEventListener('map-open',open);observer.disconnect();viewport.removeEventListener('scroll',update);disposeNavigation?.();};
+  return ()=>{frame.cancel();panel.removeEventListener('map-focus',focus);panel.removeEventListener('map-open',open);observer.disconnect();viewport.removeEventListener('scroll',schedule);disposeNavigation?.();};
 }
