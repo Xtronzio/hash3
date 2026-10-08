@@ -377,3 +377,7 @@ En Solo y Sin conexión, los destructores pueden separar físicamente partes del
 ## Puntos de Frontera sobre la cuadrícula — R0.21.9
 
 Los puntos `+` de Frontera y los objetivos externos de las herramientas de zona se posicionan de forma absoluta sobre la misma cuadrícula del tablero: el punto tocado coincide con el punto de giro y la propuesta de tres celdas.
+
+## Bomba sobre Frontera y salto al aviso de puntos — R0.21.10
+
+Al seleccionar Bomba, cada celda legal de una frontera se convierte en un botón sobre su rombo. Tocarlo selecciona el centro y Aplicar rompe la frontera completa. El aviso de puntos acepta pulsaciones y lleva a la jugada mostrada, cerrando la herramienta seleccionada para resaltar sus figuras.

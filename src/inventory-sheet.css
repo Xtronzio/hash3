@@ -72,3 +72,6 @@
 
 .area-preview{border-color:var(--yellow)!important;pointer-events:none}.bomb-preview{border-style:dashed!important;border-radius:50%}.area-anchor{position:absolute;color:var(--yellow);font-size:24px}
 .super-help-steps{padding-left:22px;margin:14px 0;line-height:1.65;font-size:13px}.super-help-points{color:var(--yellow);font-size:18px}.super-help-dialog .dialog{max-height:85dvh;overflow:auto}
+
+.board-frontier-cell.is-bomb-target{pointer-events:auto;touch-action:manipulation;padding:0;border-radius:0;cursor:pointer;outline:2px solid var(--yellow);outline-offset:-5px}
+.board-frontier-cell.is-bomb-target:hover{background:#30203f}

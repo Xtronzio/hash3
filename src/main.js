@@ -183,7 +183,8 @@ function render() {
   if(busy)document.querySelectorAll('[data-action="move"],[data-action="select-expansion"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
 }
 let layout={minX:0,minY:0,size:56,padding:100};
-function boardFrontierCell(cell,minX,minY,size,padding,preview=false,pivot=false,valid=true){
+function boardFrontierCell(cell,minX,minY,size,padding,preview=false,pivot=false,valid=true,bombTarget=false){
+ if(bombTarget)return `<button class="board-frontier-cell is-bomb-target" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="Bomba sobre frontera en ${cell.x}, ${cell.y}">${frontierDiamond}</button>`;
  const controls=pivot?`<button class="frontier-pivot-place" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" aria-label="Colocar frontera en el punto elegido ${cell.x}, ${cell.y}" ${valid?'':'disabled'}></button><button class="frontier-pivot-rotate" data-action="rotate-frontier" aria-label="Girar frontera 90° en ${cell.x}, ${cell.y}">${navIcon('rotate')}</button>`:'';
  return `<span class="board-frontier-cell ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${preview?'Propuesta de muro':'Frontera, solo se rompe con Bomba'} · ${cell.x}, ${cell.y}">${frontierDiamond}${controls}</span>`;
 }
@@ -265,14 +266,14 @@ function drawBoard(canExpand,ready,target) {
    entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
   if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Construir celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
   if(areaSelection){
-   for(const point of areaOptions)if(!known.has(key(point.x,point.y))&&point.x>=window.x&&point.x<=window.x+window.width&&point.y>=window.y&&point.y<=window.y+window.height)entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell tool-target area-anchor ${selection.tool==='frontier'?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':'muro 3×1'} en ${point.x}, ${point.y}">${selection.tool==='frontier'?'+':'◇'}</button>`});
+   for(const point of areaOptions)if(!known.has(key(point.x,point.y))&&!(selection.tool==='bomb'&&frontierCells(room).some(c=>c.x===point.x&&c.y===point.y))&&point.x>=window.x&&point.x<=window.x+window.width&&point.y>=window.y&&point.y<=window.y+window.height)entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell tool-target area-anchor ${selection.tool==='frontier'?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':selection.tool==='bomb'?'Bomba':'muro 3×1'} en ${point.x}, ${point.y}">${selection.tool==='frontier'?'+':'◇'}</button>`});
    if(selection.point){const p=selection.point;if(selection.tool==='frontier'){
     const valid=toolCells(room,uid,'frontier',{side:selection.side||'north'}).some(a=>a.x===p.x&&a.y===p.y);
     for(const [i,cell] of frontierTiles({...p,side:selection.side||'north'}).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,i===0,valid)});
    }else entries.push({id:'area-preview',markup:`<div class="placement-preview area-preview ${selection.tool==='bomb'?'bomb-preview':''}" style="left:${(p.x-minX)*size+padding}px;top:${(p.y-minY)*size+padding}px;width:${(selection.tool==='bomb'?1:3)*size}px;height:${(selection.tool==='bomb'?1:3)*size}px" aria-hidden="true"></div>`});}
   }
   for(const c of habitatReservations(room))if(!known.has(key(c.x,c.y))&&c.x>=window.x&&c.x<=window.x+window.width&&c.y>=window.y&&c.y<=window.y+window.height)entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatMark('build')}</div>`});
-  for(const frontier of frontierGroups(room))for(const cell of frontier.cells)if(cell.x>=window.x&&cell.x<=window.x+window.width&&cell.y>=window.y&&cell.y<=window.y+window.height)entries.push({id:'frontier:'+frontier.id+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding)});
+  for(const frontier of frontierGroups(room))for(const cell of frontier.cells)if(cell.x>=window.x&&cell.x<=window.x+window.width&&cell.y>=window.y&&cell.y<=window.y+window.height)entries.push({id:'frontier:'+frontier.id+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,false,false,true,ready&&selection?.tool==='bomb'&&areaKeys.has(key(cell.x,cell.y)))});
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
     entries.push({id:'score',markup:nodes.get('score')?.markup||`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`});
@@ -858,7 +859,7 @@ function showScore(feedback,comboNotice=null) {
   n.innerHTML=`<button class="score-notice-jump" aria-label="Ver jugada de ${escape(feedback.name)} · +${feedback.points} puntos"><strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><span class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b>${comboNotice?`<span class="score-combo-progress" style="--combo-color:${getComputedStyle(document.querySelector('.game')).getPropertyValue('--mode-color')}">${escape(comboNotice.message)}</span>`:''}<span class="score-notice-hint">Toca para ver la jugada ↗</span></span></button>`;
   n.querySelector('button').addEventListener('click',()=>{
     if(room?.id!==roomId||room.status!=='playing')return;
-    inventoryOpen=false;worldMapOpen=false;zoom=Math.max(zoom,.8);
+    inventoryOpen=false;inventorySelection=null;worldMapOpen=false;zoom=Math.max(zoom,.8);
     startFigureEffect(feedback);render();center(feedback.move.x,feedback.move.y);
     n.classList.remove('visible');clearTimeout(noticeTimer);
   });
