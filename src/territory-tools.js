@@ -1,7 +1,7 @@
 import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {terrainOf,key} from './game.js';
 import {territoryEnabled} from './ecology.js';
-import {habitatInterval} from './habitat-budget.js';
+import {habitatInterval,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {frontierHit} from './frontiers.js';
 
 export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=33000;
@@ -112,7 +112,7 @@ export function rebalanceAfterTerritory(room,now=Date.now()){
  room.works=(room.works||[]).filter(w=>w.destroy.slice(w.done).every(c=>known.has(key(c.x,c.y)))).slice(0,unit*3);
  let rats=Math.ceil(size*3/333);
  room.rodentRaids=(room.rodentRaids||[]).filter(r=>known.has(key(r.x,r.y))).flatMap(r=>{const count=Math.min(r.count,rats);rats-=count;return count?[{...r,count}]:[];});
- for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries({rodent:33,worm:99,work:198,bomb:66}))zone.next[kind]=zone.placements+habitatInterval(n,size);}
+ for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries(HABITAT_FREQUENCIES))zone.next[kind]=zone.placements+habitatInterval(n,size);}
  room.ecologyRecovery={until:now+33000,moves:3};
  room.ecologyRecalibration={at:now,size,pieces:room.cells.length,before,after:{rodents:room.rodentRaids.reduce((n,r)=>n+r.count,0),worms:room.worms.length,workers:room.works.length}};
  for(const e of [...room.worms,...room.works,...(room.bombs||[])])e.remainingMs=33000;

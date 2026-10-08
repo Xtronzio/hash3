@@ -1,3 +1,4 @@
+import {HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {habitatTargets} from './habitat-tools.js';
 import {habitatIcons} from './inhabitants.js';
 import {territoryIcons} from './territory-tools.js';
@@ -36,7 +37,7 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
  const kinds=['rodent','worm',...(room.faunaEnabled!==false?['build','destroy']:[]),...(room.bombs?.length?['bomb']:[]),...(room.territoryEnabled!==false?['rain','ufo','cataclysm']:[]),'neutral',...(room.frontiers?.length?['frontier']:[])];
  return kinds.map(kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
-  const birthKind=['build','destroy'].includes(kind)?'work':kind,frequency={rodent:33,worm:99,work:198}[birthKind],births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
+  const birthKind=['build','destroy'].includes(kind)?'work':kind,frequency=['rodent','worm','work'].includes(birthKind)?HABITAT_FREQUENCIES[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
   const badge=events.length?`<span class="ecology-clock mono" data-ecology-kind="${kind}" aria-label="${Math.min(...events.map(e=>ecologySeconds(e,now)))} segundos">${Math.min(...events.map(e=>ecologySeconds(e,now)))}</span>`:kind==='rodent'&&targets.length?`<span class="ecology-badge mono" aria-label="Visitas restantes por colocaciones">${Math.max(...targets.map(r=>r.remaining??3-(r.eaten||0)))}</span>`:targets.length>1?`<span class="ecology-badge mono">${targets.length}</span>`:birth!=null?`<span class="ecology-badge mono" data-ecology-birth="${birthKind}" aria-label="Próximo intento en ${birth} colocaciones de la zona">${birth}</span>`:'';
   const own=room.players?.find(p=>p.id===playerId),neutralNext=room.territoryEnabled!==false&&own?33-(own.placements||0)%33:null;
   const upcoming=kind==='neutral'&&neutralNext!=null?` · siguiente intento en ${neutralNext} colocaciones propias`:'';

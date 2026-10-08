@@ -144,11 +144,3 @@ test('Wall selection previews one valid cell, confirms on second tap and changes
  assert.equal(changed.confirm,false);assert.deepEqual(changed.selected.point,{x:other.x,y:other.y});
  const invalid=selectFrontier(first.selected,{x:100000,y:100000},anchors);assert.equal(invalid.confirm,false);assert.deepEqual(invalid.selected,first.selected);
 });
-test('Saved three-cell walls retain their shape, blocking and bomb removal when new cards become single-cell walls',()=>{
- const r=expanding();r.frontiers=[{id:'saved',by:'local-x',cells:[{x:3,y:0},{x:3,y:1},{x:3,y:2}]}];
- const wall=card(r,'frontier',{x:-1,y:0});assert.equal(wall.frontiers[1].cells.length,1);assert.deepEqual(wall.frontiers[0],r.frontiers[0]);
- const resumed=localCommand(JSON.parse(JSON.stringify(localCommand(wall,'pause',{},now))),'resume',{},now+1000);
- assert.deepEqual(resumed.frontiers,wall.frontiers);assert.ok(expansionOptions(resumed.terrain,resumed.pairs[0].active,resumed).every(p=>!frontierCells(resumed).some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)));
- let enlarged=localCommand(resumed,'expand',{x:0,y:-1},now+1000);delete enlarged.practiceTurn;
- enlarged=card(enlarged,'bomb',{x:3,y:1});assert.equal(enlarged.frontiers.length,1);assert.equal(enlarged.frontiers[0].id,wall.frontiers[1].id);
-});

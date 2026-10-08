@@ -79,3 +79,11 @@ Jorge sustituye la carta Frontera por Muro: una sola casilla sin construir adyac
 Inventario superior de tablero y mapas: blanco con stock, cian cuando usable o con efecto activo; agotadas atenuadas. Colores independientes del símbolo X/O, que sigue en etiquetas accesibles. Mantener navegación y preparación por snapshot.
 
 Recarga cada tres turnos propios pagados (sustituye cuatro), conservando sorteo equilibrado, ocho cartas y dos por tipo. Ampliación libre: una por cada nueva figura cobrada (sustituye grupos de tres), acumulación sin tope. Migrar el próximo umbral una sola vez a figuras actuales + 1, conservar reservas sin premios históricos. Mantener colocación/cancelación, créditos, turno y límites.
+
+# Ampliaciones, conversión de barreras y fauna R0.21.21
+
+Jorge fija una ampliación por grupo de tres figuras (3/6/9…; nueve figuras = tres ampliaciones acumuladas en total). Conservar reservas existentes y migrar una sola vez al siguiente múltiplo de tres, sin premios históricos.
+
+Retirar fronteras antiguas de tres celdas/segmentos y devolver una carta Muro por barrera a su dueño en cada guardado local, incluidos pausados. Conversión persistente e idempotente, sin alterar terreno, fichas, puntos, turnos, relojes ni anclajes. Devolver todas aunque se supere temporalmente ocho cartas/dos por tipo; los sorteos siguen esperando hueco. Una barrera de propietario desconocido no se elimina sin poder devolverla. Muro nuevo de una celda permanece. No aplicar a Duelo/Mundo sin soporte de servidor.
+
+Más fauna: roedores 33, gusanos 66, obras 99 colocaciones de zona, intervalos escalados por max(1,N/333), mismos pesos/cupos y comidas. Migrar cuentas pendientes de gusanos/obras proporcionalmente una sola vez, sin nacimientos retroactivos ni acumulación. Capacidad teórica máxima conjunta 7/22 = 31,82 % desde 333 celdas, antes de alimento, cupos, inmunidad y separación con fenómenos. Obras equilibradas no crecen neto. Fenómenos continúan por nuevos hitos de 333 celdas, con aviso de 33 segundos y recuperación intacta. Compartir constantes del motor con previsión, localizadores y recalibración.

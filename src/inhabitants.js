@@ -4,10 +4,10 @@ import {terrainOf,connectedTerrain,key} from './game.js';
 import {frontierReachable,frontierSegments,nearbyFrontierCells,frontierHit,edgeKey} from './frontiers.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {placeNeutral,NEUTRAL_FREQUENCY} from './neutral.js';
-import {habitatZone,habitatInterval,proportionalBudget,HABITAT_REFERENCE,HABITAT_WEIGHTS} from './habitat-budget.js';
+import {habitatZone,habitatInterval,proportionalBudget,HABITAT_REFERENCE,HABITAT_WEIGHTS,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {initializeTerritory,advanceTerritory} from './territory-tools.js';
 export const HABITAT_INTERVAL=33000;
-export const HABITAT_FREQUENCIES={rodent:33,bomb:66,worm:99,work:198};
+export {HABITAT_FREQUENCIES} from './habitat-budget.js';
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
 const choose=(all,random)=>all.length?all[Math.min(all.length-1,Math.floor(Math.max(0,random())*all.length))]:null;
 const uuid=()=>crypto.randomUUID();
@@ -16,6 +16,14 @@ export function initializeHabitats(room,now=Date.now()){
  room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
  if(!faunaEnabled(room)){room.rodents=[];room.rodentRaids=[];room.worms=[];room.works=[];}
  if(!territoryEnabled(room)){room.territoryEvents=[];room.bombs=[];}
+ if(room.habitatFrequencyVersion!==2){
+  // Shorten saved remaining placement counts proportionally, without replaying
+  // past births or changing residents, food, fractional credit or live clocks.
+  for(const zone of room.habitatZones)for(const [kind,previous]of Object.entries({worm:99,work:198})){
+   if(Number.isFinite(zone.next?.[kind]))zone.next[kind]=zone.placements+Math.max(1,Math.ceil((zone.next[kind]-zone.placements)*HABITAT_FREQUENCIES[kind]/previous));
+  }
+  room.habitatFrequencyVersion=2;
+ }
  if(room.habitatVersion===3)return;
  if(room.habitatVersion===2){let remaining=Math.ceil(terrainOf(room).length*3/333);room.rodentRaids=room.rodentRaids.flatMap(r=>{const count=Math.min(r.count,remaining);remaining-=count;return count?[{...r,count}]:[];});room.habitatVersion=3;return;}
  if(room.habitatVersion===1){

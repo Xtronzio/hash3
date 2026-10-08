@@ -430,3 +430,9 @@ Pruebas: acumulación de varios premios, pausa/guardado, gasto de una unidad, re
 La carta Muro sustituye Frontera y ocupa una casilla sin construir junto al territorio, sin giro. Mantiene el uso durante ampliación, bloqueo y rotura con Bomba. Las barreras existentes conservan su geometría al cargar partidas.
 
 Accesos de inventario blancos con stock y cian cuando utilizables o activos, en tablero y mapas activos/pausados. Recarga cada tres turnos propios pagados, con reparto equilibrado, ocho cartas guardadas y dos por tipo. Una ampliación libre por figura cobrada, acumulable. La migración conserva reservas y no premia figuras históricas. Se mantiene la ventana visible más dos celdas y los índices preparados por snapshot.
+
+## Ampliaciones cada tres figuras y más fauna — R0.21.21
+
+Una ampliación libre por grupo de tres figuras cobradas; tres ampliaciones en nueve figuras. Se conservan reservas y se migra al siguiente múltiplo sin premios históricos. Las fronteras antiguas de tres casillas/segmentos se retiran de guardados locales y devuelven una carta Muro por barrera a su propietario, incluso por encima de los topes habituales. Conversión idempotente al cargar, también en pausa; los muros nuevos de una casilla se conservan.
+
+Fauna por colocaciones de zona: roedores 33, gusanos 66 y obras 99, con los mismos presupuestos y cupos proporcionales. La capacidad teórica conjunta de comer fichas pasa de 30,30 % a 31,82 % desde 333 celdas. Contadores guardados se acortan proporcionalmente sin reactivar nacimientos pasados. Fenómenos continúan ligados a nuevos hitos de 333 celdas, separados de fauna y con aviso de 33 segundos. Navegación limitada a pantalla visible más dos celdas.

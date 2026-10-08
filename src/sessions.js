@@ -1,3 +1,6 @@
+import {initializeInventory} from './practice-tools.js';
+import {initializeFreeExpansions} from './free-expansion.js';
+import {initializeHabitats} from './inhabitants.js';
 import {archiveTerritoryResult} from './achievements.js';
 import {localCommand} from './local.js';
 const valid=g=>g&&typeof g.id==='string'&&['solo','local'].includes(g.mode)&&Array.isArray(g.players)&&Array.isArray(g.pairs)&&['playing','paused','finished'].includes(g.status);
@@ -14,13 +17,20 @@ export function toggleGamePin(storage,game,uid=''){
  storage.setItem('hash3_game_pins',JSON.stringify(next));return pinned;
 }
 export function loadLocalGames(storage,now=Date.now()){
-  let games=[],canonical=false;try{const list=JSON.parse(storage.getItem('hash3_locals'));if(Array.isArray(list)){games=list.filter(valid);canonical=true;}}catch{}
+  let games=[],canonical=false,storedEntries=[];try{const list=JSON.parse(storage.getItem('hash3_locals'));if(Array.isArray(list)){games=list.filter(valid);storedEntries=list;canonical=true;}}catch{}
   try{const old=JSON.parse(storage.getItem('hash3_local'));if(!canonical&&valid(old)&&!games.some(g=>g.id===old.id)){
     // Existing single saves become paused; no elapsed offline moves are replayed.
     let imported={...old,updatedAt:old.updatedAt||new Date(now).toISOString()};
     if(imported.status==='playing'){const at=Date.parse(imported.updatedAt);imported=localCommand(imported,'pause',{},Number.isFinite(at)&&old.updatedAt?at:Date.parse(imported.pairs[0].deadline)-(old.turnSeconds??30)*1000||now);}
     games.push(imported);
   }}catch{}
+  let migrated=!canonical&&games.length>0;
+  for(const game of games)if(game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==2||game.players.some(p=>p.freeExpansionVersion!==3)){
+    initializeInventory(game);initializeFreeExpansions(game);initializeHabitats(game,now);migrated=true;
+  }
+  // Persist conversion/refunds atomically before returning an upgraded map;
+  // failed storage leaves the previous complete collection recoverable.
+  if(migrated)storage.setItem('hash3_locals',JSON.stringify(canonical?storedEntries:games));
   return games.sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
 }
 export function saveLocalGame(storage,game,now=Date.now()){

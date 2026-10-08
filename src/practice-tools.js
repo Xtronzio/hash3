@@ -1,3 +1,4 @@
+import {migrateLegacyWalls} from './wall-migration.js';
 import {boardCellLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game.js';
@@ -41,6 +42,7 @@ export function initializeInventory(game){
       player.inventory.received[t.id]??=Math.max(startingCards.has(t.id)?1:0,player.inventory.cards[t.id]);
     }
   }
+  migrateLegacyWalls(game);
   game.inventoryEffects||={blocks:[],shields:[]};
   game.inventoryEffects.blocks||=[];game.inventoryEffects.shields||=[];game.inventoryEffects.forced||=[];
   initializeImmunity(game);

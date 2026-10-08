@@ -1,5 +1,6 @@
 import {key} from './game.js';
 export const HABITAT_REFERENCE=333;
+export const HABITAT_FREQUENCIES={rodent:33,bomb:66,worm:66,work:99};
 export const HABITAT_WEIGHTS={rodent:3,bomb:1,worm:1,work:1};
 // Fractional carry preserves linear incidence without rounding every small
 // board up to a full animal. Whole failed births never become a backlog.

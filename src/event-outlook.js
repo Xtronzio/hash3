@@ -1,10 +1,12 @@
+import {HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {faunaSuspended} from './ecology.js';
 import {ecologySeconds} from './ecology-clock.js';
 import {ecologyIcon,ecologyNames} from './ecology-navigation.js';
 
 export function eventOutlook(game,playerId,now=game.clockNow??Date.now()){
  const rows=[],suspended=faunaSuspended(game,now)||(game.ecologyRecovery?.remainingMs??0)>0;
- for(const [kind,frequency] of Object.entries({rodent:33,worm:99,work:198})){
+ for(const kind of ['rodent','worm','work']){
+  const frequency=HABITAT_FREQUENCIES[kind];
   const upcoming=(game.habitatZones||[]).map(z=>Math.max(0,(z.next?.[kind]??frequency)-z.placements));
   rows.push({kind,enabled:game.faunaEnabled!==false,suspended,remaining:upcoming.length?Math.min(...upcoming):frequency,unit:'colocaciones en su zona',warning:kind==='rodent'?null:33});
  }

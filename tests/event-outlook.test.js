@@ -8,7 +8,7 @@ test('El control descuenta colocaciones reales y respeta los siguientes umbrales
  let game=fresh();game=localCommand(game,'move',{x:0,y:0},now);
  let rows=eventOutlook(game,'local-x').rows;
  assert.equal(rows.find(e=>e.kind==='rodent').remaining,32);
- assert.equal(rows.find(e=>e.kind==='worm').remaining,98);
+ assert.equal(rows.find(e=>e.kind==='worm').remaining,65);
  assert.equal(rows.find(e=>e.kind==='neutral').remaining,32);
  game.habitatZones[0].next.worm=333;game.habitatZones[0].placements=305;
  assert.equal(eventOutlook(game,'local-x').rows.find(e=>e.kind==='worm').remaining,28);

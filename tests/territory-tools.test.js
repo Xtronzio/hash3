@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {proportionalBudget,habitatZone} from '../src/habitat-budget.js';
+import {proportionalBudget,habitatZone,habitatInterval,HABITAT_FREQUENCIES} from '../src/habitat-budget.js';
 import {recordTerritoryGrowth,territoryRegion,advanceTerritory} from '../src/territory-tools.js';
 import {countHabitatPlacement} from '../src/inhabitants.js';
 import {key} from '../src/game.js';
@@ -52,10 +52,10 @@ test('One card per new 333-cell milestone; no replay after demolition and recros
  r.terrain=board(333).terrain;assert.equal(recordTerritoryGrowth(r,33,1024000),false);
  r.terrain=board(666).terrain;assert.equal(recordTerritoryGrowth(r,333,1025000,()=>0),true);assert.equal(r.territoryEvents[0].region.length,66);
 });
-test('Scaling birth intervals as well as population keeps potential meals per new placement bounded',()=>{
+test('Scaling birth intervals and population limits potential meals to 31.82 percent across large boards',()=>{
  for(const n of [333,666,999,3330]){
   const factor=n/333,rats=3*factor,worms=factor;
-  assert.ok(Math.abs((rats*3)/(33*factor)+(worms*3)/(99*factor)-10/33)<1e-9);
+  assert.ok(Math.abs((rats*3)/(HABITAT_FREQUENCIES.rodent*factor)+(worms*3)/(HABITAT_FREQUENCIES.worm*factor)-7/22)<1e-9);
  }
 });
 test('The three complexity settings persist independently and disabled ecology never acts',()=>{
@@ -83,4 +83,13 @@ test('Expansion that announces a territory event cannot also execute a due worm 
  r.pairs[0].pending=1;r.pairs[0].credits=1;r.pairs[0].expander='local-x';
  const next=localCommand(r,'expand',{x:32,y:9},34000,()=>0);
  assert.equal(next.territoryEvents.length,1);assert.equal(next.worms[0].eaten,0);assert.equal(next.habitatEvent,undefined);
+});
+
+test('Shorter worm/work cadence scales at 333 and 999 cells and survives territory recovery without replay',()=>{
+ assert.equal(habitatInterval(HABITAT_FREQUENCIES.worm,333),66);assert.equal(habitatInterval(HABITAT_FREQUENCIES.work,333),99);
+ assert.equal(habitatInterval(HABITAT_FREQUENCIES.worm,999),198);assert.equal(habitatInterval(HABITAT_FREQUENCIES.work,999),297);
+ const r=board(333);r.players[0].placements=65;countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);
+ assert.equal(r.worms.length,1);assert.equal(r.worms[0].nextAt,35000);
+ r.territoryEvents=[{id:'u',kind:'ufo',region:[r.cells[0]],nextAt:2100}];advanceTerritory(r,2100);
+ const zone=r.habitatZones[0];assert.equal(zone.next.worm-zone.placements,66);assert.equal(zone.next.work-zone.placements,99);assert.equal(r.ecologyRecovery.moves,3);
 });
