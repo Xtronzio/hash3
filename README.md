@@ -381,3 +381,7 @@ Los puntos `+` de Frontera y los objetivos externos de las herramientas de zona 
 ## Bomba sobre Frontera y salto al aviso de puntos — R0.21.10
 
 Al seleccionar Bomba, cada celda legal de una frontera se convierte en un botón sobre su rombo. Tocarlo selecciona el centro y Aplicar rompe la frontera completa. El aviso de puntos acepta pulsaciones y lleva a la jugada mostrada, cerrando la herramienta seleccionada para resaltar sus figuras.
+
+## Bomba con doble pulsación — R0.21.11
+
+El primer toque selecciona el centro de Bomba y el segundo sobre la misma celda la aplica, tanto sobre fichas como sobre fronteras. Tocar otra celda cambia el centro sin gastar la carta. El botón Aplicar sigue disponible.
