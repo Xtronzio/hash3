@@ -6,7 +6,7 @@ import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions} from './area-tools.js';
 import {expansionFrontierContext,edgeKey} from './frontiers.js';
-export const REFILL_TURNS=1,MAX_CARDS=18,MAX_PER_CARD=2;
+export const REFILL_TURNS=1,MAX_PER_CARD=3;
 export const practiceTools=[
   {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
@@ -25,6 +25,7 @@ export const practiceTools=[
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
+export const MAX_CARDS=practiceTools.length*MAX_PER_CARD;
 export const pendingTools=[];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];

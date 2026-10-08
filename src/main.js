@@ -3,7 +3,7 @@ import {machineTurnKey} from './machine-turn.js';
 import {copyText,copyPreparedText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
-import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents} from './ecology-navigation.js';
+import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
 import {ecologySeconds} from './ecology-clock.js';
 import {matchGoalsMarkup} from './match-goals-ui.js';
 import {loadTerritoryResults,achievementsMarkup,achievementSelection} from './achievements.js';
@@ -80,7 +80,7 @@ function startTornadoEffect(feedback){
  tornadoTimer=setTimeout(()=>{tornadoEffect=null;scheduleBoard(true);},900);
 }
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
-let inventoryRefillEffect=null,inventoryRefillTimer;
+let inventoryRefillEffect=null,inventoryRefillTimer,inventoryCardChoice=null;
 let superHelpPlan=null;
 const pendingInventoryRefills=new Map();
 const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -123,7 +123,7 @@ function localUid(){const p=room.pairs[0];return room.mode==='solo'?localHumanId
 function ownPlayer(){return room?.players.find(p=>p.id===uid);}
 function ownPair(){const own=ownPlayer();return own?.pair===undefined?null:room.pairs.find(p=>p.id===own.pair);}
 function resetInventoryFeedback(){
- clearTimeout(inventoryRefillTimer);inventoryRefillEffect=null;pendingInventoryRefills.clear();
+ clearTimeout(inventoryRefillTimer);inventoryRefillEffect=null;inventoryCardChoice=null;pendingInventoryRefills.clear();
 }
 function updateInventoryFeedback(previous,next){
  if(!isLocal())return;
@@ -153,7 +153,15 @@ function accept(next) {
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
   if(superHelpPlan&&(room.id!==superHelpPlan.roomId||room.version!==superHelpPlan.version||room.status!=='playing'))superHelpPlan=null;
   updateInventoryFeedback(previousRoom,next);
-  if(inventorySelection&&(!canUsePracticeTool(room,inventorySelection.player,inventorySelection.tool)||inventorySelection.player!==uid||inventorySelection.source&&!room.cells.some(c=>c.id===inventorySelection.source.id)))inventorySelection=null;
+  if(inventoryCardChoice){
+    const {player,tool}=inventoryCardChoice,before=previousRoom?.players.find(p=>p.id===player)?.inventory?.cards[tool]||0,after=next.players.find(p=>p.id===player)?.inventory?.cards[tool]||0;
+    if(after<before)inventoryCardChoice.applied=true;
+    const event=next.lastEvent,eventChanged=event?.id!==previousRoom?.lastEvent?.id;
+    const turnEnded=eventChanged&&event?.kind==='move'&&event.actor===player&&next.practiceTurn?.player!==player;
+    const expansionEnded=eventChanged&&['expand','cancel-free-expansion'].includes(event?.kind)&&['hint-expand','frontier'].includes(tool);
+    if(player!==uid||turnEnded||expansionEnded)inventoryCardChoice=null;
+  }
+  if(inventorySelection&&(!canUsePracticeTool(room,inventorySelection.player,inventorySelection.tool)||inventorySelection.player!==uid||inventorySelection.source&&!room.cells.some(c=>c.id===inventorySelection.source.id))){inventorySelection=null;if(inventoryCardChoice&&!inventoryCardChoice.applied)inventoryCardChoice=null;}
   const target=above(), targetId=target?.lastMove?.id;
   if(!changed&&targetId&&targetId!==previousTarget)blinkId=targetId;
   else blinkId=null;
@@ -203,7 +211,7 @@ function render() {
     <div class="workspace"><div class="arena">${voteMarkup(room.vote,uid)}
     ${toolBanner}${blockedTurn?'<div class="practice-banner"><span>Las celdas vacías están bloqueadas. Puedes pasar este turno.</span><button class="small" data-action="pass">Pasar turno</button></div>':''}${canExpand&&inventorySelection?.tool!=='frontier'?`<div class="expansion-controls"><span>${selectedExpansion?expansionSummary():'Toca para situar el 3×3; puedes solaparlo.'}</span>${isLocal()&&own.inventory?.cards.frontier>0?iconButton('practice-tool','frontier',pair.frontierUsed?'Muro ya colocada en esta ampliación':'Colocar Muro antes de ampliar',`class="expansion-frontier" data-tool="frontier" ${canUsePracticeTool(room,uid,'frontier')?'':'disabled'}`):''}${pair.optionalExpansion?iconButton('cancel-free-expansion','back','Cancelar ampliación estratégica'):''}<button class="small primary" data-action="confirm-expansion" ${!selectedExpansion?'disabled':''}>Colocar</button></div>`:''}
     <div class="map-wrap"><div class="board-inventory-status">${inventoryStatus}</div><div class="viewport" tabindex="0" aria-label="Tablero compartido"><div class="board-space"><div class="board"></div></div></div><button class="game-minimap" data-action="map" aria-label="Abrir mapa general" title="Mapa general">${navIcon('map')}</button><nav class="map-tools" aria-label="Controles del tablero"><div class="map-zoom"><button data-action="plus" aria-label="Acercar tablero" title="Acercar tablero">+</button><button data-action="minus" aria-label="Alejar tablero" title="Alejar tablero">−</button>${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}</div><div class="map-jumps icon-navigation">${jumpButtons}${habitatButtons}</div></nav>${overviewMarkup({open:worldMapOpen,jumpButtons,habitatButtons,inventoryStatus})}</div>
-    <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button>${isLocal()?ecologyWarningsMarkup(room):''}<nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?iconButton('events','events','Próximos eventos',`aria-expanded="${eventsOpen}" aria-controls="events-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
+    <footer class="game-dock"><section class="score-sheet score-panel" id="ranking-panel" role="region" aria-labelledby="score-panel-title" ${rankOpen?'':'hidden'}><div class="score-panel-heading"><h2 class="heading" id="score-panel-title">${room.commonWorld?'Ranking Mundo':'Marcador'}</h2></div><div class="rank-columns"><span>#</span><span>JUGADOR</span><span>PUNTOS</span><span>#MAX</span></div><ol class="ranking-list rank-extra">${rankRows(scoreList)}</ol><div class="max-note">${room.commonWorld?'#MAX oficial':'#MAX de referencia'} · ${own.max?.value==null?'se calcula desde tu próxima jugada':own.max.provisional?`${own.max.actions}/100 acciones · provisional`:'últimas 100 acciones'}</div><dl class="game-details"><div><dt>Modalidad</dt><dd>${modeLabel}</dd></div><div><dt>Figuras</dt><dd>${room.level==='advanced'?'Avanzadas':'Normales'}</dd></div><div><dt>Juegas como</dt><dd>${escape(own.name)} · ${own.symbol}</dd></div><div><dt>Rival</dt><dd>${escape(opponent.name)}${room.mode==='solo'?` · ${room.machineInventory?'con':'sin'} inventario`:''}${opponent.bot&&room.mode!=='solo'?' · esperando duelista':''}</dd></div><div><dt>Habitantes</dt><dd>${room.faunaEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Fenómenos</dt><dd>${room.territoryEnabled===false?'Desactivados':'Activados'}</dd></div><div><dt>Reloj</dt><dd>${room.timeMode==='untimed'?'Sin reloj':'33 segundos por turno'}</dd></div><div><dt>Bonus +3</dt><dd>${3-(own.figures%3)} figuras restantes</dd></div></dl><p class="menu-version">#3 · ${VERSION_LABEL} · <span class="connection">${isLocal()?'Este dispositivo':connected?'Conectado':'Reconectando…'}</span></p>${isLocal()?'':`<p class="score-room">Sala <strong class="mono">${escape(room.code)}</strong></p>`}</section><button class="team-score-bottom" data-action="ranking" aria-label="${rankOpen?'Recoger':'Desplegar'} marcador y detalles" aria-expanded="${rankOpen}" aria-controls="ranking-panel"><span class="score-disclosure-tab" aria-hidden="true">${navIcon('chevron')}</span><div class="score-side x"><span class="score-symbol">X</span><strong>${totals.X.toLocaleString('es-ES')}</strong></div><div class="score-side o"><span class="score-symbol">O</span><strong>${totals.O.toLocaleString('es-ES')}</strong></div></button>${isLocal()?ecologyWarningsMarkup(room):''}<nav class="game-bottom" aria-label="Acciones de partida">${!room.commonWorld?iconButton('pause','pause',isLocal()?'Pausar partida':'Solicitar pausa por mayoría'):iconButton('abandon','exit','Salir de Mundo','class="world-exit"')}${isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),open:inventoryOpen,choice:inventoryCardChoice?{...inventoryCardChoice,now:performance.now(),prepared:!inventoryCardChoice.applied}:null,refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):''}${isLocal()?iconButton('events','events','Próximos eventos',`aria-expanded="${eventsOpen}" aria-controls="events-panel"`):''}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid&&!room.commonWorld?iconButton('finish','finish','Finalizar partida','class="danger"'):''}</nav></footer></div></div>
 
   </section>`;
   drawBoard(canExpand,ready,target);renderFinish();renderLeave();renderInventory();renderEvents();renderSuperHelp();updateTimer();
@@ -273,7 +281,7 @@ function drawBoard(canExpand,ready,target) {
   const reservationIndex=cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y))));
   const liveHabitatIndex=cellIndex(habitatLocations(room));
   const phenomenonIndex=cellIndex(ecologyPinTargets(room,uid).filter(e=>['rain','ufo','cataclysm'].includes(e.kind)));
-  const territoryIndex=cellIndex((room.territoryEvents||[]).flatMap(e=>e.region.map(c=>({...c,kind:e.kind,eventId:e.id}))));
+  const territoryIndex=cellIndex((room.territoryEvents||[]).flatMap(e=>territoryRenderRegion(room,e).map(c=>({...c,kind:e.kind,eventId:e.id}))));
   const frontierIndex=cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id}))));
   const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
   const habitatBlocks=new Set([...barrierKeys,...wormBody,...reservations.map(c=>key(c.x,c.y))]);
@@ -574,7 +582,7 @@ function renderLobby() {
 async function run(operation) {
   if(busy)return;busy=true;
   const buttons=[...app.querySelectorAll('button')].map(b=>[b,b.disabled]);buttons.forEach(([b])=>b.disabled=true);
-  try{await operation();connected=true;}catch(error){notify(error.message||'No se ha podido conectar. Inténtalo de nuevo.');}
+  try{await operation();connected=true;}catch(error){if(inventoryCardChoice&&!inventoryCardChoice.applied&&!inventorySelection&&!superHelpPlan&&!ownPair()?.strategicExpansion)inventoryCardChoice=null;notify(error.message||'No se ha podido conectar. Inténtalo de nuevo.');}
   finally{busy=false;if(room){render();scheduleMachine();}else buttons.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}
 }
 app.addEventListener('click',async e=>{
@@ -615,23 +623,26 @@ app.addEventListener('click',async e=>{
   if(action==='profile-copy'||action==='profile-renew'){await run(()=>copyProfileAccess(action==='profile-renew'));return;}
   if(action==='events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
-  if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;inventorySelection=null;render();return;}
+  if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
   if(action==='close-inventory'){inventoryOpen=false;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(action==='practice-hint'){
     const kind=b.dataset.tool||'hint';
+    if(!canUsePracticeTool(room,uid,kind)){notify('Herramienta no disponible en este turno.');return;}
+    inventoryCardChoice={player:uid,tool:kind,at:performance.now(),applied:false};inventorySelection=null;inventoryOpen=false;render();
     if(kind==='hint-expand'){await run(async()=>{const id=room.id,version=room.version,point=await analyzeHelp('expand');if(room.id!==id||room.version!==version)throw new Error('La partida ha cambiado.');const next=useExpansionHint(room,uid,Date.now(),point);selectedExpansion={x:point.x,y:point.y};inventoryOpen=false;accept(next);center(point.x+1,point.y+1);notify('Ampliación sugerida. Puedes colocarla o elegir otra.');});return;}
     if(kind==='super-hint'){await run(async()=>{superHelpPlan=await analyzeHelp('super');inventoryOpen=false;render();});return;}
     await run(async()=>{const next=usePracticeHint(room,uid);inventoryOpen=false;accept(next);center(next.practiceHint.x,next.practiceHint.y);});return;
   }
-  if(action==='cancel-super-help'){superHelpPlan=null;render();return;}
+  if(action==='cancel-super-help'){inventoryCardChoice=null;superHelpPlan=null;render();return;}
   if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notify(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
   if(action==='practice-tool'){
     const tool=b.dataset.tool,toolPlayer=b.dataset.player||uid;
     if(!canUsePracticeTool(room,toolPlayer,tool)){notify(tool==='frontier'?'Muro se usa cuando te corresponde ampliar.':'Herramienta no disponible en este turno.');return;}
+    inventoryCardChoice={player:toolPlayer,tool,at:performance.now(),applied:false};inventorySelection=null;
     if(!['double','rival','combo','immunity'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:toolPlayer});inventoryOpen=false;accept(next);});return;
   }
-  if(action==='cancel-tool-selection'){inventorySelection=null;render();return;}
+  if(action==='cancel-tool-selection'){inventoryCardChoice=null;inventorySelection=null;render();return;}
   if(action==='inventory-target'&&inventorySelection?.tool==='frontier'){
     const choice=selectFrontier(inventorySelection,{x:Number(b.dataset.x),y:Number(b.dataset.y)},frontierAnchors(room,uid));
     inventorySelection=choice.selected;
@@ -767,20 +778,20 @@ app.addEventListener('click',async e=>{
     const effectiveAction=action==='confirm-finish'?'finish':action==='confirm-expansion'?'expand':action;
     if(effectiveAction==='expand'){if(!selectedExpansion)return;Object.assign(payload,selectedExpansion);}
     const next=isLocal()?localCommand(room,effectiveAction,payload):await command(effectiveAction,payload);
-    if(['expand','request-free-expansion','cancel-free-expansion'].includes(effectiveAction))selectedExpansion=null;
+    if(['expand','request-free-expansion','cancel-free-expansion'].includes(effectiveAction)){selectedExpansion=null;if(['hint-expand','frontier'].includes(inventoryCardChoice?.tool))inventoryCardChoice=null;}
     if(action==='leave'){room=null;render();return;}
     accept(next);
   });
 });
 document.addEventListener('keydown',e=>{
   if(superHelpPlan){
-   if(e.key==='Escape'){e.preventDefault();superHelpPlan=null;render();return;}
+   if(e.key==='Escape'){e.preventDefault();inventoryCardChoice=null;superHelpPlan=null;render();return;}
    if(e.key==='Tab'){const buttons=[...document.querySelectorAll('.super-help-dialog button')],first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
    return;
   }
   if(rankOpen&&e.key==='Escape'){e.preventDefault();setRankingOpen(false);return;}
   if(e.key==='Escape'&&eventsOpen){e.preventDefault();eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus({preventScroll:true});return;}
-  if(e.key==='Escape'&&(inventoryOpen||inventorySelection)){e.preventDefault();inventoryOpen=false;inventorySelection=null;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
+  if(e.key==='Escape'&&(inventoryOpen||inventorySelection)){e.preventDefault();if(inventorySelection)inventoryCardChoice=null;inventoryOpen=false;inventorySelection=null;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(e.key==='Escape'&&worldMapOpen){e.preventDefault();worldMapOpen=false;document.querySelector('.world-map').hidden=true;document.querySelector('.game-minimap')?.focus({preventScroll:true});return;}
   const radio=e.target.closest?.('.hall-modes [role="radio"]');
   if(radio&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){

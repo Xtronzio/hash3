@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {completeInventoryTurn,practiceTools,MAX_CARDS} from '../src/practice-tools.js';
-import {inventoryTotal,inventoryRefill,inventoryDockMarkup} from '../src/inventory.js';
+import {completeInventoryTurn,practiceTools,MAX_CARDS,MAX_PER_CARD} from '../src/practice-tools.js';
+import {inventoryTotal,inventoryRefill,inventoryDockMarkup,toolIcon} from '../src/inventory.js';
 const now=1700000000000;
 const start=()=>createLocal('local','A','B',now,'normal','untimed');
 
@@ -40,10 +40,33 @@ test('La recarga del rival no resalta tu contador; el aviso describe la carta pr
  assert.match(html,/role="status"/);assert.match(html,/Inventario recargado · \+1 Ayuda/);
 });
 test('Mochila llena y turnos automáticos no crean un aviso de recarga',()=>{
- const previous=start();for(const t of practiceTools){if(inventoryTotal(previous,'local-x')===MAX_CARDS)break;previous.players[0].inventory.cards[t.id]=2;}const next=structuredClone(previous);
+ const previous=start();for(const t of practiceTools){if(inventoryTotal(previous,'local-x')===MAX_CARDS)break;previous.players[0].inventory.cards[t.id]=MAX_PER_CARD;}const next=structuredClone(previous);
  for(let i=0;i<1;i++)completeInventoryTurn(next,'local-x',{random:()=>0});
  assert.equal(inventoryRefill(previous,next,'local-x'),null);
  assert.match(inventoryDockMarkup(next,'local-x'),/Recarga lista cuando haya hueco/);
  next.players[0].inventory.cards.double=0;completeInventoryTurn(next,'local-x',{automatic:true});
  assert.equal(inventoryRefill(previous,next,'local-x'),null);
+});
+
+test('Every normal card appears beside the bag with its actual stock and selection state without spending',()=>{
+ const game=start(),before=structuredClone(game);
+ for(const t of practiceTools){
+  const html=inventoryDockMarkup(game,'local-x',{choice:{player:'local-x',tool:t.id,prepared:true,at:1000,now:1250}});
+  assert.ok(html.includes(`data-dock-card="${t.id}"`));assert.ok(html.includes(toolIcon(t.id)));
+  assert.ok(html.includes(t.label+' · Preparada · quedan '+(game.players[0].inventory.cards[t.id]||0)));assert.match(html,/--card-choice-delay:-250ms/);
+ }
+ assert.deepEqual(game,before);
+ const other=inventoryDockMarkup(game,'local-o',{choice:{player:'local-x',tool:'double',prepared:true,at:1000}});assert.doesNotMatch(other,/dock-card-choice/);
+ const used=localCommand(game,'inventory',{tool:'double',playerId:'local-x'},now);
+ assert.match(inventoryDockMarkup(used,'local-x',{choice:{player:'local-x',tool:'double',prepared:false,at:1000}}),/Doble · Usada · quedan 0/);
+ assert.doesNotMatch(inventoryDockMarkup(game,'local-x'),/dock-card-choice/);
+});
+test('The prepared card and active protection coexist as separate bag icons',()=>{
+ let game=start();game.players[0].inventory.immunity.cards['immunity-1']=4;
+ game=localCommand(game,'inventory',{tool:'immunity',playerId:'local-x'},now);
+ const html=inventoryDockMarkup(game,'local-x',{choice:{player:'local-x',tool:'erase',prepared:true,at:1000}});
+ assert.match(html,/dock-immunity-active/);assert.match(html,/data-immunity-clock="local-x"/);assert.match(html,/data-dock-card="erase"/);
+ assert.match(html,/left:29px/);assert.match(html,/padding-left:58px/);
+ const protectedOnly=inventoryDockMarkup(game,'local-x',{choice:{player:'local-x',tool:'immunity',at:1000}});
+ assert.equal((protectedOnly.match(/dock-immunity-active/g)||[]).length,1);assert.doesNotMatch(protectedOnly,/dock-card-choice/);
 });

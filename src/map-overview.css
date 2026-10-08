@@ -15,7 +15,7 @@ body:has(.world-map:not([hidden])) #notice.score-notice{visibility:hidden}
 @media(max-height:500px){.game .world-map{position:fixed;inset:8px;z-index:7;padding:6px}.game .world-map>.map-canvas{min-height:20px}}
 /* A real miniature uses cell fills, rather than the navigation icon's stroke. */
 .game .game-minimap{width:72px;height:48px;padding:4px;touch-action:none}
-.game .game-minimap svg{stroke:none;stroke-width:0}
+.game .game-minimap>svg{stroke:none;stroke-width:0}
 
 @media(max-width:360px){.game .map-controls{gap:2px}.game .map-controls button{width:40px}}
 

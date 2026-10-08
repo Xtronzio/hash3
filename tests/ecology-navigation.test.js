@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ecologyTargets,nextEcologyTarget,ecologyNavigationMarkup,ecologyClockEvents,ecologyMapPins,ecologyPinTargets} from '../src/ecology-navigation.js';
+import {ecologyTargets,nextEcologyTarget,ecologyNavigationMarkup,ecologyClockEvents,ecologyMapPins,ecologyPinTargets,territoryRenderRegion} from '../src/ecology-navigation.js';
 import {habitatIcons,workerHelmet,habitatMark} from '../src/inhabitants.js';
 import {cellIndex} from '../src/board-window.js';
 const now=1700000000000;
 const room={players:[],cells:[],terrain:[],frontiers:[],rodentRaids:[{id:'r',x:1,y:1,remaining:2}],worms:[],works:[{id:'w',destroy:[{x:2,y:2}],build:[{x:3,y:3}],done:0,nextAt:now+33000}],territoryEvents:[{id:'rain',kind:'rain',region:Array.from({length:33},(_,x)=>({x:x*3,y:4})),nextAt:now+33000},{id:'ufo',kind:'ufo',region:[{x:10,y:8}],nextAt:now+31000}],habitatZones:[{placements:20,next:{rodent:33,worm:99,work:198}}]};
+room.terrain=[...room.territoryEvents.flatMap(e=>e.region),{x:1,y:1},{x:2,y:2},{x:3,y:3}];
 test('Cada grupo de lluvia y cada fenómeno se recorre con identidad estable y vuelve al primero',()=>{
  const items=ecologyTargets(room,'rain');assert.equal(items.length,11);assert.ok(items.every(i=>i.region.length===3));assert.equal(items[0].x,3);
  let item;const visited=[];for(let i=0;i<12;i++){item=nextEcologyTarget(items,item?.id);visited.push(item.id);}assert.equal(new Set(visited).size,11);assert.equal(visited[0],visited[11]);
@@ -30,4 +31,22 @@ test('Mapa limita marcadores a 33 y el detalle consulta solo el índice espacial
 test('Rodent drawing never falls back to a worm, and only timed inhabitants carry seconds',()=>{
  const rodent=habitatMark('rodent','2↷',{id:'r',remaining:2});assert.ok(rodent.includes(habitatIcons.rodent));assert.ok(!rodent.includes(habitatIcons.worm));assert.doesNotMatch(rodent,/ecology-clock/);
  const worm=habitatMark('worm','',{id:'w',remainingMs:33000});assert.match(worm,/data-ecology-kind="worm" data-ecology-source="w"/);assert.match(worm,/>33<\/span>s/);
+});
+
+test('Warnings and pins remain on actual cells after holes appear; rain group identities stay stable',()=>{
+ const region=[{x:-3,y:4},{x:8,y:-1},{x:2,y:7},{x:6,y:2},{x:9,y:8},{x:7,y:5}];
+ const event={id:'rain',kind:'rain',region,nextAt:now+33000},r={terrain:region,territoryEvents:[event],version:1};
+ const before=ecologyTargets(r,'rain');assert.equal(before.length,2);
+ r.terrain=region.filter(c=>!(c.x===8&&c.y===-1));r.version++;
+ const after=ecologyTargets(r,'rain'),known=new Set(r.terrain.map(c=>`${c.x},${c.y}`));
+ assert.deepEqual(after.map(p=>p.id),before.map(p=>p.id));
+ assert.ok(after.every(p=>known.has(`${p.x},${p.y}`)));assert.equal(territoryRenderRegion(r,event).length,5);
+ r.terrain=region.slice(3);r.version++;assert.deepEqual(ecologyTargets(r,'rain').map(p=>p.id),['rain:1']);
+ assert.equal(event.region.length,6);r.terrain=[];r.version++;assert.deepEqual(ecologyTargets(r,'rain'),[]);
+});
+test('UFO and cataclysm markers choose surviving cells in irregular terrain rather than a hole at the region center',()=>{
+ for(const kind of ['ufo','cataclysm']){
+  const region=[{x:-20,y:-10},{x:20,y:10},{x:0,y:0}],r={terrain:region.slice(0,2),territoryEvents:[{id:kind,kind,region,nextAt:now+33000}]};
+  const target=ecologyTargets(r,kind)[0];assert.ok(r.terrain.some(c=>c.x===target.x&&c.y===target.y));assert.notDeepEqual({x:target.x,y:target.y},{x:0,y:0});
+ }
 });

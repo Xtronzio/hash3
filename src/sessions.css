@@ -26,15 +26,15 @@
 .paused-ranking{min-width:0}.paused-ranking h2{font-size:22px;margin:0 0 8px}.paused-ranking ol{list-style:none;padding:0;margin:0;max-height:250px;overflow:auto}
 .paused-ranking li{display:flex;gap:10px;padding:10px 8px;border-left:3px solid transparent;border-bottom:1px solid var(--line)}.paused-ranking li.me{border-left-color:var(--red);background:#ff4a580b}.paused-ranking li.me.o{border-left-color:var(--green);background:#24d3930b}
 .paused-ranking li>div{min-width:0;flex:1}.paused-ranking strong{display:block;font-size:13px;overflow-wrap:anywhere}.paused-ranking span{display:block;font-size:12px;color:#b4b8c0;margin-top:4px;font-variant-numeric:tabular-nums}.paused-ranking small{display:block;font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5}
-.paused-minimap{margin:0;min-width:0}.paused-minimap figcaption{font-size:11px;color:var(--muted);margin-bottom:8px}.paused-minimap svg{display:block;width:100%;height:clamp(160px,30dvh,260px);background:#090d12;border:1px solid #283241;border-radius:8px;fill:none}
+.paused-minimap{margin:0;min-width:0}.paused-minimap figcaption{font-size:11px;color:var(--muted);margin-bottom:8px}.paused-minimap>svg{display:block;width:100%;height:clamp(160px,30dvh,260px);background:#090d12;border:1px solid #283241;border-radius:8px;fill:none}
 .paused-game .paused-turn{font-size:11px;line-height:1.5;margin-top:12px}
 @media(max-width:600px){.paused-details{grid-template-columns:minmax(0,1fr)}.paused-game{padding:14px 12px}.paused-game .lobby-header{margin-bottom:12px}.paused-game .paused-actions{margin-bottom:12px}.paused-ranking ol{max-height:180px}}
-@media(max-height:450px) and (orientation:landscape){.paused-game .lobby-header{margin-bottom:6px}.paused-game h1{font-size:24px}.paused-game .paused-scores{padding:6px 0}.paused-details{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}.paused-minimap svg{height:160px}}
+@media(max-height:450px) and (orientation:landscape){.paused-game .lobby-header{margin-bottom:6px}.paused-game h1{font-size:24px}.paused-game .paused-scores{padding:6px 0}.paused-details{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}.paused-minimap>svg{height:160px}}
 
 /* Recognise a saved board without opening it. */
 .saved-game .saved-game-info.saved-game-open{display:flex;align-items:center;gap:12px;padding:12px 8px}
 .saved-game-thumbnail{width:92px;height:76px;flex:none;display:grid;place-items:center;border:1px solid #29313d;border-radius:7px;background:#090d12;overflow:hidden}
-.saved-game-thumbnail svg{width:100%;height:100%;padding:4px;stroke:none}
+.saved-game-thumbnail>svg{width:100%;height:100%;padding:4px;stroke:none}
 .saved-map-pending{color:var(--muted);font-size:22px}
 .saved-game-copy{display:grid;gap:5px;flex:1;min-width:0}.saved-game-copy>strong{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .saved-game-pin{color:var(--yellow);display:inline-flex}.saved-game-pin svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}

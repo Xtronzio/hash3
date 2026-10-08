@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {practiceTools,MAX_CARDS,REFILL_TURNS,canUsePracticeTool,completeInventoryTurn,initializeInventory} from '../src/practice-tools.js';
+import {practiceTools,MAX_CARDS,MAX_PER_CARD,REFILL_TURNS,canUsePracticeTool,completeInventoryTurn,initializeInventory} from '../src/practice-tools.js';
 import {availableCells,isBlockedCell} from '../src/game.js';
 import {usePracticeHint,canUsePracticeHint} from '../src/inventory.js';
 import {chooseMachineMove,machineMoveScore} from '../src/machine.js';
@@ -18,15 +18,15 @@ test('Ambos jugadores empiezan con ocho cartas iguales; gastar no recarga inmedi
  r=move(r,1,0);assert.equal(r.players[0].inventory.turns,0);assert.equal(r.players[0].inventory.cards.double,0);
  assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now));assert.equal(r.players[1].inventory.cards.double,1);
 });
-test('Recarga por turno pagado; dieciocho cartas, sin premiar esperas ni automáticos',()=>{
+test('Recarga por turno pagado; tres de cada carta, sin premiar esperas ni automáticos',()=>{
  const r=start(),id='local-x',inv=r.players[0].inventory;
  completeInventoryTurn(r,id,{automatic:true});completeInventoryTurn(r,id,{placed:false});assert.equal(inv.draws,undefined);
  for(let n=0;n<MAX_CARDS-8;n++)completeInventoryTurn(r,id,{random:()=>0});
- assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),MAX_CARDS);assert.equal(MAX_CARDS,18);
- assert.ok(practiceTools.every(t=>inv.cards[t.id]>0));assert.equal(inv.draws,10);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,10);assert.equal(inv.turns,1);
- inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true});assert.equal(inv.draws,10);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,11);assert.equal(inv.turns,0);
+ assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),MAX_CARDS);assert.equal(MAX_CARDS,48);
+ assert.ok(practiceTools.every(t=>inv.cards[t.id]>0));assert.equal(inv.draws,40);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,40);assert.equal(inv.turns,1);
+ inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true});assert.equal(inv.draws,40);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,41);assert.equal(inv.turns,0);
 });
 test('Bloqueo impide la colocación propia inmediata, permite la siguiente y dura dos turnos rivales',()=>{
  let r=card(start(),'block',{x:1,y:1});assert(isBlockedCell(r,'local-x',1,1));assert.throws(()=>move(r,1,1));
@@ -112,11 +112,20 @@ test('Even adversarial constant randomness introduces Bomba and Tornado within e
  assert.equal(new Set(draws.slice(0,8)).size,8);assert.equal(new Set(draws.slice(8,24)).size,practiceTools.length);
  assert.ok(Math.max(...Object.values(inv.received))-Math.min(...Object.values(inv.received))<=1);
 });
-test('Fair refill survives saves, never exceeds stock caps and cannot draw a third copy',()=>{
+test('Fair refill survives saves, never exceeds stock caps and cannot draw a fourth copy',()=>{
  let r=start(),inv=r.players[0].inventory;inv.cards.hint=0;
  for(let turn=0;turn<REFILL_TURNS;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
  const history=structuredClone(inv.received);r=localCommand(r,'pause',{},now);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},now+1000);inv=r.players[0].inventory;assert.deepEqual(inv.received,history);
- for(const t of practiceTools){inv.cards[t.id]=0;inv.received[t.id]=10;}inv.cards.double=2;inv.received.double=0;
- for(let turn=0;turn<REFILL_TURNS;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,2);assert.notEqual(inv.lastDraw,'double');assert.ok(Object.values(inv.cards).reduce((a,b)=>a+b,0)<=MAX_CARDS);
- delete inv.received;initializeInventory(r);assert.ok(practiceTools.every(t=>Number.isInteger(inv.received[t.id])));assert.equal(inv.cards.double,2);
+ for(const t of practiceTools){inv.cards[t.id]=0;inv.received[t.id]=10;}inv.cards.double=MAX_PER_CARD;inv.received.double=0;
+ for(let turn=0;turn<REFILL_TURNS;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,MAX_PER_CARD);assert.notEqual(inv.lastDraw,'double');assert.ok(Object.values(inv.cards).reduce((a,b)=>a+b,0)<=MAX_CARDS);
+ delete inv.received;initializeInventory(r);assert.ok(practiceTools.every(t=>Number.isInteger(inv.received[t.id])));assert.equal(inv.cards.double,MAX_PER_CARD);
+});
+
+test('Three units of every type fit; unlimited protections do not block refills and saves do not invent cards',()=>{
+ let r=start(),inv=r.players[0].inventory;inv.immunity.cards['immunity-1']=333;
+ const before=structuredClone(inv.cards);initializeInventory(r);assert.deepEqual(inv.cards,before);
+ for(let turn=0;turn<MAX_CARDS+10;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
+ assert.ok(practiceTools.every(t=>inv.cards[t.id]===3));assert.equal(inv.draws,MAX_CARDS-8);assert.equal(inv.immunity.cards['immunity-1'],333);
+ r=JSON.parse(JSON.stringify(r));initializeInventory(r);assert.deepEqual(r.players[0].inventory,inv);inv=r.players[0].inventory;
+ inv.cards.double--;completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,3);assert.equal(inv.lastDraw,'double');
 });

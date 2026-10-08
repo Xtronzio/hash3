@@ -1,3 +1,5 @@
+import {snapshotMemo} from './snapshot-memo.js';
+import {terrainOf,key} from './game.js';
 import {HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {habitatTargets,rodentTurnsRemaining} from './habitat-tools.js';
 import {habitatIcons,habitatAnimationDelay} from './inhabitants.js';
@@ -12,10 +14,17 @@ const center=points=>{
  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const p of points){left=Math.min(left,p.x);top=Math.min(top,p.y);right=Math.max(right,p.x);bottom=Math.max(bottom,p.y);}
  const middle={x:(left+right)/2,y:(top+bottom)/2};return points.reduce((best,p)=>Math.hypot(p.x-middle.x,p.y-middle.y)<Math.hypot(best.x-middle.x,best.y-middle.y)?p:best,points[0]);
 };
+// Warnings keep the announced region, but only its surviving terrain is drawn.
+// Cache the membership set with the snapshot; pan and clocks never scan it.
+export function territoryRenderRegion(room,event){
+ const known=snapshotMemo(room,'terrain-keys',()=>new Set(terrainOf(room).map(c=>key(c.x,c.y))));
+ return event.region.filter(c=>known.has(key(c.x,c.y)));
+}
 export function phenomenonTargets(room,kind){
  return (room.territoryEvents||[]).filter(e=>e.kind===kind).flatMap(e=>{
   const groups=kind==='rain'?Array.from({length:Math.ceil(e.region.length/3)},(_,i)=>e.region.slice(i*3,i*3+3)):[e.region];
-  return groups.filter(g=>g.length).map((g,i)=>({...e,...center(g),kind,id:`${e.id}:${i}`,sourceId:e.sourceId||e.id,region:g}));
+  const visible=new Set(territoryRenderRegion(room,e).map(c=>key(c.x,c.y)));
+  return groups.flatMap((group,i)=>{const g=group.filter(c=>visible.has(key(c.x,c.y)));return g.length?[{...e,...center(g),kind,id:`${e.id}:${i}`,sourceId:e.sourceId||e.id,region:g}]:[];});
  });
 }
 export function ecologyTargets(room,kind,playerId){

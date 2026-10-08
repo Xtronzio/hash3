@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {figureWindows,availableCells,isBlockedCell} from '../src/game.js';
-import {initializeInventory,canUsePracticeTool,completeInventoryTurn,toolAllowance,toolCells} from '../src/practice-tools.js';
+import {initializeInventory,canUsePracticeTool,completeInventoryTurn,toolAllowance,toolCells,practiceTools,MAX_PER_CARD} from '../src/practice-tools.js';
 import {immunityFor,immunityStock,immunityProgress,recordImmunityCombo,immunityRemaining} from '../src/immunity.js';
 import {inventoryTotal,inventoryMarkup,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from '../src/inventory.js';
 import {chooseMachineCard} from '../src/bot-inventory.js';
@@ -35,7 +35,7 @@ test('Los hitos repetibles 3, 33 y 333 avanzan juntos y sus premios nunca se pie
  earn(r,300);assert.deepEqual(immunityFor(r,'local-x').cards,{'immunity-1':111,'immunity-3':30,'immunity-33':33});
  assert.equal(immunityFor(r,'local-x').earned,122);assert.equal(inventoryTotal(r,'local-x'),182);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((s,n)=>s+n),8);
- for(const id of ['activate','destroy','tornado','bomb','frontier'])r.players[0].inventory.cards[id]=2;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,0);
+ for(const t of practiceTools)r.players[0].inventory.cards[t.id]=MAX_PER_CARD;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(r.players[0].inventory.cards.combo,MAX_PER_CARD);
 });
 test('El árbitro cuenta la colocación real, sus bonus y cada ficha de Doble por separado',()=>{
  let r=move(scoringRoom(),16,0);assert.equal(r.lastEvent.points,33);assert.equal(immunityFor(r,'local-x').combos,1);

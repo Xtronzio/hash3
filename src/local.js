@@ -22,7 +22,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:5,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:6,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -53,7 +53,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=5;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=6;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;

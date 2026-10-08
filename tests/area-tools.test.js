@@ -123,7 +123,7 @@ test('Only the expander can place Frontier before the 3×3; it preserves the pha
   assert.equal(wall.pairs[0].pending,1);assert.equal(wall.pairs[0].expander,'local-x');assert.equal(wall.pairs[0].turn,'O');assert.equal(wall.pairs[0].deadline,before.pairs[0].deadline);
   assert.deepEqual(wall.cells,before.cells);assert.deepEqual(wall.terrain,before.terrain);assert.deepEqual(wall.practiceTurn,before.practiceTurn);
   assert.deepEqual(wall.players.map(p=>[p.score,p.placements,p.inventory.turns]),before.players.map(p=>[p.score,p.placements,p.inventory.turns]));
-  assert.equal(wall.players[0].inventory.cards.frontier,1);assert.equal(canUsePracticeTool(wall,'local-x','frontier',now+1000),false);
+  assert.equal(wall.players[0].inventory.cards.frontier,before.players[0].inventory.cards.frontier-1);assert.equal(canUsePracticeTool(wall,'local-x','frontier',now+1000),false);
   assert.throws(()=>localCommand(wall,'inventory',{tool:'frontier',playerId:'local-x',x:-1,y:0,side:'south'},now+1000));
   const paused=localCommand(wall,'pause',{},now+1000),resumed=localCommand(JSON.parse(JSON.stringify(paused)),'resume',{},now+2000);
   assert.equal(resumed.pairs[0].frontierUsed,true);

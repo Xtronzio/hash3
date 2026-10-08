@@ -78,3 +78,15 @@
 .game .cell.tornado-anchor{background:transparent;outline:0;border:0;font-size:18px;opacity:.5}
 .game .cell.tornado-anchor:hover{background:#f4c65d08;opacity:1}
 .game .tornado-preview{background:#f4c65d08;border-width:2px;box-shadow:none}
+
+.dock-card-choice{position:absolute;top:50%;transform:translateY(-50%);width:25px;height:25px;display:grid;place-items:center;border:1px solid currentColor;border-radius:5px;background:#0d1117;pointer-events:none;box-shadow:0 0 8px currentColor;animation:dock-card-arrival .7s ease-out both;animation-delay:var(--card-choice-delay,0ms)}
+.game .game-bottom .dock-card-choice.x{color:var(--red)}.game .game-bottom .dock-card-choice.o{color:var(--green)}
+.dock-card-choice.is-prepared{border-style:dashed}
+.game .game-bottom .dock-card-choice svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;fill:none}
+.dock-card-choice b{position:absolute;right:-3px;bottom:-4px;font-size:8px;line-height:10px;background:#0d1117;border-radius:3px;padding:0 2px}
+.dock-immunity-active.is-newly-chosen{animation:dock-card-arrival .7s ease-out both;animation-delay:var(--card-choice-delay,0ms)}
+@keyframes dock-card-arrival{0%{opacity:0;transform:translate(12px,-50%) scale(.5)}55%{opacity:1;transform:translate(-2px,-50%) scale(1.15)}100%{opacity:1;transform:translate(0,-50%) scale(1)}}
+@media(prefers-reduced-motion:reduce){.dock-card-choice,.dock-immunity-active.is-newly-chosen{animation:none}}
+
+.game .game-bottom .inventory-dock-button:has(.dock-card-choice){min-width:88px;max-width:132px;flex:1.4}
+.game .game-bottom .inventory-dock-button:has(.dock-card-choice):has(.dock-immunity-active){min-width:112px;max-width:140px;flex:1.7}
