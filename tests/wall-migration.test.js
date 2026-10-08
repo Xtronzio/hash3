@@ -25,7 +25,7 @@ test('Refunds above per-card caps are preserved without duplicate migration or d
  const g=legacy();for(let i=0;i<9;i++)g.frontiers.push({id:'extra-'+i,by:'local-x',cells:[{x:10+i,y:0},{x:10+i,y:1},{x:10+i,y:2}]});
  initializeInventory(g);assert.equal(g.players[0].inventory.cards.frontier,10);assert.equal(Object.values(g.players[0].inventory.cards).reduce((n,c)=>n+c,0),18);
  const stored=JSON.parse(JSON.stringify(g));initializeInventory(stored);assert.equal(stored.players[0].inventory.cards.frontier,10);
- for(let i=0;i<6;i++)completeInventoryTurn(stored,'local-x');assert.equal(stored.players[0].inventory.draws,6);assert.equal(stored.players[0].inventory.cards.frontier,10);
+ for(let i=0;i<6;i++)completeInventoryTurn(stored,'local-x');assert.equal(stored.players[0].inventory.draws,undefined);assert.equal(stored.players[0].inventory.cards.frontier,10);
 });
 test('A refunded expander can use one new wall in the same pending phase; no unknown-owner barrier is destroyed',()=>{
  const g=legacy();g.players[0].figures=333;g.players[0].inventory.cards['hint-expand']=1;Object.assign(g.pairs[0],{pending:1,optionalExpansion:true,strategicExpansion:true,expander:'local-x',frontierUsed:true});

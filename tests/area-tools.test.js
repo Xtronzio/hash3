@@ -76,7 +76,7 @@ test('New cards enter refill at zero stock in old saves, preserve eight starting
  for(const t of ['tornado','bomb','frontier','hint-expand','super-hint']){assert.equal(r.players[0].inventory.cards[t],0);delete r.players[0].inventory.cards[t];}
  initializeInventory(r);assert.equal(r.players[0].inventory.cards['super-hint'],0);
  for(const t of practiceTools)r.players[0].inventory.received[t.id]=0;
- const index=practiceTools.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<3;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
+ const index=practiceTools.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
  const ready=fill(start());for(const t of ['tornado','bomb','frontier']){assert.equal(canUsePracticeTool(localCommand(ready,'pause',{},now),'local-x',t,now),false);assert.equal(canUsePracticeTool({...ready,timeMode:'timed',pairs:[{...ready.pairs[0],deadline:new Date(now).toISOString()}]},'local-x',t,now),false);}
 });
 

@@ -129,7 +129,7 @@ test('Los guardados antiguos empiezan sin inmunidad y conservan stock, puntaje y
 });
 test('El premio avisa aunque se haya gastado otra carta; la bolsa suma inmunidades y el inventario cuenta lo que falta',()=>{
  const before=earn(scoringRoom(),332),next=move(card(before,'rival'),16,0),refill=inventoryRefill(before,next,'local-x');
- assert.equal(refill.added,35);assert.equal(refill.message,'Inmunidad disponible · +34 protecciones de 33 segundos · +1 Construir celda');
+ assert.equal(refill.added,35);assert.equal(refill.message,'Inmunidad disponible · +34 protecciones de 33 segundos · +1 Doble');
  assert.match(inventoryDockMarkup(next,'local-x',{refill}),/is-refilled/);
  assert.match(inventoryDockMarkup(next,'local-x',{refill}),/Inmunidad disponible/);
  assert.match(inventoryMarkup(next,'local-x'),/Faltan 333 combos/);assert.match(inventoryMarkup(next,'local-x'),/×174/);

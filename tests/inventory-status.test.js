@@ -7,20 +7,20 @@ const now=1700000000000;
 const fresh=()=>createLocal('local','A','B',now,'normal','untimed');
 test('Tres cartas simultáneas se mantienen según su efecto, aunque ya no estén en la bolsa',()=>{
  let game=fresh();
- for(const point of [{x:0,y:0},{x:1,y:0}])game=localCommand(game,'move',point,now);
- game=localCommand(game,'inventory',{playerId:'local-x',tool:'block',x:2,y:0},now);
- game=localCommand(game,'move',{x:0,y:1},now);
- game=localCommand(game,'inventory',{playerId:'local-o',tool:'shield',x:1,y:0},now);
- game=localCommand(game,'move',{x:1,y:1},now);
- game=localCommand(game,'inventory',{playerId:'local-x',tool:'double'},now);
+ for(const point of [{x:0,y:0},{x:1,y:0}])game=localCommand(game,'move',point,now,()=>.999);
+ game=localCommand(game,'inventory',{playerId:'local-x',tool:'block',x:2,y:0},now,()=>.999);
+ game=localCommand(game,'move',{x:0,y:1},now,()=>.999);
+ game=localCommand(game,'inventory',{playerId:'local-o',tool:'shield',x:1,y:0},now,()=>.999);
+ game=localCommand(game,'move',{x:1,y:1},now,()=>.999);
+ game=localCommand(game,'inventory',{playerId:'local-x',tool:'double'},now,()=>.999);
  assert.deepEqual(activeInventoryEffects(game).map(e=>e.tool).sort(),['block','double','shield']);
  assert.equal(game.players[0].inventory.cards.block,0);
  const html=inventoryStatusMarkup(game);assert.equal((html.match(/data-inventory-effect=/g)||[]).length,3);
- game=localCommand(game,'move',{x:2,y:2},now);
+ game=localCommand(game,'move',{x:2,y:2},now,()=>.999);
  assert.equal(activeInventoryEffects(game).find(e=>e.tool==='double').remaining,1);
- game=localCommand(game,'move',{x:2,y:1},now);
+ game=localCommand(game,'move',{x:2,y:1},now,()=>.999);
  assert.ok(!activeInventoryEffects(game).some(e=>e.tool==='double'));
- const paused=localCommand(game,'pause',{},now);
+ const paused=localCommand(game,'pause',{},now,()=>.999);
  assert.deepEqual(activeInventoryEffects(paused),activeInventoryEffects(game));
 });
 test('Rival, ayuda e inmunidad muestran el tiempo o acción pendientes y no inventan efectos instantáneos',()=>{
@@ -43,7 +43,7 @@ test('Preparar indicadores no recorre las celdas ni el terreno y omite efectos v
  assert.match(inventoryStatusMarkup(game,{paused:true}),/Escudo · O · 2 turnos rivales · pausado/);
 });
 test('Accesos directos siguen el stock y permiten usar cartas instantáneas sin la bolsa',()=>{
- let game=fresh();game=localCommand(game,'move',{x:0,y:0},now);game=localCommand(game,'move',{x:1,y:0},now);game.players[0].inventory.cards.tornado=1;
+ let game=fresh();game=localCommand(game,'move',{x:0,y:0},now,()=>.999);game=localCommand(game,'move',{x:1,y:0},now,()=>.999);game.players[0].inventory.cards.tornado=1;
  let html=inventoryStatusMarkup(game,{playerId:'local-x'});
  assert.match(html,/<button[^>]+is-ready[^>]+data-action="practice-tool" data-tool="tornado"[^>]*>[^]*?<small>×1<\/small>/);
  assert.ok(!html.includes('effect-owner'));

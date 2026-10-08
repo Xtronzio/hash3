@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {practiceTools,MAX_CARDS,MAX_PER_CARD,REFILL_TURNS,canUsePracticeTool,completeInventoryTurn,initializeInventory} from '../src/practice-tools.js';
+import {practiceTools,MAX_CARDS,MAX_PER_CARD,MAX_CARD_TYPES,REFILL_TURNS,canUsePracticeTool,completeInventoryTurn,initializeInventory} from '../src/practice-tools.js';
 import {availableCells,isBlockedCell} from '../src/game.js';
 import {usePracticeHint,canUsePracticeHint} from '../src/inventory.js';
 import {chooseMachineMove,machineMoveScore} from '../src/machine.js';
@@ -15,18 +15,18 @@ test('Ambos jugadores empiezan con ocho cartas iguales; gastar no recarga inmedi
  let r=start();assert.ok(practiceTools.some(t=>t.id==='double'));assert.deepEqual(r.players[0].inventory,r.players[1].inventory);
  assert.equal(Object.values(r.players[0].inventory.cards).reduce((a,b)=>a+b),8);
  r=card(r,'double');assert.equal(r.players[0].inventory.cards.double,0);r=move(r,0,0);assert.equal(r.players[0].inventory.turns,0);
- r=move(r,1,0);assert.equal(r.players[0].inventory.turns,0);assert.equal(r.players[0].inventory.cards.double,0);
+ r=move(r,1,0);assert.equal(r.players[0].inventory.turns,0);assert.equal(r.players[0].inventory.cards.double,1);
  assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now));assert.equal(r.players[1].inventory.cards.double,1);
 });
 test('Recarga por turno pagado; tres de cada carta, sin premiar esperas ni automáticos',()=>{
  const r=start(),id='local-x',inv=r.players[0].inventory;
  completeInventoryTurn(r,id,{automatic:true});completeInventoryTurn(r,id,{placed:false});assert.equal(inv.draws,undefined);
  for(let n=0;n<MAX_CARDS-8;n++)completeInventoryTurn(r,id,{random:()=>0});
- assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),MAX_CARDS);assert.equal(MAX_CARDS,48);
- assert.ok(practiceTools.every(t=>inv.cards[t.id]>0));assert.equal(inv.draws,40);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,40);assert.equal(inv.turns,1);
- inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true});assert.equal(inv.draws,40);
- completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,41);assert.equal(inv.turns,0);
+ assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),MAX_CARDS);assert.equal(MAX_CARDS,18);
+ assert.ok(practiceTools.some(t=>inv.cards[t.id]===0));assert.equal(inv.draws,10);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,10);assert.equal(inv.turns,1);
+ inv.cards.erase=0;completeInventoryTurn(r,id,{automatic:true});assert.equal(inv.draws,10);
+ completeInventoryTurn(r,id,{random:()=>0});assert.equal(inv.draws,11);assert.equal(inv.turns,0);
 });
 test('Bloqueo impide la colocación propia inmediata, permite la siguiente y dura dos turnos rivales',()=>{
  let r=card(start(),'block',{x:1,y:1});assert(isBlockedCell(r,'local-x',1,1));assert.throws(()=>move(r,1,1));
@@ -102,15 +102,12 @@ test('Dificultad, figuras, reloj e inventario son independientes y sobreviven a 
  }
 });
 
-test('Even adversarial constant randomness introduces Bomba and Tornado within eight available refills',()=>{
- const r=start(),inv=r.players[0].inventory;inv.cards.hint=0;const draws=[];
- for(let n=0;n<24;n++){
-  for(let turn=0;turn<REFILL_TURNS;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
-  draws.push(inv.lastDraw);inv.cards[inv.lastDraw]=0;
- }
- assert.ok(draws.slice(0,8).includes('bomb'));assert.ok(draws.slice(0,8).includes('tornado'));
- assert.equal(new Set(draws.slice(0,8)).size,8);assert.equal(new Set(draws.slice(8,24)).size,practiceTools.length);
- assert.ok(Math.max(...Object.values(inv.received))-Math.min(...Object.values(inv.received))<=1);
+test('Recargas aleatorias permiten duplicados antes de completar el catálogo',()=>{
+ const r=start(),inv=r.players[0].inventory;
+ completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,2);
+ completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,3);
+ assert.equal(inv.cards.bomb,0);assert.equal(inv.cards.tornado,0);
+ completeInventoryTurn(r,'local-x',{random:()=>.72});assert.ok(['bomb','frontier','hint-expand','super-hint','combo'].includes(inv.lastDraw));
 });
 test('Fair refill survives saves, never exceeds stock caps and cannot draw a fourth copy',()=>{
  let r=start(),inv=r.players[0].inventory;inv.cards.hint=0;
@@ -121,11 +118,41 @@ test('Fair refill survives saves, never exceeds stock caps and cannot draw a fou
  delete inv.received;initializeInventory(r);assert.ok(practiceTools.every(t=>Number.isInteger(inv.received[t.id])));assert.equal(inv.cards.double,MAX_PER_CARD);
 });
 
-test('Three units of every type fit; unlimited protections do not block refills and saves do not invent cards',()=>{
+test('Mochila de 18 y hasta 12 tipos permite ceros; protecciones aparte y sin recargas históricas',()=>{
  let r=start(),inv=r.players[0].inventory;inv.immunity.cards['immunity-1']=333;
  const before=structuredClone(inv.cards);initializeInventory(r);assert.deepEqual(inv.cards,before);
- for(let turn=0;turn<MAX_CARDS+10;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
- assert.ok(practiceTools.every(t=>inv.cards[t.id]===3));assert.equal(inv.draws,MAX_CARDS-8);assert.equal(inv.immunity.cards['immunity-1'],333);
- r=JSON.parse(JSON.stringify(r));initializeInventory(r);assert.deepEqual(r.players[0].inventory,inv);inv=r.players[0].inventory;
- inv.cards.double--;completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,3);assert.equal(inv.lastDraw,'double');
+ for(let turn=0;turn<100;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});
+ assert.equal(Object.values(inv.cards).reduce((a,b)=>a+b),18);assert.ok(practiceTools.some(t=>inv.cards[t.id]===0));
+ assert.ok(practiceTools.every(t=>inv.cards[t.id]<=3));assert.equal(inv.draws,10);assert.equal(inv.immunity.cards['immunity-1'],333);
+ r=JSON.parse(JSON.stringify(r));initializeInventory(r);assert.deepEqual(r.players[0].inventory,inv);
+});
+test('No entra un tipo 13; agotar una carta abre sitio para otro tipo sin reponerla a la fuerza',()=>{
+ const r=start(),inv=r.players[0].inventory;
+ for(const t of practiceTools)inv.cards[t.id]=0;
+ for(const t of practiceTools.slice(0,MAX_CARD_TYPES))inv.cards[t.id]=1;
+ completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(inv.lastDraw,'bomb');assert.equal(inv.cards.frontier,0);
+ inv.cards.double=0;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(inv.lastDraw,'combo');assert.equal(inv.cards.combo,1);assert.equal(inv.cards.double,0);
+ assert.equal(practiceTools.filter(t=>inv.cards[t.id]>0).length,MAX_CARD_TYPES);
+});
+test('Reservas anteriores excesivas se conservan y no recargan hasta cumplir ambos límites',()=>{
+ const r=start(),inv=r.players[0].inventory;
+ for(const t of practiceTools)inv.cards[t.id]=3;
+ const before=structuredClone(inv.cards);
+ for(let turn=0;turn<20;turn++)completeInventoryTurn(r,'local-x',{random:()=>0});assert.deepEqual(inv.cards,before);assert.equal(inv.draws,undefined);
+ for(const t of practiceTools)inv.cards[t.id]=1; // 16 tipos: todavía no hay hueco de variedad.
+ completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.draws,undefined);
+ for(const t of practiceTools.slice(MAX_CARD_TYPES))inv.cards[t.id]=0;
+ completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.draws,1);
+});
+test('Sorteo sostenido rota todo el catálogo y mantiene stocks 0/1/2/3 sin llenar un arsenal',()=>{
+ const r=start(),inv=r.players[0].inventory,seen=new Set(),stocks=new Set();let seed=333;
+ const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+ for(let turn=0;turn<3000;turn++){
+   const held=practiceTools.filter(t=>inv.cards[t.id]>0);
+   if(held.length&&random()<.85)inv.cards[held[Math.floor(random()*held.length)].id]--;
+   completeInventoryTurn(r,'local-x',{random});seen.add(inv.lastDraw);
+   const counts=practiceTools.map(t=>inv.cards[t.id]);counts.forEach(n=>stocks.add(n));
+   assert.ok(counts.reduce((a,b)=>a+b)<=18);assert.ok(counts.filter(n=>n>0).length<=12);assert.ok(counts.every(n=>n<=3));assert.ok(counts.some(n=>n===0));
+ }
+ assert.equal(seen.size,practiceTools.length);assert.deepEqual([...stocks].sort(),[0,1,2,3]);
 });

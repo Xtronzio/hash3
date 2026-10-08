@@ -39,7 +39,7 @@ test('Activated terrain is permanent and available to both players after saving,
 test('New card has a proper icon, appears in the inventory and enters refill without changing the initial eight cards',()=>{
  const r=createLocal('local','A','B',now,'normal','untimed');assert.equal(inventoryTotal(r,'local-x'),8);assert.equal(r.players[0].inventory.cards.activate,0);
  for(const t of practiceTools)r.players[0].inventory.received[t.id]=0; // Equal exposure: the draw is random among all eligible cards.
- r.players[0].inventory.cards.hint=0;const index=practiceTools.findIndex(t=>t.id==='activate');for(let i=0;i<3;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});
+ r.players[0].inventory.cards.hint=0;const index=practiceTools.findIndex(t=>t.id==='activate');for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});
  assert.equal(r.players[0].inventory.cards.activate,1);assert.match(toolIcon('activate'),/stroke-dasharray/);assert.doesNotMatch(toolIcon('activate'),/undefined/);assert.match(inventoryMarkup(r,'local-x'),/data-tool="activate"/);
  delete r.players[0].inventory.cards.activate;initializeInventory(r);assert.equal(r.players[0].inventory.cards.activate,0);
 });

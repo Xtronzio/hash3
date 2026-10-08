@@ -20,7 +20,7 @@ test('Una recarga se detecta por el sorteo, incluso si el total coincide tras co
  const previous=start(),next=localCommand(previous,'inventory',{tool:'rival',playerId:'local-x'},now);
  for(let i=0;i<1;i++)completeInventoryTurn(next,'local-x',{random:()=>0});
  assert.equal(inventoryTotal(previous,'local-x'),inventoryTotal(next,'local-x'));
- assert.deepEqual(inventoryRefill(previous,next,'local-x'),{player:'local-x',added:1,tool:'Construir celda',total:8});
+ assert.deepEqual(inventoryRefill(previous,next,'local-x'),{player:'local-x',added:1,tool:'Doble',total:8});
  assert.equal(inventoryRefill(previous,next,'local-o'),null);
  assert.equal(inventoryRefill(next,structuredClone(next),'local-x'),null);
 });

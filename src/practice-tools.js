@@ -25,7 +25,7 @@ export const practiceTools=[
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
-export const MAX_CARDS=practiceTools.length*MAX_PER_CARD;
+export const MAX_CARDS=18,MAX_CARD_TYPES=12;
 export const pendingTools=[];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
@@ -129,11 +129,11 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));
   if(automatic||!placed)return;
   const inv=game.players.find(p=>p.id===playerId).inventory;inv.turns=Math.min(REFILL_TURNS,inv.turns+1);
-  const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD);
-  if(inv.turns>=REFILL_TURNS&&Object.values(inv.cards).reduce((a,b)=>a+b,0)<MAX_CARDS&&eligible.length){
-    const minimum=Math.min(...eligible.map(t=>inv.received[t.id]));
-    const balanced=eligible.filter(t=>inv.received[t.id]===minimum);
-    const draw=balanced[Math.min(balanced.length-1,Math.floor(Math.max(0,random())*balanced.length))];
+  const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
+  const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
+  if(inv.turns>=REFILL_TURNS&&Object.values(inv.cards).reduce((a,b)=>a+b,0)<MAX_CARDS&&heldTypes<=MAX_CARD_TYPES&&eligible.length){
+    // Draw from all eligible types, including duplicates. A cap is not a refill target.
+    const draw=eligible[Math.min(eligible.length-1,Math.floor(Math.max(0,random())*eligible.length))];
     inv.cards[draw.id]++;inv.received[draw.id]++;inv.turns=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;
   }
 }
