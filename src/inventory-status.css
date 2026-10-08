@@ -25,3 +25,6 @@
 .event-outlook-row>b{max-width:100px;text-align:right;font-size:15px;font-variant-numeric:tabular-nums;flex:none}
 .event-outlook-row.is-disabled{opacity:.4}
 .event-outlook-note{font-size:10px;line-height:1.5;color:#858a94;margin:10px 0 2px}
+
+.event-outlook-icons svg:has([data-worker-sign="plus"]){color:var(--green)}
+.event-outlook-icons svg:has([data-worker-sign="minus"]){color:var(--red)}
