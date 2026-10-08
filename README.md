@@ -402,3 +402,5 @@ Efectos activos del inventario arriba en tablero y mapas activos/pausados; fauna
 Control inferior junto a inventario y ampliación: colocaciones hasta intentos de fauna y #, casillas hasta el siguiente nuevo umbral territorial de 333 y segundos reales de intervenciones anunciadas. Respeta suspensión y recuperación; informa de intentos sujetos a población, tamaño y alimento y no predice el fenómeno aleatorio. Indicadores preparados por snapshot y relojes sin recorrer terreno ni fichas.
 
 La selección del Tornado conserva las fichas visibles y destaca únicamente el marco 3×3, sin cubrir todo el tablero con destinos opacos. Se mantiene intacta la animación de mezcla. No cambia reglas de aparición, escalado, protección ni navegación.
+
+Validación R0.21.17: 248 pruebas automatizadas y compilación correcta para GitHub Pages y raíz. Pruebas de indicadores simultáneos, caducidad, conservación al pausar y previsión de umbrales sin recorrer fichas durante los relojes.
