@@ -99,11 +99,16 @@ try{
  track(context);
  for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
   const {page,errors}=await load(context,fixture(999,kind));
+  const active=page.locator(`.map-jumps button[data-ecology-kind="${kind}"]`);
+  assert.equal(await page.locator('.map-jumps .is-announced').count(),1);
+  assert.equal(await page.locator('.map-jumps [data-ecology-attempt].is-inactive:disabled').count(),8);
+  assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
+  assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
   await page.locator(`[data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
   await frame(page);
   assert.ok(await page.locator(`.board .phenomenon-marker [data-ecology-kind="${kind}"]`).count()>0,`No visible marker for ${kind}`);
   await page.screenshot({path:path.join(output,`${kind}.png`)});
-  assert.deepEqual(errors,[]);results.push({kind,passed:true});await page.close();
+  assert.deepEqual(errors,[]);results.push({kind,ecologyStates:true,passed:true});await page.close();
  }
  // One local snapshot must look the same in map, pause and board overview.
  const {page:visual,errors:visualErrors}=await load(context,(()=>{
@@ -112,12 +117,15 @@ try{
   r.cells=[{id:'x',x:0,y:0,symbol:'X',owner:'local-x'},{id:'o',x:1,y:0,symbol:'O',owner:'local-o'},{id:'n',x:2,y:0,symbol:'#',owner:null},{id:'i',x:3,y:0,symbol:'*',owner:null}];
   return r;
  })());
- assert.equal(await visual.locator('.map-jumps [data-ecology-attempt]').count(),2);
+ assert.equal(await visual.locator('.map-jumps [data-ecology-attempt].is-inactive:disabled').count(),9);
+ assert.equal(await visual.locator('.map-jumps [data-ecology-attempt] .ecology-clock').count(),0);
+ assert.equal(await visual.locator('.map-jumps [data-ecology-attempt]').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
  await visual.locator('[data-action="map"]').tap();await frame(visual);
  const liveMap=await visual.locator('.map-terrain').innerHTML();
  await visual.screenshot({path:path.join(output,'shared-live-map.png')});
  await visual.locator('[data-action="close-map"]').tap();
  await visual.locator('[data-action="pause"]').tap();await visual.locator('.inspection-canvas').waitFor();await frame(visual);
+ assert.equal(await visual.locator('.ecology-controls [data-ecology-attempt].is-inactive:disabled').count(),9);
  assert.equal(await visual.locator('.inspection-terrain').innerHTML(),liveMap);
  await visual.screenshot({path:path.join(output,'shared-paused-map.png')});
  await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
@@ -145,7 +153,7 @@ try{
  await visual.setViewportSize({width:390,height:844});await frame(visual);
  await visual.locator('[data-action="pause"]').tap();await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
  assert.equal(await visual.locator('.dock-used-cards.x .dock-used-card').count(),1);assert.equal(await visual.locator('.dock-used-cards.o .dock-used-card').count(),1);
- assert.deepEqual(visualErrors,[]);results.push({sharedMaps:true,readableZoomGlyphs:true,phenomenaForecasts:true,inventoryBothSides:true,passed:true});await visual.close();
+ assert.deepEqual(visualErrors,[]);results.push({sharedMaps:true,readableZoomGlyphs:true,phenomenaInactive:true,inventoryBothSides:true,passed:true});await visual.close();
  const {page:expansion,errors:expansionErrors}=await load(context,(()=>{
   const r=createLocal('local','X','O',Date.now(),'normal','untimed',undefined,'X',false,{faunaEnabled:false,territoryEnabled:false});
   r.cells=r.terrain.map((p,i)=>({...p,id:`c${i}`,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));
