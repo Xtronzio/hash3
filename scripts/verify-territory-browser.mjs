@@ -67,6 +67,17 @@ async function pinch(page){
  await cdp.detach();await frame(page);
 }
 try{
+ // Every production icon declaration resolves within the Pages /hash3/ scope.
+ const productionHtml=await fs.readFile('docs/index.html','utf8');
+ const iconLinks=[...productionHtml.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map(match=>({href:match[0].match(/href="([^"]+)"/)[1],size:Number(match[0].match(/sizes="(\d+)x\d+"/)[1])}));
+ assert.equal(iconLinks.length,4);
+ for(const icon of iconLinks){
+  assert.ok(icon.href.startsWith('/hash3/icons/hash3-'),'Explicit #3 icon must stay inside the app scope');
+  const png=await fs.readFile(path.join('docs',icon.href.slice('/hash3/'.length)));
+  assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),icon.size);assert.equal(png.readUInt32BE(20),icon.size);
+ }
+ assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/apple-touch-icon-r08.png'));
+ results.push({pagesFaviconsAndAppleIconResolve:true,passed:true});
  for(const viewport of [{width:390,height:844},{width:1024,height:768}]){
   const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,serviceWorkers:'block'});
   track(context);
@@ -335,7 +346,7 @@ try{
  assert.equal(reclaimed.terrain.length,992);assert.ok(reclaimed.terrain.some(c=>c.x===1&&c.y===0));assert.equal(reclaimed.cells.length,0);assert.equal(reclaimed.players[0].score,25912);assert.equal(reclaimed.invasions.length,0);
  assert.equal(await reclaimPage.locator('.board [data-action="move"][data-x="1"][data-y="0"]').count(),1);
  await reclaimPage.screenshot({path:path.join(output,'reconquered-terrain-r38.png')});assert.deepEqual(reclaimErrors,[]);results.push({reconquerPreservesLargeSave:true,passed:true});await reclaimPage.close();
- // A due storm can pay both symbols, and its visible notice identifies each.
+ // A due storm pays both symbols with normal large coloured numbers only.
  const stormRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  stormRoom.cells=[['X',0,0],['X',1,0],['X',2,1],['O',0,1],['O',1,1],['O',2,0]].map(([symbol,x,y],i)=>({id:'s'+i,symbol,x,y,owner:symbol==='X'?'local-x':'local-o'}));
  let expectedStorm;
@@ -347,10 +358,19 @@ try{
  assert.ok(expectedStorm,'Find a reproducible storm scoring both symbols');
  const {page:stormPage,errors:stormErrors}=await load(context,stormRoom);
  await stormPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);
+ assert.equal(await stormPage.locator('.landing-score-float.x').count(),1);
+ assert.equal(await stormPage.locator('.landing-score-float.o').count(),1);
+ assert.equal(await stormPage.locator('.landing-score-float.x').evaluate(el=>getComputedStyle(el).animationName),'scoreRise');
  const landed=await stormPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.deepEqual(landed.players.map(p=>p.score),expectedStorm.players.map(p=>p.score));
- assert.match(await stormPage.locator('#notice').innerText(),/Huracán.*X \+.*O \+/);
- await stormPage.screenshot({path:path.join(output,'landing-scores-r37.png')});
- assert.deepEqual(stormErrors,[]);results.push({landingBothSymbolsNotice:true,passed:true});await stormPage.close();
+ assert.equal(await stormPage.locator('#notice .score-notice-total.x').innerText(),'+'+expectedStorm.landingEvent.scores.find(s=>s.symbol==='X').points);
+ assert.equal(await stormPage.locator('#notice .score-notice-total.o').innerText(),'+'+expectedStorm.landingEvent.scores.find(s=>s.symbol==='O').points);
+ assert.match(await stormPage.locator('#notice').innerText(),/^\+\d+\s*\+\d+$/);
+ assert.equal(await stormPage.locator('#notice .score-notice-detail').count(),0);
+ assert.ok(await stormPage.locator('#notice .score-notice-total.x').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))>=42);
+ assert.equal(await stormPage.locator('#notice .score-notice-total.x').evaluate(el=>getComputedStyle(el).color),'rgb(255, 74, 88)');
+ assert.equal(await stormPage.locator('#notice .score-notice-total.o').evaluate(el=>getComputedStyle(el).color),'rgb(36, 211, 147)');
+ await stormPage.screenshot({path:path.join(output,'landing-scores-r38.png')});
+ assert.deepEqual(stormErrors,[]);results.push({landingBothSymbolsLargeNumbersOnly:true,passed:true});await stormPage.close();
  assert.deepEqual(onlineRequests,[],'Local diagnosis contacted Supabase');
  results.push({supabaseRequests:0,passed:true});
  await context.close();
