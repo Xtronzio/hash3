@@ -71,3 +71,7 @@ Diagnóstico remoto de esta continuación: consulta mínima SQL, lista de migrac
 ## Compatibilidad móvil (R0.21.28-P2, 9/10/2026)
 
 En `main` se integró el hotfix de pantalla completa móvil (`PR #3`, commit `92d9eef52871191646b416496249e715e3b39dc3`): `src/mobile-viewport.css` importado **en último lugar** en `src/main.js`, pantallas/diálogos limitados a `100dvh`, controles de Perfil de ≥16px para evitar autozoom de Safari, y foco inicial del botón cerrar en Perfil móvil. **Al integrar #3_11, conservar este hotfix**: ni reemplazar el import CSS ni restaurar el autofocus de `#profile-name` ni el `max-height:94dvh` efectivo del diálogo. Mantener las pruebas `tests/mobile-viewport.test.js`.
+
+## R0.21.32 · Selección y partidas cortas
+
+PR #1 incorporada a main por la revisión local R0.21.31; se conserva todo el motor y el SQL preparado, sin activar servidor. R0.21.32 actualiza duración total a 33 segundos / 3 / 6 / 9 minutos e iconos de selección. La pausa congela el tiempo total; el límite termina antes de aceptar una jugada vencida. Logros identifica Relámpago en segundos y sigue permitiendo consultar resultados antiguos de 5/10 minutos. Partidas antiguas mantienen su objetivo al reabrirlas. Los tres controles existentes conservan su semántica: inventario rival, fauna/habitantes y territorio (invasores/naturales/estelares).

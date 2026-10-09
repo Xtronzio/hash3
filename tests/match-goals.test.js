@@ -5,6 +5,7 @@ import {needsLocalTick} from '../src/local-clock.js';
 import {saveLocalGame,deleteLocalGame,loadLocalGames} from '../src/sessions.js';
 import {loadTerritoryResults,territoryComparisonKey,achievementsMarkup} from '../src/achievements.js';
 import {matchGoalsMarkup} from '../src/match-goals-ui.js';
+import {MATCH_TIME_TARGETS} from '../src/match-durations.js';
 const game=options=>createLocal('solo','A','B',1000,'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false,...options});
 const memory=()=>{const values=new Map();return {getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)}};
 test('Each cell objective finishes at constructed terrain, even with holes and ecology on; Mundo stays continuous',()=>{
@@ -31,5 +32,23 @@ test('Completed result is deduplicated, retained after deleting the board and gr
  const storage=memory();saveLocalGame(storage,r);saveLocalGame(storage,r);assert.equal(loadTerritoryResults(storage,loadLocalGames(storage)).length,1);
  deleteLocalGame(storage,r.id);assert.equal(loadLocalGames(storage).length,0);const [result]=loadTerritoryResults(storage);assert.equal(result.players[0].placements,33);
  assert.notEqual(territoryComparisonKey(result),territoryComparisonKey({...result,target:333}));assert.notEqual(territoryComparisonKey(result),territoryComparisonKey({...result,machineInventory:true}));
- assert.match(achievementsMarkup([result]),/Movimientos · 33/);assert.doesNotMatch(achievementsMarkup([result]),/undefined/);assert.match(matchGoalsMarkup('time',300),/5 minutos/);
+ assert.match(achievementsMarkup([result]),/Movimientos · 33/);assert.doesNotMatch(achievementsMarkup([result]),/undefined/);
+ const options=matchGoalsMarkup('time',33);assert.match(options,/Relámpago · 33 segundos/);assert.match(options,/6 minutos/);assert.match(options,/9 minutos/);assert.doesNotMatch(options,/5 minutos|10 minutos/);
+});
+test('33 seconds and 3/6/9 minutes expire before an overdue action in both local modes and preserve pause time',()=>{
+ for(const mode of ['solo','local'])for(const timeMode of ['timed','untimed'])for(const target of MATCH_TIME_TARGETS){
+  let r=createLocal(mode,'A','B',1000,'normal',timeMode,'medium','X',false,{faunaEnabled:false,territoryEnabled:false,matchGoal:{type:'time',target}});
+  assert.equal(Date.parse(r.endsAt),1000+target*1000);
+  r=localCommand(r,'pause',{},11000);assert.equal(r.matchRemainingMs,target*1000-10000);
+  r=localCommand(r,'resume',{},1000000);const end=1000000+target*1000-10000;assert.equal(Date.parse(r.endsAt),end);
+  r=localCommand(r,'move',{x:0,y:0},end);assert.equal(r.status,'finished');assert.equal(r.cells.length,0);assert.equal(r.finalResult.target,target);assert.equal(r.finalResult.kind,'time-limit');
+ }
+});
+test('Saved five and ten minute games retain their duration when loaded and resumed',()=>{
+ for(const target of [300,600]){
+  const r=game({matchGoal:{type:'time',target:180}});r.matchGoal.target=target;r.endsAt=new Date(1000+target*1000).toISOString();
+  const paused=localCommand(r,'pause',{},11000),storage=memory();saveLocalGame(storage,paused);
+  const [saved]=loadLocalGames(storage);assert.equal(saved.matchGoal.target,target);
+  const resumed=localCommand(saved,'resume',{},1000000);assert.equal(Date.parse(resumed.endsAt),1000000+target*1000-10000);
+ }
 });

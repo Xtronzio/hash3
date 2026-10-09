@@ -1,4 +1,5 @@
 import {boardCellLimit,finishAtMatchGoal,CELL_TARGETS} from './board-limits.js';
+import {MATCH_TIME_TARGETS} from './match-durations.js';
 import {initializeFreeExpansions,earnFreeExpansion,canRequestFreeExpansion} from './free-expansion.js';
 import {territoryEnabled} from './ecology.js';
 import {recordTerritoryGrowth,territoryPlacementDue,territoryReady} from './territory-tools.js';
@@ -28,7 +29,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
   if(CELL_TARGETS.includes(ecology.cellTarget))room.cellTarget=ecology.cellTarget;
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
-  if(ecology.matchGoal?.type==='time'&&[180,300,600].includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
+  if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
   initializeInventory(room);initializeRodents(room,now);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {

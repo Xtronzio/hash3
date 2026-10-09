@@ -15,7 +15,14 @@ test('Different rule combinations are selectable and never merged into a compari
 test('Empty selections retain buttons and archived legacy board results remain accessible',()=>{
  const html=achievementsMarkup([],{mode:'local',goal:'moves',target:333});assert.match(html,/No hay partidas completadas/);assert.match(html,/data-target="333" aria-pressed="true"/);
  const legacy=record('Legacy','local','cells',33);delete legacy.goalType;delete legacy.target;assert.match(achievementsMarkup([legacy]),/<th scope="row">Legacy/);
- assert.equal(achievementSelection(results,{mode:'local',goal:'time',target:33}).target,180);assert.match(achievementsMarkup(results,{mode:'world'}),/Mundo es continuo/);
+ assert.equal(achievementSelection(results,{mode:'local',goal:'time',target:33}).target,33);assert.match(achievementsMarkup(results,{mode:'world'}),/Mundo es continuo/);
+});
+test('Time achievements label lightning in seconds and preserve archived five and ten minute results',()=>{
+ const records=[record('Lightning','local','time',33),record('Old five','local','time',300),record('Old ten','local','time',600)];
+ const lightning=achievementsMarkup(records,{mode:'local',goal:'time',target:33});assert.match(lightning,/Tiempo · 33 segundos/);assert.doesNotMatch(lightning,/0,55|0\.55/);
+ for(const [target,label,name] of [[300,'5 minutos','Old five'],[600,'10 minutos','Old ten']]){
+  const html=achievementsMarkup(records,{mode:'local',goal:'time',target});assert.match(html,new RegExp('Tiempo · '+label));assert.match(html,new RegExp('<th scope="row">'+name));assert.match(html,new RegExp('data-target="'+target+'" aria-pressed="true"'));
+ }
 });
 
 test('One selected statistic is displayed at a time without a wide mixed table',()=>{

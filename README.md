@@ -1,6 +1,8 @@
-# #3 — R0.21.31 · Diagnóstico local
+# #3 — R0.21.32 · Territorio vivo local
 
 ## Territorio vivo · #3_11
+
+La PR #1 está integrada. Nuevas partidas por tiempo total: **Relámpago · 33 segundos**, **3, 6 y 9 minutos**, independientes del reloj de turno. Los guardados y logros anteriores de 5/10 minutos conservan su duración. El selector muestra fauna y habitantes, invasores y fenómenos con los iconos del catálogo actual.
 
 Fauna y habitantes aparecen con mayor frecuencia que los fenómenos grandes. Invasores y fenómenos usan ciclos independientes: bases de 66 y 333 colocaciones, escaladas por tamaño. Los efectos conservan grupos de tres y geometrías 3×3. Las invasiones pequeñas permiten actuar a la fauna; ampliar no adelanta ataques. Catálogo, frecuencias, validación y bloqueos en [el diseño de territorio vivo](design/3-11-territorio-vivo.md).
 

@@ -156,14 +156,26 @@ try{
   await page.locator(`.hall-mode[data-mode="${mode}"]`).tap();await page.locator('[data-action="hall-play"]').tap();
   if(mode==='offline')await page.locator('[data-action="setup-local"]').tap();
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
+  await page.locator('#local-goal-type').selectOption('time');
+  assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),8);
+  for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
+  await page.locator('#local-goal-target').selectOption(mode==='solo'?'33':'540');
+  await page.locator('.ecology-choices').scrollIntoViewIfNeeded();
+  const setupLayout=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,controls:[...document.querySelectorAll('.ecology-choice')].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right};})}));
+  assert.ok(setupLayout.scrollWidth<=setupLayout.width);assert.ok(setupLayout.controls.every(r=>r.left>=0&&r.right<=setupLayout.width));
+  await page.screenshot({path:path.join(output,'setup-'+mode+'-duration-icons.png')});
+  await page.locator('#local-goal-target').scrollIntoViewIfNeeded();
+  await page.screenshot({path:path.join(output,'setup-'+mode+'-total-time.png')});
   await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();await frame(page);
   await isolated.setOffline(true);
   await page.locator('.board .available').first().tap();
   await page.waitForFunction(minimum=>JSON.parse(localStorage.getItem('hash3_locals'))?.[0]?.cells.length>=minimum,mode==='solo'?2:1,{timeout:15000});
   const local=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(local.mode,mode==='solo'?'solo':'local');assert.ok(local.cells.length>=(mode==='solo'?2:1));
+  assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
-  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:8,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
  }
  assert.deepEqual(onlineRequests,[],'Local diagnosis contacted Supabase');
  results.push({supabaseRequests:0,passed:true});
