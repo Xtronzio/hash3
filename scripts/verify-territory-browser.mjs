@@ -26,7 +26,7 @@ function fixture(size,kind='invader-colony'){
  r.worms=[{id:'worm',x:5,y:5,body:[{x:5,y:5}],eaten:0,nextAt:now+600000}];
  r.rodentRaids=[{id:'raid',x:6,y:6,count:1,turn:0,mealsLeft:3,phase:'arriving',members:[{id:'rat',x:6,y:6}],visited:[]}];
  r.works=[{id:'work',x:9,y:9,done:0,nextAt:now+600000,destroy:Array.from({length:9},(_,i)=>({x:9+i%3,y:9+Math.floor(i/3)})),build:Array.from({length:9},(_,i)=>({x:-3+i%3,y:9+Math.floor(i/3)}))}];
- r.frontiers=[{id:'wall',x:-1,y:0,owner:'local-x'}];
+ r.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];
  const region=Array.from({length:9},(_,i)=>({x:12+i%3,y:12+Math.floor(i/3)}));
  r.territoryEvents=[{id:'event',kind,region,groups:[region],nextAt:now+600000}];
  return r;
@@ -105,6 +105,47 @@ try{
   await page.screenshot({path:path.join(output,`${kind}.png`)});
   assert.deepEqual(errors,[]);results.push({kind,passed:true});await page.close();
  }
+ // One local snapshot must look the same in map, pause and board overview.
+ const {page:visual,errors:visualErrors}=await load(context,(()=>{
+  const r=createLocal('local','X','O',Date.now(),'normal','untimed',undefined,'X',false,{faunaEnabled:false,territoryEnabled:true});
+  r.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));
+  r.cells=[{id:'x',x:0,y:0,symbol:'X',owner:'local-x'},{id:'o',x:1,y:0,symbol:'O',owner:'local-o'},{id:'n',x:2,y:0,symbol:'#',owner:null},{id:'i',x:3,y:0,symbol:'*',owner:null}];
+  return r;
+ })());
+ assert.equal(await visual.locator('.map-jumps [data-ecology-attempt]').count(),2);
+ await visual.locator('[data-action="map"]').tap();await frame(visual);
+ const liveMap=await visual.locator('.map-terrain').innerHTML();
+ await visual.screenshot({path:path.join(output,'shared-live-map.png')});
+ await visual.locator('[data-action="close-map"]').tap();
+ await visual.locator('[data-action="pause"]').tap();await visual.locator('.inspection-canvas').waitFor();await frame(visual);
+ assert.equal(await visual.locator('.inspection-terrain').innerHTML(),liveMap);
+ await visual.screenshot({path:path.join(output,'shared-paused-map.png')});
+ await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
+ for(let i=0;i<5;i++)await visual.locator('[data-action="minus"]').tap();await frame(visual);
+ assert.equal(await visual.locator('.board-overview-map').count(),1);
+ for(const symbol of ['X','O','#','*'])assert.ok(await visual.locator(`.board-overview-map [data-symbol="${symbol}"]`).count()>0);
+ await visual.screenshot({path:path.join(output,'shared-board-zoom-out.png')});
+ await visual.locator('[data-action="center"]').first().tap();await frame(visual);
+ await visual.locator('[data-action="practice-tool"][data-tool="double"]').first().tap();
+ await visual.locator('.board .available').first().tap();await visual.locator('.board .available').first().tap();
+ await visual.locator('[data-action="practice-tool"][data-tool="rival"]').first().tap();
+ await frame(visual);
+ assert.equal(await visual.locator('.inventory-dock .dock-used-cell').count(),4);
+ const dock=await visual.evaluate(()=>{
+  const x=document.querySelector('.dock-used-cards.x'),bag=document.querySelector('.inventory-dock-button'),o=document.querySelector('.dock-used-cards.o');
+  const xr=x.getBoundingClientRect(),br=bag.getBoundingClientRect(),or=o.getBoundingClientRect();
+  return {x:x.getAttribute('aria-label'),o:o.getAttribute('aria-label'),red:getComputedStyle(x.querySelector('.dock-used-card')).color,green:getComputedStyle(o.querySelector('.dock-used-card')).color,ordered:xr.right<=br.left+1&&br.right<=or.left+1,width:document.documentElement.scrollWidth,viewport:innerWidth};
+ });
+ assert.ok(dock.x.includes('X')&&dock.o.includes('O'));assert.notEqual(dock.red,dock.green);assert.ok(dock.ordered);assert.ok(dock.width<=dock.viewport);
+ await visual.waitForTimeout(1000);
+ await visual.screenshot({path:path.join(output,'inventory-both-sides.png')});
+ await visual.setViewportSize({width:320,height:640});await frame(visual);
+ assert.ok(await visual.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await visual.screenshot({path:path.join(output,'inventory-both-sides-320.png')});
+ await visual.setViewportSize({width:390,height:844});await frame(visual);
+ await visual.locator('[data-action="pause"]').tap();await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
+ assert.equal(await visual.locator('.dock-used-cards.x .dock-used-card').count(),1);assert.equal(await visual.locator('.dock-used-cards.o .dock-used-card').count(),1);
+ assert.deepEqual(visualErrors,[]);results.push({sharedMaps:true,readableZoomGlyphs:true,phenomenaForecasts:true,inventoryBothSides:true,passed:true});await visual.close();
  const {page:expansion,errors:expansionErrors}=await load(context,(()=>{
   const r=createLocal('local','X','O',Date.now(),'normal','untimed',undefined,'X',false,{faunaEnabled:false,territoryEnabled:false});
   r.cells=r.terrain.map((p,i)=>({...p,id:`c${i}`,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));
@@ -159,6 +200,8 @@ try{
   await page.locator('#local-goal-type').selectOption('time');
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
   assert.equal(await page.locator('.ecology-choice-icons svg').count(),8);
+  assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
+  assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
   await page.locator('#local-goal-target').selectOption(mode==='solo'?'33':'540');
   await page.locator('.ecology-choices').scrollIntoViewIfNeeded();

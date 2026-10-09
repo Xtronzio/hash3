@@ -118,12 +118,18 @@ export function spendCard(game,playerId,tool){
   if(tool==='immunity')spendImmunity(game,playerId);else player.inventory.cards[tool]--;
   player.practiceTools=(player.practiceTools||0)+1;
   if(tool==='immunity')return;
+  const inv=player.inventory,turn=inv.completedTurns||0;
+  if(inv.turnUse?.turn!==turn)inv.turnUse={turn,tools:[]};
+  inv.turnUse.tools.push(tool);
   if(tool==='frontier'&&game.pairs[0].pending){game.pairs[0].frontierUsed=true;return;}
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
 export function completeInventoryTurn(game,playerId,{automatic=false,placed=true,random=Math.random}={}){
   initializeInventory(game);
   completeImmunityRound(game,playerId);
+  const usage=game.players.find(p=>p.id===playerId).inventory;
+  if(usage.turnUse?.turn!==(usage.completedTurns||0))usage.turnUse={turn:usage.completedTurns||0,tools:[]};
+  usage.completedTurns=(usage.completedTurns||0)+1;
   for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
   game.inventoryEffects.blocks=game.inventoryEffects.blocks.filter(e=>e.remaining>0&&!game.cells.some(c=>c.x===e.x&&c.y===e.y));
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));

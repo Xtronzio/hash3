@@ -3,12 +3,12 @@ import {terrainOf,key} from './game.js';
 import {HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {habitatTargets,rodentTurnsRemaining} from './habitat-tools.js';
 import {habitatIcons,habitatAnimationDelay} from './inhabitants.js';
-import {territoryIcons} from './territory-tools.js';
+import {territoryIcons,territoryPlacements,territoryFigures,TERRITORY_MIN_FIGURES} from './territory-tools.js';
 import {rodentIcon} from './rodents.js';
 import {neutralIcon} from './neutral.js';
 import {frontierFootprint} from './frontiers.js';
 import {ecologySeconds} from './ecology-clock.js';
-import {TERRITORY_EVENT_RULES,eventLabel,isTimedTerritoryKind} from './territory-event-rules.js';
+import {TERRITORY_EVENT_RULES,eventLabel,isTimedTerritoryKind,territoryAttemptInterval} from './territory-event-rules.js';
 export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Destructores',bomb:'Bombas antiguas',neutral:'Ficha neutral #',frontier:'Muros',...Object.fromEntries(Object.keys(TERRITORY_EVENT_RULES).map(kind=>[kind,eventLabel(kind)]))};
 export const ecologyColors={build:'var(--green)',destroy:'var(--red)',frontier:'var(--frontier)',neutral:'#e3e5e9'};
 const center=points=>{
@@ -45,7 +45,13 @@ export function ecologyClockEvents(room,kind){
 }
 export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date.now()}={}){
  const kinds=['rodent','worm',...(room.faunaEnabled!==false?['build','destroy']:[]),...(room.bombs?.length?['bomb']:[]),...(room.territoryEnabled!==false?[...new Set((room.territoryEvents||[]).map(e=>e.kind))]:[]),'neutral',...(room.frontiers?.length?['frontier']:[])];
- return kinds.map(kind=>{
+ const forecasts=room.territoryEnabled===false?'':[['invaders','territoryNextInvasion',['invader-rain','invader-colony'],'Invasores'],['natural','territoryNextPlacement',['meteorites','ufo','blackhole'],'Fenómenos naturales y estelares']].map(([family,field,icons,name])=>{
+  const remaining=Math.max(0,(room[field]??territoryPlacements(room)+territoryAttemptInterval(room.terrain?.length||0,family))-territoryPlacements(room));
+  const figures=Math.max(0,TERRITORY_MIN_FIGURES-territoryFigures(room)),unit=figures?'figuras entre ambos':'colocaciones entre ambos',value=figures||remaining;
+  const label=`${name} · próximo intento en ${remaining} colocaciones entre ambos${figures?' · faltan '+figures+' figuras para habilitarlo':''}${room.territoryEvents?.length?' · espera al aviso actual':''}`;
+  return `<span class="ecology-jump ecology-next" data-ecology-attempt="${family}" role="img" aria-label="${label}" title="${label}"><span class="ecology-family-icons" aria-hidden="true">${icons.map(ecologyIcon).join('')}</span><span class="ecology-badge mono" aria-label="${value} ${unit}">${value}</span><small>${figures?'#':'↷'}</small></span>`;
+ }).join('');
+ return forecasts+kinds.map(kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
   const birthKind=['build','destroy'].includes(kind)?'work':kind,frequency=['rodent','worm','work'].includes(birthKind)?HABITAT_FREQUENCIES[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
   const badge=events.length?`<span class="ecology-clock mono" data-ecology-kind="${kind}" aria-label="${Math.min(...events.map(e=>ecologySeconds(e,now)))} segundos">${Math.min(...events.map(e=>ecologySeconds(e,now)))}</span><small>s</small>`:kind==='rodent'&&room.rodentRaids?.length?`<span class="ecology-badge mono" aria-label="Turnos restantes del ciclo visible">${Math.max(...(room.rodentRaids||[]).map(rodentTurnsRemaining),0)}</span>`:targets.length>1?`<span class="ecology-badge mono">${targets.length}</span>`:birth!=null?`<span class="ecology-badge mono" data-ecology-birth="${birthKind}" aria-label="Próximo intento en ${birth} colocaciones de la zona">${birth}</span>`:'';

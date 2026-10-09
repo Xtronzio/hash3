@@ -94,8 +94,24 @@
 /* Las últimas cartas de cada colono quedan junto a la mochila, incluso si
    la máquina las ha usado y ha terminado su turno. */
 .inventory-dock-button{position:relative}
-.dock-used-cards{position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);display:flex;gap:5px;align-items:center;justify-content:center;pointer-events:none;z-index:10}
-.dock-used-card{position:relative;display:flex;align-items:center;justify-content:center;gap:2px;padding:3px 5px;min-width:32px;height:27px;border:1px solid currentColor;border-radius:6px;background:#101216;box-shadow:0 2px 8px #0009}
+.game .game-bottom .inventory-dock{display:flex;align-items:center;justify-content:center;flex:2;min-width:112px;max-width:240px;gap:3px}
+.game .game-bottom .inventory-dock>.inventory-dock-button{flex:none;width:44px;min-width:44px;padding:10px 4px}
+.dock-used-cards{display:flex;gap:3px;align-items:center;min-width:24px;max-width:62px;overflow-x:auto;flex:1;overscroll-behavior-x:contain;scrollbar-width:none}
+.dock-used-cards.x{justify-content:flex-end}.dock-used-cards.o{justify-content:flex-start}
+
+.dock-used-card{position:relative;display:flex;align-items:center;justify-content:center;gap:2px;padding:3px 5px;min-width:26px;height:27px;flex:none;border:1px solid currentColor;border-radius:6px;background:#101216;box-shadow:0 2px 8px #0009}
 .dock-used-card.x{color:var(--red)}.dock-used-card.o{color:var(--green)}
 .dock-used-card svg{width:18px!important;height:18px!important;stroke:currentColor;fill:none}
 .dock-used-card b{font-size:10px;line-height:1;min-width:8px}
+
+.dock-used-cards .dock-card-choice{position:relative;left:auto!important;top:auto;transform:none;flex:none;width:26px;height:27px;margin:0;animation:none}
+.game .game-bottom .inventory-dock:has(.dock-immunity-active)>.inventory-dock-button{width:62px}
+
+.game .game-bottom>.inventory-dock{flex:2;min-width:156px;max-width:220px}
+.dock-used-cards{width:51px;min-width:51px;max-width:51px;flex:none;gap:3px;overflow:visible}
+.dock-used-cards.x{color:var(--red)}.dock-used-cards.o{color:var(--green)}
+.dock-used-cell{display:grid;place-items:center;width:24px;height:28px;flex:none}
+.dock-used-cell.is-empty{border:1px dashed currentColor;border-radius:6px;opacity:.3}
+.dock-used-cell>.dock-used-card,.dock-used-cards .dock-card-choice{width:24px;min-width:24px;height:28px;padding:2px}
+.dock-used-cell>.dock-used-card:not(.dock-card-choice)>b{display:none}
+.game .game-bottom>button{min-width:30px;padding-inline:3px}

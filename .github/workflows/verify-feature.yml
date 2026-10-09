@@ -5,6 +5,7 @@ on:
       - feature/3-11-territorio-vivo
       - release/local-diagnostics
       - release/local-territory-r32
+      - release/local-visual-r33
   workflow_dispatch:
 permissions:
   contents: write

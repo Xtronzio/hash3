@@ -58,3 +58,13 @@ test('Cada tornado disperso tiene un localizador para su propia zona 3×3',()=>{
  assert.equal(targets.length,2);
  assert.ok(targets.every(c=>c.region.length===9));
 });
+
+test('Fenómenos e invasores muestran intentos por colocaciones antes del primer aviso y el requisito de figuras',()=>{
+ const game={players:[{id:'x',placements:20,figures:99}],cells:[],terrain:[],territoryEvents:[],territoryNextPlacement:333,territoryNextInvasion:66};
+ const markup=ecologyNavigationMarkup(game,'x',{now});
+ assert.match(markup,/data-ecology-attempt="natural"[^]*?313 colocaciones entre ambos/);
+ assert.match(markup,/data-ecology-attempt="invaders"[^]*?46 colocaciones entre ambos/);
+ assert.doesNotMatch(markup,/ecology-clock/);
+ game.players[0].figures=12;assert.match(ecologyNavigationMarkup(game,'x'),/faltan 87 figuras para habilitarlo/);
+ game.territoryEnabled=false;assert.doesNotMatch(ecologyNavigationMarkup(game,'x'),/data-ecology-attempt=/);
+});
