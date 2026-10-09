@@ -4,6 +4,7 @@ on:
     branches:
       - feature/3-11-territorio-vivo
       - release/local-diagnostics
+      - release/local-territory-r32
   workflow_dispatch:
 permissions:
   contents: write
@@ -29,13 +30,13 @@ jobs:
         with:
           name: territory-browser-qa
           path: browser-results/
-      - name: Package local diagnosis for Pages
-        if: github.ref == 'refs/heads/release/local-diagnostics' && success()
+      - name: Package local revision for Pages
+        if: startsWith(github.ref, 'refs/heads/release/local-') && success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A docs/
           if ! git diff --cached --quiet; then
-            git commit -m "Build Pages R0.21.31 for local diagnosis"
-            git push origin HEAD:release/local-diagnostics
+            git commit -m "Build Pages for ${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
