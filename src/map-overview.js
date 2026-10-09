@@ -12,7 +12,7 @@ export function overviewModel(room,own,target,{includeFrontiers=true}={}){
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),owners=new Set(myPair?[myPair.x,myPair.o]:[]);
   const eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y))),rodents=new Map(habitatLocations(room).map(r=>[key(r.x,r.y),r]));
   const position=target?.lastMove?{x:target.lastMove.x+.5,y:target.lastMove.y+.5}:targetPair?{x:targetPair.active.x+1.5,y:targetPair.active.y+1.5}:null;
-  return {bounds,habitats:habitatLocations(room),frontiers:includeFrontiers?frontierMarkup(room):'',terrain:terrain.map(p=>{const c=cells.get(key(p.x,p.y)),r=rodents.get(key(p.x,p.y));return {...p,fill:r?'var(--yellow)':c?(c.symbol==='#'?'#c5cbd4':c.id&&c.id===target?.lastMove?.id?'var(--blue)':owners.has(c.owner)?c.symbol==='X'?'var(--red)':'var(--green)':'#7b8492'):'#343e4c',eaten:!c&&eaten.has(key(p.x,p.y)),rodent:r||null};}),active:myPair?.active,ownColor:own?.symbol==='X'?'var(--red)':'var(--green)',target:position};
+  return {bounds,habitats:habitatLocations(room),frontiers:includeFrontiers?frontierMarkup(room):'',terrain:terrain.map(p=>{const c=cells.get(key(p.x,p.y)),r=rodents.get(key(p.x,p.y));return {...p,fill:r?'var(--yellow)':c?(c.symbol==='#'?'#c5cbd4':c.symbol==='*'?'#dba9ff':c.id&&c.id===target?.lastMove?.id?'var(--blue)':owners.has(c.owner)?c.symbol==='X'?'var(--red)':'var(--green)':'#7b8492'):'#343e4c',eaten:!c&&eaten.has(key(p.x,p.y)),rodent:r||null};}),active:myPair?.active,ownColor:own?.symbol==='X'?'var(--red)':'var(--green)',target:position};
 }
 
 export function overviewPoint(bounds,rect,clientX,clientY){
