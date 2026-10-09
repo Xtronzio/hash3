@@ -42,13 +42,13 @@ test('UFO scales with occupied pieces rather than terrain; demolition removes ce
 });
 test('One card per new 333-cell milestone; no replay after demolition and recrossing, and pauses freeze the warning',()=>{
  let r=board(332);r.cells=[];assert.equal(recordTerritoryGrowth(r,1,1000),false);r.terrain.push({x:2,y:10});
- assert.equal(recordTerritoryGrowth(r,1,1000,()=>0),true);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'rain');assert.equal(r.territoryEvents[0].region.length,33);
+ assert.equal(recordTerritoryGrowth(r,1,1000,()=>0),true);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'invader-rain');assert.equal(r.territoryEvents[0].region.length,3);
  recordTerritoryGrowth(r,999,2000,()=>0);assert.equal(r.territoryEvents.length,1);
  r=localCommand(r,'pause',{},11000);assert.equal(r.territoryEvents[0].remainingMs,23000);
  const paused=JSON.stringify(r);assert.equal(localCommand(r,'tick',{},1000000),r);assert.equal(JSON.stringify(r),paused);
  r=localCommand(JSON.parse(paused),'resume',{},1000000);assert.equal(r.territoryEvents[0].nextAt,1023000);
  r=localCommand(r,'tick',{},1022999);assert.equal(r.terrain.length,333);
- r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.terrain.length,300);assert.equal(r.habitatEvent.actions.length,33);
+ r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.terrain.length,333);assert.equal(r.habitatEvent.actions.length,3);assert.equal(r.cells.filter(c=>c.symbol==='*').length,3);
  r.terrain=board(333).terrain;assert.equal(recordTerritoryGrowth(r,33,1024000),false);
  r.ecologyRecovery.moves=0;r.terrain=board(666).terrain;assert.equal(recordTerritoryGrowth(r,333,1056000,()=>0),true);assert.equal(r.territoryEvents[0].region.length,66);
 });
@@ -74,7 +74,7 @@ test('Warning, impact and recovery suppress fauna; populations and future interv
  r.worms=[{id:'worm',kind:'worm',player:'local-x',x:10,y:5,body:[{x:10,y:5}],eaten:0,nextAt:34000}];
  recordTerritoryGrowth(r,1,1000,()=>0);const before=r.cells.length,raids=JSON.stringify(r.rodentRaids);
  countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.cells.length,before);assert.equal(JSON.stringify(r.rodentRaids),raids);
- const impacted=localCommand(r,'tick',{},34000,()=>0);assert.ok(impacted.habitatEvent.actions.every(a=>a.kind==='rain'));assert.equal(impacted.worms[0]?.eaten||0,0);
+ const impacted=localCommand(r,'tick',{},34000,()=>0);assert.ok(impacted.habitatEvent.actions.every(a=>a.kind==='invader-rain'));assert.equal(impacted.worms[0]?.eaten||0,0);
  assert.equal(impacted.ecologyRecalibration.size,300);assert.equal(impacted.ecologyRecovery.moves,3);
  countHabitatPlacement(impacted,'local-x',{x:0,y:0},34001,()=>0);assert.equal(impacted.ecologyRecovery.moves,2);
 });
@@ -99,11 +99,11 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  let r=board(999);r.cells=r.cells.slice(0,500);r.territoryMilestone=3;r.territoryNextPlacement=1;
  r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
  r=localCommand(r,'move',{x:8,y:30},34000,()=>0);
- assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,99);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,34);
+ assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,3);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,34);
  r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.territoryEvents[0].nextAt,1023000);
- r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,900);
+ r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,999);
  r.territoryNextPlacement=1;assert.equal(recordTerritoryPlacement(r,1023001,()=>0),false);assert.equal(r.territoryEvents.length,0);
- r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'cataclysm');assert.equal(r.territoryEvents[0].region.length,Math.floor(900*33/333));
+ r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'meteorites');assert.equal(r.territoryEvents[0].region.length,Math.floor(999*33/333));
  });
  test('Old large saves receive one future attempt after 33 placements, without historical events or lost residents',()=>{
  const r=board(3333);r.players[0].placements=3000;r.players[1].placements=2900;delete r.territoryActivityVersion;
@@ -112,15 +112,15 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  r.players[0].placements++;assert.ok(recordTerritoryPlacement(r,10001,()=>0));assert.equal(r.territoryNextPlacement,5966);
  });
 test('Phenomena require 99 shared figures, respect the switch and work below 333 cells',()=>{
- for(const size of [99,332,333]){const r=board(size);r.territoryNextPlacement=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=98;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=49;r.players[1].figures=50;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,3*Math.floor(Math.floor(size*33/333)/3));}
+ for(const size of [99,332,333]){const r=board(size);r.territoryNextPlacement=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=98;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=49;r.players[1].figures=50;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,3);}
 });
-test('Viable phenomena rotate through all three types with constant randomness and saved state',()=>{
+test('Daily invasors inherit the former rain position and natural phenomena rotate with saved state',()=>{
  let r=board(333);const seen=[];
  for(let n=0;n<6;n++){
   r.territoryNextPlacement=0;assert.ok(recordTerritoryPlacement(r,1000+n*100000,()=>0));seen.push(r.territoryEvents[0].kind);
   r=JSON.parse(JSON.stringify(r));r.territoryEvents=[];
  }
- assert.deepEqual(seen,['rain','cataclysm','ufo','rain','cataclysm','ufo']);
+ assert.deepEqual(seen,['invader-rain','meteorites','earthquake','invader-colony','pandemic','ufo']);
 });
 
 test('The placement that reaches 99 figures announces without executing a due worm meal',()=>{
