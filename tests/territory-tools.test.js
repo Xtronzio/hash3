@@ -75,7 +75,7 @@ test('Warning, impact and recovery suppress fauna; populations and future interv
  recordTerritoryGrowth(r,1,1000,()=>0);const before=r.cells.length,raids=JSON.stringify(r.rodentRaids);
  countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.cells.length,before);assert.equal(JSON.stringify(r.rodentRaids),raids);
  const impacted=localCommand(r,'tick',{},34000,()=>0);assert.ok(impacted.habitatEvent.actions.every(a=>a.kind==='invader-rain'));assert.equal(impacted.worms[0]?.eaten||0,0);
- assert.equal(impacted.ecologyRecalibration.size,300);assert.equal(impacted.ecologyRecovery.moves,3);
+ assert.equal(impacted.ecologyRecalibration.size,333);assert.equal(impacted.ecologyRecovery.moves,3);
  countHabitatPlacement(impacted,'local-x',{x:0,y:0},34001,()=>0);assert.equal(impacted.ecologyRecovery.moves,2);
 });
 
