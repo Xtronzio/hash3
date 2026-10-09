@@ -299,7 +299,7 @@ try{
  await growthPage.locator('[data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
  assert.match(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
  assert.equal(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
- assert.match(await growthPage.locator('.board .phenomenon-marker').innerText(),/4\/9/);
+ assert.match(await growthPage.locator('.board .phenomenon-marker').innerText(),/4\/9/);assert.equal(await growthPage.locator('.board .phenomenon-marker').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
  await growthPage.screenshot({path:path.join(output,'invasion-growing-r37.png')});
  assert.deepEqual(growthErrors,[]);results.push({invasionGrowingBadge:true,passed:true});await growthPage.close();
  // A due storm can pay both symbols, and its visible notice identifies each.
