@@ -121,8 +121,11 @@ export function advanceTerritory(room,now=Date.now()){
   room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
   for(const p of room.players)if(p.lastMove){const moved=survivors.get(p.lastMove.id);if(moved)p.lastMove={...moved};else delete p.lastMove;}
   room.eatenCells=(room.eatenCells||[]).filter(c=>!hit.has(key(c.x,c.y)));
-  if(['vacate','blackhole'].includes(eventRule(event.kind)?.effect))
-   room.eatenCells.push(...changes.filter(c=>!room.cells.some(p=>p.x===c.x&&p.y===c.y)).map(c=>({x:c.x,y:c.y})));
+  if(['vacate','blackhole'].includes(eventRule(event.kind)?.effect)){
+   const cleared=event.kind==='blackhole'?event.region:changes;
+   const remaining=new Set(room.cells.map(c=>key(c.x,c.y)));
+   room.eatenCells.push(...cleared.filter(c=>!remaining.has(key(c.x,c.y))).map(c=>({x:c.x,y:c.y})));
+  }
   if(demolish){
    room.terrain=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y)));
    room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by,now)||!frontierHit(f,hit));
