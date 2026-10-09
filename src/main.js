@@ -1,6 +1,6 @@
 import {snapshotMemo} from './snapshot-memo.js';
 import {machineTurnKey} from './machine-turn.js';
-import {copyText,copyPreparedText,legacyCopyText} from './clipboard.js';
+import {copyText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
 import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
@@ -414,6 +414,7 @@ function renderHallDialog() {
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local,hasPrevious:hallHistory.length>0});
   app.insertAdjacentHTML('beforeend',markup);
+  if(hallDialog==='profile')hydrateProfileAccess();
   if(hallDialog==='games')bindOnlineThumbnails();
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
@@ -434,11 +435,27 @@ function renderHallDialog() {
   const preference=document.querySelector('#preference'),pairField=document.querySelector('#pair-code-field');
   if(pairField){const refreshPairField=()=>{pairField.hidden=preference.value!=='pair';const button=document.querySelector('#entry-form button[value="world"]');button.textContent=preference.value==='new'?'Crear pareja':preference.value==='pair'?'Unirme a la pareja':'Entrar en Mundo';};preference.addEventListener('change',refreshPairField);if(pairUrlCode){preference.value='pair';document.querySelector('#pair-code').value=pairUrlCode;}refreshPairField();}
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{
-    e.preventDefault();const name=document.querySelector('#profile-name').value.trim();
-    if(name.length<2||name.length>18){notify('El apodo debe tener entre 2 y 18 caracteres.');return;}
-    save('hash3_name',name);try{if(read('hash3_profile_token'))await profileAccess('sync',{name});}catch(error){notify(error.message);return;}closeHallDialog(false);renderHome();document.querySelector('[data-action="hall-profile"]')?.focus();notify('Apodo guardado.');
+    e.preventDefault();if(busy)return;
+    const name=document.querySelector('#profile-name').value.trim();
+    if(name.length<2||name.length>18){profileStatus('profile-name-status','El apodo debe tener entre 2 y 18 caracteres.','error');return;}
+    save('hash3_name',name);
+    document.querySelector('.profile-identity strong').textContent=name;
+    profileStatus('profile-name-status','Apodo guardado en este navegador.','ok');
+    if(read('hash3_profile_token')){
+     try{await profileAccess('sync',{name});profileStatus('profile-name-status','Apodo guardado y sincronizado con tu perfil online.','ok');}
+     catch(error){profileStatus('profile-name-status','Apodo guardado aquí, pero no se ha sincronizado: '+error.message,'error');}
+    }
   });
-  document.querySelector('#profile-import')?.addEventListener('submit',async e=>{e.preventDefault();if(busy)return;await run(()=>loadProfileAccess(document.querySelector('#profile-link').value));});
+  document.querySelector('#profile-import')?.addEventListener('submit',async e=>{
+    e.preventDefault();if(busy)return;
+    const input=document.querySelector('#profile-link')?.value.trim();
+    profileStatus('profile-restore-status','Verificando tu enlace…');
+    busy=true;
+    const submit=document.querySelector('#profile-import button[type="submit"]');if(submit)submit.disabled=true;
+    try{await loadProfileAccess(input);}
+    catch(error){profileStatus('profile-restore-status',error.message||'No se pudo cargar el perfil.','error');}
+    finally{busy=false;if(submit?.isConnected)submit.disabled=false;}
+  });
   const dialog=document.querySelector('.hall-dialog');
   dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
   (document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]')).focus();
