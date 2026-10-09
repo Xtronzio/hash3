@@ -1,6 +1,6 @@
 # Diagnóstico del enlace y Supabase · 9 de octubre de 2026
 
-Jorge observa que los problemas aparecieron al intentar generar el enlace para otro navegador. Se contrastó esa observación con el historial Git, la función realmente desplegada y los registros del proyecto `vyzugvepzylidyxitojo`. No se modificó el servidor ni se regeneró ningún acceso.
+Jorge observa que los problemas aparecieron al intentar generar el enlace para otro navegador. Se contrastó esa observación con el historial Git, la función realmente desplegada y los registros del proyecto `vyzugvepzylidyxitojo`. La investigación leyó registros y código; se intentó pausar únicamente el reloj de Mundo, pero su ejecución no se pudo confirmar. No se regeneró ningún acceso.
 
 ## Cronología comprobada
 
