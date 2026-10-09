@@ -11,6 +11,7 @@ import {initializeTerritory,advanceTerritory,recordTerritoryPlacement} from './t
 export const HABITAT_INTERVAL=33000;
 export {HABITAT_FREQUENCIES} from './habitat-budget.js';
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
+const fourNeighbors=p=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:p.x+dx,y:p.y+dy}));
 const choose=(all,random)=>all.length?all[Math.min(all.length-1,Math.floor(Math.max(0,random())*all.length))]:null;
 const uuid=()=>crypto.randomUUID();
 export function initializeHabitats(room,now=Date.now()){
@@ -87,12 +88,36 @@ function project(room,point,player,random,now){
  const anchors=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y)));
  const eligible=empty.filter(c=>!anchors.has(key(c.x,c.y)));
  if(eligible.length<9)return false;
- const destroy=[];while(destroy.length<9){const c=choose(eligible,random);destroy.push({x:c.x,y:c.y});eligible.splice(eligible.indexOf(c),1);}
- const build=[],blocked=new Set(frontierSegments(room).map(edgeKey));
- let edge=area;
- while(build.length<9){
-  const options=new Map();for(const c of edge)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const p={x:c.x+dx,y:c.y+dy},k=key(p.x,p.y);if(!known.has(k)&&!reserved.has(k)&&!blocked.has(edgeKey({a:c,b:p})))options.set(k,p);}
-  const c=choose([...options.values()],random);if(!c)return false;build.push(c);known.add(key(c.x,c.y));edge=[...edge,c];
+ // Una obra equivale a una promoción: varios proyectos aparecen dispersos,
+ // pero cada intervención se concentra en una misma manzana de 3×3.
+ const eligibleKeys=new Set(eligible.map(c=>key(c.x,c.y)));
+ const plot=origin=>Array.from({length:9},(_,i)=>({x:origin.x+i%3,y:origin.y+Math.floor(i/3)}));
+ const demolitionSites=eligible.map(plot).filter(block=>block.every(c=>eligibleKeys.has(key(c.x,c.y))));
+ const destroy=demolitionSites.length?choose(demolitionSites,random):[];
+ if(!destroy.length)while(destroy.length<9){
+  const c=choose(eligible,random);destroy.push({x:c.x,y:c.y});eligible.splice(eligible.indexOf(c),1);
+ }
+ const territory=new Set(area.map(c=>key(c.x,c.y)));
+ const blocked=new Set(frontierSegments(room).map(edgeKey));
+ const buildSites=new Map();
+ for(const c of area)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]])for(let xOffset=0;xOffset<3;xOffset++)for(let yOffset=0;yOffset<3;yOffset++){
+  const origin={x:c.x+dx-xOffset,y:c.y+dy-yOffset},group=plot(origin);
+  if(group.some(p=>known.has(key(p.x,p.y))||reserved.has(key(p.x,p.y))))continue;
+  const joins=group.some(p=>fourNeighbors(p).some(n=>territory.has(key(n.x,n.y))&&!blocked.has(edgeKey({a:p,b:n}))));
+  if(joins)buildSites.set(key(origin.x,origin.y),group);
+ }
+ const build=buildSites.size?choose([...buildSites.values()],random):[];
+ if(!build.length){
+  let edge=area;
+  while(build.length<9){
+   const options=new Map();
+   for(const c of edge)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const p={x:c.x+dx,y:c.y+dy},k=key(p.x,p.y);
+    if(!known.has(k)&&!reserved.has(k)&&!blocked.has(edgeKey({a:c,b:p})))options.set(k,p);
+   }
+   const chosen=choose([...options.values()],random);if(!chosen)return false;
+   build.push(chosen);known.add(key(chosen.x,chosen.y));edge=[...edge,chosen];
+  }
  }
  for(let i=0;i<3;i++)room.works.push({id:uuid(),player,kind:'work',destroy:destroy.slice(i*3,i*3+3),build:build.slice(i*3,i*3+3),done:0,nextAt:now+HABITAT_INTERVAL});
  return true;
