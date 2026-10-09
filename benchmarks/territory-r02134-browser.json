@@ -1,0 +1,132 @@
+[
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "size": 999,
+    "detailNodes": 88,
+    "afterDragNodes": 120,
+    "elapsedMs": 3176,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "size": 33333,
+    "detailNodes": 88,
+    "afterDragNodes": 120,
+    "elapsedMs": 5101,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "size": 999,
+    "detailNodes": 117,
+    "afterDragNodes": 150,
+    "elapsedMs": 3063,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "size": 33333,
+    "detailNodes": 117,
+    "afterDragNodes": 150,
+    "elapsedMs": 4883,
+    "passed": true
+  },
+  {
+    "kind": "meteorites",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "earthquake",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "pandemic",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "ufo",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "tornado-rain",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "hurricane",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "blackhole",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "invader-rain",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "kind": "invader-colony",
+    "passed": true,
+    "ecologyStates": true
+  },
+  {
+    "sharedMaps": true,
+    "readableZoomGlyphs": true,
+    "inventoryBothSides": true,
+    "passed": true,
+    "phenomenaInactive": true
+  },
+  {
+    "expansion": true,
+    "passed": true
+  },
+  {
+    "tornadoAnimation": true,
+    "passed": true
+  },
+  {
+    "profileMobile": true,
+    "passed": true
+  },
+  {
+    "localStart": "solo",
+    "moves": 2,
+    "matchDurationSeconds": 33,
+    "setupEcologyIcons": 8,
+    "networkOffline": true,
+    "noSupabaseRequests": true,
+    "passed": true
+  },
+  {
+    "localStart": "offline",
+    "moves": 1,
+    "matchDurationSeconds": 540,
+    "setupEcologyIcons": 8,
+    "networkOffline": true,
+    "noSupabaseRequests": true,
+    "passed": true
+  },
+  {
+    "supabaseRequests": 0,
+    "passed": true
+  }
+]

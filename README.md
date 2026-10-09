@@ -1,8 +1,8 @@
-# #3 — R0.21.33 · Territorio vivo local
+# #3 — R0.21.34 · Territorio vivo local
 
 ## Territorio vivo · #3_11
 
-Mapas activos, pausa y tablero alejado comparten representación. Fenómenos e invasores muestran sus próximos intentos antes del aviso; dos celdas a cada lado de la mochila muestran el inventario usado por X (rojo) y O (verde).
+Mapas activos, pausa y tablero alejado comparten representación. Los nueve iconos de fenómenos e invasores quedan sombreados mientras están inactivos; solo el aviso real se ilumina, con un pulso breve y sus segundos restantes. La previsión por familia continúa en las etiquetas y Próximos eventos. Dos celdas a cada lado de la mochila muestran el inventario usado por X (rojo) y O (verde).
 
 La PR #1 está integrada. Nuevas partidas por tiempo total: **⚡ · 33 segundos**, **3, 6 y 9 minutos**, independientes del reloj de turno. Los guardados y logros anteriores de 5/10 minutos conservan su duración. El selector muestra fauna y habitantes, invasores y fenómenos con los iconos del catálogo actual.
 
