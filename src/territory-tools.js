@@ -5,27 +5,36 @@ import {habitatInterval,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {frontierHit} from './frontiers.js';
 import {eventRule,eventLabel,pickEventKind,confirmEventKind,EVENT_BALANCE,territoryAttemptInterval,impactCount} from './territory-event-rules.js';
 import {plannedEventRegion,applyPlannedEvent} from './territory-event-actions.js';
+import {localLiving,livingFactor,livingMinimum,livingAttempt,livingEventClock,livingFirstClock} from './living-balance.js';
 
 export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=EVENT_BALANCE.warningMs,TERRITORY_PLACEMENTS=EVENT_BALANCE.placementsPerAttempt;
 export const TERRITORY_MIN_FIGURES=99;
 export const territoryFigures=room=>room.players.reduce((n,p)=>n+(p.figures||0),0);
-export const territoryReady=room=>territoryFigures(room)>=TERRITORY_MIN_FIGURES;
+export const territoryReady=room=>territoryFigures(room)>=livingMinimum(room);
 export const territoryPlacements=room=>room.players.reduce((n,p)=>n+(p.placements??room.cells.filter(c=>c.owner===p.id).length),0);
 export const territoryIcons={
  rain:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>',
  meteorites:'<path d="M4 6 12 14m-6-9 9 9M19 4l9 9M14 23l7-7 8 7-4 7H15l-5-4Z"/><path d="m8 18 4 4m-8 0 3 3"/>',
  cataclysm:'<path d="m18 2-8 12 9 2-7 14M2 21l6-3m16 5 6-2M3 8l5 2m16-1 5-3"/>',
  earthquake:'<path d="M2 24h8l3-7 5 7 5-10 7 10M10 4l4 8-6 6m13-14-3 9 5 4"/>',
- pandemic:'<circle cx="16" cy="16" r="4"/><path d="M16 12V2M16 20v10M12 16H2m18 0h10M13 13 6 6m13 13 7 7M19 13l7-7M13 19l-7 7"/>',
+ pandemic:'<path d="M10 7c-4 2-6 7-4 12s7 8 12 6 9-7 7-12-10-9-15-6ZM16 6V2m-3 0h6M8 9 5 6m-2 2 4-4M6 16H2m0-3v6m7 4-3 4m-2-2 4 4m9-4v5m-3 0h6m4-9 4 3m-2 2 4-4m-5-12 4-3m-2-2 4 4"/><circle cx="12" cy="14" r="1.5"/><circle cx="19" cy="18" r="2"/><circle cx="18" cy="11" r="1"/>',
  ufo:'<ellipse cx="16" cy="15" rx="13" ry="4"/><path d="M9 12a7 7 0 0 1 14 0M10 22l-4 7m10-7v8m6-8 4 7"/>',
- 'tornado-rain':'<path d="M1 5h10m4 0h15M4 10h8m5 0h10M7 15h6m7 0h7M9 20h6m9 0h4M12 25h4m8 0h4m-13 4h3"/>',
- hurricane:'<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>',
- blackhole:'<circle cx="16" cy="16" r="7"/><path d="M3 14c1-10 15-16 23-6S24 31 13 29m-4-18c-5 3-7 11-3 16"/>',
+ 'tornado-rain':'<path d="M2 5h12M4 10h9M6 15h6M8 20h4l-3 5M18 8h12m-10 5h8m-6 5h5m-4 5h4l-3 5"/><path d="m2 25 1 3m14-25 1 3"/>',
+ hurricane:'<path d="M25 3C10 0 1 13 8 24c5 8 18 5 20-4M7 29C22 32 31 19 24 8c-5-8-18-5-20 4"/><circle cx="16" cy="16" r="4"/>',
+ blackhole:'<circle cx="16" cy="16" r="6" fill="#08090b"/><ellipse cx="16" cy="16" rx="14" ry="5" transform="rotate(-25 16 16)"/><path d="M6 10C8 0 26 1 28 12M4 20c2 11 20 12 23 2"/>',
  'invader-rain':'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/><path d="m9 19 12 0m-6-6v12"/>',
  'invader-colony':'<rect x="3" y="3" width="26" height="26" rx="2"/><path d="M12 3v26M20 3v26M3 12h26M3 20h26m3-14 3 3m0-3-3 3m12 13 4 4m0-4-4 4"/>'
 };
 export function initializeTerritory(room){
  room.territoryEvents||=[];
+ if(localLiving(room)&&room.livingTerritoryVersion!==1){
+  const now=room.clockNow??Date.now();
+  room.territoryNextPlacement=territoryPlacements(room)+livingAttempt(room,'natural');
+  room.territoryNextInvasion=territoryPlacements(room)+livingAttempt(room,'invaders');
+  room.territoryNextNaturalAt=now+livingFirstClock(room,'natural');room.territoryNextInvaderAt=now+livingFirstClock(room,'invaders');
+  room.livingTerritoryVersion=1;room.territoryActivityVersion=4;
+  if(room.status==='paused'){room.territoryNextNaturalAtRemaining=livingFirstClock(room,'natural');room.territoryNextInvaderAtRemaining=livingFirstClock(room,'invaders');}
+ }
  // Adopt current terrain without firing historical growth again.
  room.territoryMilestone??=Math.floor(terrainOf(room).length/333);
  if(room.territoryActivityVersion!==4){
@@ -41,6 +50,17 @@ export function territoryRegion(room,kind,random=Math.random,count=Math.floor(te
  const anchors=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y)));
  const eligible=terrain.filter(c=>kind==='ufo'||!anchors.has(key(c.x,c.y)));
  const neighbors=c=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:c.x+dx,y:c.y+dy}));
+ if(localLiving(room)&&kind==='cataclysm'&&count>=6){
+  const allowed=new Set(eligible.map(c=>key(c.x,c.y))),dimensions=[];
+  for(let w=2;w<=Math.sqrt(count);w++)if(count%w===0)dimensions.push([w,count/w],[count/w,w]);
+  dimensions.sort((a,b)=>Math.abs(a[0]-a[1])-Math.abs(b[0]-b[1]));
+  const offset=Math.min(eligible.length-1,Math.floor(Math.max(0,random())*eligible.length));
+  for(const [width,height] of dimensions)for(let i=0;i<eligible.length;i++){
+   const seed=eligible[(i+offset)%eligible.length],region=[];let valid=true;
+   for(let dy=0;dy<height&&valid;dy++)for(let dx=0;dx<width;dx++){const c={x:seed.x+dx,y:seed.y+dy};if(!allowed.has(key(c.x,c.y))){valid=false;break;}region.push(c);}
+   if(valid)return region;
+  }
+ }
  if(kind==='rain'){
   const pool=[...eligible],region=[];
   while(region.length<count&&pool.length){const i=Math.min(pool.length-1,Math.floor(Math.max(0,random())*pool.length));region.push(pool[i]);pool[i]=pool.at(-1);pool.pop();}
@@ -76,8 +96,9 @@ export function territoryRegion(room,kind,random=Math.random,count=Math.floor(te
 function announceTerritory(room,now,random,trigger,family){
  const size=terrainOf(room).length,milestone=Math.floor(size/333);
  room.territoryMilestone=Math.max(room.territoryMilestone,milestone);
- room[family==='invaders'?'territoryNextInvasion':'territoryNextPlacement']=territoryPlacements(room)+territoryAttemptInterval(size,family);
- const choice=pickEventKind(room,family);
+ room[family==='invaders'?'territoryNextInvasion':'territoryNextPlacement']=territoryPlacements(room)+(livingAttempt(room,family)??territoryAttemptInterval(size,family));
+ if(localLiving(room))room[family==='invaders'?'territoryNextInvaderAt':'territoryNextNaturalAt']=now+livingEventClock(room,family);
+ const choice=pickEventKind(room,family,random);
  for(const kind of choice.order){
   const planned=kind==='ufo'?territoryRegion(room,'ufo',random,impactCount(room,kind)):
    kind==='earthquake'?territoryRegion(room,'cataclysm',random,impactCount(room,kind)):
@@ -88,9 +109,9 @@ function announceTerritory(room,now,random,trigger,family){
   // depends on rendering, navigation or the size of the visible window.
   if(family!=='invaders')for(const e of [...(room.worms||[]),...(room.works||[]),...(room.bombs||[])])
    if(e.remainingMs==null)e.remainingMs=Math.max(0,(e.nextAt||now+33000)-now);
-  confirmEventKind(room,choice);
+  confirmEventKind(room,choice,kind);
   room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,trigger,region,
-   ...(planned.groups?{groups:planned.groups}:{}),x:region[0].x,y:region[0].y,
+   ...(planned.groups?{groups:planned.groups}:{}),...(planned.paths?{paths:planned.paths}:{}),...(planned.approaches?{approaches:planned.approaches}:{}),x:region[0].x,y:region[0].y,
    nextAt:now+EVENT_BALANCE.warningMs});return true;
  }
  // An impossible attack is skipped, never queued up for a later burst.
@@ -105,11 +126,12 @@ export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.rand
 }
 export function territoryPlacementDue(room,now=Date.now(),increment=0,{naturalOnly=false}={}){
  return territoryEnabled(room)&&territoryReady(room)&&!room.territoryEvents?.length&&!faunaSuspended(room,now)&&
-  (territoryPlacements(room)+increment>=room.territoryNextPlacement||!naturalOnly&&territoryPlacements(room)+increment>=room.territoryNextInvasion);
+  (!localLiving(room)||!room.endsAt||Date.parse(room.endsAt)-now>=EVENT_BALANCE.warningMs)&&
+  (territoryPlacements(room)+increment>=room.territoryNextPlacement||localLiving(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&(territoryPlacements(room)+increment>=room.territoryNextInvasion||localLiving(room)&&now>=room.territoryNextInvaderAt));
 }
 export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random){
  initializeTerritory(room);if(!territoryPlacementDue(room,now))return false;
- const family=territoryPlacements(room)>=room.territoryNextPlacement?'natural':'invaders';
+ const family=territoryPlacements(room)>=room.territoryNextPlacement||localLiving(room)&&now>=room.territoryNextNaturalAt?'natural':'invaders';
  return announceTerritory(room,now,random,'placements',family);
 }
 export function advanceTerritory(room,now=Date.now()){
@@ -153,13 +175,13 @@ export function territoryNotice(room,now=Date.now()){
 }
 
 export function rebalanceAfterTerritory(room,now=Date.now()){
- const terrain=terrainOf(room),size=terrain.length,known=new Set(terrain.map(c=>key(c.x,c.y))),unit=Math.ceil(size/333);
+ const terrain=terrainOf(room),size=terrain.length,known=new Set(terrain.map(c=>key(c.x,c.y))),unit=localLiving(room)?livingFactor(size):Math.ceil(size/333);
  const before={rodents:(room.rodentRaids||[]).reduce((n,r)=>n+r.count,0),worms:(room.worms||[]).length,workers:(room.works||[]).length};
  room.worms=(room.worms||[]).filter(w=>(w.body||[]).every(c=>known.has(key(c.x,c.y)))).slice(0,unit);
  room.works=(room.works||[]).filter(w=>w.destroy.slice(w.done).every(c=>known.has(key(c.x,c.y)))).slice(0,unit*3);
- let rats=Math.ceil(size*3/333);
+ let rats=localLiving(room)?unit*3:Math.ceil(size*3/333);
  room.rodentRaids=(room.rodentRaids||[]).filter(r=>known.has(key(r.x,r.y))).flatMap(r=>{const count=Math.min(r.count,rats);rats-=count;return count?[{...r,count}]:[];});
- for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries(HABITAT_FREQUENCIES))zone.next[kind]=zone.placements+habitatInterval(n,size);}
+ if(!localLiving(room))for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries(HABITAT_FREQUENCIES))zone.next[kind]=zone.placements+habitatInterval(n,size);}
  room.ecologyRecovery={until:now+EVENT_BALANCE.recoveryMs,moves:EVENT_BALANCE.recoveryMoves};
  room.ecologyRecalibration={at:now,size,pieces:room.cells.length,before,after:{rodents:room.rodentRaids.reduce((n,r)=>n+r.count,0),worms:room.worms.length,workers:room.works.length}};
  for(const e of [...room.worms,...room.works,...(room.bombs||[])])e.remainingMs=EVENT_BALANCE.recoveryMs;

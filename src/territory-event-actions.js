@@ -4,6 +4,8 @@ import {terrainOf,key} from './game.js';
 import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {EVENT_BALANCE,eventRule,impactCount} from './territory-event-rules.js';
+import {localLiving} from './living-balance.js';
+import {planInvasion,defendedInvasionCells} from './invasion-paths.js';
 
 const choose=(list,random)=>list[Math.min(list.length-1,Math.floor(Math.max(0,random())*list.length))];
 const four=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -51,6 +53,16 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
  const r=eventRule(kind);if(!r)return [];
  const count=impactCount(room,kind);
  if(!count)return [];
+ if(localLiving(room)&&['invader-colony','invader-rain'].includes(kind))return planInvasion(room,allowed(room,now),count,kind==='invader-colony',random);
+ if(localLiving(room)&&kind==='blackhole'){
+  const pool=allowed(room,now),eligible=new Set(pool.map(c=>key(c.x,c.y))),groups=[],used=new Set();
+  for(const p of randomSubset(pool,pool.length,random)){
+   const group=Array.from({length:9},(_,i)=>({x:p.x+i%3,y:p.y+Math.floor(i/3)}));
+   if(group.some(c=>!eligible.has(key(c.x,c.y))||used.has(key(c.x,c.y))))continue;
+   groups.push(group);for(const c of group)used.add(key(c.x,c.y));if(groups.length*9>=count)break;
+  }
+  return {region:groups.flat(),groups};
+ }
  if(kind==='blackhole'||kind==='invader-colony')return wholeSquare(room,kind==='blackhole'?EVENT_BALANCE.blackholeSide:EVENT_BALANCE.invasionColonySide,random,now);
  if(kind==='invader-rain')return randomSubset(allowed(room,now),count,random);
  if(kind==='pandemic'){
@@ -109,6 +121,7 @@ function shuffle(room,region,random,blocked){
 export function applyPlannedEvent(room,event,now=Date.now()){
  const rule=eventRule(event.kind);if(!rule)return {hit:new Set(),actions:[],demolish:false};
  const blocked=immutable(room,now),known=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
+ if(rule.family==='invaders')for(const k of defendedInvasionCells(room,event))blocked.add(k);
  if(rule.effect==='demolish')for(const p of room.pairs){const a=p.terrainAnchor||p.active;blocked.add(key(a.x,a.y));}
  let region=(event.region||[]).filter(c=>known.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
  if(['earthquake','cataclysm'].includes(event.kind)){
@@ -127,14 +140,15 @@ export function applyPlannedEvent(room,event,now=Date.now()){
   // three Chebyshev steps of the core, never inventing/removing cells.
   room.cells=room.cells.filter(c=>!hit.has(key(c.x,c.y)));
   actions.push(...region.map(c=>({...c,kind:'blackhole'})));
-  const core=event.region||[];
-  const x0=Math.min(...core.map(c=>c.x)),x1=Math.max(...core.map(c=>c.x));
-  const y0=Math.min(...core.map(c=>c.y)),y1=Math.max(...core.map(c=>c.y));
-  const halo=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&
-   c.x>=x0-EVENT_BALANCE.blackholeHalo&&c.x<=x1+EVENT_BALANCE.blackholeHalo&&
-   c.y>=y0-EVENT_BALANCE.blackholeHalo&&c.y<=y1+EVENT_BALANCE.blackholeHalo);
-  actions.push(...shuffle(room,halo,random,blocked).map(c=>({...c,kind:'blackhole'})));
-  for(const p of halo)hit.add(key(p.x,p.y));
+  for(const core of event.groups||[event.region||[]]){
+   if(!core.length)continue;
+   const x0=Math.min(...core.map(c=>c.x)),x1=Math.max(...core.map(c=>c.x));
+   const y0=Math.min(...core.map(c=>c.y)),y1=Math.max(...core.map(c=>c.y));
+   const halo=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&
+    c.x>=x0-EVENT_BALANCE.blackholeHalo&&c.x<=x1+EVENT_BALANCE.blackholeHalo&&
+    c.y>=y0-EVENT_BALANCE.blackholeHalo&&c.y<=y1+EVENT_BALANCE.blackholeHalo);
+   const moved=shuffle(room,halo,random,blocked);actions.push(...moved.map(c=>({...c,kind:'blackhole'})));for(const p of moved)hit.add(key(p.x,p.y));
+  }
  }else{
   room.cells=room.cells.filter(c=>!hit.has(key(c.x,c.y)));
   if(rule.effect==='colonize'){

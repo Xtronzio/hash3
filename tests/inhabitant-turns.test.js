@@ -18,9 +18,9 @@ test('A habitat action changes the board without restarting the same machine tur
  r=localCommand(r,'move',{x:2,y:2},2001,()=>0);assert.equal(machineTurnKey(r),null);assert.equal(r.pairs[0].turn,'X');
 });
 test('Rodent positions and animation phases are shared by board, map and pause, with no phantom hidden positions',()=>{
- const r=start();r.mode='local';r.territoryEnabled=false;r.terrain=Array.from({length:111},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,50).map((c,i)=>({...c,id:'f'+i,symbol:'X',owner:'local-x'}));r.players[0].placements=32;
+ const r=start();r.mode='local';r.territoryEnabled=false;r.terrain=Array.from({length:111},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,50).map((c,i)=>({...c,id:'f'+i,symbol:'X',owner:'local-x'}));r.players[0].placements=65;
  countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0);r.worms=[];
- const birth=habitatLocations(r).filter(e=>e.kind==='rodent');assert.equal(birth.length,1);assert.equal(rodentTurnsRemaining(r.rodentRaids[0]),9);assert.deepEqual(ecologyPinTargets(r).filter(e=>e.kind==='rodent').map(e=>[e.x,e.y]),birth.map(e=>[e.x,e.y]));assert.match(habitatMark('rodent','',birth[0]),/phase-arriving/);
+ const birth=habitatLocations(r).filter(e=>e.kind==='rodent');assert.equal(birth.length,3);assert.equal(rodentTurnsRemaining(r.rodentRaids[0]),9);assert.deepEqual(ecologyPinTargets(r).filter(e=>e.kind==='rodent').map(e=>[e.x,e.y]),birth.map(e=>[e.x,e.y]));assert.match(habitatMark('rodent','',birth[0]),/phase-arriving/);
  countHabitatPlacement(r,'local-o',{x:14,y:3},1001,()=>0);countHabitatPlacement(r,'local-x',{x:14,y:3},1002,()=>0);assert.match(ecologyMapPins(ecologyPinTargets(r),1002),/phase-eating/);
  countHabitatPlacement(r,'local-o',{x:14,y:3},1003,()=>0);assert.equal(habitatLocations(r).filter(e=>e.kind==='rodent').length,0);assert.equal(ecologyPinTargets(r).filter(e=>e.kind==='rodent').length,0);
  countHabitatPlacement(r,'local-x',{x:14,y:3},1004,()=>0);assert.notDeepEqual(habitatLocations(r).filter(e=>e.kind==='rodent').map(e=>[e.x,e.y]),birth.map(e=>[e.x,e.y]));

@@ -1,10 +1,11 @@
+import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount} from '../src/territory-event-rules.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {proportionalBudget,habitatZone,habitatInterval,HABITAT_FREQUENCIES} from '../src/habitat-budget.js';
 import {recordTerritoryGrowth,territoryRegion,advanceTerritory,initializeTerritory,recordTerritoryPlacement} from '../src/territory-tools.js';
 import {countHabitatPlacement} from '../src/inhabitants.js';
 import {key} from '../src/game.js';
-const board=(size=999)=>{const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.map((c,i)=>({...c,id:'f'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;return r;};
+const board=(size=999)=>{const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.map((c,i)=>({...c,id:'f'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;r.livingBags={natural:[...NATURAL_EVENT_ROTATION],invaders:[...INVADER_EVENT_ROTATION]};return r;};
 test('100 and 1000 cells receive exactly the same budget density over repeated activations, including fractional animals',()=>{
  for(const kind of ['rodent','worm','bomb','work']){
   const a={},b={};let small=0,large=0;
@@ -14,9 +15,9 @@ test('100 and 1000 cells receive exactly the same budget density over repeated a
  }
 });
 test('Two players share zone cadence, and no-food generations stay bounded',()=>{
- const r=board(333);r.cells=[];r.players[0].placements=32;
- countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,33);assert.equal(r.rodentRaids[0].count,3);
- countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,34);
+ const r=board(333);r.cells=[];r.players[0].placements=65;
+ countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,66);assert.equal(r.rodentRaids[0].count,3);
+ countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,67);
  for(let turn=2;turn<=9;turn++)countHabitatPlacement(r,turn%2?'local-o':'local-x',{x:1,y:0},2000+turn,()=>0);assert.equal(r.rodentRaids.length,0);
 });
 test('Merged zones combine one fractional budget without replaying old milestones',()=>{
@@ -60,7 +61,7 @@ test('Scaling birth intervals and population limits potential meals below one me
 test('The three complexity settings persist independently and disabled ecology never acts',()=>{
  for(const faunaEnabled of [false,true])for(const territoryEnabled of [false,true]){
   let r=createLocal('solo','A','B',1000,'normal','untimed','medium','X',true,{faunaEnabled,territoryEnabled});
-  r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;r.terrain=board(333).terrain;r.cells=board(333).cells.slice(0,60);r.players[0].placements=32;
+  r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;r.terrain=board(333).terrain;r.cells=board(333).cells.slice(0,60);r.players[0].placements=65;
   countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.rodentRaids.length,faunaEnabled?1:0);assert.equal(r.cells.some(c=>c.symbol==='#'),territoryEnabled);
   r.territoryNextInvasion=0;assert.equal(recordTerritoryGrowth(r,1,3000,()=>0),territoryEnabled);
   r=localCommand(r,'pause',{},3100);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},10000);
@@ -73,7 +74,7 @@ test('Warning, impact and recovery suppress fauna; populations and future interv
  r.territoryNextPlacement=0;recordTerritoryGrowth(r,1,1000,()=>0);const before=r.cells.length,raids=JSON.stringify(r.rodentRaids);
  countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.cells.length,before);assert.equal(JSON.stringify(r.rodentRaids),raids);
  const impacted=localCommand(r,'tick',{},34000,()=>0);assert.ok(impacted.habitatEvent.actions.every(a=>a.kind==='meteorites'));assert.equal(impacted.worms[0]?.eaten||0,0);
- assert.equal(impacted.ecologyRecalibration.size,300);assert.equal(impacted.ecologyRecovery.moves,3);
+ assert.equal(impacted.ecologyRecalibration.size,324);assert.equal(impacted.ecologyRecovery.moves,3);
  countHabitatPlacement(impacted,'local-x',{x:0,y:0},34001,()=>0);assert.equal(impacted.ecologyRecovery.moves,2);
 });
 
@@ -97,24 +98,24 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  let r=board(999);r.cells=r.cells.slice(0,500);r.territoryMilestone=3;r.territoryNextPlacement=1;
  r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
  r=localCommand(r,'move',{x:8,y:30},34000,()=>0);
- assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,99);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,502);
+ assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,27);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,100);
  r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.territoryEvents[0].nextAt,1023000);
- r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,900);
+ r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,972);
  r.territoryNextPlacement=1;assert.equal(recordTerritoryPlacement(r,1023001,()=>0),false);assert.equal(r.territoryEvents.length,0);
- r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'earthquake');assert.equal(r.territoryEvents[0].region.length,Math.floor(900*33/333));
+ r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'earthquake');assert.equal(r.territoryEvents[0].region.length,impactCount(r,'earthquake'));
  });
- test('Old large saves receive one future scaled attempt, without historical events or lost residents',()=>{
- const r=board(3333);r.players[0].placements=3000;r.players[1].placements=2900;delete r.territoryActivityVersion;
- initializeTerritory(r);assert.equal(r.territoryNextPlacement,7568);assert.equal(r.territoryEvents.length,0);const saved=structuredClone(r);
- initializeTerritory(r);assert.deepEqual(r,saved);r.players[0].placements+=332;assert.equal(recordTerritoryPlacement(r,10000,()=>0),false);
- r.players[0].placements++;assert.ok(recordTerritoryPlacement(r,10001,()=>0));assert.equal(r.territoryNextInvasion,6566);assert.equal(r.territoryNextPlacement,7568);
+ test('Old large saves receive future local attempts, without historical events or lost residents',()=>{
+ const r=board(3333);r.players[0].placements=3000;r.players[1].placements=2900;delete r.territoryActivityVersion;delete r.livingTerritoryVersion;
+ initializeTerritory(r);assert.equal(r.territoryNextPlacement,5999);assert.equal(r.territoryEvents.length,0);const saved=structuredClone(r);
+ initializeTerritory(r);assert.deepEqual(r,saved);r.players[0].placements+=32;assert.equal(recordTerritoryPlacement(r,10000,()=>0),false);
+ r.players[0].placements++;assert.ok(recordTerritoryPlacement(r,10001,()=>0));assert.equal(r.territoryNextInvasion,5966);assert.equal(r.territoryNextPlacement,5999);
  });
-test('Phenomena require 99 shared figures, respect the switch and work below 333 cells',()=>{
- for(const size of [99,332,333]){const r=board(size);r.territoryNextInvasion=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=98;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=49;r.players[1].figures=50;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,3);}
+test('Phenomena require 33 shared figures, respect the switch and work below 333 cells',()=>{
+ for(const size of [99,332,333]){const r=board(size);r.territoryNextInvasion=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=32;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=16;r.players[1].figures=17;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,3);}
 });
 test('Invasions do not stop fauna, change natural deadlines or reset birth budgets',()=>{
  const r=board(333);r.territoryNextPlacement=333;r.territoryNextInvasion=0;
- r.players[0].placements=32;
+ r.players[0].placements=65;
  countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>.3);
  assert.equal(r.territoryEvents[0].kind,'invader-rain');assert.equal(r.territoryNextPlacement,333);
  assert.ok(r.rodentRaids.length);assert.ok(r.worms.length);
@@ -128,5 +129,5 @@ test('The placement that reaches 99 figures announces without executing a due wo
  r.worms=[{id:'due',kind:'worm',x:10,y:2,player:'local-x',body:[{x:10,y:2}],eaten:0,nextAt:34000}];
  const next=localCommand(r,'move',{x:2,y:0},34000,()=>0);
  assert.equal(next.players[0].figures,99);assert.equal(next.territoryEvents.length,1);assert.equal(next.worms[0].eaten,0);
- assert.equal(next.territoryNextPlacement,366);
+ assert.equal(next.territoryNextPlacement,132);
 });

@@ -1,4 +1,6 @@
 import {key,terrainOf,playableTerrain,expansionOptions,shapeTemplates,availableCells} from './game.js';
+import {habitatReservations} from './habitat-tools.js';
+import {frontierCells} from './frontiers.js';
 
 export const machineLevels=[
   {id:'basic',label:'Básico'}, {id:'medium',label:'Medio'},
@@ -37,7 +39,9 @@ class Position {
     });this.extensionLayers=0;this.extensionKey='root';
     this.board=new Uint8Array(this.cells.length);
     for(const c of room.cells){const i=this.index.get(key(c.x,c.y));if(i!==undefined)this.board[i]=symbolNumber(c.symbol);}
-    this.free=this.cells.slice(0,this.legalSize).map((_,i)=>i).filter(i=>!this.board[i]);
+    const reserved=new Set([...frontierCells(room).filter(c=>!c.borderSide),...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[])].map(c=>key(c.x,c.y)));
+    this.habitatBlocks=new Set(this.cells.map((c,i)=>reserved.has(key(c.x,c.y))?i:-1).filter(i=>i>=0));
+    this.free=this.cells.slice(0,this.legalSize).map((_,i)=>i).filter(i=>!this.board[i]&&!this.habitatBlocks.has(i));
     this.figures=[0,...['X','O'].map(s=>room.players.find(p=>p.symbol===s)?.figures||0)];
     this.diff=(room.players.find(p=>p.symbol==='X')?.score||0)-(room.players.find(p=>p.symbol==='O')?.score||0);
     this.advanced=room.level==='advanced';this.patterns=[];this.at=this.cells.map(()=>[]);
@@ -99,7 +103,7 @@ class Position {
   }
   moves(s){
     const placed=this.forced[s]||s;
-    return this.free.filter(i=>!this.board[i]&&!this.blocks.some(b=>b.i===i&&b.remaining>0&&(b.by!==s||b.fresh))).map(i=>({i,g:this.gain(i,placed),threat:this.gain(i,3-s).points,future:this.future(i,placed)}))
+    return this.free.filter(i=>!this.board[i]&&!this.habitatBlocks.has(i)&&!this.blocks.some(b=>b.i===i&&b.remaining>0&&(b.by!==s||b.fresh))).map(i=>({i,g:this.gain(i,placed),threat:this.gain(i,3-s).points,future:this.future(i,placed)}))
       .map(m=>({...m,order:m.g.points*1.1+m.threat+m.future*0.2}))
       .sort((a,b)=>b.order-a.order||a.i-b.i);
   }

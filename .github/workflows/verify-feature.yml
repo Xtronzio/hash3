@@ -7,6 +7,7 @@ on:
       - release/local-territory-r32
       - release/local-visual-r33
       - release/local-ecology-r34
+      - release/local-living-r35
   workflow_dispatch:
 permissions:
   contents: write

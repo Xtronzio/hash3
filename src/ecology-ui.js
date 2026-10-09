@@ -2,9 +2,9 @@ import {ecologyIcon,ecologyColors} from './ecology-navigation.js';
 import {territoryIcons} from './territory-tools.js';
 import {eventLabel,eventRule} from './territory-event-rules.js';
 export function ecologyChoicesMarkup(settings,inventoryIcon){
- const group=kinds=>`<span class="ecology-choice-icons" aria-hidden="true">${kinds.map(kind=>`<span data-ecology-kind="${kind}" style="--ecology-color:${ecologyColors[kind]||'var(--yellow)'}">${ecologyIcon(kind)}</span>`).join('')}</span>`;
+ const group=kinds=>`<span class="ecology-choice-icons ${kinds.length>4?'all-phenomena':''}" aria-hidden="true">${kinds.map(kind=>`<span data-ecology-kind="${kind}" style="--ecology-color:${ecologyColors[kind]||'var(--yellow)'}">${ecologyIcon(kind)}</span>`).join('')}</span>`;
  const choice=(id,label,icon,checked,disabled=false)=>`<label class="ecology-choice" for="${id}" title="${label}${disabled?' · solo contra la máquina':''}">${icon}<input id="${id}" type="checkbox" aria-label="${label}" ${checked?'checked':''} ${disabled?'disabled':''}></label>`;
- return `<fieldset class="ecology-choices" aria-label="Complejidad de la partida">${choice('machine-inventory','Inventario rival',inventoryIcon,settings.machineInventory,!settings.machine)}${choice('fauna-enabled','Fauna y habitantes: roedores, gusanos, constructores y destructores',group(['rodent','worm','build','destroy']),settings.faunaEnabled)}${choice('territory-enabled','Invasores y fenómenos naturales y estelares',group(['invader-colony','meteorites','hurricane','ufo']),settings.territoryEnabled)}</fieldset>`;
+ return `<fieldset class="ecology-choices" aria-label="Complejidad de la partida">${choice('machine-inventory','Inventario rival',inventoryIcon,settings.machineInventory,!settings.machine)}${choice('fauna-enabled','Fauna y habitantes: roedores, gusanos, constructores y destructores',group(['rodent','worm','build','destroy']),settings.faunaEnabled)}${choice('territory-enabled','Invasores y fenómenos naturales y estelares',group(['invader-rain','invader-colony','meteorites','earthquake','pandemic','ufo','tornado-rain','hurricane','blackhole']),settings.territoryEnabled)}</fieldset>`;
 }
 export function territoryWarningMarkup(room,now=Date.now()){
  return (room.territoryEvents||[]).map(e=>{

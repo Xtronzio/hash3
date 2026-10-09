@@ -61,3 +61,11 @@ body{padding-bottom:26px}.game{height:calc(100dvh - 26px)}.entry{min-height:calc
 .game .cell:has(.visible-inhabitant){opacity:1}.game .habitat-rodent{background:#13150be6;border-radius:35%}.ecology-map-pin>svg{transform-box:fill-box;transform-origin:center}
 
 .visible-inhabitant>svg{animation-delay:var(--inhabitant-delay,0ms)!important}
+
+.worm-body{box-shadow:none;background:#f4c84a0b!important}.worm-trail-layer{position:absolute;pointer-events:none;fill:none;stroke:var(--yellow);stroke-width:.07;stroke-linecap:round;opacity:.85;z-index:2}.board-border-cell{position:absolute;pointer-events:none;z-index:5}.board-border-cell svg{width:100%;height:100%;overflow:visible;fill:none;stroke:var(--frontier);stroke-width:.09}.board-border-cell.is-preview{opacity:.65}
+
+.ecology-choice-icons.all-phenomena{grid-template-columns:repeat(3,24px);gap:3px}.ecology-choice-icons.all-phenomena svg{width:24px;height:24px}
+
+.invasion-entry{position:absolute;left:50%;top:-10px;color:var(--yellow);font-size:20px;font-weight:bold;transform-origin:50% 100%}
+
+.cell.worm-body.blocked::after{display:none}

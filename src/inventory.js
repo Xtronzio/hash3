@@ -1,3 +1,4 @@
+import {borderIcon} from './frontiers.js';
 import {machineChoice,localHumanId} from './local.js';
 import {availableCells,figureWindows} from './game.js';
 import {practiceTools,practiceTurn,canUsePracticeTool,inventoryFor,initializeInventory,spendCard,placementSymbol,REFILL_TURNS,MAX_CARDS,toolStock,toolAllowance,pendingTools} from './practice-tools.js';
@@ -9,6 +10,7 @@ const toolIcons={destroy:'<rect x="4" y="4" width="24" height="24" rx="2" stroke
 Object.assign(toolIcons,{
  tornado:'<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>',
  bomb:'<circle cx="14" cy="20" r="9"/><path d="m19 12 3-5 4 2M23 5l2-3m3 5h3m-3-4 2-2M9 17a5 5 0 0 1 4-2"/>',
+ border:borderIcon,
  frontier:'<rect x="4" y="4" width="24" height="24"/><path d="m16 8 8 8-8 8-8-8Z"/>',
  'hint-expand':'<rect x="3" y="12" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M3 18h18M3 24h18M9 12v18M15 12v18M19 3h10v10m-10 0L29 3"/>',
  'super-hint':'<path d="M9 20c0-3-4-4-4-9a9 9 0 0 1 18 0c0 5-4 6-4 9M9 24h10m-9 4h8M26 15l2 4 3 1-3 2-2 4-1-4-4-2 4-1 1-4Z"/>'
@@ -133,7 +135,7 @@ export function inventoryStatusMarkup(game,{paused=false,playerId}={}){
   const label=`${t.label} · ${stock} carta${stock===1?'':'s'}${paused?' · pausado':enabled?' · usar ahora':t.id==='hint-expand'?' · al ampliar o desde 333 figuras':' · no disponible en este turno'}`;
   return `<button class="inventory-effect inventory-shortcut ${stock?'has-stock':'is-inactive'} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="${t.group==='help'?'practice-hint':'practice-tool'}" data-tool="${t.id}" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(t.id)}<small>×${stock}</small></button>`;
  }).join('');
- const pending=effects.filter(e=>e.tool!=='frontier'&&(e.tool!=='immunity'||paused||game.mode==='solo'&&e.player!==actor)).map(e=>{
+ const pending=effects.filter(e=>!['frontier','border'].includes(e.tool)&&(e.tool!=='immunity'||paused||game.mode==='solo'&&e.player!==actor)).map(e=>{
   const name=e.tool==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===e.tool).label;
   const detail=e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
   const label=`${name} · ${e.symbol} · ${detail}${paused?' · pausado':''}`;

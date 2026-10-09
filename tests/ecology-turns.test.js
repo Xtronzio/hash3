@@ -7,5 +7,6 @@ test('Seeded command simulation repeats invasions, fauna and balanced works with
  assert.deepEqual(first,second);assert.equal(crypto.randomUUID,original);
  assert.equal(first.completed,true);assert.equal(first.constructed,first.demolished);
  assert.ok(first.rodentMeals>0&&first.wormMeals>0&&first.constructed>0);
- assert.deepEqual(first.announcements,{'invader-rain':1,'invader-colony':1});
+ assert.ok(first.announcements['invader-rain']>=3&&first.announcements['invader-colony']>=3);
+ assert.ok(Object.keys(first.announcements).filter(k=>!k.startsWith('invader-')).length>=4);
 });

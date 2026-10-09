@@ -1,6 +1,6 @@
 {
   "name": "hash3",
-  "version": "0.21.34",
+  "version": "0.21.35",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
     "simulate:ecology": "node scripts/simulate-ecology.mjs",
     "simulate:turns": "node scripts/simulate-ecology-turns.mjs",
     "verify:sql": "node scripts/generate-ecology-sql.mjs --check && node scripts/verify-ecology-sql.mjs",
-    "verify:browser": "node scripts/verify-territory-browser.mjs"
+    "verify:browser": "node scripts/verify-territory-browser.mjs",
+    "simulate:living": "node scripts/simulate-living-r35.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2"

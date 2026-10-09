@@ -1,4 +1,4 @@
-# #3 — R0.21.34 · Territorio vivo local
+# #3 — R0.21.35 · Territorio vivo local
 
 ## Territorio vivo · #3_11
 
@@ -6,7 +6,9 @@ Mapas activos, pausa y tablero alejado comparten representación. Los nueve icon
 
 La PR #1 está integrada. Nuevas partidas por tiempo total: **⚡ · 33 segundos**, **3, 6 y 9 minutos**, independientes del reloj de turno. Los guardados y logros anteriores de 5/10 minutos conservan su duración. El selector muestra fauna y habitantes, invasores y fenómenos con los iconos del catálogo actual.
 
-Fauna y habitantes aparecen con mayor frecuencia que los fenómenos grandes. Invasores y fenómenos usan ciclos independientes: bases de 66 y 333 colocaciones, escaladas por tamaño. Los efectos conservan grupos de tres y geometrías 3×3. Las invasiones pequeñas permiten actuar a la fauna; ampliar no adelanta ataques. Catálogo, frecuencias, validación y bloqueos en [el diseño de territorio vivo](design/3-11-territorio-vivo.md).
+La IA excluye cuerpos de gusanos y reservas de obras; los gusanos salen tras tres comidas o tres intentos seguidos sin alimento. El rastro comparte geometría continua en tablero y mapas. Frontera vuelve como carta independiente de tres segmentos orientables, capaz de contener líneas invasoras durante el aviso. Muro conserva su casilla.
+
+Población y focos escalan con la raíz cuadrada del terreno real; intentos mixtos por colocaciones o tiempo activo y efectos del 3/6/9 %. Los guardados adoptan plazos futuros, sin eventos retrospectivos. Tabla completa, resultados medidos y límites en [las reglas R0.21.35](design/living-r35.md).
 
 Territorio vivo disponible para probar en VS máquina y Sin conexión. Duelo y Mundo están desactivados y muestran «En construcción»; la aplicación no inicia llamadas ni renovaciones de sesión Supabase durante esta fase. Conserva partidas, apodo y enlaces guardados. El cron del servidor puede seguir activo: bloquear el navegador no implica consumo total cero.
 

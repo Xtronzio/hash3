@@ -1,7 +1,7 @@
 import {habitatBlocked} from './habitat-tools.js';
 import {terrainOf,playableTerrain,key,expansionOptions} from './game.js';
 import {isImmune,protectedTerritoryKeys} from './immunity.js';
-import {frontierTiles,frontierDirections,frontierCells,nearbyFrontierCells,frontierHit} from './frontiers.js';
+import {frontierTiles,frontierEdges,frontierSegments,edgeKey,frontierDirections,frontierCells,nearbyFrontierCells,frontierHit} from './frontiers.js';
 
 const directions=Array.from({length:9},(_,i)=>[i%3-1,Math.floor(i/3)-1]).filter(([x,y])=>x||y);
 const shielded=(r,c)=>r.inventoryEffects?.shields?.some(e=>e.cell===c?.id&&e.remaining>0);
@@ -50,6 +50,12 @@ export function frontierOptions(room,side='north',actor){
  return [...points.values()].filter(p=>{const cells=frontierTiles(p);return cells.every(c=>!protectedKeys.has(key(c.x,c.y))&&!known.has(key(c.x,c.y))&&!existing.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y))&&cells.some(c=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>linked.has(key(c.x+dx,c.y+dy))));});
 }
 export function frontierAnchors(room,actor){return frontierOptions(room,'north',actor);}
+export function borderOptions(room,side='north'){
+ if(!frontierDirections.includes(side))return [];
+ const terrain=area(room),known=new Set(terrain.map(c=>key(c.x,c.y))),existing=new Set(frontierSegments(room).map(edgeKey));
+ const protectedKeys=protectedTerritoryKeys(room);
+ return terrain.flatMap(c=>{const p={x:c.x-(side==='east'?2:0),y:c.y-(side==='south'?2:0),side},edges=frontierEdges(p);return edges.every(e=>known.has(key(e.a.x,e.a.y))&&!existing.has(edgeKey(e))&&!protectedKeys.has(key(e.a.x,e.a.y)))?[p]:[];});
+}
 function pruneBrokenForms(room){
  const symbols=new Map(room.cells.map(c=>[key(c.x,c.y),c.symbol]));
  room.forms=(room.forms||[]).filter(f=>f.slice(f.lastIndexOf(':')+1).split(';').every(k=>symbols.get(k)===f[0]));
@@ -75,12 +81,15 @@ export function applyAreaTool(room,actor,tool,point,random=Math.random){
   room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by)||!frontierHit(f,hit));
   room.inventoryEffects.blocks=room.inventoryEffects.blocks.filter(e=>!hit.has(key(e.x,e.y)));
   for(const p of room.players)if(p.lastMove&&!room.cells.some(c=>c.id===p.lastMove.id))delete p.lastMove;
+ }else if(tool==='border'){
+  if(!borderOptions(room,point.side).some(p=>p.x===point.x&&p.y===point.y))throw new Error('La frontera necesita tres celdas construidas en línea, sin otra barrera ni protección.');
+  room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),type:'border',by:actor,point:{x:point.x,y:point.y},side:point.side,edges:frontierEdges(point)});
  }else if(tool==='frontier'){
   if(!frontierOptions(room,point.side,actor).some(p=>p.x===point.x&&p.y===point.y))throw new Error('El muro necesita un hueco sin construir, junto a tu territorio y sin otra barrera.');
   room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),by:actor,point:{x:point.x,y:point.y},cells:frontierTiles(point)});
   if(!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,room).length)throw new Error('Este muro cerraría todas las salidas de ampliación. Elige otra casilla.');
  }else throw new Error('Herramienta de zona desconocida.');
- if(tool!=='frontier')pruneBrokenForms(room);
+ if(!['frontier','border'].includes(tool))pruneBrokenForms(room);
  room.inventoryEffects.shields=room.inventoryEffects.shields.filter(e=>room.cells.some(c=>c.id===e.cell));
  return {affected:changed,removed:old.length-room.cells.length};
 }

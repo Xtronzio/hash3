@@ -21,7 +21,8 @@ export function activeInventoryEffects(game,now=game?.clockNow??Date.now()){
  grouped('shield',game.inventoryEffects?.shields||[],'turnos rivales');
  grouped('rival',game.inventoryEffects?.forced||[],'colocación rival');
  if(game.practiceHint)add(game.practiceHint.action==='expand'?'hint-expand':'hint',game.practiceHint.player,1,null,'');
- grouped('frontier',game.frontiers||[],'');
+ grouped('frontier',(game.frontiers||[]).filter(f=>f.type!=='border'),'');
+ grouped('border',(game.frontiers||[]).filter(f=>f.type==='border'),'');
  for(const p of game.players){const seconds=immunitySeconds(game,p.id,now);if(seconds)add('immunity',p.id,1,seconds,'segundos');}
  return effects;
 }

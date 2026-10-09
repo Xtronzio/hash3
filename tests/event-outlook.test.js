@@ -7,13 +7,13 @@ const fresh=()=>createLocal('local','A','B',now,'normal','untimed');
 test('El control descuenta colocaciones reales y respeta los siguientes umbrales recalculados',()=>{
  let game=fresh();game=localCommand(game,'move',{x:0,y:0},now);
  let rows=eventOutlook(game,'local-x').rows;
- assert.equal(rows.find(e=>e.kind==='rodent').remaining,32);
+ assert.equal(rows.find(e=>e.kind==='rodent').remaining,65);
  assert.equal(rows.find(e=>e.kind==='worm').remaining,32);
  assert.equal(rows.find(e=>e.kind==='neutral').remaining,32);
  game.habitatZones[0].next.worm=333;game.habitatZones[0].placements=305;
  assert.equal(eventOutlook(game,'local-x').rows.find(e=>e.kind==='worm').remaining,28);
- const territory=rows.find(e=>e.kind==='territory');assert.equal(territory.remaining,332);assert.equal(territory.warning,33);
- assert.equal(rows.find(e=>e.kind==='invaders').remaining,65);
+ const territory=rows.find(e=>e.kind==='territory');assert.equal(territory.remaining,98);assert.equal(territory.warning,33);
+ assert.equal(rows.find(e=>e.kind==='invaders').remaining,32);
 });
 test('Fenómenos y recuperación suspenden los intentos; fauna apagada y roedores no inventan reloj',()=>{
  const game=fresh();game.territoryEvents=[{id:'u',kind:'ufo',nextAt:now+28000}];
@@ -47,10 +47,10 @@ test('Active rodents show remaining turns, while offscreen timed events have a v
  assert.match(eventOutlookMarkup(g,'local-x'),/Ciclo de actividad/);
  });
 
-test('Activity countdown shows figures before 99 and shared placements after the opening',()=>{
- const g=fresh();g.players[0].figures=48;g.players[1].figures=50;
+test('Activity countdown shows figures before 33 and shared placements after the opening',()=>{
+ const g=fresh();g.players[0].figures=15;g.players[1].figures=17;
  assert.match(eventOutlookMarkup(g,'local-x'),/Faltan<\/small>1<small>figuras entre ambos/);
- g.players[0].figures=49;assert.equal(eventOutlook(g,'local-x').rows.find(e=>e.trigger==='placements').requiresFigures,false);
+ g.players[0].figures=16;assert.equal(eventOutlook(g,'local-x').rows.find(e=>e.trigger==='placements').requiresFigures,false);
  assert.match(eventOutlookMarkup(g,'local-x'),/Ciclo de actividad/);
 });
 

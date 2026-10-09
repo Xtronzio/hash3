@@ -7,6 +7,7 @@ import {createServer} from 'vite';
 import {createLocal} from '../src/local.js';
 import {initializeHabitats} from '../src/inhabitants.js';
 import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
+import {plannedEventRegion} from '../src/territory-event-actions.js';
 
 const output=path.resolve(process.env.HASH3_QA_OUTPUT||'browser-results');
 await fs.mkdir(output,{recursive:true});
@@ -72,6 +73,7 @@ try{
    const {page,errors}=await load(context,fixture(size));
    const started=Date.now();
    const read=()=>page.evaluate(()=>({nodes:document.querySelectorAll('.board .terrain-cell').length,scroll:document.querySelector('.viewport').scrollLeft,overflow:document.documentElement.scrollWidth-innerWidth}));
+   assert.ok(await page.locator('.board-frontier-cell svg').count()>0,'Wall glyph missing');
    const before=await read();assert.ok(before.nodes>0&&before.nodes<1500,`Unbounded detailed cells: ${before.nodes}`);assert.ok(before.overflow<=1,`Horizontal overflow: ${before.overflow}`);
    await touchDrag(page,-110,-50);const after=await read();assert.notEqual(after.scroll,before.scroll,'Touch drag did not move board');
    await pinch(page);assert.ok((await read()).nodes<1500);
@@ -207,7 +209,7 @@ try{
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
   await page.locator('#local-goal-type').selectOption('time');
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
-  assert.equal(await page.locator('.ecology-choice-icons svg').count(),8);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),13);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
@@ -226,8 +228,53 @@ try{
   assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
-  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:8,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:13,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
  }
+ // Exercise the real Worker: the former winning target is a worm body.
+ for(const difficulty of ['basic','medium','high','pro']){
+  const now=Date.now(),r=createLocal('solo','X','',now,'normal','untimed',difficulty);
+  r.pairs[0].turn='O';r.cells=[{id:'a',x:0,y:0,symbol:'O',owner:'local-o'},{id:'b',x:1,y:0,symbol:'O',owner:'local-o'}];
+  r.worms=[{id:'blocked',kind:'worm',x:2,y:0,body:[{x:2,y:0}],eaten:1,nextAt:now+600000}];
+  r.works=[{id:'work',kind:'work',done:0,destroy:[{x:2,y:1}],build:[{x:3,y:1}],nextAt:now+600000}];
+  const {page,errors}=await load(context,r);
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].pairs[0].turn==='X',{},{timeout:15000});
+  const next=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+  assert.equal(next.players[1].placements,1);assert.ok(next.players[1].lastMove.x!==2||![0,1].includes(next.players[1].lastMove.y));
+  assert.deepEqual(errors,[]);results.push({difficulty,workerAvoidsWormAndWork:true,passed:true});await page.close();
+ }
+ const borderRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
+ borderRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));
+ borderRoom.players[0].inventory.cards.border=1;
+ const invasion=plannedEventRegion(borderRoom,'invader-colony',()=>0,Date.now());
+ borderRoom.territoryEvents=[{id:'border-warning',kind:'invader-colony',...invasion,nextAt:Date.now()+600000}];
+ const {page:borderPage,errors:borderErrors}=await load(context,borderRoom);
+ const selectBorder=()=>borderPage.locator('[data-action="practice-tool"][data-tool="border"]').first().tap();
+ await selectBorder();
+ const anchor=borderPage.locator('.board [data-action="inventory-target"][data-x="0"][data-y="0"]').first();
+ await anchor.evaluate(el=>{const viewport=document.querySelector('.viewport'),r=el.getBoundingClientRect(),v=viewport.getBoundingClientRect();viewport.scrollLeft+=r.x+r.width/2-v.x-v.width/2;viewport.scrollTop+=r.y+r.height/2-v.y-v.height/2;});await frame(borderPage);
+ await anchor.tap();assert.equal(await borderPage.locator('.board-border-cell.is-preview').count(),3);
+ await borderPage.locator('[data-action="rotate-border"]').tap();assert.equal(await borderPage.locator('.board-border-cell.is-preview').count(),0);
+ await borderPage.locator('[data-action="cancel-tool-selection"]').tap();
+ assert.equal(await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[0].inventory.cards.border),1);
+ await selectBorder();await anchor.evaluate(el=>{const viewport=document.querySelector('.viewport'),r=el.getBoundingClientRect(),v=viewport.getBoundingClientRect();viewport.scrollLeft+=r.x+r.width/2-v.x-v.width/2;viewport.scrollTop+=r.y+r.height/2-v.y-v.height/2;});await frame(borderPage);await anchor.tap();await borderPage.locator('[data-action="confirm-area-tool"]').tap();
+ const placedBorder=await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.equal(placedBorder.frontiers[0].edges.length,3);
+ assert.equal(await borderPage.locator('.board-border-cell').count(),3);assert.ok(await borderPage.locator('.board .invasion-entry').count()>0);
+ await borderPage.screenshot({path:path.join(output,'border-warning.png')});
+ await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
+ await borderPage.locator('[data-action="close-map"]').tap();await borderPage.locator('[data-action="pause"]').tap();
+ assert.ok(await borderPage.locator('.inspection-canvas .map-frontiers path').count()>=3);
+ assert.deepEqual(borderErrors,[]);results.push({borderPreviewCancelRotate:true,borderSpendOnce:true,borderSharedMaps:true,passed:true});await borderPage.close();
+ // The head uses the creature icon; body links use the same map geometry.
+ const trailRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
+ trailRoom.worms=[{id:'trail',kind:'worm',x:2,y:1,body:[{x:0,y:0},{x:1,y:0},{x:2,y:1}],eaten:2,nextAt:Date.now()+600000}];
+ const {page:trailPage,errors:trailErrors}=await load(context,trailRoom);
+ assert.equal(await trailPage.locator('.worm-trail-layer path').count(),2);assert.equal(await trailPage.locator('.worm-body').first().evaluate(el=>getComputedStyle(el,'::after').display),'none');assert.equal(await trailPage.locator('.board .habitat-worm').count(),1);
+ await trailPage.screenshot({path:path.join(output,'worm-trail.png')});
+ await trailPage.locator('[data-action="map"]').tap();const wormMap=await trailPage.locator('.world-map .worm-map-trail').innerHTML();
+ await trailPage.locator('[data-action="close-map"]').tap();await trailPage.locator('[data-action="pause"]').tap();
+ assert.equal(await trailPage.locator('.inspection-canvas .worm-map-trail').innerHTML(),wormMap);
+ assert.deepEqual(trailErrors,[]);results.push({continuousWormTrail:true,headDistinct:true,sharedPausedTrail:true,passed:true});await trailPage.close();
  assert.deepEqual(onlineRequests,[],'Local diagnosis contacted Supabase');
  results.push({supabaseRequests:0,passed:true});
  await context.close();
