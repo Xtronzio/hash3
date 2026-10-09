@@ -1,4 +1,4 @@
-name: #3 Verify feature
+name: 'HASH3 Verify feature'
 on:
   push:
     branches:
