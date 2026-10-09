@@ -120,20 +120,28 @@ begin
 end $rpc_invasion$;
 reset role;
 DO $natural_fixture$
-declare s jsonb;
+declare s jsonb;point jsonb;
 begin
  select state into s from hash3_private.rooms where code=current_setting('hash3.ecology_fixture');
  s:=s||jsonb_build_object('territoryEvents','[]'::jsonb,'habitatLastCheck',extract(epoch from now())*1000,'worms',jsonb_build_array(jsonb_build_object('id','due-worm','kind','worm','player',s->'players'->0->>'id','x',5,'y',5,'body','[{"x":5,"y":5}]'::jsonb,'eaten',0,'nextAt',extract(epoch from now())*1000)));
  s:=jsonb_set(s,'{players,0,placements}','331');s:=jsonb_set(s,'{players,1,placements}','1');
+ -- The 66th placement can put a neutral # in the old hardcoded (1,0).
+ -- Select an actual empty, unreserved cell without removing that effect.
+ select v into point from jsonb_array_elements(s->'terrain') v
+ where not exists(select 1 from jsonb_array_elements(s->'cells') c where c->>'x'=v->>'x' and c->>'y'=v->>'y')
+ and not hash3_private.habitat_reserved(s,(v->>'x')::int,(v->>'y')::int)
+ order by (v->>'y')::int,(v->>'x')::int limit 1;
+ assert point is not null,'Natural RPC fixture has a legal placement';
+ perform set_config('hash3.ecology_move',point::text,true);
  update hash3_private.rooms set state=s where code=current_setting('hash3.ecology_fixture');
 end $natural_fixture$;
 set local role authenticated;
 DO $rpc_natural$
-declare s jsonb;code text:=current_setting('hash3.ecology_fixture');actor text;
+declare s jsonb;code text:=current_setting('hash3.ecology_fixture');actor text;point jsonb:=current_setting('hash3.ecology_move')::jsonb;
 begin
  perform set_config('request.jwt.claim.sub','a3110001-1111-4111-8111-111111111111',true);
  s:=public.hash3_command('get',jsonb_build_object('code',code));actor:=s->'pairs'->0->>lower(s->'pairs'->0->>'turn');perform set_config('request.jwt.claim.sub',actor,true);
- s:=public.hash3_command('move',jsonb_build_object('code',code,'x',1,'y',0,'requestId',gen_random_uuid()));
+ s:=public.hash3_command('move',jsonb_build_object('code',code,'x',point->'x','y',point->'y','requestId',gen_random_uuid()));
  assert s->'territoryEvents'->0->>'kind'='meteorites','RPC schedules natural event independently';
  assert (s->'worms'->0->>'eaten')::int=0 and s->'worms'->0 ? 'remainingMs','Natural announcement freezes due fauna';
 end $rpc_natural$;
