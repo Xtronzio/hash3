@@ -19,3 +19,10 @@ jobs:
       - run: npm run simulate:turns -- --quick > /dev/null
       - run: npm run simulate:ecology -- --quick > /dev/null
       - run: npm run build:github
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: territory-browser-qa
+          path: browser-results/

@@ -165,3 +165,10 @@ Jorge autoriza distribuir las frecuencias a favor del juego y mantener los efect
 SQL autoritativo preparado en `20261009081642_territorio_vivo.sql`, generado de plantilla y configuración JS. Comprobar deriva con `npm run verify:sql`; prueba PostgreSQL desechable incluye RPC, idempotencia y permisos. No sustituye la verificación del Supabase real. Secuencias completas: `npm run simulate:turns`, resultados en benchmarks; juego aleatorio no equivale a estrategia humana. El servidor sigue dando timeout y falta QA táctil real; mantener PR borrador y no publicar Pages parcialmente.
 
 La rama incorpora la corrección de Perfil R0.21.28-P1 de main (698edf2), con pruebas del conjunto. Conservar los archivos públicos de esa versión estable mientras siguen pendientes SQL remoto y QA táctil.
+
+
+## #3_11 · Continuación con navegador y pantalla móvil P2
+
+La rama incorpora `main` R0.21.28-P2 (92d9eef), conservando R0.21.30 de desarrollo y Pages estable P2. No sobrescribir pantalla móvil fija, paneles con scroll propio ni Perfil sin autofocus editable. `npm run verify:browser` ejecuta Chromium con tacto emulado sobre 999/33.333 celdas, nueve eventos, ampliación, Tornado y Perfil móvil. Capturas y resultados adjuntos al workflow; resumen en benchmarks/territory-r02130-browser.json. Node, navegador emulado y SQL local pasan; no presentar esta emulación como ensayo en iPhone/iPad físicos ni Safari.
+
+La descarga alternativa de Chromium ya funciona; para reproducir: `npx playwright install chromium`, luego `npm run verify:browser`. El Supabase remoto sigue devolviendo timeout incluso para SQL mínimo, lista de migraciones y asesores. Administración lo marca ACTIVE_HEALTHY y logs muestran 504 de renovación de sesión, sin registros PostgreSQL disponibles. Causa no determinada. Mantener PR borrador y no publicar el bloque territorial parcialmente antes de validar migración remota y juego en dispositivo físico.

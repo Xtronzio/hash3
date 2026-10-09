@@ -11,13 +11,15 @@
     "build:github": "node scripts/build-github.mjs",
     "simulate:ecology": "node scripts/simulate-ecology.mjs",
     "simulate:turns": "node scripts/simulate-ecology-turns.mjs",
-    "verify:sql": "node scripts/generate-ecology-sql.mjs --check && node scripts/verify-ecology-sql.mjs"
+    "verify:sql": "node scripts/generate-ecology-sql.mjs --check && node scripts/verify-ecology-sql.mjs",
+    "verify:browser": "node scripts/verify-territory-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
+    "playwright": "1.56.1",
     "vite": "7.1.7"
   }
 }

@@ -2,7 +2,7 @@
 
 Los jugadores son **COLONOS**. El territorio combina fauna, habitantes, invasores y fenómenos naturales o estelares. Los efectos conservan la relación con el 3; las frecuencias responden al impacto en el juego, según la indicación de Jorge del 9 de octubre de 2026.
 
-Fuente: `feature/3-11-territorio-vivo`, PR borrador #1. `main` continúa en R0.21.28-P1. Esta rama no está publicada ni aplicada al Supabase real.
+Fuente: `feature/3-11-territorio-vivo`, PR borrador #1. `main` continúa en R0.21.28-P2. Esta rama no está publicada ni aplicada al Supabase real.
 
 ## Efectos
 
@@ -46,6 +46,7 @@ El motor local y la migración SQL preparada incluyen el catálogo completo, pro
 - `npm test`: reglas, interacción, pausas, navegación, inventario, guardados y secuencias reproducibles.
 - `npm run verify:sql`: deriva de configuración, aplicación y reaplicación de migración en PostgreSQL desechable, RPC público, reintentos, permisos, reloj, protecciones, efectos y convivencia de fauna con invasores. Usa PGlite; la planificación cron se sustituye por una función de prueba, por lo que no valida el planificador remoto.
 - `npm run simulate:turns`: secuencias de 1.500 colocaciones en 333/999 celdas y 2.000 en 3.333, dos semillas, con/sin territorio activo. Incluye herramientas, Doble, expansiones, pausas de una hora y comprobaciones de integridad. UUID y azar reproducibles; seis segundos activos por colocación, ocupación inicial del 35 %, comienzo tras la apertura de 99 figuras. Es juego aleatorio, no mide decisiones humanas ni tasa de victoria.
+- `npm run verify:browser`: Chromium real con pantallas táctiles emuladas de 390×844 y 1024×768. Tableros de 999 y 33.333 celdas; arrastre, pellizco, mapa, pausa y reanudación, cancelación de carta, nueve localizadores de eventos, ampliación y animación de Tornado. Comprueba límites de nodos y ausencia de desbordamiento; captura pantallas y las adjunta al pipeline. Incluye Perfil móvil sin autofocus editable, campos de 16 px y diálogo dentro de la pantalla. No equivale a Safari ni a hardware móvil real.
 - `npm run build:github`: genera y verifica los paquetes de Pages y de raíz. Los archivos públicos se mantienen en la versión estable hasta promoción completa.
 - `node scripts/benchmark-board.mjs`: consulta de ventana y comandos sintéticos en 9.999/33.333/99.999 celdas. No valida hardware móvil.
 
@@ -54,12 +55,18 @@ Resultados de secuencias y rendimiento: `benchmarks/territory-r02130-turns.json`
 ## Bloqueos antes de integrar y publicar
 
 1. El Supabase real `vyzugvepzylidyxitojo` devuelve timeout incluso en consultas simples. La migración está preparada y probada localmente, **no aplicada**. Verificar migraciones previas, aplicar con el flujo de migraciones y validar Mundo/Duelo y asesores sobre el servidor antes de promoción.
-2. QA táctil de grandes tableros, ampliaciones y animaciones pendiente. El entorno no tiene navegador ejecutable; la descarga de Chromium devuelve archivos vacíos. Los ensayos Node y las pruebas de navegación no sustituyen esa comprobación.
-3. Mantener PR borrador, sin integrar a `main` ni publicar Pages parcialmente. Una vez resueltos servidor y QA táctil, ejecutar el pipeline oficial y verificar la versión pública.
+2. QA de navegador completada: la descarga alternativa de Playwright ha permitido ejecutar Chromium. Pasan los gestos táctiles emulados y la revisión de capturas; sigue pendiente una partida en dispositivo físico (especialmente Safari/iOS). Los resultados están en `benchmarks/territory-r02130-browser.json`.
+3. Mantener PR borrador, sin integrar a `main` ni publicar Pages parcialmente. Una vez resueltos servidor y comprobación física, ejecutar el pipeline oficial y verificar la versión pública.
 
 ## Compatibilidad con Perfil
 
 Conservar la corrección publicada el 9 de octubre en `main`, R0.21.28-P1 (PR #2, commit `698edf259cad0c9b47fc43ab4b114daf8f77bbe0`): acceso entre navegadores y Perfil rediseñado. La rama incorpora esa revisión de `main`, incluidos `src/profile-access-ui.js`, `src/profile-link.js`, `src/api.js`, `src/hall.js`, `src/hall.css`, `src/main.js` y sus pruebas. Se resolvió únicamente el identificador de versión para mantener R0.21.30; el flujo nuevo de Perfil se conserva. La versión de desarrollo sigue identificada como R0.21.30.
+
+## Continuación del 9 de octubre: navegador y compatibilidad móvil
+
+La rama incorpora también `main` R0.21.28-P2, commit `92d9eef52871191646b416496249e715e3b39dc3`: pantalla móvil fija, paneles con desplazamiento propio y Perfil sin apertura automática del teclado. Se conserva la versión de desarrollo R0.21.30; los archivos de Pages permanecen en P2. Se ejecutaron 326 pruebas tras esa integración, validación SQL desechable y construcción de ambos paquetes.
+
+Diagnóstico remoto de esta continuación: consulta mínima SQL, lista de migraciones y asesores de rendimiento agotan el plazo de conexión. La API de administración marca el proyecto ACTIVE_HEALTHY. Los registros recientes contienen HTTP 504 de renovación de sesión en iPhone; en la ventana de 24 horas no aparecen registros PostgreSQL. Esto confirma un fallo remoto de acceso pero no establece si hay saturación, bloqueo o un problema de infraestructura. No se ha reiniciado el servicio ni aplicado la migración.
 
 ## Compatibilidad móvil (R0.21.28-P2, 9/10/2026)
 
