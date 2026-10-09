@@ -23,7 +23,7 @@ export function territoryRenderRegion(room,event){
 }
 export function phenomenonTargets(room,kind){
  return (room.territoryEvents||[]).filter(e=>e.kind===kind).flatMap(e=>{
-  const groups=['rain','meteorites','invader-rain','tornado-rain'].includes(kind)?Array.from({length:Math.ceil(e.region.length/3)},(_,i)=>e.region.slice(i*3,i*3+3)):[e.region];
+  const groups=kind==='tornado-rain'&&e.groups?.length?e.groups:['rain','meteorites','invader-rain'].includes(kind)?Array.from({length:Math.ceil(e.region.length/3)},(_,i)=>e.region.slice(i*3,i*3+3)):[e.region];
   const visible=new Set(territoryRenderRegion(room,e).map(c=>key(c.x,c.y)));
   return groups.flatMap((group,i)=>{const g=group.filter(c=>visible.has(key(c.x,c.y)));return g.length?[{...e,...center(g),kind,id:`${e.id}:${i}`,sourceId:e.sourceId||e.id,region:g}]:[];});
  });
