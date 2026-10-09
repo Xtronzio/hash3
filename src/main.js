@@ -34,6 +34,7 @@ import './map-overview.css';
 import './inventory-sheet.css';
 import './game-chrome.css';
 import './inventory-status.css';
+import './mobile-viewport.css';
 import {overviewMarkup,overviewModel} from './map-overview.js';
 import {extensionView,clampBoardZoom} from './map-camera.js';
 import {cellIndex,viewportCellWindow,cachedCellWindow,reconcileCells,overviewGrid} from './board-window.js';
@@ -458,7 +459,14 @@ function renderHallDialog() {
   });
   const dialog=document.querySelector('.hall-dialog');
   dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
-  (document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]')).focus();
+  // Focusing the nickname automatically on iOS opens the keyboard and moves
+  // the visual viewport before the modal can be sized. Preserve keyboard
+  // focus for desktop, but focus a non-editable control on touch devices.
+  const touchProfile=hallDialog==='profile'&&matchMedia('(max-width:760px) and (pointer:coarse)').matches;
+  const focusTarget=touchProfile
+    ?dialog.querySelector('[data-action="hall-close"]')
+    :(document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]'));
+  focusTarget?.focus({preventScroll:true});
   updateOfflineStatus();renderDeleteGame();
 }
 function profileStatus(id,message,state='info'){
