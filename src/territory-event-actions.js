@@ -61,15 +61,16 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
   // Independently placed 3×3 storms, small and scattered across the map.
   const pool=new Map(allowed(room,now).map(c=>[key(c.x,c.y),c]));
   const groups=[],used=new Set(),seeds=randomSubset([...pool.values()],pool.size,random);
+  let selectedCount=0;
   for(const seed of seeds){
-   if(groups.flat().length>=count)break;
+   if(selectedCount>=count)break;
    const group=[];
    for(let y=seed.y;y<seed.y+EVENT_BALANCE.dispersedTornadoSide;y++)
     for(let x=seed.x;x<seed.x+EVENT_BALANCE.dispersedTornadoSide;x++){
-     const k=key(x,y);if(pool.has(k)&&!used.has(k)&&groups.flat().length+group.length<count)group.push(pool.get(k));
+     const k=key(x,y);if(pool.has(k)&&!used.has(k)&&selectedCount+group.length<count)group.push(pool.get(k));
     }
    if(group.length<2)continue;
-   groups.push(group);for(const p of group)used.add(key(p.x,p.y));
+   groups.push(group);selectedCount+=group.length;for(const p of group)used.add(key(p.x,p.y));
   }
   return {region:groups.flat(),groups};
  }
