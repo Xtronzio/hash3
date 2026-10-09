@@ -461,32 +461,56 @@ function renderHallDialog() {
   (document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]')).focus();
   updateOfflineStatus();renderDeleteGame();
 }
-async function loadProfileAccess(input){
- const token=profileToken(input,location.href);if(!token)throw Error('Pega un enlace privado válido de #3.');
- const result=await profileAccess('restore',{token}),id=await restoreProfile(client,result);
- clearGameView();uid=id;save('hash3_name',result.name);save('hash3_profile_token',token);save('hash3_profile_owner',id);save('hash3_pair',null);save('hash3_room',null);
- myGames={};onlinePreviews.clear();gamesRequest++;metricsRequest++;metricState={entries:[],loading:false,error:''};hallDialog='profile';hallHistory=[];renderHome();notify('Perfil cargado. Tus partidas online están en Mis partidas.');
+function profileStatus(id,message,state='info'){
+ const el=document.getElementById(id);if(el){el.textContent=message;el.dataset.state=state;}
 }
-async function prepareProfileAccess(renew=false){
- const name=(document.querySelector('#profile-name')?.value||read('hash3_name')||'').trim();if(name.length<2||name.length>18)throw Error('Escribe un apodo de 2 a 18 caracteres.');
- let timeout;const id=await Promise.race([ensurePlayer(),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('El servicio de perfiles no responde. Inténtalo cuando vuelva la conexión.')),12000);})]).finally(()=>clearTimeout(timeout)),saved=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
- const result=await profileAccess(renew?'renew':'copy',{name,token:saved});if(!validProfileToken(result.token))throw Error('No se pudo generar el enlace.');
+function localProfileLink(){
+ const token=read('hash3_profile_token'),owner=read('hash3_profile_owner');
+ if(!owner||!validProfileToken(token)||!token.startsWith('h31_'+owner+'_'))return null;
+ try{return profileUrl(token,location.href);}catch{return null;}
+}
+function hydrateProfileAccess(){
+ const link=localProfileLink(),ready=document.querySelector('#profile-ready');
+ if(ready)ready.hidden=!link;
+ const field=document.querySelector('#profile-export');if(field)field.value=link||'';
+ const generate=document.querySelector('#profile-generate');if(generate)generate.hidden=!!link;
+ const copy=document.querySelector('#profile-copy-ready');if(copy)copy.hidden=!link;
+ const share=document.querySelector('#profile-share');if(share)share.hidden=!link||typeof navigator.share!=='function';
+ const incoming=profileToken(location.href,location.href),importField=document.querySelector('#profile-link');
+ if(incoming&&importField&&!importField.value)importField.value=profileUrl(incoming,location.href);
+}
+async function loadProfileAccess(input){
+ const token=profileToken(input,location.href);
+ if(!token)throw Error('Pega un enlace de perfil válido de #3. Comprueba que está completo.');
+ const result=await profileAccess('restore',{token}),id=await restoreProfile(client,result);
+ if(new URLSearchParams(location.hash.slice(1)).has('perfil'))
+  history.replaceState(null,'',location.pathname+location.search);
+ clearGameView();uid=id;save('hash3_name',result.name);
+ save('hash3_profile_token',token);save('hash3_profile_owner',id);
+ save('hash3_pair',null);save('hash3_room',null);
+ myGames={};onlinePreviews.clear();gamesRequest++;metricsRequest++;
+ metricState={entries:[],loading:false,error:''};
+ hallDialog='profile';hallHistory=[];renderHome();
+ profileStatus('profile-restore-status','Perfil recuperado correctamente. Ya puedes entrar en tus partidas online.','ok');
+ notify('Perfil recuperado. Tus partidas online están en Mis partidas.');
+}
+async function generateProfileAccess(renew=false){
+ const name=(document.querySelector('#profile-name')?.value||read('hash3_name')||'').trim();
+ if(name.length<2||name.length>18)throw Error('Escribe primero un apodo de 2 a 18 caracteres.');
+ if(!renew&&localProfileLink())return localProfileLink();
+ const id=await ensurePlayer(),existing=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
+ const result=await profileAccess(renew?'renew':'copy',{name,token:existing});
+ if(!validProfileToken(result?.token))throw Error('El servidor no ha generado un enlace válido.');
  save('hash3_profile_token',result.token);save('hash3_profile_owner',id);save('hash3_name',name);
+ hydrateProfileAccess();
  return profileUrl(result.token,location.href);
 }
-async function copyProfileAccess(renew=false){
- const status=document.querySelector('#profile-copy-status');status.textContent='Preparando enlace…';
- const task=prepareProfileAccess(renew);
- const copied=copyPreparedText(task,{fallback:legacyCopyText});
- // A generation failure must be reported even if the clipboard rejects first.
- copied.catch(()=>{});
- try{
-  const link=await task,field=document.querySelector('#profile-export');if(!field)return;
-  field.hidden=false;field.value=link;document.querySelector('[data-action="profile-copy-ready"]').hidden=false;
-  const ok=await copied;status.textContent=ok?'Enlace copiado. Ya puedes pegarlo.':'Enlace preparado. Pulsa Copiar enlace preparado o selecciónalo para copiarlo.';
-  if(!ok){field.focus();field.select();}
-  notify(ok?(renew?'Nuevo enlace copiado. El anterior queda invalidado.':'Enlace privado copiado. Ya puedes pegarlo.'):status.textContent);
- }catch(error){status.textContent='No se ha podido preparar el enlace. '+error.message;throw error;}
+async function copySavedProfileLink(){
+ const link=localProfileLink();
+ if(!link){profileStatus('profile-copy-status','Primero genera un enlace de acceso.','error');return;}
+ const copied=await copyText(link,{fallback:legacyCopyText}),field=document.querySelector('#profile-export');
+ if(!copied){field?.focus();field?.select();}
+ profileStatus('profile-copy-status',copied?'Enlace copiado. Pégalo en el otro navegador.':'Enlace preparado: selecciónalo y utiliza Copiar.',copied?'ok':'info');
 }
 
 function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}}
