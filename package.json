@@ -1,6 +1,6 @@
 {
   "name": "hash3",
-  "version": "0.21.28",
+  "version": "0.21.31",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,12 +8,18 @@
     "build": "vite build && node scripts/build-offline.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.js",
-    "build:github": "node scripts/build-github.mjs"
+    "build:github": "node scripts/build-github.mjs",
+    "simulate:ecology": "node scripts/simulate-ecology.mjs",
+    "simulate:turns": "node scripts/simulate-ecology-turns.mjs",
+    "verify:sql": "node scripts/generate-ecology-sql.mjs --check && node scripts/verify-ecology-sql.mjs",
+    "verify:browser": "node scripts/verify-territory-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "playwright": "1.56.1",
     "vite": "7.1.7"
   }
 }

@@ -1,0 +1,41 @@
+name: 'HASH3 Verify feature'
+on:
+  push:
+    branches:
+      - feature/3-11-territorio-vivo
+      - release/local-diagnostics
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run verify:sql
+      - run: npm run simulate:turns -- --quick > /dev/null
+      - run: npm run simulate:ecology -- --quick > /dev/null
+      - run: npm run build:github
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: territory-browser-qa
+          path: browser-results/
+      - name: Package local diagnosis for Pages
+        if: github.ref == 'refs/heads/release/local-diagnostics' && success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Pages R0.21.31 for local diagnosis"
+            git push origin HEAD:release/local-diagnostics
+          fi

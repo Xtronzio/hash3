@@ -197,7 +197,7 @@
 .profile-alias-form button{min-width:110px;padding:10px 15px;min-height:46px}
 .profile-step{display:flex;gap:11px;align-items:center;margin:14px 0 12px}
 .profile-step-icon{width:43px;height:43px;display:grid;place-items:center;flex-shrink:0;color:#b3d2ff;border:1px solid #3f5876;border-radius:10px;background:#142131}
-.profile-step-icon svg{width:23px;height:23px}
+.profile-step-icon svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .profile-step-copy strong{display:block;font-size:15px;color:#eaf0f8}
 .profile-step-copy small{display:block;margin-top:3px;color:#8c96a3;font-size:12px;line-height:1.5}
 .profile-link-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -239,3 +239,9 @@
  .profile-link-actions button{width:100%}
  .profile-link-actions [data-action="profile-generate"]{grid-column:1/-1}
 }
+
+.profile-symbol .profile-colono-logo{width:54px;height:54px;fill:none;stroke:#edf0f4;stroke-linecap:round;stroke-linejoin:round}
+.profile-colono-logo .colono-x{stroke:var(--red);stroke-width:2}
+.profile-colono-logo .colono-o{stroke:var(--green);stroke-width:2}
+.hall .hall-mode:disabled{opacity:.5;cursor:default;filter:saturate(.45)}
+.hall .hall-mode:disabled span{color:var(--yellow);font-weight:700;font-size:11px;letter-spacing:.035em;text-transform:uppercase}

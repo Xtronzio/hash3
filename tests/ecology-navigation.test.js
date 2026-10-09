@@ -50,3 +50,11 @@ test('UFO and cataclysm markers choose surviving cells in irregular terrain rath
   const target=ecologyTargets(r,kind)[0];assert.ok(r.terrain.some(c=>c.x===target.x&&c.y===target.y));assert.notDeepEqual({x:target.x,y:target.y},{x:0,y:0});
  }
 });
+
+test('Cada tornado disperso tiene un localizador para su propia zona 3×3',()=>{
+ const region=Array.from({length:18},(_,i)=>({x:i<9?i%3:10+(i-9)%3,y:i<9?Math.floor(i/3):Math.floor((i-9)/3)}));
+ const r={...room,terrain:region,territoryEvents:[{id:'tornados',kind:'tornado-rain',region,groups:[region.slice(0,9),region.slice(9)],nextAt:now+33000}],version:6};
+ const targets=ecologyTargets(r,'tornado-rain');
+ assert.equal(targets.length,2);
+ assert.ok(targets.every(c=>c.region.length===9));
+});

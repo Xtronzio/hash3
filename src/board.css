@@ -95,3 +95,13 @@ button.territory-notice{display:flex;align-items:center;justify-content:center;g
 /* Board layers cannot escape above minimap, navigation or surrounding chrome. */
 .game .viewport{isolation:isolate;z-index:0}
 .game .board{isolation:isolate}
+
+/* #3_11: la ocupación invasora es ajena a X, O y al neutral #. */
+.cell.invader{color:#e6b8ff;background:#25162e;box-shadow:inset 0 0 0 1px #b95bf088}
+.invader-asterisk{font-size:clamp(19px,2.8vw,38px);font-weight:900;line-height:1;color:#dba9ff;text-shadow:0 0 12px #d37bff88}
+.board-action-invader-rain,.board-action-invader-colony{color:#dba9ff;background:radial-gradient(circle,#d37bff77,transparent 70%);animation:bomb-action .9s both;animation-delay:var(--visit-delay,0ms)}
+.board-action-meteorites{animation:bomb-action .9s both;color:#ffb368;background:radial-gradient(circle,#ffa35066,transparent 75%)}
+.board-action-earthquake{animation:cataclysm-demolition .9s both;color:#ff7b74}
+.board-action-pandemic,.board-action-ufo{animation:ufo-abduction .9s both;color:#c0f1e7}
+.board-action-tornado-rain,.board-action-hurricane,.board-action-blackhole{animation:cataclysm-demolition .9s both;color:#c3d6fc}
+@media(prefers-reduced-motion:reduce){.board-action-invader-rain,.board-action-invader-colony,.board-action-meteorites,.board-action-earthquake,.board-action-pandemic,.board-action-tornado-rain,.board-action-hurricane,.board-action-blackhole{animation:none}}

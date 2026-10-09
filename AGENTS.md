@@ -147,3 +147,43 @@ Logros conserva el código de modalidad en todos sus selectores de objetivo, lí
 # Variedad y escasez de mochila R0.21.28
 
 Tres por tipo es un máximo, nunca un objetivo de reposición. Jorge pide coexistencia de stocks 0/1/2/3 y parte del catálogo ausente. Sustituir el tope global de 48 por 18 cartas normales y hasta 12 tipos simultáneos. Mantener ocho iniciales y una recarga por turno propio manual completo; sortear uniformemente entre todos los tipos permitidos, incluidos duplicados, sin completar primero los menos recibidos. No introducir un tipo decimotercero hasta agotar alguno; ninguna recarga supera total, tipos o tres unidades. Protecciones aparte sin tope. Conservar reservas y reembolsos históricos que excedan límites; impedir recargas mientras los excedan, sin sorteos acumulados ni premios al abrir guardados. Reglas activas y resultados nuevos versión 8; finales históricos intactos. Mismo sorteo para ambos jugadores y máquina. No calcular recargas en navegación o reloj.
+
+## #3_11 · Territorio vivo (R0.21.29, rama de trabajo)
+
+Referencia de diseño y alcance: `design/3-11-territorio-vivo.md`. Trabajo en rama `feature/3-11-territorio-vivo`, pull request borrador #1. `main` R0.21.28 sigue estable y no debe publicarse la nueva mecánica parcialmente como disponible en todos los modos.
+
+Los jugadores son COLONOS; fauna (roedores dispersos/gusanos localizados), habitantes (promociones 3×3, construir y destruir iguales, dispersos al aparecer/localizados al intervenir), invasores (lluvia dispersa de bombas que deja asteriscos * y colonias localizadas de 3×3). Familias de fenómenos: meteoritos/terremoto destruyen terreno + signos; pandemia/OVNI vacían signos; lluvia de tornados/huracán reordenan signos; agujero negro vacía signos de 3×3 y reordena zona circundante de hasta tres celdas. OVNI y agujero negro son estelares. No confundir bombas del inventario con meteoritos naturales o invasores.
+
+Motor local parametrizado en `src/territory-event-rules.js` + `src/territory-event-actions.js`; frecuencias invasoras heredan un turno de cada tres anuncios de la antigua lluvia de bombas. Inventario X/O junto a mochila, mapas y rendimiento en ampliación revisados. Pruebas: `npm test` + `npm run simulate:ecology -- --quick` + `npm run build:github`.
+
+Para que #3_11 se considere terminado falta reproducir en SQL Supabase el comportamiento en Mundo/Duelo, QA táctil de grandes tableros y animaciones, integrar y publicar Pages. NO confundir rama validada con despliegue online. La simulación de efectos geométricos es base: ampliar a secuencias de turnos para ajustar patrones y frecuencias por separado.
+
+## #3_11 · Frecuencias por impacto (9 de octubre, R0.21.30 en desarrollo)
+
+Jorge autoriza distribuir las frecuencias a favor del juego y mantener los efectos ligados al 3. Fauna, habitantes e invasores deben aparecer más que los fenómenos de gran impacto. Sustituye el sorteo conjunto y los ataques por hitos de expansión: ciclos independientes por colocaciones aceptadas, base 33 roedores/gusanos, 66 obras/invasores, 333 naturales/estelares. Escalar por max(1,N/666); invasores/fenómenos redondeados a múltiplos de tres. Las ampliaciones no adelantan anuncios; una sola advertencia activa, sin ráfagas históricas. Rotación persistida por familia. Aviso 33 s, impactos invasores de 3 o 3×3; no congelan fauna ni reinician nacimientos. Solo los fenómenos grandes aplican suspensión y recuperación 33 s + 3 colocaciones. Migración local territoryActivityVersion 4, catálogo 2 y resultados nuevos ruleVersion 9; conservar finales históricos.
+
+SQL autoritativo preparado en `20261009081642_territorio_vivo.sql`, generado de plantilla y configuración JS. Comprobar deriva con `npm run verify:sql`; prueba PostgreSQL desechable incluye RPC, idempotencia y permisos. No sustituye la verificación del Supabase real. Secuencias completas: `npm run simulate:turns`, resultados en benchmarks; juego aleatorio no equivale a estrategia humana. El servidor sigue dando timeout y falta QA táctil real; mantener PR borrador y no publicar Pages parcialmente.
+
+La rama incorpora la corrección de Perfil R0.21.28-P1 de main (698edf2), con pruebas del conjunto. Conservar los archivos públicos de esa versión estable mientras siguen pendientes SQL remoto y QA táctil.
+
+
+## #3_11 · Continuación con navegador y pantalla móvil P2
+
+La rama incorpora `main` R0.21.28-P2 (92d9eef), conservando R0.21.30 de desarrollo y Pages estable P2. No sobrescribir pantalla móvil fija, paneles con scroll propio ni Perfil sin autofocus editable. `npm run verify:browser` ejecuta Chromium con tacto emulado sobre 999/33.333 celdas, nueve eventos, ampliación, Tornado y Perfil móvil. Capturas y resultados adjuntos al workflow; resumen en benchmarks/territory-r02130-browser.json. Node, navegador emulado y SQL local pasan; no presentar esta emulación como ensayo en iPhone/iPad físicos ni Safari.
+
+La descarga alternativa de Chromium ya funciona; para reproducir: `npx playwright install chromium`, luego `npm run verify:browser`. El Supabase remoto sigue devolviendo timeout incluso para SQL mínimo, lista de migraciones y asesores. Administración lo marca ACTIVE_HEALTHY y logs muestran 504 de renovación de sesión, sin registros PostgreSQL disponibles. Causa no determinada. Mantener PR borrador y no publicar el bloque territorial parcialmente antes de validar migración remota y juego en dispositivo físico.
+
+
+## #3_11 · R0.21.31: autorización de diagnóstico local (9 de octubre)
+
+Jorge cambia explícitamente el alcance: publicar territorio vivo para probar VS máquina y Sin conexión, después habilitar Duelo y finalmente Mundo. Esta instrucción sustituye el bloqueo previo de publicación conjunta: el SQL remoto puede seguir pendiente porque las modalidades online permanecen desactivadas y etiquetadas En construcción. `src/online-availability.js` centraliza los dos controles. No reactivar ninguno sin la siguiente fase autorizada.
+
+Durante diagnóstico, sin llamadas Supabase de la aplicación: guardas en API, refresh automático de sesión apagado, sin consultas de salas, rankings, métricas ni antesalas antiguas. Perfil conserva apodo y accesos guardados; generación/renovación/restauración online quedan en construcción. Copiar un enlace ya guardado es local. El navegador comprueba cero peticiones Supabase al iniciar/jugar ambas modalidades con restos de sesión/enlaces anteriores. No afirmar consumo cero del servidor: el cron ya instalado puede seguir activo, y sigue inaccesible por SQL.
+
+Incluir estética final de #3_10: Colono = cuadrícula # con X roja y O verde en celdas; enlace privado = icono de celdas X/O conectadas con fill none y stroke explícito. No sobrescribir correcciones de pantalla móvil P2. Publicar R0.21.31 con el pipeline, comprobar versión pública, y continuar el ajuste de patrones/frecuencias con partidas locales.
+
+## Investigación cronológica del enlace (9 de octubre)
+
+Detalle en `design/supabase-link-diagnosis.md`. Logs unificados sitúan 504 de refresh a las 12:10 y signup a las 12:46 del 8/10 (Madrid), antes de crear `profile-link` a las 18:09 y del commit R0.21.18 a las 18:19. Ventana consultada 8/10 10:00–9/10 09:55 UTC: 815 refresh 504 y 13 signup 504. No atribuir la caída inicial al enlace: precede a su despliegue. El enlace original sí consultaba sesión antes de recuperar y podía bloquear por refresh; P1 eliminó esa dependencia en la petición. No hay diagnóstico definitivo de SQL/infraestructura ni generación/restauración reales verificadas.
+
+Ampliación histórica: desde el 4/10 hay logs disponibles. Primer 5xx interno de refresh localizado 8/10 00:07:14 Madrid, 502 a las 00:10:10 y 504 a las 00:12:10. Antes: SQL habitantes R0.21.0 aplicado 7/10 23:32–23:33; cron agota plazo a las 23:36:31 en advance_worlds → advance_state (línea 24) → habitat_reserved; PostgreSQL registra recuperación tras cierre incorrecto a las 23:37:34 y reinicios posteriores. Principal sospecha: filtro nuevo por cada celda, no el enlace. No afirmar OOM probado. Intento reversible de desactivar cron el 9/10 volvió a dar timeout: pausa NO confirmada. Antes de reactivar Duelo/Mundo, resolver esta consulta y verificar reloj/recursos.

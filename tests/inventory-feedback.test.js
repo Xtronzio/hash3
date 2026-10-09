@@ -70,3 +70,14 @@ test('The prepared card and active protection coexist as separate bag icons',()=
  const protectedOnly=inventoryDockMarkup(game,'local-x',{choice:{player:'local-x',tool:'immunity',at:1000}});
  assert.equal((protectedOnly.match(/dock-immunity-active/g)||[]).length,1);assert.doesNotMatch(protectedOnly,/dock-card-choice/);
 });
+
+test('Últimas cartas usadas se muestran juntas en la mochila con color de ambos colonos',()=>{
+ const game=start(),state=structuredClone(game);
+ const html=inventoryDockMarkup(game,'local-x',{uses:[{player:'local-x',tool:'double',at:1},{player:'local-o',tool:'bomb',at:2}]});
+ assert.match(html,/Últimas cartas usadas por los colonos/);
+ assert.match(html,/class="dock-used-card x"/);
+ assert.match(html,/class="dock-used-card o"/);
+ assert.match(html,/X usó Doble/);
+ assert.match(html,/O usó Bomba/);
+ assert.deepEqual(game,state);
+});

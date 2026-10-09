@@ -8,7 +8,8 @@ import {rodentIcon} from './rodents.js';
 import {neutralIcon} from './neutral.js';
 import {frontierFootprint} from './frontiers.js';
 import {ecologySeconds} from './ecology-clock.js';
-export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Destructores',bomb:'Bombas antiguas',rain:'Lluvia de bombas',ufo:'OVNI',cataclysm:'Cataclismo',neutral:'Ficha neutral #',frontier:'Muros'};
+import {TERRITORY_EVENT_RULES,eventLabel,isTimedTerritoryKind} from './territory-event-rules.js';
+export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Destructores',bomb:'Bombas antiguas',neutral:'Ficha neutral #',frontier:'Muros',...Object.fromEntries(Object.keys(TERRITORY_EVENT_RULES).map(kind=>[kind,eventLabel(kind)]))};
 export const ecologyColors={build:'var(--green)',destroy:'var(--red)',frontier:'var(--frontier)',neutral:'#e3e5e9'};
 const center=points=>{
  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const p of points){left=Math.min(left,p.x);top=Math.min(top,p.y);right=Math.max(right,p.x);bottom=Math.max(bottom,p.y);}
@@ -22,13 +23,13 @@ export function territoryRenderRegion(room,event){
 }
 export function phenomenonTargets(room,kind){
  return (room.territoryEvents||[]).filter(e=>e.kind===kind).flatMap(e=>{
-  const groups=kind==='rain'?Array.from({length:Math.ceil(e.region.length/3)},(_,i)=>e.region.slice(i*3,i*3+3)):[e.region];
+  const groups=kind==='tornado-rain'&&e.groups?.length?e.groups:['rain','meteorites','invader-rain'].includes(kind)?Array.from({length:Math.ceil(e.region.length/3)},(_,i)=>e.region.slice(i*3,i*3+3)):[e.region];
   const visible=new Set(territoryRenderRegion(room,e).map(c=>key(c.x,c.y)));
   return groups.flatMap((group,i)=>{const g=group.filter(c=>visible.has(key(c.x,c.y)));return g.length?[{...e,...center(g),kind,id:`${e.id}:${i}`,sourceId:e.sourceId||e.id,region:g}]:[];});
  });
 }
 export function ecologyTargets(room,kind,playerId){
- if(['rain','ufo','cataclysm'].includes(kind))return phenomenonTargets(room,kind);
+ if(isTimedTerritoryKind(kind))return phenomenonTargets(room,kind);
  if(kind==='neutral')return (room.cells||[]).filter(c=>c.symbol==='#').map(c=>({...c,kind}));
  if(kind==='frontier')return (room.frontiers||[]).flatMap(f=>{const cells=frontierFootprint(f,room);return cells.length?[{...f,...center(cells),kind,sourceId:f.id}]:[];});
  return habitatTargets(room,kind,playerId).map(e=>({...e,sourceId:e.sourceId||e.id}));
@@ -39,11 +40,11 @@ export function ecologyIcon(kind){
  return `<svg viewBox="0 0 ${kind==='neutral'?'64 64':'32 32'}" aria-hidden="true">${path||''}</svg>`;
 }
 export function ecologyClockEvents(room,kind){
- if(['rain','ufo','cataclysm'].includes(kind))return (room.territoryEvents||[]).filter(e=>e.kind===kind);
+ if(isTimedTerritoryKind(kind))return (room.territoryEvents||[]).filter(e=>e.kind===kind);
  return kind==='worm'?room.worms||[]:['build','destroy'].includes(kind)?room.works||[]:kind==='bomb'?room.bombs||[]:[];
 }
 export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date.now()}={}){
- const kinds=['rodent','worm',...(room.faunaEnabled!==false?['build','destroy']:[]),...(room.bombs?.length?['bomb']:[]),...(room.territoryEnabled!==false?['rain','ufo','cataclysm']:[]),'neutral',...(room.frontiers?.length?['frontier']:[])];
+ const kinds=['rodent','worm',...(room.faunaEnabled!==false?['build','destroy']:[]),...(room.bombs?.length?['bomb']:[]),...(room.territoryEnabled!==false?[...new Set((room.territoryEvents||[]).map(e=>e.kind))]:[]),'neutral',...(room.frontiers?.length?['frontier']:[])];
  return kinds.map(kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
   const birthKind=['build','destroy'].includes(kind)?'work':kind,frequency=['rodent','worm','work'].includes(birthKind)?HABITAT_FREQUENCIES[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
@@ -55,14 +56,14 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
  }).join('');
 }
 export function ecologyPinTargets(room,playerId){
- return ['rodent','worm','build','destroy','bomb','rain','ufo','cataclysm'].flatMap(kind=>ecologyTargets(room,kind,playerId));
+ return ['rodent','worm','build','destroy','bomb',...new Set((room.territoryEvents||[]).map(e=>e.kind))].flatMap(kind=>ecologyTargets(room,kind,playerId));
 }
 // A fit view may contain many rain groups. Draw at most 33 markers, keeping
 // their real coordinates; every group remains reachable through the icon.
 export function ecologyMapPins(targets,now=Date.now(),maximum=33){
  const selected=targets.length>maximum?Array.from({length:maximum},(_,i)=>targets[Math.floor(i*targets.length/maximum)]):targets;
  return selected.map(e=>{
-  const color=ecologyColors[e.kind]||'var(--yellow)',timed=['worm','build','destroy','bomb','rain','ufo','cataclysm'].includes(e.kind),value=timed?ecologySeconds(e,now):rodentTurnsRemaining(e);
+  const color=ecologyColors[e.kind]||'var(--yellow)',timed=['worm','build','destroy','bomb'].includes(e.kind)||isTimedTerritoryKind(e.kind),value=timed?ecologySeconds(e,now):rodentTurnsRemaining(e);
   return `<g class="ecology-map-pin visible-inhabitant habitat-${e.kind} phase-${e.phase||'working'} ${e.frozen||e.remainingMs!=null?'is-frozen':''}" data-x="${e.x+.5}" data-y="${e.y+.5}" style="color:${color};--inhabitant-delay:${habitatAnimationDelay(e,e.kind,now)}ms"><title>${ecologyNames[e.kind]}</title><circle r="13" fill="#101216" stroke="currentColor" stroke-width="1.5"/><svg x="-10" y="-12" width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${e.kind==='rodent'?rodentIcon:territoryIcons[e.kind]||habitatIcons[e.kind]}</svg><text y="11" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" class="${timed?'ecology-clock':''}" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId||e.id}" aria-label="${timed?value+' segundos':value+' turnos'}">${value}</text></g>`;
  }).join('');
 }

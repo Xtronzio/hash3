@@ -41,3 +41,10 @@ test('Target is a blue cell; eating is yellow and cleared empty cells retain yel
  const r={...room,cells:room.cells.map((c,i)=>({...c,id:String(i)})),eatenCells:[{x:-3,y:-2}],rodents:[{id:'rat',x:-4,y:-2,eaten:12,phase:0}]};
  const m=overviewModel(r,own,{lastMove:{id:'1',x:8,y:5}});assert.equal(m.terrain[0].fill,'var(--yellow)');assert.equal(m.terrain[1].eaten,true);assert.equal(m.terrain[2].fill,'var(--blue)');assert.equal(m.terrain[0].rodent.eaten,12);
 });
+
+test('Invasores tienen color distinguible de los colonos y de las fichas neutrales',()=>{
+ const r={...room,cells:[{id:'invader',x:-4,y:-2,symbol:'*',owner:null}]};
+ const model=overviewModel(r,own,null);
+ assert.equal(model.terrain[0].fill,'#dba9ff');
+ assert.equal(model.terrain[2].fill,'#343e4c');
+});

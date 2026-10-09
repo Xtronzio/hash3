@@ -96,3 +96,13 @@ test('Neutral # has its own glyph in paused map detail, alongside X/O',()=>{
  const model=savedMapModel(r);assert.equal(model.terrain.find(c=>c.x===1&&c.y===1).symbol,'#');
  assert.match(inspectionCells(model),/data-symbol="#"/);
 });
+
+test('Colonias invasoras aparecen como asteriscos morados en mapa y pausa',()=>{
+ const r=createLocal('local','A','B',0);
+ r.cells=[{id:'invader',x:1,y:1,symbol:'*',owner:null,invader:true}];
+ const model=savedMapModel(r,r.players[0]);
+ const cell=model.terrain.find(c=>c.x===1&&c.y===1);
+ assert.equal(cell.fill,'#dba9ff');
+ assert.match(inspectionCells(model),/<text[^>]+>\*<\/text>/);
+ assert.match(thumbnailMarkup(r),/#dba9ff/);
+});

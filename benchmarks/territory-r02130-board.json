@@ -1,0 +1,38 @@
+{
+  "environment": "Synthetic Node workload in development container; not mobile hardware validation",
+  "results": [
+    {
+      "n": 9999,
+      "method": "5 medians after warmup; synthetic 80% occupied",
+      "visible": 308,
+      "moveMs": 55.7,
+      "expansionMs": 13.8,
+      "serializeSaveMs": 2.9,
+      "navigationQueryMs": 0.007,
+      "jsonBytes": 745681,
+      "fullOccupancyAt10sHours": 27.8
+    },
+    {
+      "n": 33333,
+      "method": "5 medians after warmup; synthetic 80% occupied",
+      "visible": 308,
+      "moveMs": 163.1,
+      "expansionMs": 31.8,
+      "serializeSaveMs": 10,
+      "navigationQueryMs": 0.008,
+      "jsonBytes": 2584957,
+      "fullOccupancyAt10sHours": 92.6
+    },
+    {
+      "n": 99999,
+      "method": "5 medians after warmup; synthetic 80% occupied",
+      "visible": 308,
+      "moveMs": 518.2,
+      "expansionMs": 101.8,
+      "serializeSaveMs": 24.3,
+      "navigationQueryMs": 0.007,
+      "jsonBytes": 7904142,
+      "fullOccupancyAt10sHours": 277.8
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+[
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "size": 999,
+    "detailNodes": 88,
+    "afterDragNodes": 120,
+    "elapsedMs": 3075,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "size": 33333,
+    "detailNodes": 88,
+    "afterDragNodes": 120,
+    "elapsedMs": 5168,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "size": 999,
+    "detailNodes": 117,
+    "afterDragNodes": 150,
+    "elapsedMs": 3129,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "size": 33333,
+    "detailNodes": 117,
+    "afterDragNodes": 150,
+    "elapsedMs": 4984,
+    "passed": true
+  },
+  {
+    "kind": "meteorites",
+    "passed": true
+  },
+  {
+    "kind": "earthquake",
+    "passed": true
+  },
+  {
+    "kind": "pandemic",
+    "passed": true
+  },
+  {
+    "kind": "ufo",
+    "passed": true
+  },
+  {
+    "kind": "tornado-rain",
+    "passed": true
+  },
+  {
+    "kind": "hurricane",
+    "passed": true
+  },
+  {
+    "kind": "blackhole",
+    "passed": true
+  },
+  {
+    "kind": "invader-rain",
+    "passed": true
+  },
+  {
+    "kind": "invader-colony",
+    "passed": true
+  },
+  {
+    "expansion": true,
+    "passed": true
+  },
+  {
+    "tornadoAnimation": true,
+    "passed": true
+  },
+  {
+    "profileMobile": true,
+    "passed": true
+  }
+]
