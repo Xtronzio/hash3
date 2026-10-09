@@ -60,3 +60,7 @@ Resultados de secuencias y rendimiento: `benchmarks/territory-r02130-turns.json`
 ## Compatibilidad con Perfil
 
 Conservar la corrección publicada el 9 de octubre en `main`, R0.21.28-P1 (PR #2, commit `698edf259cad0c9b47fc43ab4b114daf8f77bbe0`): acceso entre navegadores y Perfil rediseñado. La rama incorpora esa revisión de `main`, incluidos `src/profile-access-ui.js`, `src/profile-link.js`, `src/api.js`, `src/hall.js`, `src/hall.css`, `src/main.js` y sus pruebas. Se resolvió únicamente el identificador de versión para mantener R0.21.30; el flujo nuevo de Perfil se conserva. La versión de desarrollo sigue identificada como R0.21.30.
+
+## Compatibilidad móvil (R0.21.28-P2, 9/10/2026)
+
+En `main` se integró el hotfix de pantalla completa móvil (`PR #3`, commit `92d9eef52871191646b416496249e715e3b39dc3`): `src/mobile-viewport.css` importado **en último lugar** en `src/main.js`, pantallas/diálogos limitados a `100dvh`, controles de Perfil de ≥16px para evitar autozoom de Safari, y foco inicial del botón cerrar en Perfil móvil. **Al integrar #3_11, conservar este hotfix**: ni reemplazar el import CSS ni restaurar el autofocus de `#profile-name` ni el `max-height:94dvh` efectivo del diálogo. Mantener las pruebas `tests/mobile-viewport.test.js`.
