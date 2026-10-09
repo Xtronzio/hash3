@@ -279,29 +279,62 @@ try{
  await trailPage.locator('[data-action="close-map"]').tap();await trailPage.locator('[data-action="pause"]').tap();
  assert.equal(await trailPage.locator('.inspection-canvas .worm-map-trail').innerHTML(),wormMap);
  assert.deepEqual(trailErrors,[]);results.push({continuousWormTrail:true,headDistinct:true,sharedPausedTrail:true,passed:true});await trailPage.close();
- // Turn-driven worms show meals and turns consistently in board and maps.
+ // Turn-driven worms retain their rules without visible numeric counters.
  const turnRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  turnRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));turnRoom.territoryEnabled=false;
  turnRoom.cells=[{id:'food',x:3,y:3,symbol:'O',owner:'local-o'},{id:'food2',x:4,y:3,symbol:'X',owner:'local-x'}];
  turnRoom.worms=[{id:'turn-worm',kind:'worm',x:3,y:3,body:[{x:3,y:3}],eaten:0,mealLimit:9,turnDriven:true,turnsSinceMeal:2}];
  const {page:turnPage,errors:turnErrors}=await load(context,turnRoom);
- assert.match(await turnPage.locator('.habitat-worm b').first().innerText(),/0\/9.*1↷/);
+ assert.equal(await turnPage.locator('.habitat-worm b').count(),0);
  assert.equal(await turnPage.locator('.map-jumps [data-ecology-kind="worm"] .ecology-clock').count(),0);
  const moveCell=turnPage.locator('.board [data-action="move"][data-x="0"][data-y="0"]');await moveCell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(turnPage);await moveCell.tap();
  await turnPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].worms[0].eaten===1);
- assert.match(await turnPage.locator('.habitat-worm b').first().innerText(),/1\/9.*3↷/);
- await turnPage.locator('[data-action="events"][aria-label="Próximos eventos"]').tap();assert.match(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
- await turnPage.screenshot({path:path.join(output,'worm-turns-r37.png')});
- assert.deepEqual(turnErrors,[]);results.push({wormNineMealsTurnBadge:true,passed:true});await turnPage.close();
+ assert.equal(await turnPage.locator('.habitat-worm b').count(),0);
+ await turnPage.locator('[data-action="events"][aria-label="Próximos eventos"]').tap();assert.doesNotMatch(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
+ await turnPage.screenshot({path:path.join(output,'worm-turns-r38.png')});
+ assert.deepEqual(turnErrors,[]);results.push({wormNineMealsWithoutCounters:true,passed:true});await turnPage.close();
  // A live invasion remains active without a fictitious seconds clock.
  const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');for(let i=0;i<3;i++)advanceInvasions(growthRoom,Date.now(),()=>0);
  const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
  await growthPage.locator('[data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
- assert.match(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
+ assert.doesNotMatch(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
  assert.equal(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
- assert.match(await growthPage.locator('.board .phenomenon-marker').innerText(),/4\/9/);assert.equal(await growthPage.locator('.board .phenomenon-marker').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
- await growthPage.screenshot({path:path.join(output,'invasion-growing-r37.png')});
- assert.deepEqual(growthErrors,[]);results.push({invasionGrowingBadge:true,passed:true});await growthPage.close();
+ assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.ok(await growthPage.locator('.board .invasion-growth').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth').first().evaluate(el=>getComputedStyle(el,'::after').borderTopStyle),'dashed');assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
+ await growthPage.screenshot({path:path.join(output,'invasion-growing-r38.png')});
+ await growthPage.locator('[data-action="map"]').tap();
+ await growthPage.locator('.world-map [data-action="locate-ecology"][data-ecology-kind="invader-colony"]').tap();await frame(growthPage);
+ assert.ok(await growthPage.locator('.world-map .map-invasion-growth rect').count()>0);
+ await growthPage.locator('[data-action="close-map"]').tap();await growthPage.locator('[data-action="pause"]').tap();
+ assert.ok(await growthPage.locator('.inspection-canvas .map-invasion-growth rect').count()>0);
+ assert.deepEqual(growthErrors,[]);results.push({invasionGrowingDashedFrames:true,passed:true});await growthPage.close();
+ // Shared wildcards score each participant through actual touch placements.
+ const wildRoom=createLocal('local','X','O',Date.now(),'normal','untimed');wildRoom.faunaEnabled=false;
+ wildRoom.cells=[{id:'wild',symbol:'#',x:1,y:1,owner:null},{id:'x',symbol:'X',x:0,y:1,owner:'local-x'},{id:'o',symbol:'O',x:1,y:0,owner:'local-o'}];
+ const {page:wildPage,errors:wildErrors}=await load(context,wildRoom);
+ await wildPage.locator('.board [data-action="move"][data-x="2"][data-y="1"]').tap();
+ await wildPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[0].score===3);
+ await wildPage.locator('.board [data-action="move"][data-x="1"][data-y="2"]').tap();
+ await wildPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[1].score===3);
+ assert.equal(await wildPage.locator('.board .neutral[data-x="1"][data-y="1"]').count(),1);
+ await wildPage.screenshot({path:path.join(output,'shared-wildcard-r38.png')});assert.deepEqual(wildErrors,[]);results.push({wildcardScoresBothSymbols:true,passed:true});await wildPage.close();
+ // A real ecology tick converts four signs; no landing payout or recreated colony.
+ const flipRoom=createLocal('local','X','O',Date.now(),'normal','untimed');flipRoom.faunaEnabled=false;seedInvasions(flipRoom,[{x:2,y:0}],'invader-colony');
+ flipRoom.cells.push({id:'x',symbol:'X',x:0,y:0,owner:'local-x'},{id:'o',symbol:'O',x:1,y:0,owner:'local-o'},{id:'wild',symbol:'#',x:2,y:1,owner:null});
+ flipRoom.players[0].score=25912;flipRoom.territoryEvents=[{id:'flip-four',kind:'pandemic',region:flipRoom.cells.map(c=>({x:c.x,y:c.y})),nextAt:Date.now()+2000}];
+ const {page:flipPage,errors:flipErrors}=await load(context,flipRoom);
+ await flipPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);
+ const flipped=await flipPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ assert.deepEqual(flipped.cells.slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(c=>c.symbol),['O','X','#','*']);assert.equal(flipped.players[0].score,25912);assert.equal(flipped.invasions.length,0);
+ assert.equal(await flipPage.locator('.board .invasion-growth').count(),0);await flipPage.screenshot({path:path.join(output,'pandemic-flips-r38.png')});assert.deepEqual(flipErrors,[]);results.push({pandemicFourSignsPreservesScore:true,passed:true});await flipPage.close();
+ // Reconquest frees a playable tile, preserves a large saved score and adds terrain.
+ const reclaimRoom=createLocal('local','X','O',Date.now(),'normal','untimed');reclaimRoom.terrain=Array.from({length:991},(_,i)=>({x:i%33,y:Math.floor(i/33)}));reclaimRoom.players[0].score=25912;reclaimRoom.players[0].placements=1422;
+ seedInvasions(reclaimRoom,[{x:1,y:0}],'invader-colony');reclaimRoom.works=[{id:'reclaim',kind:'work',reconquer:true,destroy:[{x:1,y:0}],build:[{x:-1,y:0}],done:0,nextAt:Date.now()+2000}];
+ const {page:reclaimPage,errors:reclaimErrors}=await load(context,reclaimRoom);
+ await reclaimPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].works.length===0);
+ const reclaimed=await reclaimPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ assert.equal(reclaimed.terrain.length,992);assert.ok(reclaimed.terrain.some(c=>c.x===1&&c.y===0));assert.equal(reclaimed.cells.length,0);assert.equal(reclaimed.players[0].score,25912);assert.equal(reclaimed.invasions.length,0);
+ assert.equal(await reclaimPage.locator('.board [data-action="move"][data-x="1"][data-y="0"]').count(),1);
+ await reclaimPage.screenshot({path:path.join(output,'reconquered-terrain-r38.png')});assert.deepEqual(reclaimErrors,[]);results.push({reconquerPreservesLargeSave:true,passed:true});await reclaimPage.close();
  // A due storm can pay both symbols, and its visible notice identifies each.
  const stormRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  stormRoom.cells=[['X',0,0],['X',1,0],['X',2,1],['O',0,1],['O',1,1],['O',2,0]].map(([symbol,x,y],i)=>({id:'s'+i,symbol,x,y,owner:symbol==='X'?'local-x':'local-o'}));

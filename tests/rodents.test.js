@@ -23,7 +23,7 @@ test('Visible roedores scale 3/6/9; three meals occupy nine completed turns with
   }
   assert.equal(r.rodentRaids.length,0);assert.equal(visits.length,3*group);assert.equal(new Set(visits.map(c=>key(c.x,c.y))).size,3*group);
  }
- const r=fixture();birth(r,198);assert.equal(r.bombs.length,0);assert.equal(r.worms.length,1);assert.equal(r.works.length,3);assert.equal(habitatReservations(r).length,18);
+ const r=fixture();birth(r,198);assert.equal(r.bombs.length,0);assert.equal(r.worms.length,1);assert.equal(r.works.length,3);assert.equal(habitatReservations(r).length,9);
 });
 test('Loading historic saves preserves placements and never replays overdue milestones',()=>{
  const r=fixture();delete r.habitatVersion;r.players[0].placements=400;initializeHabitats(r,1000);assert.equal(r.players[0].habitatNext.rodent,429);assert.equal(r.rodents.length,0);const before=structuredClone(r);initializeHabitats(r,2000);assert.deepEqual(r,before);
@@ -51,15 +51,15 @@ test('Frontier blocks roedor migration and worm diagonal crossing; automatic bom
  r.terrain.push({x:3,y:0},{x:3,y:1},{x:3,y:2});r.cells=[{id:'own',x:2,y:0,symbol:'X',owner:'local-x'},{id:'outside',x:3,y:1,symbol:'O',owner:'local-o'}];r.worms=[animal('worm',{x:2,y:0})];initializeHabitats(r,1000);for(let i=0;i<6;i++)visitWorms(r,null,1000+i,()=>0);assert.equal(r.worms[0].eaten,1);assert.ok(r.cells.some(c=>c.id==='outside'));
  r.bombs=[{id:'b',kind:'bomb',x:2,y:0,blast:[{x:2,y:0},{x:2,y:1},{x:2,y:2}],nextAt:100000}];advanceHabitats(r,100000);assert.equal(r.frontiers.length,0);assert.equal(r.terrain.length,12);
 });
-test('Work reserves the full 18 positions, rejects occupation/expansion/cards and balances each of nine changes',()=>{
- const r=fixture();birth(r,198);r.rodents=[];r.worms=[];r.bombs=[];const before=r.terrain.length,pieces=r.cells.length;const reserved=habitatReservations(r),empty=r.works[0].destroy[0],build=r.works[0].build[0];
+test('Legacy online work reserves 18 positions, blocks cards and balances all nine changes',()=>{
+ const r=fixture();r.mode='world';birth(r,198);r.rodents=[];r.worms=[];r.bombs=[];const before=r.terrain.length,pieces=r.cells.length;const reserved=habitatReservations(r),empty=r.works[0].destroy[0],build=r.works[0].build[0];
  assert.ok(!availableCells(r,r.pairs[0]).some(c=>c.x===empty.x&&c.y===empty.y));assert.ok(!toolCells(r,'local-x','destroy').some(c=>c.x===empty.x&&c.y===empty.y));assert.ok(!toolCells(r,'local-x','activate').some(c=>c.x===build.x&&c.y===build.y));
  assert.ok(expansionOptions(r.terrain,r.pairs[0].active,r).every(p=>!reserved.some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)));
  for(const t of [34000,67000,100000]){advanceHabitats(r,t,()=>0);assert.equal(r.terrain.length,before);}
  assert.equal(r.works.length,0);assert.ok(!r.terrain.some(c=>c.x===empty.x&&c.y===empty.y));assert.ok(r.terrain.some(c=>c.x===build.x&&c.y===build.y));assert.equal(r.cells.length,pieces);
 });
-test('Conflicting work cancels remaining reservations without unilateral destruction or construction',()=>{
- const r=fixture();birth(r,198);r.rodents=[];r.worms=[];r.bombs=[];const w=r.works[0],size=r.terrain.length;r.cells.push({id:'conflict',...w.destroy[0],symbol:'X',owner:'local-x'});advanceHabitats(r,34000,()=>0);assert.equal(r.terrain.length,size);assert.ok(!r.works.some(v=>v.id===w.id));
+test('Legacy online conflicting work cancels without unilateral changes',()=>{
+ const r=fixture();r.mode='world';birth(r,198);r.rodents=[];r.worms=[];r.bombs=[];const w=r.works[0],size=r.terrain.length;r.cells.push({id:'conflict',...w.destroy[0],symbol:'X',owner:'local-x'});advanceHabitats(r,34000,()=>0);assert.equal(r.terrain.length,size);assert.ok(!r.works.some(v=>v.id===w.id));
 });
 test('Local pause/reload/resume preserves the exact turn counter and never performs accumulated meals',()=>{
  let r=fixture();r.worms=[animal('worm')];initializeHabitats(r,1000);visitWorms(r,null,1001,()=>0);r=localCommand(r,'pause',{},11000);assert.equal(r.worms[0].turnsSinceMeal,1);assert.equal(r.worms[0].remainingMs,undefined);

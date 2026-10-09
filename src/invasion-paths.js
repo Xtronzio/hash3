@@ -1,7 +1,7 @@
 import {key,terrainOf} from './game.js';
 import {frontierSegments,edgeKey} from './frontiers.js';
 import {localLiving} from './living-balance.js';
-import {habitatBlocked} from './habitat-tools.js';
+import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {protectedTerritoryKeys} from './immunity.js';
 
 const directions=[['north',0,1],['east',-1,0],['south',0,-1],['west',1,0]];
@@ -66,20 +66,40 @@ export function seedInvasions(room,region,kind){
   room.cells.push({x:c.x,y:c.y,id:crypto.randomUUID(),symbol:'*',owner:null,invader:true,invasionId:id});
  }
 }
+// Prepared for one command/snapshot; navigation only queries the resulting index.
+function growthContext(room,now){
+ const known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),occupied=new Map(room.cells.map(c=>[key(c.x,c.y),c])),protectedKeys=protectedTerritoryKeys(room,now),edges=new Set(frontierSegments(room).map(edgeKey));
+ const blocked=new Set([...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
+ const shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell)),alive=new Map();
+ for(const [k,c] of occupied){if(shields.has(c.id))protectedKeys.add(k);if(c.symbol==='*'&&c.invasionId){if(!alive.has(c.invasionId))alive.set(c.invasionId,[]);alive.get(c.invasionId).push(c);}}
+ return {known,occupied,protectedKeys,edges,blocked,alive};
+}
+function growthOptions(colony,context,exclude=null){
+ const {known,occupied,protectedKeys,edges,blocked}=context,visited=new Set((colony.visited||[]).map(c=>key(c.x,c.y))),candidates=new Map(),fronts=new Map();
+ for(const a of context.alive.get(colony.id)||[])for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+  const b={x:a.x+dx,y:a.y+dy},k=key(b.x,b.y),piece=occupied.get(k);
+  if(known.has(k)&&!visited.has(k)&&piece?.symbol!=='*'&&(!exclude||piece?.id!==exclude)&&!protectedKeys.has(k)&&!blocked.has(k)&&!edges.has(edgeKey({a,b}))){candidates.set(k,b);fronts.set(key(a.x,a.y),a);}
+ }
+ return {candidates,fronts};
+}
+export function invasionGrowthCells(room,now=room.clockNow??Date.now()){
+ if(!localLiving(room)||room.territoryEnabled===false)return [];
+ const context=growthContext(room,now),result=new Map();
+ for(const colony of room.invasions||[])if(colony.grown<9&&colony.failed<3)for(const [k,c] of growthOptions(colony,context).fronts)result.set(k,{x:c.x,y:c.y});
+ return [...result.values()];
+}
+export function removeDefeatedInvasions(room){
+ if(!localLiving(room)||!room.invasions?.length)return;
+ const alive=new Set(room.cells.filter(c=>c.symbol==='*'&&c.invasionId).map(c=>c.invasionId));
+ room.invasions=room.invasions.filter(c=>alive.has(c.id));
+}
 export function advanceInvasions(room,now=Date.now(),random=Math.random,exclude=null){
  initializeInvasions(room);if(!localLiving(room)||room.status!=='playing'||room.territoryEnabled===false)return [];
- const known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),occupied=new Map(room.cells.map(c=>[key(c.x,c.y),c])),protectedKeys=protectedTerritoryKeys(room,now),edges=new Set(frontierSegments(room).map(edgeKey)),actions=[];
- const shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
- for(const [k,c] of occupied)if(shields.has(c.id))protectedKeys.add(k);
+ const context=growthContext(room,now),occupied=context.occupied,actions=[];
  for(const colony of room.invasions){
   if(colony.grown>=9)continue;
-  const alive=room.cells.filter(c=>c.invasionId===colony.id&&c.symbol==='*');
-  if(!alive.length){colony.failed=3;continue;}
-  const visited=new Set(colony.visited.map(c=>key(c.x,c.y))),candidates=new Map();
-  for(const a of alive)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-   const b={x:a.x+dx,y:a.y+dy},k=key(b.x,b.y),piece=occupied.get(k);
-   if(known.has(k)&&!visited.has(k)&&piece?.symbol!=='*'&&piece?.id!==exclude&&!protectedKeys.has(k)&&!habitatBlocked(room,b.x,b.y)&&!edges.has(edgeKey({a,b})))candidates.set(k,b);
-  }
+  if(!context.alive.get(colony.id)?.length){colony.failed=3;continue;}
+  const {candidates}=growthOptions(colony,context,exclude);
   const pool=[...candidates.values()];
   if(!pool.length){colony.failed++;continue;}
   const c=pool[Math.min(pool.length-1,Math.floor(Math.max(0,random())*pool.length))],k=key(c.x,c.y),old=occupied.get(k),piece={...c,id:crypto.randomUUID(),symbol:'*',owner:null,invader:true,invasionId:colony.id};

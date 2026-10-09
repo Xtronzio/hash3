@@ -1,3 +1,4 @@
+import {localLiving} from './living-balance.js';
 import {borderChains} from './area-tools.js';
 import {defendedInvasionCells} from './invasion-paths.js';
 import {canUsePracticeTool,toolCells,moveDestination,placementSymbol} from './practice-tools.js';
@@ -21,7 +22,7 @@ export function chooseMachineCard(room,now=Date.now()){
     let best=null,points=0;
     for(const target of targets){
       const changed=room.cells.map(c=>c.id===target.id?{...c,symbol:player.symbol}:c);
-      const gain=figureWindows(changed,target.x,target.y,player.symbol,room.level).filter(f=>!room.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0);
+      const gain=figureWindows(changed,target.x,target.y,player.symbol,room.level,null,localLiving(room)).filter(f=>!room.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0);
       if(gain>points){best=target;points=gain;}
     }
     if(best&&points>=(level==='basic'?4:3))return command('opposite',best);
@@ -39,7 +40,7 @@ export function chooseMachineCard(room,now=Date.now()){
   if(usable('activate')){
     const symbol=placementSymbol(room,actor),targets=toolCells(room,actor,'activate').sort((a,b)=>neighbors(b,symbol)-neighbors(a,symbol)).slice(0,24);
     for(const point of targets){
-      const figures=figureWindows([...room.cells,{...point,symbol}],point.x,point.y,symbol,room.level);
+      const figures=figureWindows([...room.cells,{...point,symbol}],point.x,point.y,symbol,room.level,null,localLiving(room));
       if(figures.some(f=>!room.forms.includes(f.id)))return command('activate',point);
     }
   }
@@ -65,7 +66,7 @@ export function chooseMachineCard(room,now=Date.now()){
   }
   if(usable('destroy')){
     const symbol=player.symbol==='X'?'O':'X';
-    const target=toolCells(room,actor,'destroy').find(point=>figureWindows([...room.cells,{...point,symbol}],point.x,point.y,symbol,room.level).some(f=>!room.forms.includes(f.id)));
+    const target=toolCells(room,actor,'destroy').find(point=>figureWindows([...room.cells,{...point,symbol}],point.x,point.y,symbol,room.level,null,localLiving(room)).some(f=>!room.forms.includes(f.id)));
     if(target)return command('destroy',target);
   }
   if(usable('block')){

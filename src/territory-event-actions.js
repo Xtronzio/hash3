@@ -134,7 +134,19 @@ export function applyPlannedEvent(room,event,now=Date.now()){
  }
  const actions=[],hit=new Set(region.map(c=>key(c.x,c.y)));
  const random=randomGenerator(event.id);
- if(rule.effect==='shuffle'){
+ if(localLiving(room)&&event.kind==='pandemic'){
+  const flip={X:'O',O:'X','*':'#','#':'*'};
+  room.cells=room.cells.map(c=>{
+   if(!hit.has(key(c.x,c.y))||!flip[c.symbol])return c;
+   const symbol=flip[c.symbol],piece={...c,symbol,owner:room.players.find(p=>p.symbol===symbol)?.id??null};
+   delete piece.invasionId;delete piece.invader;delete piece.neutral;
+   if(symbol==='#')piece.neutral=true;if(symbol==='*')piece.invader=true;
+   return piece;
+  });
+  const live=new Set(room.cells.filter(c=>c.symbol==='*').map(c=>c.invasionId).filter(Boolean));
+  room.invasions=(room.invasions||[]).filter(c=>live.has(c.id));
+  actions.push(...region.map(c=>({...c,kind:'pandemic'})));
+ }else if(rule.effect==='shuffle'){
   const groups=event.kind==='tornado-rain'?event.groups||[region]:[region];
   for(const group of groups)actions.push(...shuffle(room,group,random,blocked).map(c=>({...c,kind:event.kind})));
  }else if(rule.effect==='blackhole'){

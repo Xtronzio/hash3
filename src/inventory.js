@@ -1,3 +1,4 @@
+import {localLiving} from './living-balance.js';
 import {borderIcon,wallIcon} from './frontiers.js';
 import {machineChoice,localHumanId} from './local.js';
 import {availableCells,figureWindows} from './game.js';
@@ -81,7 +82,7 @@ export function usePracticeHint(original,playerId,now=Date.now()){
  let choice;
  const symbol=placementSymbol(game,playerId);
  if(symbol!==game.players.find(p=>p.id===playerId).symbol){
-   const ranked=availableCells(game,pair).map(point=>({point,points:figureWindows([...game.cells,{...point,symbol}],point.x,point.y,symbol,game.level).filter(f=>!game.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0)})).sort((a,b)=>b.points-a.points);
+   const ranked=availableCells(game,pair).map(point=>({point,points:figureWindows([...game.cells,{...point,symbol}],point.x,point.y,symbol,game.level,null,localLiving(game)).filter(f=>!game.forms.includes(f.id)).reduce((sum,f)=>sum+f.size,0)})).sort((a,b)=>b.points-a.points);
    choice={payload:ranked[0].point};
  }else choice=machineChoice({...game,difficulty:'medium',pairs:[{...pair}]},()=>0);
  game.practiceHint={...choice.payload,player:playerId};
