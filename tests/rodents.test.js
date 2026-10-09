@@ -1,7 +1,7 @@
 import {livingInterval} from '../src/living-balance.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {initializeHabitats,countHabitatPlacement,advanceHabitats,freezeHabitats,resumeHabitats,habitatLabel,clearHabitatCell} from '../src/inhabitants.js';
+import {initializeHabitats,countHabitatPlacement,advanceHabitats,visitWorms,freezeHabitats,resumeHabitats,habitatLabel,clearHabitatCell} from '../src/inhabitants.js';
 import {availableCells,expansionOptions,key,figureWindows} from '../src/game.js';
 import {toolCells} from '../src/practice-tools.js';
 import {frontierEdges} from '../src/frontiers.js';
@@ -12,7 +12,7 @@ function animal(kind='rodent',point={x:0,y:0}){return {id:kind,player:'local-x',
 function birth(r,count){r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
 test('Visible roedores scale 3/6/9; three meals occupy nine completed turns with separate locations',()=>{
  for(const [size,group] of [[333,3],[999,6],[3333,9]]){
-  const r=fixture(size);r.territoryEnabled=false;birth(r,livingInterval(66,r.terrain.length));r.worms=[];
+  const r=fixture(size);r.territoryEnabled=false;birth(r,livingInterval(66,r.terrain.length));r.worms=[];r.habitatZones[0].next.worm=1000000;r.habitatZones[0].clockNext.worm=1000000;
   assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].members.length,group);assert.equal(r.cells.length,60);
   const visits=[];let oldId;
   for(let turn=1;turn<=9;turn++){
@@ -40,15 +40,15 @@ test('Doble advances one completed turn; clocks and cards never advance the visi
  const nextPoint=availableCells(r,r.pairs[0])[0];r=localCommand(r,'move',nextPoint,1300);assert.equal(r.rodentRaids[0].turn,1);assert.equal(r.players[0].placements,34);
  const before=structuredClone(r.rodentRaids);r=localCommand(r,'tick',{},34000,()=>0);assert.deepEqual(r.rodentRaids,before);
 });
-test('Worm walks adjacent cells including diagonals, blocks body and disappears with its third meal at 99 seconds',()=>{
+test('Worm walks adjacent cells including diagonals, blocks body and disappears with its third meal after nine turns',()=>{
  const r=fixture();r.cells=[{id:'a',x:0,y:0,symbol:'X',owner:'local-x'},{id:'b',x:1,y:1,symbol:'O',owner:'local-o'},{id:'c',x:2,y:2,symbol:'X',owner:'local-x'},{id:'far',x:14,y:8,symbol:'X',owner:'local-x'}];r.worms=[animal('worm')];
- for(const t of [34000,67000])advanceHabitats(r,t,()=>0);
+ initializeHabitats(r,1000);for(let i=0;i<6;i++)visitWorms(r,null,1000+i,()=>0);
  assert.equal(r.worms[0].eaten,2);assert.equal(r.worms[0].body.length,2);assert.ok(habitatBlocked(r,1,1));assert.ok(!availableCells(r,r.pairs[0]).some(c=>c.x===1&&c.y===1));
- advanceHabitats(r,100000,()=>0);assert.equal(r.worms.length,0);assert.equal(r.cells.length,1);assert.equal(r.cells[0].id,'far');assert.ok(!habitatBlocked(r,1,1));
+ for(let i=0;i<3;i++)visitWorms(r,null,1010+i,()=>0);assert.equal(r.worms.length,0);assert.equal(r.cells.length,1);assert.equal(r.cells[0].id,'far');assert.ok(!habitatBlocked(r,1,1));
 });
 test('Frontier blocks roedor migration and worm diagonal crossing; automatic bomb breaks the complete barrier',()=>{
  const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)}));r.frontiers=[{id:'f',edges:frontierEdges({x:0,y:0,side:'east'})}];
- r.terrain.push({x:3,y:0},{x:3,y:1},{x:3,y:2});r.cells=[{id:'own',x:2,y:0,symbol:'X',owner:'local-x'},{id:'outside',x:3,y:1,symbol:'O',owner:'local-o'}];r.worms=[animal('worm',{x:2,y:0})];advanceHabitats(r,34000,()=>0);advanceHabitats(r,67000,()=>0);assert.equal(r.worms[0].eaten,1);assert.ok(r.cells.some(c=>c.id==='outside'));
+ r.terrain.push({x:3,y:0},{x:3,y:1},{x:3,y:2});r.cells=[{id:'own',x:2,y:0,symbol:'X',owner:'local-x'},{id:'outside',x:3,y:1,symbol:'O',owner:'local-o'}];r.worms=[animal('worm',{x:2,y:0})];initializeHabitats(r,1000);for(let i=0;i<6;i++)visitWorms(r,null,1000+i,()=>0);assert.equal(r.worms[0].eaten,1);assert.ok(r.cells.some(c=>c.id==='outside'));
  r.bombs=[{id:'b',kind:'bomb',x:2,y:0,blast:[{x:2,y:0},{x:2,y:1},{x:2,y:2}],nextAt:100000}];advanceHabitats(r,100000);assert.equal(r.frontiers.length,0);assert.equal(r.terrain.length,12);
 });
 test('Work reserves the full 18 positions, rejects occupation/expansion/cards and balances each of nine changes',()=>{
@@ -61,17 +61,17 @@ test('Work reserves the full 18 positions, rejects occupation/expansion/cards an
 test('Conflicting work cancels remaining reservations without unilateral destruction or construction',()=>{
  const r=fixture();birth(r,198);r.rodents=[];r.worms=[];r.bombs=[];const w=r.works[0],size=r.terrain.length;r.cells.push({id:'conflict',...w.destroy[0],symbol:'X',owner:'local-x'});advanceHabitats(r,34000,()=>0);assert.equal(r.terrain.length,size);assert.ok(!r.works.some(v=>v.id===w.id));
 });
-test('Local pause/reload/resume preserves the exact remaining clock and never performs accumulated meals',()=>{
- let r=fixture();r.worms=[animal('worm')];r=localCommand(r,'pause',{},11000);assert.equal(r.worms[0].remainingMs,23000);
+test('Local pause/reload/resume preserves the exact turn counter and never performs accumulated meals',()=>{
+ let r=fixture();r.worms=[animal('worm')];initializeHabitats(r,1000);visitWorms(r,null,1001,()=>0);r=localCommand(r,'pause',{},11000);assert.equal(r.worms[0].turnsSinceMeal,1);assert.equal(r.worms[0].remainingMs,undefined);
  const paused=structuredClone(r);assert.equal(localCommand(r,'tick',{},1000000),r);assert.deepEqual(r,paused);
- r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.worms[0].nextAt,1023000);r=localCommand(r,'tick',{},1022999);assert.equal(r.worms[0].eaten,0);r=localCommand(r,'tick',{},1023000);assert.equal(r.worms[0].eaten,1);
+ r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.worms[0].nextAt,undefined);r=localCommand(r,'tick',{},1022999);assert.equal(r.worms[0].eaten,0);visitWorms(r,null,1023000,()=>0);visitWorms(r,null,1023001,()=>0);assert.equal(r.worms[0].eaten,1);
 });
 test('Mundo activity belongs to connected inhabited territory and preserves emigrant origin/capacity',()=>{
  const r=fixture();r.mode='world';r.players.forEach(p=>p.active=false);r.worms=[animal('worm')];advanceHabitats(r,11000);assert.equal(r.worms[0].remainingMs,33000);
  advanceHabitats(r,1000000);assert.equal(r.worms[0].eaten,0);r.players[1].active=true;advanceHabitats(r,1000001);assert.equal(r.worms[0].nextAt,1033001);advanceHabitats(r,1033001,()=>0);assert.equal(r.worms[0].eaten,1);assert.equal(r.worms[0].player,'local-x');
 });
-test('Absent food retries the next independent interval; finished games never advance',()=>{
- const r=fixture();r.cells=[];r.worms=[animal('worm')];advanceHabitats(r,34000);assert.equal(r.worms[0].eaten,0);assert.equal(r.worms[0].nextAt,67000);r.status='finished';r.cells.push({id:'food',x:0,y:0,symbol:'X',owner:'local-x'});advanceHabitats(r,67000);assert.equal(r.cells.length,1);
+test('Absent food retries the next three-turn meal attempt; finished games never advance',()=>{
+ const r=fixture();r.cells=[];r.worms=[animal('worm')];initializeHabitats(r,1000);for(let i=0;i<3;i++)visitWorms(r,null,1000+i);assert.equal(r.worms[0].eaten,0);assert.equal(r.worms[0].failedMeals,1);assert.equal(r.worms[0].nextAt,undefined);r.status='finished';r.cells.push({id:'food',x:0,y:0,symbol:'X',owner:'local-x'});advanceHabitats(r,67000);assert.equal(r.cells.length,1);
 });
 test('Clearing preserves earned points and releases broken paid figures for reconstruction',()=>{
  const r=fixture();r.cells=r.cells.slice(0,3);r.forms=figureWindows(r.cells,1,0,'X').map(f=>f.id);r.forms.push('O:línea:30,0;31,0;32,0');r.players[0].score=70;clearHabitatCell(r,{x:1,y:0});assert.equal(r.players[0].score,70);assert.deepEqual(r.forms,['O:línea:30,0;31,0;32,0']);

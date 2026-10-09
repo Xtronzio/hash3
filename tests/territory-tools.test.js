@@ -89,7 +89,7 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  assert.equal(habitatInterval(HABITAT_FREQUENCIES.worm,333),33);assert.equal(habitatInterval(HABITAT_FREQUENCIES.work,333),66);
  assert.equal(habitatInterval(HABITAT_FREQUENCIES.worm,999),50);assert.equal(habitatInterval(HABITAT_FREQUENCIES.work,999),99);
  const r=board(333);r.players[0].placements=65;countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);
- assert.equal(r.worms.length,1);assert.equal(r.worms[0].nextAt,35000);
+ assert.equal(r.worms.length,1);assert.equal(r.worms[0].turnDriven,true);assert.equal(r.worms[0].mealLimit,3);assert.equal(r.worms[0].nextAt,undefined);
  r.territoryEvents=[{id:'u',kind:'ufo',region:[r.cells[0]],nextAt:2100}];advanceTerritory(r,2100);
  const zone=r.habitatZones[0];assert.equal(zone.next.worm-zone.placements,33);assert.equal(zone.next.work-zone.placements,66);assert.equal(r.ecologyRecovery.moves,3);
 });

@@ -48,6 +48,6 @@ test('Old fauna counters shorten proportionally once, without creating residents
  const g=createLocal('local','A','B',now,'normal','untimed');delete g.habitatFrequencyVersion;
  g.habitatZones=[{x:0,y:0,placements:20,next:{rodent:33,worm:99,work:198,bomb:66},credit:{worm:.4,work:.7}}];
  g.worms=[{id:'live',x:0,y:0,body:[{x:0,y:0}],eaten:1,nextAt:now+28000}];const before=structuredClone(g.worms);
- initializeHabitats(g,now+1000);assert.equal(g.habitatZones[0].next.rodent,33);assert.equal(g.habitatZones[0].next.worm,47);assert.equal(g.habitatZones[0].next.work,80);assert.deepEqual(g.habitatZones[0].credit,{worm:.4,work:.7});assert.deepEqual(g.worms,before);assert.equal(g.works.length,0);
+ initializeHabitats(g,now+1000);assert.equal(g.habitatZones[0].next.rodent,33);assert.equal(g.habitatZones[0].next.worm,47);assert.equal(g.habitatZones[0].next.work,80);assert.deepEqual(g.habitatZones[0].credit,{worm:.4,work:.7});assert.deepEqual(g.worms.map(({turnDriven,mealLimit,turnsSinceMeal,failedMeals,...w})=>w),before.map(({nextAt,...w})=>w));assert.equal(g.worms[0].mealLimit,3);assert.equal(g.works.length,0);
  const saved=structuredClone(g);initializeHabitats(g,now+999999);assert.deepEqual(g,saved);
 });

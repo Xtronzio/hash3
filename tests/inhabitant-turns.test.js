@@ -7,13 +7,13 @@ import {habitatLocations,rodentTurnsRemaining} from '../src/habitat-tools.js';
 import {ecologyPinTargets,ecologyMapPins} from '../src/ecology-navigation.js';
 import {availableCells} from '../src/game.js';
 const start=()=>createLocal('solo','A','',1000,'normal','untimed');
-test('A worm without food persists its retry deadline; repeated ticks neither eat nor replace the rival turn',()=>{
+test('A worm without food preserves its turn counter; repeated ticks neither eat nor replace the rival turn',()=>{
  let r=start();r.pairs[0].turn='O';r.worms=[{id:'w',kind:'worm',x:0,y:0,body:[{x:0,y:0}],eaten:1,nextAt:2000}];
- const original=machineTurnKey(r);r=localCommand(r,'tick',{},2000,()=>0);assert.equal(r.worms[0].nextAt,35000);assert.equal(needsLocalTick(r,2500),false);assert.equal(machineTurnKey(r),original);
+ const original=machineTurnKey(r);r=localCommand(r,'tick',{},2000,()=>0);assert.equal(r.worms[0].nextAt,undefined);assert.equal(r.worms[0].turnsSinceMeal,0);assert.equal(needsLocalTick(r,2500),false);assert.equal(machineTurnKey(r),original);
  const next=localCommand(r,'tick',{},2500,()=>0);assert.equal(next,r);assert.ok(availableCells(r,r.pairs[0]).length);r=localCommand(r,'move',{x:1,y:0},2501,()=>0);assert.equal(r.pairs[0].turn,'X');
 });
 test('A habitat action changes the board without restarting the same machine turn; referee validates against fresh state',()=>{
- let r=start();r=localCommand(r,'move',{x:1,y:1},1100,()=>0);r.worms=[{id:'w',kind:'worm',x:1,y:1,body:[{x:1,y:1}],eaten:0,nextAt:2000}];
+ let r=start();r=localCommand(r,'move',{x:1,y:1},1100,()=>0);r.cells[0].symbol='*';r.works=[{id:'cleaner',kind:'work',role:'build',destroy:[],build:[{x:1,y:1}],done:0,nextAt:2000}];
  const key=machineTurnKey(r),version=r.version;r=localCommand(r,'tick',{},2000,()=>0);assert.ok(r.version>version);assert.equal(r.cells.length,0);assert.equal(machineTurnKey(r),key);
  r=localCommand(r,'move',{x:2,y:2},2001,()=>0);assert.equal(machineTurnKey(r),null);assert.equal(r.pairs[0].turn,'X');
 });

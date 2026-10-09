@@ -12,7 +12,8 @@ export const livingFirstClock=(room,family)=>family==='invaders'?66000:livingEve
 export function livingImpact(room,kind,rule){
  const n=room.terrain?.length||0,f=livingFactor(n);
  if(kind==='invader-rain')return 3*f;
- if(kind==='invader-colony'||kind==='blackhole')return 9*f;
+ if(kind==='invader-colony')return f;
+ if(kind==='blackhole')return 9*f;
  const size=rule.basis==='pieces'?room.cells.length:n;
  const rate=rule.effect==='demolish'?.03:rule.effect==='vacate'?.06:.09;
  const cap=(rule.effect==='demolish'?33:rule.effect==='vacate'?66:99)*f;

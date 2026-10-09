@@ -4,7 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
-import {createLocal} from '../src/local.js';
+import {createLocal,localCommand} from '../src/local.js';
+import {seedInvasions} from '../src/invasion-paths.js';
 import {initializeHabitats} from '../src/inhabitants.js';
 import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
 import {plannedEventRegion} from '../src/territory-event-actions.js';
@@ -253,19 +254,21 @@ try{
  await selectBorder();
  const anchor=borderPage.locator('.board [data-action="inventory-target"][data-x="0"][data-y="0"]').first();
  await anchor.evaluate(el=>{const viewport=document.querySelector('.viewport'),r=el.getBoundingClientRect(),v=viewport.getBoundingClientRect();viewport.scrollLeft+=r.x+r.width/2-v.x-v.width/2;viewport.scrollTop+=r.y+r.height/2-v.y-v.height/2;});await frame(borderPage);
- await anchor.tap();assert.equal(await borderPage.locator('.board-border-cell.is-preview').count(),3);
- await borderPage.locator('[data-action="rotate-border"]').tap();assert.equal(await borderPage.locator('.board-border-cell.is-preview').count(),0);
+ await anchor.tap();assert.equal(await borderPage.locator('.board-frontier-cell.is-preview').count(),1);
+ const tapBorder=async(x,y)=>{const cell=borderPage.locator(`.board [data-action="inventory-target"][data-x="${x}"][data-y="${y}"]`).first();await cell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(borderPage);await cell.tap();};
+ await tapBorder(1,0);assert.equal(await borderPage.locator('.board-frontier-cell.is-preview').count(),2);
+ assert.equal(await borderPage.locator('[data-action="rotate-border"]').count(),0);
  await borderPage.locator('[data-action="cancel-tool-selection"]').tap();
  assert.equal(await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[0].inventory.cards.border),1);
- await selectBorder();await anchor.evaluate(el=>{const viewport=document.querySelector('.viewport'),r=el.getBoundingClientRect(),v=viewport.getBoundingClientRect();viewport.scrollLeft+=r.x+r.width/2-v.x-v.width/2;viewport.scrollTop+=r.y+r.height/2-v.y-v.height/2;});await frame(borderPage);await anchor.tap();await borderPage.locator('[data-action="confirm-area-tool"]').tap();
+ await selectBorder();await tapBorder(0,0);await tapBorder(1,0);await tapBorder(1,1);
  const placedBorder=await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.equal(placedBorder.frontiers[0].edges.length,3);
- assert.equal(await borderPage.locator('.board-border-cell').count(),3);assert.ok(await borderPage.locator('.board .invasion-entry').count()>0);
+ assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.deepEqual(placedBorder.frontiers[0].cells,[{x:0,y:0},{x:1,y:0},{x:1,y:1}]);
+ assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);assert.ok(await borderPage.locator('.board .invasion-entry').count()>0);
  await borderPage.screenshot({path:path.join(output,'border-warning.png')});
  await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
  await borderPage.locator('[data-action="close-map"]').tap();await borderPage.locator('[data-action="pause"]').tap();
  assert.ok(await borderPage.locator('.inspection-canvas .map-frontiers path').count()>=3);
- assert.deepEqual(borderErrors,[]);results.push({borderPreviewCancelRotate:true,borderSpendOnce:true,borderSharedMaps:true,passed:true});await borderPage.close();
+ assert.deepEqual(borderErrors,[]);results.push({borderThreeTapsLAndCancel:true,borderSpendOnce:true,borderSharedMaps:true,passed:true});await borderPage.close();
  // The head uses the creature icon; body links use the same map geometry.
  const trailRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  trailRoom.worms=[{id:'trail',kind:'worm',x:2,y:1,body:[{x:0,y:0},{x:1,y:0},{x:2,y:1}],eaten:2,nextAt:Date.now()+600000}];
@@ -276,6 +279,45 @@ try{
  await trailPage.locator('[data-action="close-map"]').tap();await trailPage.locator('[data-action="pause"]').tap();
  assert.equal(await trailPage.locator('.inspection-canvas .worm-map-trail').innerHTML(),wormMap);
  assert.deepEqual(trailErrors,[]);results.push({continuousWormTrail:true,headDistinct:true,sharedPausedTrail:true,passed:true});await trailPage.close();
+ // Turn-driven worms show meals and turns consistently in board and maps.
+ const turnRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
+ turnRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));turnRoom.territoryEnabled=false;
+ turnRoom.cells=[{id:'food',x:3,y:3,symbol:'O',owner:'local-o'},{id:'food2',x:4,y:3,symbol:'X',owner:'local-x'}];
+ turnRoom.worms=[{id:'turn-worm',kind:'worm',x:3,y:3,body:[{x:3,y:3}],eaten:0,mealLimit:9,turnDriven:true,turnsSinceMeal:2}];
+ const {page:turnPage,errors:turnErrors}=await load(context,turnRoom);
+ assert.match(await turnPage.locator('.habitat-worm b').first().innerText(),/0\/9.*1↷/);
+ assert.equal(await turnPage.locator('.map-jumps [data-ecology-kind="worm"] .ecology-clock').count(),0);
+ const moveCell=turnPage.locator('.board [data-action="move"][data-x="0"][data-y="0"]');await moveCell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(turnPage);await moveCell.tap();
+ await turnPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].worms[0].eaten===1);
+ assert.match(await turnPage.locator('.habitat-worm b').first().innerText(),/1\/9.*3↷/);
+ await turnPage.locator('[data-action="events"]').tap();assert.match(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
+ await turnPage.screenshot({path:path.join(output,'worm-turns-r37.png')});
+ assert.deepEqual(turnErrors,[]);results.push({wormNineMealsTurnBadge:true,passed:true});await turnPage.close();
+ // A live invasion remains active without a fictitious seconds clock.
+ const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');growthRoom.invasions[0].grown=4;
+ const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
+ await growthPage.locator('[data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
+ assert.match(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
+ assert.equal(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
+ assert.match(await growthPage.locator('.board .phenomenon-marker').innerText(),/4\/9/);
+ await growthPage.screenshot({path:path.join(output,'invasion-growing-r37.png')});
+ assert.deepEqual(growthErrors,[]);results.push({invasionGrowingBadge:true,passed:true});await growthPage.close();
+ // A due storm can pay both symbols, and its visible notice identifies each.
+ const stormRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
+ stormRoom.cells=[['X',0,0],['X',1,0],['X',2,1],['O',0,1],['O',1,1],['O',2,0]].map(([symbol,x,y],i)=>({id:'s'+i,symbol,x,y,owner:symbol==='X'?'local-x':'local-o'}));
+ let expectedStorm;
+ for(let i=0;i<100;i++){
+  stormRoom.territoryEvents=[{id:'storm-qa-'+i,kind:'hurricane',region:stormRoom.terrain,nextAt:Date.now()+1500}];
+  const candidate=localCommand(stormRoom,'tick',{},stormRoom.territoryEvents[0].nextAt);
+  if(candidate.landingEvent?.scores.length===2){expectedStorm=candidate;break;}
+ }
+ assert.ok(expectedStorm,'Find a reproducible storm scoring both symbols');
+ const {page:stormPage,errors:stormErrors}=await load(context,stormRoom);
+ await stormPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);
+ const landed=await stormPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.deepEqual(landed.players.map(p=>p.score),expectedStorm.players.map(p=>p.score));
+ assert.match(await stormPage.locator('#notice').innerText(),/Huracán.*X \+.*O \+/);
+ await stormPage.screenshot({path:path.join(output,'landing-scores-r37.png')});
+ assert.deepEqual(stormErrors,[]);results.push({landingBothSymbolsNotice:true,passed:true});await stormPage.close();
  assert.deepEqual(onlineRequests,[],'Local diagnosis contacted Supabase');
  results.push({supabaseRequests:0,passed:true});
  await context.close();
