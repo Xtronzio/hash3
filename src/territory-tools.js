@@ -78,7 +78,9 @@ function announceTerritory(room,now,random,trigger){
  room.territoryNextPlacement=territoryPlacements(room)+TERRITORY_PLACEMENTS;
  const choice=pickEventKind(room,random);
  for(const kind of choice.order){
-  const planned=plannedEventRegion(room,kind,random,now);
+  const planned=kind==='ufo'?territoryRegion(room,'ufo',random,Math.floor(room.cells.length*33/333)):
+   kind==='earthquake'?territoryRegion(room,'cataclysm',random,Math.floor(size*33/333)):
+   plannedEventRegion(room,kind,random,now);
   const region=Array.isArray(planned)?planned:planned.region;
   if(!region?.length)continue;
   // All event parameters live in territory-event-rules.js. No work here
