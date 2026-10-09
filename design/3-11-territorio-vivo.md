@@ -53,3 +53,7 @@ No afirmar que el equilibrio se ha optimizado: **los patrones y frecuencias toda
 ## Siguiente conversación
 
 Abrir **#3_11** con esta rama como referencia. Completar homologación Supabase, QA táctil, publicación y simulación de partidas completas. **Después** modificar solo lo que salga de los datos: patrones, frecuencias e intensidades.
+
+## Compatibilidad con corrección de perfiles publicada
+
+El 9/10/2026 se publicó por separado en `main` la revisión `R0.21.28-P1` (PR #2, commit `698edf259cad0c9b47fc43ab4b114daf8f77bbe0`): acceso entre navegadores más fiable y Perfil rediseñado. **Antes de integrar #3_11, conservar/cherry-pick las mejoras de** `src/profile-access-ui.js`, `src/profile-link.js`, `src/api.js`, `src/hall.js`, `src/hall.css`, `src/main.js`, las pruebas y versión. No sobrescribirlas con el `main.js` antiguo de esta rama. Las ramas comparten `hall.js`/`main.js`; resolver conflictos con prioridad al flujo de perfil más reciente.
