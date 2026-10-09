@@ -1,3 +1,4 @@
+import {localLiving} from './living-balance.js';
 import {key,figureWindows} from './game.js';
 
 // Render only the geometries actually paid by the authoritative engine.
@@ -8,7 +9,7 @@ export function scoreFeedback(previous,next) {
   if(!player)return null;
   const scoredMove=move||ev.move;if(!scoredMove)return null;
   const paid=new Set(next.forms||[]),before=new Set(previous.forms||[]);
-  const figures=ev.paidFigures||figureWindows(next.cells,scoredMove.x,scoredMove.y,scoredMove.symbol,next.level).filter(f=>paid.has(f.id)&&!before.has(f.id));
+  const figures=ev.paidFigures||figureWindows(next.cells,scoredMove.x,scoredMove.y,scoredMove.symbol,next.level,null,localLiving(next)).filter(f=>paid.has(f.id)&&!before.has(f.id));
   const cells=new Map(),groups=new Map();
   for(const f of figures) {
     for(const [x,y] of f.points)cells.set(key(x,y),{x,y});

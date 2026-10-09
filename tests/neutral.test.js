@@ -8,7 +8,7 @@ import {machineMoveScore} from '../src/machine.js';
 import {initializeHabitats,countHabitatPlacement,advanceHabitats} from '../src/inhabitants.js';
 import {rodentVisitFeedback,boardActionFeedback} from '../src/rodent-feedback.js';
 
-test('# sabotages a completion hole, has no owner, no figures and cannot be played over',()=>{
+test('# appears without awarding points, has no owner and cannot be played over',()=>{
  const room=createLocal('local','A','B',1000,'normal','untimed');room.cells=[{id:'a',x:0,y:0,symbol:'X',owner:'local-x'},{id:'b',x:1,y:0,symbol:'X',owner:'local-x'}];
  const cell=placeNeutral(room,[{x:2,y:0},{x:2,y:2}],1000,()=>0);
  assert.equal(cell.x,2);assert.equal(cell.y,0);assert.equal(cell.symbol,'#');assert.equal(cell.owner,null);
@@ -23,9 +23,9 @@ test('# respects reservations, leaves a legal move and can be erased but never c
  assert.ok(!toolCells(room,'local-x','opposite').some(c=>c.id===cell.id));assert.ok(!toolCells(room,'local-x','shift').some(c=>c.id===cell.id));
  const next=localCommand(room,'inventory',{tool:'erase',playerId:'local-x',x:cell.x,y:cell.y},2000);assert.ok(!next.cells.some(c=>c.id===cell.id));assert.equal(next.players[0].score,0);
 });
-test('Machine never counts # as O or scores a pattern through it',()=>{
+test('Machine uses # as the placing symbol, while invasion * remains an obstacle',()=>{
  const room=createLocal('local','A','B',1000,'normal','untimed');room.pairs[0].turn='O';room.cells=[{id:'n',x:0,y:0,symbol:'#',owner:null},{id:'o',x:1,y:0,symbol:'O',owner:'local-o'}];
- const score=machineMoveScore(room,{x:2,y:0},'O');assert.equal(score.figures,0);assert.equal(score.points,0);
+ const score=machineMoveScore(room,{x:2,y:0},'O');assert.equal(score.figures,1);assert.equal(score.points,3);room.cells[0].symbol='*';assert.equal(machineMoveScore(room,{x:2,y:0},'O').points,0);
 });
 test('Legacy rats migrate to move visits once; completed worms release their body at load',()=>{
  const room=createLocal('local','A','B',1000,'normal','untimed');room.habitatVersion=1;room.rodents=[{id:'old',x:0,y:0,player:'local-x',eaten:1,nextAt:33000}];room.worms=[{id:'old-worm',eaten:3,body:[{x:1,y:0}]}];
@@ -37,7 +37,7 @@ test('An idle legacy save persists its upgrade once without permanent polling wo
  const next=localCommand(room,'tick',{},2000);assert.equal(next.habitatVersion,3);assert.notEqual(next,room);assert.equal(localCommand(next,'tick',{},3000),next);
 });
 test('No-food visits expire after three moves and never build an overdue backlog',()=>{
- const room=createLocal('local','A','B',1000,'normal','untimed');room.players[0].placements=32;
+ const room=createLocal('local','A','B',1000,'normal','untimed');room.players[0].placements=35;
  for(let i=0;i<3;i++)countHabitatPlacement(room,'local-x',{x:0,y:0},1000+i,()=>0);
  assert.equal(room.rodentRaids.length,0);assert.equal(room.rodentVisit,undefined);assert.equal(room.cells.filter(c=>c.symbol==='#').length,1);
 });

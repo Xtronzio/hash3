@@ -10,6 +10,7 @@ on:
       - release/local-living-r35
       - release/local-symbols-r36
       - release/local-evolution-r37
+      - release/local-reclaim-r38
   workflow_dispatch:
 permissions:
   contents: write

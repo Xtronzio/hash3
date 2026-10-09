@@ -1,8 +1,10 @@
+import {localLiving} from './living-balance.js';
 import {protectedTerritoryKeys} from './immunity.js';
 import {key,shapeTemplates} from './game.js';
 import {habitatBlocked} from './habitat-tools.js';
 
-export const NEUTRAL_FREQUENCY=33;
+export const NEUTRAL_FREQUENCY=9;
+export const neutralFrequency=room=>localLiving(room)?NEUTRAL_FREQUENCY:33;
 export const neutralIcon='<path d="M25 12 19 52M45 12 39 52M12 25h40M10 40h40"/>';
 
 // Evaluate local patterns against one index, rather than rescanning all pieces

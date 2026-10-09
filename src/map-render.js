@@ -19,11 +19,16 @@ export function mapFrameMarkup(model){
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){
- return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[])};
+ return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[])};
 }
 export function mapWindowMarkup(model,index,box,scale){
  const detail=box.width*box.height<=MAP_DETAIL_LIMIT,cells=detail?index.detail.query(box):index.coarse.query(box);
  const walls=detail?frontierMarkup({frontiers:[{cells:index.barriers.query(box)}]}):frontierMarkup({frontiers:[{cells:index.coarseBarriers.query(box)}]});
  const worms=detail?`<g class="worm-map-trail" fill="none" stroke="var(--yellow)" stroke-width=".07" stroke-linecap="round">${wormTrailMarkup(index.worms.query(box))}</g>`:'';
- return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+worms+walls+mapFrameMarkup(model);
+ const growth=detail?invasionGrowthMarkup(index.growth.query(box)):'';
+ return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+mapFrameMarkup(model);
+}
+
+export function invasionGrowthMarkup(points){
+ return `<g class="map-invasion-growth" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08">${points.map(c=>`<rect x="${c.x+.07}" y="${c.y+.07}" width=".86" height=".86"><title>Invasión: esta casilla puede expandirse</title></rect>`).join('')}</g>`;
 }

@@ -150,7 +150,7 @@ export function advanceTerritory(room,now=Date.now()){
   const mixes=['shuffle','blackhole'].includes(eventRule(event.kind)?.effect);
   if(mixes)pruneBrokenForms(room);
   else room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
-  for(const p of room.players)if(p.lastMove){const moved=survivors.get(p.lastMove.id);if(moved)p.lastMove={...moved};else delete p.lastMove;}
+  for(const p of room.players)if(p.lastMove){const moved=survivors.get(p.lastMove.id);if(moved&&moved.owner===p.id)p.lastMove={...moved};else delete p.lastMove;}
   room.eatenCells=(room.eatenCells||[]).filter(c=>!hit.has(key(c.x,c.y)));
   if(['vacate','blackhole'].includes(eventRule(event.kind)?.effect)){
    const cleared=event.kind==='blackhole'?event.region:changes;
@@ -185,7 +185,7 @@ export function rebalanceAfterTerritory(room,now=Date.now()){
  const terrain=terrainOf(room),size=terrain.length,known=new Set(terrain.map(c=>key(c.x,c.y))),unit=localLiving(room)?livingFactor(size):Math.ceil(size/333);
  const before={rodents:(room.rodentRaids||[]).reduce((n,r)=>n+r.count,0),worms:(room.worms||[]).length,workers:(room.works||[]).length};
  room.worms=(room.worms||[]).filter(w=>(w.body||[]).every(c=>known.has(key(c.x,c.y)))).slice(0,unit);
- room.works=(room.works||[]).filter(w=>(w.role==='build'?w.build:w.destroy).slice(w.done).every(c=>known.has(key(c.x,c.y)))).slice(0,unit*3);
+ room.works=(room.works||[]).filter(w=>w.reconquer?(!w.destroy.slice(w.done).length||w.destroy.slice(w.done).some(c=>known.has(key(c.x,c.y)))||w.build.slice(w.done).some(c=>!known.has(key(c.x,c.y)))):(w.role==='build'?w.build:w.destroy).slice(w.done).every(c=>known.has(key(c.x,c.y)))).slice(0,unit*3);
  let rats=localLiving(room)?unit*3:Math.ceil(size*3/333);
  room.rodentRaids=(room.rodentRaids||[]).filter(r=>known.has(key(r.x,r.y))).flatMap(r=>{const count=Math.min(r.count,rats);rats-=count;return count?[{...r,count}]:[];});
  if(!localLiving(room))for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries(HABITAT_FREQUENCIES))zone.next[kind]=zone.placements+habitatInterval(n,size);}

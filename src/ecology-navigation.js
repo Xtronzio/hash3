@@ -1,4 +1,4 @@
-import {isTurnWorm,wormTurnsToMeal} from './worm-turns.js';
+import {isTurnWorm} from './worm-turns.js';
 import {localLiving,LIVING_FREQUENCIES,livingMinimum,livingAttempt} from './living-balance.js';
 import {borderIcon,wallIcon} from './frontiers.js';
 import {snapshotMemo} from './snapshot-memo.js';
@@ -8,11 +8,11 @@ import {habitatTargets,rodentTurnsRemaining} from './habitat-tools.js';
 import {habitatIcons,habitatAnimationDelay} from './inhabitants.js';
 import {territoryIcons,territoryPlacements,territoryFigures} from './territory-tools.js';
 import {rodentIcon} from './rodents.js';
-import {neutralIcon} from './neutral.js';
+import {neutralIcon,neutralFrequency} from './neutral.js';
 import {frontierFootprint} from './frontiers.js';
 import {ecologySeconds} from './ecology-clock.js';
 import {TERRITORY_EVENT_RULES,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,EVENT_BALANCE,eventLabel,isTimedTerritoryKind,territoryAttemptInterval} from './territory-event-rules.js';
-export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Destructores',bomb:'Bombas antiguas',neutral:'Ficha neutral #',frontier:'Muros',border:'Fronteras',...Object.fromEntries(Object.keys(TERRITORY_EVENT_RULES).map(kind=>[kind,eventLabel(kind)])),'invader-colony':'Colonias invasoras'};
+export const ecologyNames={rodent:'Roedores',worm:'Gusanos',build:'Constructores',destroy:'Reconquistadores',bomb:'Bombas antiguas',neutral:'Comodín #',frontier:'Muros',border:'Fronteras',...Object.fromEntries(Object.keys(TERRITORY_EVENT_RULES).map(kind=>[kind,eventLabel(kind)])),'invader-colony':'Colonias invasoras'};
 export const ecologyColors={build:'var(--green)',destroy:'var(--red)',frontier:'var(--frontier)',border:'var(--frontier)',neutral:'#e3e5e9'};
 const center=points=>{
  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const p of points){left=Math.min(left,p.x);top=Math.min(top,p.y);right=Math.max(right,p.x);bottom=Math.max(bottom,p.y);}
@@ -60,9 +60,9 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
  return kinds.map(kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
   const birthKind=['build','destroy'].includes(kind)?'work':kind,frequency=['rodent','worm','work'].includes(birthKind)?(localLiving(room)?LIVING_FREQUENCIES:HABITAT_FREQUENCIES)[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
-  const turnWorms=kind==='worm'?targets.filter(isTurnWorm):[],colonies=targets.filter(e=>e.invasion);
-  const badge=turnWorms.length?`<span class="ecology-badge mono" aria-label="Turnos hasta la próxima comida">${Math.min(...turnWorms.map(wormTurnsToMeal))}↷</span>`:colonies.length?`<span class="ecology-badge mono" aria-label="Casillas invadidas de nueve por colonia">${Math.max(...colonies.map(c=>c.grown))}/9</span>`:events.length?`<span class="ecology-clock mono" data-ecology-kind="${kind}" aria-label="${Math.min(...events.map(e=>ecologySeconds(e,now)))} segundos">${Math.min(...events.map(e=>ecologySeconds(e,now)))}</span><small>s</small>`:kind==='rodent'&&room.rodentRaids?.length?`<span class="ecology-badge mono" aria-label="Turnos restantes del ciclo visible">${Math.max(...(room.rodentRaids||[]).map(rodentTurnsRemaining),0)}</span>`:targets.length>1?`<span class="ecology-badge mono">${targets.length}</span>`:birth!=null?`<span class="ecology-badge mono" data-ecology-birth="${birthKind}" aria-label="Próximo intento en ${birth} colocaciones de la zona">${birth}</span>`:'';
-  const own=room.players?.find(p=>p.id===playerId),neutralNext=room.territoryEnabled!==false&&own?33-(own.placements||0)%33:null;
+  const colonies=targets.filter(e=>e.invasion);
+  const badge=kind==='worm'?'':events.length?`<span class="ecology-clock mono" data-ecology-kind="${kind}" aria-label="${Math.min(...events.map(e=>ecologySeconds(e,now)))} segundos">${Math.min(...events.map(e=>ecologySeconds(e,now)))}</span><small>s</small>`:colonies.length?'':kind==='rodent'&&room.rodentRaids?.length?`<span class="ecology-badge mono" aria-label="Turnos restantes del ciclo visible">${Math.max(...(room.rodentRaids||[]).map(rodentTurnsRemaining),0)}</span>`:targets.length>1?`<span class="ecology-badge mono">${targets.length}</span>`:birth!=null?`<span class="ecology-badge mono" data-ecology-birth="${birthKind}" aria-label="Próximo intento en ${birth} colocaciones de la zona">${birth}</span>`:'';
+  const own=room.players?.find(p=>p.id===playerId),neutralNext=room.territoryEnabled!==false&&own?neutralFrequency(room)-(own.placements||0)%neutralFrequency(room):null;
   const upcoming=kind==='neutral'&&neutralNext!=null?` · siguiente intento en ${neutralNext} colocaciones propias`:'';
   const timed=isTimedTerritoryKind(kind),active=targets.length>0,family=TERRITORY_EVENT_RULES[kind]?.family==='invaders'?'invaders':'natural';
   // Anchor the brief announcement pulse to game time so snapshot redraws do
@@ -78,9 +78,10 @@ export function ecologyPinTargets(room,playerId){
 // A fit view may contain many rain groups. Draw at most 33 markers, keeping
 // their real coordinates; every group remains reachable through the icon.
 export function ecologyMapPins(targets,now=Date.now(),maximum=33){
+ targets=targets.filter(e=>!e.invasion);
  const selected=targets.length>maximum?Array.from({length:maximum},(_,i)=>targets[Math.floor(i*targets.length/maximum)]):targets;
  return selected.map(e=>{
-  const color=ecologyColors[e.kind]||'var(--yellow)',timed=!isTurnWorm(e)&&!e.invasion&&(['worm','build','destroy','bomb'].includes(e.kind)||isTimedTerritoryKind(e.kind)),value=e.invasion?`${e.grown}/9`:isTurnWorm(e)?`${wormTurnsToMeal(e)}↷`:timed?ecologySeconds(e,now):rodentTurnsRemaining(e);
-  return `<g class="ecology-map-pin visible-inhabitant habitat-${e.kind} phase-${e.phase||'working'} ${e.frozen||e.remainingMs!=null?'is-frozen':''}" data-x="${e.x+.5}" data-y="${e.y+.5}" style="color:${color};--inhabitant-delay:${habitatAnimationDelay(e,e.kind,now)}ms"><title>${ecologyNames[e.kind]}${isTurnWorm(e)?` · ${e.eaten||0}/${e.mealLimit} comidas`:e.invasion?` · ${e.grown}/9 casillas invadidas`:''}${e.approach?' · entrada '+e.approach.side:''}</title>${e.approach?`<path class="invasion-direction" d="M0-27v9m-4-4 4 4 4-4" transform="rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]})" fill="none" stroke="currentColor" stroke-width="2"/>`:''}<circle r="13" fill="#101216" stroke="currentColor" stroke-width="1.5"/><svg x="-10" y="-12" width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${e.kind==='rodent'?rodentIcon:territoryIcons[e.kind]||habitatIcons[e.kind]}</svg><text y="11" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" class="${timed?'ecology-clock':''}" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId||e.id}" aria-label="${timed?value+' segundos':value+' turnos'}">${value}</text></g>`;
+  const color=ecologyColors[e.kind]||'var(--yellow)',timed=!isTurnWorm(e)&&!e.invasion&&(['worm','build','destroy','bomb'].includes(e.kind)||isTimedTerritoryKind(e.kind)),value=e.invasion||e.kind==='worm'?null:timed?ecologySeconds(e,now):rodentTurnsRemaining(e);
+  return `<g class="ecology-map-pin visible-inhabitant habitat-${e.kind} phase-${e.phase||'working'} ${e.frozen||e.remainingMs!=null?'is-frozen':''}" data-x="${e.x+.5}" data-y="${e.y+.5}" style="color:${color};--inhabitant-delay:${habitatAnimationDelay(e,e.kind,now)}ms"><title>${ecologyNames[e.kind]}${e.invasion?' · en crecimiento':''}${e.approach?' · entrada '+e.approach.side:''}</title>${e.approach?`<path class="invasion-direction" d="M0-27v9m-4-4 4 4 4-4" transform="rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]})" fill="none" stroke="currentColor" stroke-width="2"/>`:''}<circle r="13" fill="#101216" stroke="currentColor" stroke-width="1.5"/><svg x="-10" y="${value==null?-10:-12}" width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${e.kind==='rodent'?rodentIcon:territoryIcons[e.kind]||habitatIcons[e.kind]}</svg>${value==null?'':`<text y="11" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" class="${timed?'ecology-clock':''}" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId||e.id}" aria-label="${timed?value+' segundos':value+' turnos'}">${value}</text>`}</g>`;
  }).join('');
 }

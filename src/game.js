@@ -57,13 +57,13 @@ for(const [kind,shape] of [['L',[[0,0],[1,0],[0,1]]],['L',[[0,0],[1,0],[2,0],[0,
   }
 }
 export const shapeTemplates=[...templates.values()];
-export function prepareFigureIndex(cells){
- const bySymbol=new Map(['X','O'].map(symbol=>[symbol,cells.filter(c=>c.symbol===symbol)]));
+export function prepareFigureIndex(cells,wildcards=false){
+ const bySymbol=new Map(['X','O'].map(symbol=>[symbol,cells.filter(c=>c.symbol===symbol||wildcards&&c.symbol==='#')]));
  return {bySymbol,occupied:new Map([...bySymbol].map(([symbol,cs])=>[symbol,new Set(cs.map(c=>key(c.x,c.y)))])),groups:new Map()};
 }
-export function figureWindows(cells,x,y,symbol,level='normal',index=null) {
+export function figureWindows(cells,x,y,symbol,level='normal',index=null,wildcards=false) {
   if(!['X','O'].includes(symbol))return [];
-  const occupied=index?.occupied.get(symbol)||new Set(cells.filter(c=>c.symbol===symbol).map(c=>key(c.x,c.y))),found=new Map();
+  const occupied=index?.occupied.get(symbol)||new Set(cells.filter(c=>c.symbol===symbol||wildcards&&c.symbol==='#').map(c=>key(c.x,c.y))),found=new Map();
   const add=(kind,points)=>{const id=symbol+':'+kind+':'+canonical(points);found.set(id,{id,kind,size:points.length,points});};
   for(const [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]) {
     let sx=x,sy=y;while(occupied.has(key(sx-dx,sy-dy))){sx-=dx;sy-=dy;}
@@ -77,7 +77,7 @@ export function figureWindows(cells,x,y,symbol,level='normal',index=null) {
   if(level==='advanced') {
     const cache=index?.groups.get(symbol)||new Map();if(index&&!index.groups.has(symbol))index.groups.set(symbol,cache);
     let points=cache.get(key(x,y));
-    if(!points){points=connectedTerrain(index?.bySymbol.get(symbol)||cells.filter(c=>c.symbol===symbol),{x,y}).map(c=>[c.x,c.y]);if(index)for(const [px,py] of points)cache.set(key(px,py),points);}
+    if(!points){points=connectedTerrain(index?.bySymbol.get(symbol)||cells.filter(c=>c.symbol===symbol||wildcards&&c.symbol==='#'),{x,y}).map(c=>[c.x,c.y]);if(index)for(const [px,py] of points)cache.set(key(px,py),points);}
     if(points.length>=4&&!Array.from(found.values()).some(f=>canonical(f.points)===canonical(points)))add('grupo',points);
   }
   return [...found.values()];

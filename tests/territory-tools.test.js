@@ -62,7 +62,7 @@ test('The three complexity settings persist independently and disabled ecology n
  for(const faunaEnabled of [false,true])for(const territoryEnabled of [false,true]){
   let r=createLocal('solo','A','B',1000,'normal','untimed','medium','X',true,{faunaEnabled,territoryEnabled});
   r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;r.terrain=board(333).terrain;r.cells=board(333).cells.slice(0,60);r.players[0].placements=65;
-  countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.rodentRaids.length,faunaEnabled?1:0);assert.equal(r.cells.some(c=>c.symbol==='#'),territoryEnabled);
+  countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.rodentRaids.length,faunaEnabled?1:0);r.players[0].placements=71;countHabitatPlacement(r,'local-x',{x:0,y:0},2001,()=>0);assert.equal(r.cells.some(c=>c.symbol==='#'),territoryEnabled);
   r.territoryNextInvasion=0;assert.equal(recordTerritoryGrowth(r,1,3000,()=>0),territoryEnabled);
   r=localCommand(r,'pause',{},3100);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},10000);
   assert.equal(r.machineInventory,true);assert.equal(r.faunaEnabled,faunaEnabled);assert.equal(r.territoryEnabled,territoryEnabled);

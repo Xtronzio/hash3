@@ -73,3 +73,8 @@ body{padding-bottom:26px}.game{height:calc(100dvh - 26px)}.entry{min-height:calc
 /* Growth and intercepted warnings must leave the occupied symbol or wall visible. */
 .phenomenon-marker.is-growing,.phenomenon-marker.on-barrier{background:transparent;border:0;align-items:flex-start;justify-content:flex-end}
 .phenomenon-marker.is-growing svg,.phenomenon-marker.on-barrier svg{width:14px;height:14px;margin:2px}
+
+/* Active invasion fronts: readable cells, no progress numbers. */
+.cell.invasion-growth::after{content:"";position:absolute;inset:4px;border:2px dashed var(--yellow);border-radius:3px;pointer-events:none;}
+
+#notice.landing-score-notice.visible{justify-content:center;gap:32px;padding:14px 24px;pointer-events:none;}

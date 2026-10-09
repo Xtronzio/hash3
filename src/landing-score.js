@@ -1,10 +1,11 @@
+import {localLiving} from './living-balance.js';
 import {key,figureWindows,prepareFigureIndex} from './game.js';
 import {earnFreeExpansion} from './free-expansion.js';
 import {recordCombo} from './records.js';
 
 export function pruneBrokenForms(room){
  const symbols=new Map(room.cells.map(c=>[key(c.x,c.y),c.symbol]));
- room.forms=(room.forms||[]).filter(f=>f.slice(f.lastIndexOf(':')+1).split(';').every(k=>symbols.get(k)===f[0]));
+ room.forms=(room.forms||[]).filter(f=>f.slice(f.lastIndexOf(':')+1).split(';').every(k=>symbols.get(k)===f[0]||localLiving(room)&&symbols.get(k)==='#'));
 }
 export function awardFigures(room,scorer,figures){
  room.forms.push(...figures.map(f=>f.id));

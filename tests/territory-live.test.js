@@ -38,6 +38,9 @@ for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
   if(expected==='demolish'){
    assert.equal(r.terrain.length,oldTerrain-region.length);
    assert.equal(r.cells.length,oldCells-region.length);
+  }else if(kind==='pandemic'){
+   assert.equal(r.terrain.length,oldTerrain);assert.equal(r.cells.length,oldCells);
+   const hit=new Set(region.map(c=>c.x+','+c.y));assert.ok(r.cells.filter(c=>hit.has(c.x+','+c.y)).every(c=>c.symbol===(Number(c.id.split(':')[1])%2?'O':'X')));
   }else if(expected==='vacate'){
    assert.equal(r.terrain.length,oldTerrain);
    assert.equal(r.cells.length,oldCells-region.length);
