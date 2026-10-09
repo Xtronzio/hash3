@@ -1,5 +1,5 @@
 import {localLiving,LIVING_FREQUENCIES,livingMinimum,livingAttempt} from './living-balance.js';
-import {borderIcon} from './frontiers.js';
+import {borderIcon,wallIcon} from './frontiers.js';
 import {snapshotMemo} from './snapshot-memo.js';
 import {terrainOf,key} from './game.js';
 import {HABITAT_FREQUENCIES} from './habitat-budget.js';
@@ -38,7 +38,7 @@ export function ecologyTargets(room,kind,playerId){
 }
 export function nextEcologyTarget(items,previousId){if(!items.length)return null;const last=items.findIndex(e=>e.id===previousId);return items[(last+1)%items.length];}
 export function ecologyIcon(kind){
- const path=kind==='border'?borderIcon:kind==='rodent'?rodentIcon:kind==='neutral'?neutralIcon:kind==='frontier'?'<rect x="4" y="4" width="24" height="24"/><path d="m16 8 8 8-8 8-8-8Z"/>':territoryIcons[kind]||habitatIcons[kind];
+ const path=kind==='border'?borderIcon:kind==='rodent'?rodentIcon:kind==='neutral'?neutralIcon:kind==='frontier'?wallIcon:territoryIcons[kind]||habitatIcons[kind];
  return `<svg viewBox="0 0 ${kind==='neutral'?'64 64':'32 32'}" aria-hidden="true">${path||''}</svg>`;
 }
 export function ecologyClockEvents(room,kind){

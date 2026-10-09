@@ -84,7 +84,7 @@ test('A new wall occupies the chosen cell independently of legacy direction hint
  for(const side of ['north','east','south','west'])assert.deepEqual(frontierTiles({x:3,y:3,side}),[{x:3,y:3}]);
  assert.deepEqual(frontierTiles({x:3.5,y:3}),[]);assert.deepEqual(frontierTiles({x:3,y:3,side:'invalid'}),[]);
 });
-test('A wall is one purple diamond cell, adds no terrain, survives save and is removed as a whole by Bomb',()=>{
+test('A wall is one purple wall cell, adds no terrain, survives save and is removed as a whole by Bomb',()=>{
  const r=expanding(),next=card(r,'frontier',{x:3,y:0,side:'south'});
  assert.deepEqual(frontierCells(next),frontierTiles({x:3,y:0,side:'south'}));assert.deepEqual(next.terrain,r.terrain);assert.deepEqual(next.cells,r.cells);
  assert.equal(frontierCells(next).length,1);assert.ok(frontierCells(next).every(c=>!r.terrain.some(t=>t.x===c.x&&t.y===c.y)));

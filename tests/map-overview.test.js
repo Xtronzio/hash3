@@ -45,6 +45,6 @@ test('Target is a blue cell; eating is yellow and cleared empty cells retain yel
 test('Invasores tienen color distinguible de los colonos y de las fichas neutrales',()=>{
  const r={...room,cells:[{id:'invader',x:-4,y:-2,symbol:'*',owner:null}]};
  const model=overviewModel(r,own,null);
- assert.equal(model.terrain[0].fill,'#dba9ff');
+ assert.equal(model.terrain[0].fill,'var(--yellow)');
  assert.equal(model.terrain[2].fill,'#343e4c');
 });

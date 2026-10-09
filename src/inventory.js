@@ -1,4 +1,4 @@
-import {borderIcon} from './frontiers.js';
+import {borderIcon,wallIcon} from './frontiers.js';
 import {machineChoice,localHumanId} from './local.js';
 import {availableCells,figureWindows} from './game.js';
 import {practiceTools,practiceTurn,canUsePracticeTool,inventoryFor,initializeInventory,spendCard,placementSymbol,REFILL_TURNS,MAX_CARDS,toolStock,toolAllowance,pendingTools} from './practice-tools.js';
@@ -11,11 +11,11 @@ Object.assign(toolIcons,{
  tornado:'<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>',
  bomb:'<circle cx="14" cy="20" r="9"/><path d="m19 12 3-5 4 2M23 5l2-3m3 5h3m-3-4 2-2M9 17a5 5 0 0 1 4-2"/>',
  border:borderIcon,
- frontier:'<rect x="4" y="4" width="24" height="24"/><path d="m16 8 8 8-8 8-8-8Z"/>',
+ frontier:wallIcon,
  'hint-expand':'<rect x="3" y="12" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M3 18h18M3 24h18M9 12v18M15 12v18M19 3h10v10m-10 0L29 3"/>',
  'super-hint':'<path d="M9 20c0-3-4-4-4-9a9 9 0 0 1 18 0c0 5-4 6-4 9M9 24h10m-9 4h8M26 15l2 4 3 1-3 2-2 4-1-4-4-2 4-1 1-4Z"/>'
 });
-export const toolIcon=kind=>kind==='hint'?hintIcon:`<svg viewBox="0 0 32 32" aria-hidden="true">${toolIcons[kind]||''}</svg>`;
+export const toolIcon=kind=>kind==='hint'?hintIcon:`<svg viewBox="0 0 32 32" ${['frontier','border'].includes(kind)?'style="color:var(--frontier)"':''} aria-hidden="true">${toolIcons[kind]||''}</svg>`;
 
 export function inventoryTotal(game,playerId){
  return Object.values(inventoryFor(game,playerId).cards).reduce((sum,count)=>sum+count,0)+immunityStock(game,playerId);

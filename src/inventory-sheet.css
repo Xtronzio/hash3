@@ -59,7 +59,7 @@
 .inventory-help{margin-top:12px;padding-top:10px;border-top:1px solid #465364}.inventory-help h3{margin:0 0 7px;font-size:12px;color:#b8c5d8}.inventory-help-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 /* The wall reserves one unbuilt expansion cell, separate from yellow inhabitants. */
 .board-frontier-cell{position:absolute;display:grid;place-items:center;border:2px solid var(--frontier);background:#171020;z-index:5;pointer-events:none;box-sizing:border-box;color:var(--frontier)}
-.board-frontier-cell svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
+.board-frontier-cell svg{width:88%;height:88%;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
 .board-frontier-cell.is-preview{border-style:dashed;background:#171020cc}
 .board-frontier-cell.is-invalid{border-color:#ff818b;background:#381421cc}
 .frontier-pivot-place{position:absolute;inset:0;padding:0;border:0;border-radius:0;background:transparent;pointer-events:auto;touch-action:manipulation}

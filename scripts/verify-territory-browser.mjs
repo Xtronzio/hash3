@@ -74,6 +74,7 @@ try{
    const started=Date.now();
    const read=()=>page.evaluate(()=>({nodes:document.querySelectorAll('.board .terrain-cell').length,scroll:document.querySelector('.viewport').scrollLeft,overflow:document.documentElement.scrollWidth-innerWidth}));
    assert.ok(await page.locator('.board-frontier-cell svg').count()>0,'Wall glyph missing');
+   await page.screenshot({path:path.join(output,`board-${viewport.width}-${size}.png`)});
    const before=await read();assert.ok(before.nodes>0&&before.nodes<1500,`Unbounded detailed cells: ${before.nodes}`);assert.ok(before.overflow<=1,`Horizontal overflow: ${before.overflow}`);
    await touchDrag(page,-110,-50);const after=await read();assert.notEqual(after.scroll,before.scroll,'Touch drag did not move board');
    await pinch(page);assert.ok((await read()).nodes<1500);
