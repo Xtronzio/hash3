@@ -90,3 +90,12 @@
 
 .game .game-bottom .inventory-dock-button:has(.dock-card-choice){min-width:88px;max-width:132px;flex:1.4}
 .game .game-bottom .inventory-dock-button:has(.dock-card-choice):has(.dock-immunity-active){min-width:112px;max-width:140px;flex:1.7}
+
+/* Las últimas cartas de cada colono quedan junto a la mochila, incluso si
+   la máquina las ha usado y ha terminado su turno. */
+.inventory-dock-button{position:relative}
+.dock-used-cards{position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);display:flex;gap:5px;align-items:center;justify-content:center;pointer-events:none;z-index:10}
+.dock-used-card{position:relative;display:flex;align-items:center;justify-content:center;gap:2px;padding:3px 5px;min-width:32px;height:27px;border:1px solid currentColor;border-radius:6px;background:#101216;box-shadow:0 2px 8px #0009}
+.dock-used-card.x{color:var(--red)}.dock-used-card.o{color:var(--green)}
+.dock-used-card svg{width:18px!important;height:18px!important;stroke:currentColor;fill:none}
+.dock-used-card b{font-size:10px;line-height:1;min-width:8px}
