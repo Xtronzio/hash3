@@ -32,7 +32,7 @@ export function simulateEcology({sizes=[333,999,3333],densities=[.35,.7,.95],tri
     if(!region?.length){unavailable++;continue;}
     const beforePieces=new Map(room.cells.map(c=>[c.id,{x:c.x,y:c.y}]));
     const oldTerrain=terrainOf(room).length,oldPieces=room.cells.length;
-    room.territoryEvents=[{id:kind+':'+i,kind,region,...(plan.groups?{groups:plan.groups}:{}),nextAt:2000}];
+    room.territoryEvents=[{id:kind+':'+i,kind,region,...(Array.isArray(plan)?{}:plan),nextAt:2000}];
     advanceTerritory(room,2000);
     const moved=room.cells.filter(c=>beforePieces.has(c.id)).filter(c=>{
      const previous=beforePieces.get(c.id);return previous.x!==c.x||previous.y!==c.y;

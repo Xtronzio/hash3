@@ -1,3 +1,6 @@
+import {frontierDirections,frontierEdges} from './frontiers.js';
+import {borderOptions} from './area-tools.js';
+import {defendedInvasionCells} from './invasion-paths.js';
 import {canUsePracticeTool,toolCells,moveDestination,placementSymbol} from './practice-tools.js';
 import {availableCells,figureWindows,key,isBlockedCell} from './game.js';
 
@@ -23,6 +26,20 @@ export function chooseMachineCard(room,now=Date.now()){
       if(gain>points){best=target;points=gain;}
     }
     if(best&&points>=(level==='basic'?4:3))return command('opposite',best);
+  }
+  if(usable('border')){
+   for(const event of room.territoryEvents||[])if(event.kind.startsWith('invader-')&&event.paths?.length){
+    const already=defendedInvasionCells(room,event);
+    for(const side of frontierDirections){
+     const options=borderOptions(room,side);
+     for(const approach of event.approaches||[]){
+      const point=options.find(p=>p.x===approach.x-(side==='east'?2:0)&&p.y===approach.y-(side==='south'?2:0));
+      if(!point)continue;
+      const defended=defendedInvasionCells({...room,frontiers:[...(room.frontiers||[]),{type:'border',edges:frontierEdges(point)}]},event);
+      if(defended.size-already.size>=3)return command('border',point,{side});
+     }
+    }
+   }
   }
   if(usable('double'))return command('double',{});
   if(usable('activate')){

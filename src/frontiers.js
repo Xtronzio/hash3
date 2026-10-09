@@ -8,6 +8,7 @@ export function frontierTiles({x,y,side='north'}){
 }
 export function frontierFootprint(frontier,room){
  if(frontier.cells)return frontier.cells;
+ if(frontier.type==='border')return (frontier.edges||[]).map(({a,b})=>({...a,borderSide:b.x>a.x?'east':b.x<a.x?'west':b.y>a.y?'south':'north'}));
  // Display saved edge barriers as three diamonds without losing their old blocking rules.
  const known=new Set((room.terrain||[]).map(c=>key(c.x,c.y)));
  return (frontier.edges||[]).map(({a,b})=>known.has(key(b.x,b.y))?a:b);
@@ -36,7 +37,7 @@ export function frontierSegments(room){return (room.frontiers||[]).flatMap(f=>{
  return f.cells.flatMap(a=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({a,b:{x:a.x+dx,y:a.y+dy}})).filter(({b})=>!inside.has(key(b.x,b.y)))).map(edge=>({...edge,id:f.id,by:f.by}));
 });}
 export function frontierCells(room){
- const points=new Map();for(const c of frontierGroups(room).flatMap(f=>f.cells))points.set(key(c.x,c.y),c);return [...points.values()];
+ const points=new Map();for(const c of frontierGroups(room).flatMap(f=>f.cells))points.set(key(c.x,c.y)+(c.borderSide?':'+c.borderSide:''),c);return [...points.values()];
 }
 export function nearbyFrontierCells(room,terrain){
  const linked=new Set(terrain.map(c=>key(c.x,c.y)));
@@ -54,7 +55,7 @@ export function expansionFrontierContext(terrain,start,room){
  if(!room?.frontiers?.length)return null;
  // Cell walls cannot exclude another built island from local expansion. Preserve
  // the blocking semantics of old saved edge walls until they are removed.
- const reached=['solo','local'].includes(room.mode)&&!room.frontiers.some(f=>f.edges?.length)?terrain:frontierReachable(terrain,start,room);
+ const reached=['solo','local'].includes(room.mode)&&!room.frontiers.some(f=>f.type!=='border'&&f.edges?.length)?terrain:frontierReachable(terrain,start,room);
  return {known:new Set(terrain.map(c=>key(c.x,c.y))),reached:new Set(reached.map(c=>key(c.x,c.y))),blocked:new Set(frontierSegments(room).map(edgeKey))};
 }
 export function expansionCrossesFrontier(terrain,start,point,room,context){
@@ -68,8 +69,10 @@ export function frontierLine({a,b}){
  return a.x===b.x?{x1:a.x,y1:Math.max(a.y,b.y),x2:a.x+1,y2:Math.max(a.y,b.y)}:{x1:Math.max(a.x,b.x),y1:a.y,x2:Math.max(a.x,b.x),y2:a.y+1};
 }
 export function frontierMarkup(room){
- return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>`<g><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/><path d="M${c.x+.5} ${c.y+.2}l.3 .3-.3 .3-.3-.3Z" fill="none" vector-effect="non-scaling-stroke"/><title>Muro · solo se rompe con Bomba</title></g>`).join('')}</g>`;
+ return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>c.borderSide?`<path d="${borderPath(c)}" fill="none" vector-effect="non-scaling-stroke"><title>Frontera · contiene invasiones</title></path>`:`<g><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/><path d="M${c.x+.5} ${c.y+.2}l.3 .3-.3 .3-.3-.3Z" fill="none" vector-effect="non-scaling-stroke"/><title>Muro · solo se rompe con Bomba</title></g>`).join('')}</g>`;
 }
+export function borderPath(c){const horizontal=['north','south'].includes(c.borderSide),x=c.x+(c.borderSide==='east'?1:0),y=c.y+(c.borderSide==='south'?1:0);return `M${x} ${y}${horizontal?'h1':'v1'}`;}
+export const borderIcon='<path d="M3 8h26M3 4v8m9-8v8m9-8v8m8-8v8"/>';
 export const frontierDiamond='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 9-9 9-9-9Z"/></svg>';
 
 // A second tap on the chosen expansion anchor places the chosen single cell.

@@ -22,7 +22,7 @@ export function seededRandom(seed){let n=seed>>>0;return ()=>{n=(Math.imul(n,166
 function cardCandidates(room,player,now){
  const commands=[],own=room.players.find(p=>p.id===player),occupied=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
  const proximity=p=>[[1,0],[-1,0],[0,1],[0,-1]].reduce((n,[dx,dy])=>n+(occupied.get(key(p.x+dx,p.y+dy))?.symbol===own.symbol?1:0),0);
- for(const tool of ['combo','double','opposite','erase','activate','bomb','tornado','shift','rival','block','destroy','immunity','shield','frontier']){
+ for(const tool of ['combo','double','opposite','erase','activate','bomb','tornado','shift','rival','block','destroy','immunity','shield','frontier','border']){
   if(!canUsePracticeTool(room,player,tool,now))continue;
   if(['combo','double','rival','immunity'].includes(tool)){commands.push({action:'inventory',payload:{tool,playerId:player}});continue;}
   const points=toolCells(room,player,tool).sort((a,b)=>proximity(b)-proximity(a)).slice(0,3);
@@ -30,7 +30,7 @@ function cardCandidates(room,player,now){
    if(tool==='shift'){
     const destination=availableCells(room,room.pairs[0]).find(c=>moveDestination(room,player,c)&&moveDestination(room,p.owner,c));
     if(destination)commands.push({action:'inventory',payload:{tool,playerId:player,x:p.x,y:p.y,toX:destination.x,toY:destination.y}});
-   }else commands.push({action:'inventory',payload:{tool,playerId:player,x:p.x,y:p.y,...(tool==='frontier'?{side:'north'}:{})}});
+   }else commands.push({action:'inventory',payload:{tool,playerId:player,x:p.x,y:p.y,...(['frontier','border'].includes(tool)?{side:'north'}:{})}});
   }
  }
  return commands;

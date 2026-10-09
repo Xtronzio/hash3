@@ -1,3 +1,5 @@
+import {eventOutlook} from './event-outlook.js';
+import {wormTrailParts,wormTrailMarkup} from './worm-trails.js';
 import {snapshotMemo} from './snapshot-memo.js';
 import {ONLINE_ENABLED,ONLINE_NOTICE,modeAvailable} from './online-availability.js';
 import {machineTurnKey} from './machine-turn.js';
@@ -42,8 +44,8 @@ import {extensionView,clampBoardZoom} from './map-camera.js';
 import {cellIndex,viewportCellWindow,cachedCellWindow,reconcileCells} from './board-window.js';
 import {inventoryStatusMarkup,inventoryMarkup,inventoryShortcutsMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,toolAllowance} from './practice-tools.js';
-import {selectFrontier,frontierTiles,frontierCells,frontierGroups,frontierDiamond} from './frontiers.js';
-import {frontierAnchors} from './area-tools.js';
+import {selectFrontier,frontierTiles,frontierCells,frontierGroups,frontierDiamond,frontierDirections,frontierEdges,frontierFootprint,borderPath} from './frontiers.js';
+import {frontierAnchors,borderOptions} from './area-tools.js';
 import {useExpansionHint,planSuperHelp,suggestExpansion,executeSuperHelp} from './assistance.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon,hallReturnButton} from './hall.js';
 import {client, ensurePlayer, command, profileAccess} from './api.js';
@@ -161,7 +163,7 @@ function accept(next) {
     if(after<before)inventoryCardChoice.applied=true;
     const event=next.lastEvent,eventChanged=event?.id!==previousRoom?.lastEvent?.id;
     const turnEnded=eventChanged&&event?.kind==='move'&&event.actor===player&&next.practiceTurn?.player!==player;
-    const expansionEnded=eventChanged&&['expand','cancel-free-expansion'].includes(event?.kind)&&['hint-expand','frontier'].includes(tool);
+    const expansionEnded=eventChanged&&['expand','cancel-free-expansion'].includes(event?.kind)&&['hint-expand','frontier','border'].includes(tool);
     if(player!==uid||turnEnded||expansionEnded)inventoryCardChoice=null;
   }
   if(inventorySelection&&(!canUsePracticeTool(room,inventorySelection.player,inventorySelection.tool)||inventorySelection.player!==uid||inventorySelection.source&&!room.cells.some(c=>c.id===inventorySelection.source.id))){inventorySelection=null;if(inventoryCardChoice&&!inventoryCardChoice.applied)inventoryCardChoice=null;}
@@ -205,8 +207,8 @@ function render() {
   const turnSymbol=room.inventoryEffects?.forced?.find(e=>e.player===pair[pair.turn.toLowerCase()])?.symbol||pair.turn;
   const comboStatus=tools?.used.includes('combo')?toolAllowance(room,uid):null;
   const instructions={destroy:'Toca una celda vacía resaltada para eliminarla del tablero; después coloca tu ficha.',activate:'Toca un hueco resaltado para construir una celda; después coloca tu ficha normalmente.',erase:'Toca una ficha rival resaltada para borrarla.',opposite:'Toca una ficha rival resaltada para convertirla en tuya.',shift:inventorySelection?.source?'Elige una celda vacía para desplazar la ficha seleccionada.':'Toca la ficha rival que quieres mover.',block:'Elige una celda vacía para reservarla; después coloca tu ficha en otra.',shield:'Toca una ficha tuya para protegerla.'};
-  Object.assign(instructions,{tornado:'Sitúa el marco 3×3 para mezclar sus fichas y huecos.',bomb:'Elige el centro; vuelve a tocarlo o pulsa Aplicar. La bomba vacía tres celdas contiguas al azar.',frontier:'Toca un + para situar una casilla de muro; vuelve a tocarla o pulsa Colocar.'});
-  const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span>${['tornado','bomb','frontier'].includes(inventorySelection.tool)?`<button class="small primary" data-action="confirm-area-tool" ${inventorySelection.point&&(inventorySelection.tool!=='frontier'||toolCells(room,uid,'frontier',{side:inventorySelection.side||'north'}).some(p=>p.x===inventorySelection.point.x&&p.y===inventorySelection.point.y))?'':'disabled'}>${inventorySelection.tool==='frontier'?'Colocar':'Aplicar'}</button>`:''}<button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(comboStatus||tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${comboStatus?`Combo · ${comboStatus.remaining} herramienta${comboStatus.remaining===1?'':'s'} disponible${comboStatus.remaining===1?'':'s'}. `:''}${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
+  Object.assign(instructions,{border:'Sitúa una línea de tres celdas y gírala hacia la entrada de la invasión.',tornado:'Sitúa el marco 3×3 para mezclar sus fichas y huecos.',bomb:'Elige el centro; vuelve a tocarlo o pulsa Aplicar. La bomba vacía tres celdas contiguas al azar.',frontier:'Toca un + para situar una casilla de muro; vuelve a tocarla o pulsa Colocar.'});
+  const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span>${inventorySelection.tool==='border'?'<button class="small" data-action="rotate-border">Girar ↻</button>':''}${['tornado','bomb','frontier','border'].includes(inventorySelection.tool)?`<button class="small primary" data-action="confirm-area-tool" ${inventorySelection.point&&(!['frontier','border'].includes(inventorySelection.tool)||toolCells(room,uid,inventorySelection.tool,{side:inventorySelection.side||'north'}).some(p=>p.x===inventorySelection.point.x&&p.y===inventorySelection.point.y))?'':'disabled'}>${inventorySelection.tool==='frontier'?'Colocar':'Aplicar'}</button>`:''}<button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(comboStatus||tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${comboStatus?`Combo · ${comboStatus.remaining} herramienta${comboStatus.remaining===1?'':'s'} disponible${comboStatus.remaining===1?'':'s'}. `:''}${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
   const blockedTurn=isLocal()&&ready&&!availableCells(room,pair).length&&availableCells(room,pair,{ignoreBlocks:true}).length;
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
   app.innerHTML=`<section class="game ${hallModeClass(isLocal()?(room.mode==='solo'?'solo':'offline'):room.commonWorld?'world':'duel')} ${inventoryOpen?'inventory-visible':''}">
@@ -228,6 +230,7 @@ function render() {
 }
 let layout={minX:0,minY:0,size:56,padding:100};
 function boardFrontierCell(cell,minX,minY,size,padding,preview=false,pivot=false,valid=true,bombTarget=false){
+ if(cell.borderSide)return `<span class="board-border-cell ${preview?'is-preview':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="${preview?'Propuesta de frontera':'Frontera'} · ${cell.borderSide}"><svg viewBox="${cell.x} ${cell.y} 1 1"><path d="${borderPath(cell)}"/></svg></span>`;
  if(bombTarget)return `<button class="board-frontier-cell is-bomb-target" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="Bomba sobre muro en ${cell.x}, ${cell.y}">${frontierDiamond}</button>`;
  const controls=pivot?`<button class="frontier-pivot-place" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" aria-label="Colocar muro en el punto elegido ${cell.x}, ${cell.y}" ${valid?'':'disabled'}></button>`:'';
  return `<span class="board-frontier-cell ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${preview?'Propuesta de muro':'Muro, solo se rompe con Bomba'} · ${cell.x}, ${cell.y}">${frontierDiamond}${controls}</span>`;
@@ -261,11 +264,11 @@ function drawBoard(canExpand,ready,target) {
   const selection=inventorySelection?.player===uid?inventorySelection:null;
   const activationTargets=selection?.tool==='activate'?snapshotMemo(room,'board-activation:'+uid,()=>toolCells(room,uid,'activate')):[];
   const choices=canExpand&&!selection?snapshotMemo(room,'expansion:'+pair.id,()=>expansionOptions(terrain,pair.terrainAnchor||pair.active,room)):[],choiceKeys=new Set(choices.map(c=>key(c.x,c.y)));
-  const areaSelection=['tornado','bomb','frontier'].includes(selection?.tool),areaOptions=areaSelection?snapshotMemo(room,'board-area:'+uid+':'+selection.tool,()=>selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool)):[];
+  const areaSelection=['tornado','bomb','frontier','border'].includes(selection?.tool),areaOptions=areaSelection?snapshotMemo(room,'board-area:'+uid+':'+selection.tool+':'+selection.side,()=>selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool,{side:selection.side||'north'})):[];
   const areaKeys=new Set(areaOptions.map(c=>key(c.x,c.y)));
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
   const barriers=snapshotMemo(room,'board-barriers',()=>frontierCells(room)),reservations=snapshotMemo(room,'board-reservations',()=>habitatReservations(room));
-  const barrierKeys=new Set(barriers.map(c=>key(c.x,c.y)));
+  const barrierKeys=new Set(barriers.filter(c=>!c.borderSide).map(c=>key(c.x,c.y)));
   const {minX,minY,maxX,maxY}=snapshotMemo(room,'board-bounds:'+uid+':'+canExpand+':'+selection?.tool+':'+selection?.point?.x+','+selection?.point?.y,()=>{
     const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,side:selection.side||'north'}):[]),...reservations,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
@@ -286,11 +289,12 @@ function drawBoard(canExpand,ready,target) {
   const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north'})).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
   const index=snapshotMemo(room,'board-index',()=>cellIndex(terrain)),choiceIndex=snapshotMemo(room,'board-choice-index:'+pair.id+':'+canExpand,()=>cellIndex(choices.filter(c=>!known.has(key(c.x,c.y))))),activationIndex=snapshotMemo(room,'board-activation-index:'+uid+':'+selection?.tool,()=>cellIndex(activationTargets));
-  const areaIndex=snapshotMemo(room,'board-area-index:'+uid+':'+selection?.tool,()=>cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y))))));
+  const areaIndex=snapshotMemo(room,'board-area-index:'+uid+':'+selection?.tool+':'+selection?.side,()=>cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y))))));
   const reservationIndex=snapshotMemo(room,'board-reservation-index',()=>cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y)))));
   const liveHabitatIndex=snapshotMemo(room,'board-inhabitants',()=>cellIndex(habitatLocations(room)));
   const phenomenonIndex=snapshotMemo(room,'board-phenomena:'+uid,()=>cellIndex(ecologyPinTargets(room,uid).filter(e=>!!territoryIcons[e.kind])));
   const territoryIndex=snapshotMemo(room,'board-warnings',()=>cellIndex((room.territoryEvents||[]).flatMap(e=>territoryRenderRegion(room,e).map(c=>({...c,kind:e.kind,eventId:e.id})))));
+  const wormTrailIndex=snapshotMemo(room,'board-worm-trails',()=>cellIndex(wormTrailParts(room)));
   const frontierIndex=snapshotMemo(room,'board-walls',()=>cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id})))));
   const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
   const habitatBlocks=new Set([...barrierKeys,...wormBody,...reservations.map(c=>key(c.x,c.y))]);
@@ -317,7 +321,7 @@ function drawBoard(canExpand,ready,target) {
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
     const label=removable?`${source?'Destino de Desplazar':toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol} de ${owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
-    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.kind==='rodent'?rodentTurnsRemaining(habitat)+'↷':'',habitat):body?'<span class="worm-trail"></span>':''}</button>`;
+    return `<button class="cell terrain-cell ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!removable&&!select&&!playable}" aria-label="${escape((body?'Gusano · cuerpo bloquea esta celda. ':rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol):''}${rodent?rodentMark(rodent):habitat?habitatMark(habitat.kind,habitat.kind==='rodent'?rodentTurnsRemaining(habitat)+'↷':'',habitat):''}</button>`;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
   const density=size<24?snapshotMemo(room,'board-density:'+uid+':'+target?.id,()=>{const model=overviewModel(room,own,target,{includeFrontiers:false});return {model,index:prepareMapRendering(model,frontierCells(room))};}):null;
@@ -329,7 +333,7 @@ function drawBoard(canExpand,ready,target) {
    if(density){
     const entries=[{id:'board-map',markup:`<svg class="board-overview-map ${size>=MAP_SYMBOL_SCALE?'show-symbols':''}" data-action="board-overview" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" role="img" aria-label="Vista general del tablero; toca para acercarte">${mapWindowMarkup(density.model,density.index,window,size)}</svg>`}];
     for(const e of liveHabitatIndex.query(window).slice(0,33))entries.push({id:'inhabitant:'+e.id+':'+e.kind,markup:`<span class="cell inhabitant-overview" style="${style(e)};width:32px;height:32px" aria-label="${e.kind}">${habitatMark(e.kind,e.kind==='rodent'?rodentTurnsRemaining(e)+'↷':'',e)}</span>`});
-    for(const e of phenomenonIndex.query(window).slice(0,33))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)};width:32px;height:32px" aria-hidden="true">${ecologyIcon(e.kind)}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
+    for(const e of phenomenonIndex.query(window).slice(0,33))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)};width:32px;height:32px" aria-hidden="true">${ecologyIcon(e.kind)}${e.approach?`<span class="invasion-entry" style="transform:rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]}deg)">↓</span>`:''}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
     nodes=reconcileCells(board,entries,nodes);return;
    }
    const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now}:${swirling}:${visiting}`);
@@ -337,17 +341,18 @@ function drawBoard(canExpand,ready,target) {
    if(visible===lastEntries&&extras===lastExtras)return;
    lastEntries=visible;lastExtras=extras;
    const entries=[...visible];
+   entries.push({id:'worm-trail',markup:`<svg class="worm-trail-layer" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" aria-hidden="true">${wormTrailMarkup(wormTrailIndex.query(window),{})}</svg>`});
    entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
   if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Construir celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
   if(areaSelection){
-   for(const point of areaIndex.query(window).filter(p=>selection.tool!=='tornado'||!known.has(key(p.x,p.y))))entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell ${selection.tool==='tornado'?'tornado-anchor':'tool-target'} area-anchor ${selection.tool==='frontier'?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':selection.tool==='bomb'?'Bomba':'Muro de una casilla'} en ${point.x}, ${point.y}">${selection.tool==='frontier'?'+':selection.tool==='tornado'?'·':'◇'}</button>`});
-   if(selection.point){const p=selection.point;if(selection.tool==='frontier'){
+   for(const point of areaIndex.query(window).filter(p=>selection.tool!=='tornado'||!known.has(key(p.x,p.y))))entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell ${selection.tool==='tornado'?'tornado-anchor':'tool-target'} area-anchor ${['frontier','border'].includes(selection.tool)?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':selection.tool==='bomb'?'Bomba':selection.tool==='border'?'Frontera de tres celdas':'Muro de una casilla'} en ${point.x}, ${point.y}">${['frontier','border'].includes(selection.tool)?'+':selection.tool==='tornado'?'·':'◇'}</button>`});
+   if(selection.point){const p=selection.point;if(['frontier','border'].includes(selection.tool)){
     const valid=targets.has(key(p.x,p.y));
-    for(const [i,cell] of frontierTiles({...p,side:selection.side||'north'}).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,i===0,valid)});
+    for(const [i,cell] of (selection.tool==='border'?frontierFootprint({type:'border',edges:frontierEdges({...p,side:selection.side||'north'})},room):frontierTiles({...p,side:selection.side||'north'})).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,i===0,valid)});
    }else entries.push({id:'area-preview',markup:`<div class="placement-preview area-preview ${selection.tool==='bomb'?'bomb-preview':'tornado-preview'}" style="left:${(p.x-minX)*size+padding}px;top:${(p.y-minY)*size+padding}px;width:${(selection.tool==='bomb'?1:3)*size}px;height:${(selection.tool==='bomb'?1:3)*size}px" aria-hidden="true"></div>`});}
   }
   for(const c of reservationIndex.query(window))entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatPoints.has(key(c.x,c.y))?habitatMark('build','',habitatPoints.get(key(c.x,c.y))):'<span class="project-reservation">·</span>'}</div>`});
-  for(const cell of frontierIndex.query(window))entries.push({id:'frontier:'+cell.frontierId+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,false,false,true,ready&&selection?.tool==='bomb'&&areaKeys.has(key(cell.x,cell.y)))});
+  for(const cell of frontierIndex.query(window))entries.push({id:'frontier:'+cell.frontierId+key(cell.x,cell.y)+cell.borderSide,markup:boardFrontierCell(cell,minX,minY,size,padding,false,false,true,ready&&selection?.tool==='bomb'&&areaKeys.has(key(cell.x,cell.y)))});
   if(figureEffect&&figureEffect.floatUntil>performance.now()){
     const e=figureEffect;
     entries.push({id:'score',markup:nodes.get('score')?.markup||`<span class="score-float ${e.symbol.toLowerCase()}" style="left:${(e.move.x-minX+.5)*size+padding}px;top:${(e.move.y-minY)*size+padding}px;animation-duration:${Math.max(1,e.floatUntil-performance.now())}ms" aria-hidden="true">+${e.points}</span>`});
@@ -356,7 +361,7 @@ function drawBoard(canExpand,ready,target) {
     const b=selectedExpansion;
     entries.push({id:'preview',markup:`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`});
   }
-  for(const e of phenomenonIndex.query(window))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)}" aria-hidden="true">${ecologyIcon(e.kind)}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
+  for(const e of phenomenonIndex.query(window))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)}" aria-hidden="true">${ecologyIcon(e.kind)}${e.approach?`<span class="invasion-entry" style="transform:rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]}deg)">↓</span>`:''}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
   for(const c of territoryIndex.query(window))entries.push({id:'territory-warning:'+c.eventId+key(c.x,c.y),markup:`<span class="cell territory-warning territory-${c.kind}" style="${style(c)}" aria-hidden="true"></span>`});
   if(visiting)for(const visit of rodentEffect.index.query(window).filter(v=>v.kind!=='rodent')){
    const id='board-action:'+visit.kind+key(visit.x,visit.y),path=visit.kind==='neutral'?neutralIcon:visit.kind==='rodent'?rodentIcon:territoryIcons[visit.kind]||habitatIcons[visit.kind];
@@ -724,8 +729,9 @@ app.addEventListener('click',async e=>{
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:toolPlayer});inventoryOpen=false;accept(next);});return;
   }
   if(action==='cancel-tool-selection'){inventoryCardChoice=null;inventorySelection=null;render();return;}
-  if(action==='inventory-target'&&inventorySelection?.tool==='frontier'){
-    const choice=selectFrontier(inventorySelection,{x:Number(b.dataset.x),y:Number(b.dataset.y)},frontierAnchors(room,uid));
+  if(action==='rotate-border'&&inventorySelection?.tool==='border'){const i=frontierDirections.indexOf(inventorySelection.side||'north');inventorySelection.side=frontierDirections[(i+1)%4];delete inventorySelection.point;render();return;}
+  if(action==='inventory-target'&&['frontier','border'].includes(inventorySelection?.tool)){
+    const choice=selectFrontier(inventorySelection,{x:Number(b.dataset.x),y:Number(b.dataset.y)},inventorySelection.tool==='border'?borderOptions(room,inventorySelection.side||'north'):frontierAnchors(room,uid));
     inventorySelection=choice.selected;
     if(choice.confirm)action='confirm-area-tool';else{render();return;}
   }
@@ -859,7 +865,7 @@ app.addEventListener('click',async e=>{
     const effectiveAction=action==='confirm-finish'?'finish':action==='confirm-expansion'?'expand':action;
     if(effectiveAction==='expand'){if(!selectedExpansion)return;Object.assign(payload,selectedExpansion);}
     const next=isLocal()?localCommand(room,effectiveAction,payload):await command(effectiveAction,payload);
-    if(['expand','request-free-expansion','cancel-free-expansion'].includes(effectiveAction)){selectedExpansion=null;if(['hint-expand','frontier'].includes(inventoryCardChoice?.tool))inventoryCardChoice=null;}
+    if(['expand','request-free-expansion','cancel-free-expansion'].includes(effectiveAction)){selectedExpansion=null;if(['hint-expand','frontier','border'].includes(inventoryCardChoice?.tool))inventoryCardChoice=null;}
     if(action==='leave'){room=null;render();return;}
     accept(next);
   });
@@ -1025,6 +1031,7 @@ function updateTimer() {
   }
   for(const node of document.querySelectorAll('[data-immunity-clock]')){const seconds=immunitySeconds(room,node.dataset.immunityClock,clockNow);node.textContent=seconds;node.setAttribute('aria-label',`${seconds} segundos de inmunidad`);}
   for(const node of document.querySelectorAll('[data-recovery-clock]'))node.textContent=Math.max(0,Math.ceil((room.ecologyRecovery?.remainingMs??((room.ecologyRecovery?.until??clockNow)-clockNow))/1000));
+  if(document.querySelector('[data-appearance-clock]')){const rows=eventOutlook(room,uid,clockNow).rows;for(const node of document.querySelectorAll('[data-appearance-clock]'))node.textContent=rows.find(e=>e.clockKind===node.dataset.appearanceClock)?.seconds??0;}
   const p=ownPair(),node=document.querySelector('.turn-timer');
   const duel=document.querySelector('#duel-time');if(duel&&room.endsAt){const left=Math.max(0,Math.ceil((Date.parse(room.endsAt)-Date.now())/1000));duel.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);}
   if(node){node.hidden=!p?.deadline;if(node.hidden){node.textContent='';node.classList.remove('urgent');}}

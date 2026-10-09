@@ -1,5 +1,6 @@
 // #3_11: Identidad del evento y parámetros separados del motor.
 // Los valores son provisionales: se afinan con simulaciones, no con cambios de lógica.
+import {localLiving,livingImpact} from './living-balance.js';
 export const TERRITORY_EVENT_RULES=Object.freeze({
   // Los alias se conservan para no romper partidas y avisos históricos.
   rain:{label:'Lluvia de bombas (antigua)',family:'legacy',effect:'demolish',distribution:'dispersed',basis:'terrain'},
@@ -39,6 +40,7 @@ export const isTimedTerritoryKind=kind=>!!eventRule(kind);
 export function impactCount(room,kind){
  const r=eventRule(kind),b=EVENT_BALANCE;
  if(!r)return 0;
+ if(localLiving(room)&&r.family!=='legacy')return livingImpact(room,kind,r);
  if(kind==='invader-rain')return b.invasionRainCells;
  if(kind==='invader-colony')return b.invasionColonySide**2;
  if(kind==='blackhole')return b.blackholeSide**2;
@@ -46,7 +48,7 @@ export function impactCount(room,kind){
  const count=Math.floor(size*b.incidenceNumerator/b.incidenceDenominator);
  return kind==='rain'?3*Math.floor(count/3):Math.max(0,count);
 }
-export function pickEventKind(room,family='natural'){
+export function pickEventKind(room,family='natural',random=Math.random){
  if(room.territoryCatalogueVersion!==2){
   // Versionado idempotente: no repetir la actividad pasada.
   room.territoryCatalogueVersion=2;
@@ -56,13 +58,19 @@ export function pickEventKind(room,family='natural'){
   room.territoryBag=[];
  }
  const rotation=family==='invaders'?INVADER_EVENT_ROTATION:NATURAL_EVENT_ROTATION;
+ if(localLiving(room)){
+  room.livingBags||={};let bag=room.livingBags[family];
+  if(!bag?.length){bag=[...rotation];for(let i=bag.length-1;i>0;i--){const j=Math.min(i,Math.floor(Math.max(0,random())*(i+1)));[bag[i],bag[j]]=[bag[j],bag[i]];}room.livingBags[family]=bag;}
+  return {family,order:[...bag],index:family==='invaders'?'territoryInvasionIndex':'territoryNaturalIndex',living:true};
+ }
  const index=family==='invaders'?'territoryInvasionIndex':'territoryNaturalIndex';
  const offset=room[index]%rotation.length;
  // Rotation ensures every member can appear with a fixed deterministic RNG.
  // A random offset may be introduced by the simulator after impact calibration.
  return {family,order:[...rotation.slice(offset),...rotation.slice(0,offset)],index};
 }
-export function confirmEventKind(room,choice){
+export function confirmEventKind(room,choice,kind){
+ if(choice.living){const bag=room.livingBags[choice.family],index=bag.indexOf(kind??choice.order[0]);if(index>=0)bag.splice(index,1);}
  room.territoryKindCounter++;
  room[choice.index]=(room[choice.index]||0)+1;
 }

@@ -1,5 +1,6 @@
 import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
 import {frontierMarkup} from './frontiers.js';
+import {wormTrailMarkup} from './worm-trails.js';
 
 export const MAP_DETAIL_LIMIT=4096,MAP_SYMBOL_SCALE=14;
 // Shared by live, paused and zoomed-out board views. Group fills into paths;
@@ -17,10 +18,11 @@ export function mapFrameMarkup(model){
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){
- return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds)};
+ return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[])};
 }
 export function mapWindowMarkup(model,index,box,scale){
  const detail=box.width*box.height<=MAP_DETAIL_LIMIT,cells=detail?index.detail.query(box):index.coarse.query(box);
- const walls=detail?frontierMarkup({frontiers:[{cells:index.barriers.query(box)}]}):overviewCells(index.coarseBarriers.query(box).map(c=>({...c,frontier:true,fill:'var(--frontier,#c18aff)'})));
- return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+walls+mapFrameMarkup(model);
+ const walls=detail?frontierMarkup({frontiers:[{cells:index.barriers.query(box)}]}):frontierMarkup({frontiers:[{cells:index.coarseBarriers.query(box)}]});
+ const worms=detail?`<g class="worm-map-trail" fill="none" stroke="var(--yellow)" stroke-width=".07" stroke-linecap="round">${wormTrailMarkup(index.worms.query(box))}</g>`:'';
+ return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+worms+walls+mapFrameMarkup(model);
 }

@@ -8,6 +8,7 @@ import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {placeNeutral,NEUTRAL_FREQUENCY} from './neutral.js';
 import {habitatZone,habitatInterval,proportionalBudget,HABITAT_REFERENCE,HABITAT_WEIGHTS,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {initializeTerritory,advanceTerritory,recordTerritoryPlacement} from './territory-tools.js';
+import {localLiving,LIVING_FREQUENCIES,livingFactor,livingInterval,livingClock,livingBirthBudget,freezeLiving,resumeLiving} from './living-balance.js';
 export const HABITAT_INTERVAL=33000;
 export {HABITAT_FREQUENCIES} from './habitat-budget.js';
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
@@ -19,6 +20,15 @@ export function initializeHabitats(room,now=Date.now()){
  room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
  if(!faunaEnabled(room)){room.rodents=[];room.rodentRaids=[];room.worms=[];room.works=[];}
  if(!territoryEnabled(room)){room.territoryEvents=[];room.bombs=[];}
+ if(localLiving(room)&&room.livingHabitatVersion!==1){
+  for(const z of room.habitatZones){
+   const size=frontierReachable(terrainOf(room),z,room).length;
+   z.next=Object.fromEntries(Object.entries(LIVING_FREQUENCIES).map(([kind,n])=>[kind,z.placements+livingInterval(n,size)]));
+   z.clockNext=Object.fromEntries(['rodent','worm','work'].map(kind=>[kind,now+livingClock(kind,size)]));z.credit={};
+   if(room.status==='paused')z.clockRemaining=Object.fromEntries(['rodent','worm','work'].map(kind=>[kind,livingClock(kind,size)]));
+  }
+  room.livingHabitatVersion=1;room.habitatFrequencyVersion=3;
+ }
  if(room.habitatFrequencyVersion!==3){
   // Rescale remaining attempts once, without adding animals or replaying births.
   const previous=room.habitatFrequencyVersion===2?{rodent:33,bomb:66,worm:66,work:99}:{rodent:33,bomb:66,worm:99,work:198};
@@ -139,20 +149,23 @@ function project(room,point,player,random,now){
 }
 export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=Math.random,{completed=true}={}){
  initializeHabitats(room,now);const p=room.players.find(p=>p.id===playerId);if(!p)return;
- const area=areaAt(room,point),zone=habitatZone(room,area,HABITAT_FREQUENCIES),areaSet=new Set(area.map(c=>key(c.x,c.y)));
+ const frequencies=localLiving(room)?LIVING_FREQUENCIES:HABITAT_FREQUENCIES;
+ const area=areaAt(room,point),zone=habitatZone(room,area,frequencies),areaSet=new Set(area.map(c=>key(c.x,c.y)));
+ if(localLiving(room)&&!zone.clockNext){zone.next=Object.fromEntries(Object.entries(frequencies).map(([kind,n])=>[kind,(Math.floor(zone.placements/livingInterval(n,area.length))+1)*livingInterval(n,area.length)]));zone.clockNext=Object.fromEntries(['rodent','worm','work'].map(kind=>[kind,now+livingClock(kind,area.length)]));}
  const previouslySuspended=faunaSuspended(room,now);if(room.ecologyRecovery?.moves>0)room.ecologyRecovery.moves--;
  p.placements++;zone.placements++;recordTerritoryPlacement(room,now,random);
  const suspended=previouslySuspended||faunaSuspended(room,now);room.eatenCells=room.eatenCells.filter(c=>!same(c,point));
  if(faunaEnabled(room)&&!suspended&&completed)visitRodents(room,point,now,random);
- for(const [kind,frequency]of Object.entries(HABITAT_FREQUENCIES)){
+ for(const [kind,frequency]of Object.entries(frequencies)){
   p.habitatNext[kind]=(Math.floor(p.placements/frequency)+1)*frequency;
   if(!faunaEnabled(room)||suspended)continue;
   if(kind==='bomb')continue; // Automatic rain is now a territory card, not repeated small blasts.
-  if(zone.placements<zone.next[kind])continue;
-  zone.next[kind]=zone.placements+habitatInterval(frequency,area.length);
-  let count=proportionalBudget(zone,kind,area.length);
+  if(zone.placements<zone.next[kind]&&(!localLiving(room)||now<zone.clockNext[kind]))continue;
+  zone.next[kind]=zone.placements+(localLiving(room)?livingInterval(frequency,area.length):habitatInterval(frequency,area.length));
+  if(localLiving(room))zone.clockNext[kind]=now+livingClock(kind,area.length);
+  let count=localLiving(room)?livingBirthBudget(zone,kind,area.length,HABITAT_WEIGHTS):proportionalBudget(zone,kind,area.length);
   // A bounded shared population: waiting for food never piles up generations.
-  const cap=Math.ceil(area.length/HABITAT_REFERENCE*HABITAT_WEIGHTS[kind]);
+  const cap=localLiving(room)?livingFactor(area.length)*HABITAT_WEIGHTS[kind]:Math.ceil(area.length/HABITAT_REFERENCE*HABITAT_WEIGHTS[kind]);
   const residents=kind==='rodent'?room.rodentRaids.filter(r=>areaSet.has(key(r.x,r.y))).reduce((n,r)=>n+r.count,0):kind==='work'?room.works.filter(w=>areaSet.has(key(w.destroy[w.done].x,w.destroy[w.done].y))).length/3:(kind==='bomb'?room.bombs:room.worms).filter(e=>areaSet.has(key(e.x,e.y))).length;
   count=Math.max(0,Math.min(count,Math.floor(cap-residents)));
   if(kind==='rodent'){if(count){const raid={id:uuid(),player:playerId,...point,count,remaining:3,mealsLeft:3,turn:0,phase:'arriving',phaseAt:now,visited:[],members:[]};room.rodentRaids.push(raid);positionRodents(room,raid,point,random);}continue;}
@@ -211,12 +224,14 @@ function activeAt(room,point){
  return room.pairs.some(pair=>area.has(key((pair.terrainAnchor||pair.active).x,(pair.terrainAnchor||pair.active).y))&&room.players.some(p=>(p.id===pair.x||p.id===pair.o)&&p.active!==false&&!p.bot));
 }
 export function freezeHabitats(room,now=Date.now()){
- initializeHabitats(room,now);for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=e.remainingMs??Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
+ initializeHabitats(room,now);freezeLiving(room,now);
+ for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=e.remainingMs??Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
  if(room.ecologyRecovery)room.ecologyRecovery.remainingMs=room.ecologyRecovery.remainingMs??Math.max(0,room.ecologyRecovery.until-now);
  room.habitatLastCheck=now;
 }
 export function resumeHabitats(room,now=Date.now()){
- initializeHabitats(room,now);if(room.ecologyRecovery?.remainingMs!=null){room.ecologyRecovery.until=now+room.ecologyRecovery.remainingMs;delete room.ecologyRecovery.remainingMs;}for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
+ initializeHabitats(room,now);resumeLiving(room,now);
+ if(room.ecologyRecovery?.remainingMs!=null){room.ecologyRecovery.until=now+room.ecologyRecovery.remainingMs;delete room.ecologyRecovery.remainingMs;}for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
 }
 export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppressFauna=false}={}){
  initializeHabitats(room,now);if(room.status!=='playing')return false;room.clockNow=now;
@@ -246,7 +261,8 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppress
    let food=room.cells.find(c=>same(c,e)&&!isImmune(room,c.owner)&&!occupiedByOther(room,c,e.id));
    if(e.kind==='worm'&&e.eaten>0)food=foodFor(room,e,random,{adjacent:true});
    else food||=foodFor(room,e,random);
-   if(!food)continue;
+   if(!food){if(e.kind==='worm'&&localLiving(room)){e.failedMeals=(e.failedMeals||0)+1;if(e.failedMeals>=3)room.worms=room.worms.filter(w=>w.id!==e.id);}continue;}
+   e.failedMeals=0;
    clearHabitatCell(room,food);actions.push({x:food.x,y:food.y,kind:'worm'});e.x=food.x;e.y=food.y;e.eaten++;changed=true;
    if(e.kind==='worm'){e.body.push({x:e.x,y:e.y});e.body=[...new Map(e.body.map(c=>[key(c.x,c.y),c])).values()].slice(-3);if(e.eaten>=3)room.worms=room.worms.filter(w=>w.id!==e.id);}
    else if(e.eaten>=3)room.rodents=room.rodents.filter(r=>r.id!==e.id);

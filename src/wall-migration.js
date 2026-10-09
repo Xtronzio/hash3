@@ -4,7 +4,7 @@ export function migrateLegacyWalls(game){
  if(!['solo','local'].includes(game.mode)||game.wallMigrationVersion===1)return false;
  const removed=new Map();
  game.frontiers=(game.frontiers||[]).filter(wall=>{
-  const legacy=wall.cells?.length===3||!wall.cells&&wall.edges?.length===3;
+  const legacy=wall.type!=='border'&&(wall.cells?.length===3||!wall.cells&&wall.edges?.length===3);
   const owner=game.players.find(p=>p.id===wall.by);
   // Never destroy a barrier whose owner cannot be recovered from the save.
   if(!legacy||!owner)return true;

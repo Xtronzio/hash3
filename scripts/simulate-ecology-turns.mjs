@@ -9,16 +9,16 @@ import {initializeTerritory} from '../src/territory-tools.js';
 
 const rng=seed=>()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
 const choose=(items,random)=>items[Math.floor(random()*items.length)];
-function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,territoryEnabled=true}={}){
+function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,territoryEnabled=true,durationSeconds=null,openingFigures=99}={}){
  const random=rng(seed);let now=1000;
- let room=createLocal('local','X','O',now,'normal','untimed');
+ let room=createLocal('local','X','O',now,'normal','untimed','medium','X',false,{matchGoal:durationSeconds?{type:'time',target:durationSeconds}:undefined});
  room.territoryEnabled=territoryEnabled;
  room.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
  room.cells=room.terrain.filter(()=>random()<density).map((p,i)=>({...p,id:'initial:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));
  // Start after the opening gate; report separately from a fresh 3×3 game.
- room.players[0].figures=99;room.territoryMilestone=Math.floor(size/333);
+ room.players[0].figures=openingFigures;room.territoryMilestone=Math.floor(size/333);
  delete room.territoryActivityVersion;initializeTerritory(room);
- const stats={size,seed,territoryEnabled,requestedMoves:moves,secondsPerMove,density,openingFigures:99,placements:0,turns:0,expansions:0,cardsUsed:0,pauses:0,rodentMeals:0,wormMeals:0,constructed:0,demolished:0,announcements:{},impacts:{},piecesMoved:0,minSize:size,maxSize:size};
+ const stats={size,seed,territoryEnabled,requestedMoves:moves,secondsPerMove,density,openingFigures,durationSeconds,activeSeconds:0,placements:0,turns:0,expansions:0,cardsUsed:0,pauses:0,rodentMeals:0,wormMeals:0,constructed:0,demolished:0,announcements:{},impacts:{},piecesMoved:0,minSize:size,maxSize:size};
  const seen={events:new Set(),actions:new Set(),visits:new Set()};
  const collect=before=>{
   for(const event of room.territoryEvents||[])if(!seen.events.has(event.id)){
@@ -51,7 +51,7 @@ function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,terr
  };
  let stalled=0;
  while(stats.placements<moves&&room.status==='playing'&&stalled<10){
-  now+=secondsPerMove*1000;command('tick');
+  now+=secondsPerMove*1000;stats.activeSeconds+=secondsPerMove;command('tick');if(room.status!=='playing')break;
   if(stats.placements>0&&stats.placements%211===0&&stats.pauses<Math.floor(stats.placements/211)){
    command('pause');const cells=JSON.stringify(room.cells),score=room.players.map(p=>p.score);
    now+=3600000;command('tick');assert.equal(JSON.stringify(room.cells),cells);assert.deepEqual(room.players.map(p=>p.score),score);command('resume');stats.pauses++;
@@ -72,7 +72,7 @@ function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,terr
   if(stats.placements%50===0)invariants();
  }
  invariants();
- return {...stats,finalSize:room.terrain.length,finalPieces:room.cells.length,invaderPieces:room.cells.filter(p=>p.symbol==='*').length,figures:room.players.reduce((n,p)=>n+p.figures,0)-99,points:room.players.reduce((n,p)=>n+p.score,0),completed:stats.placements===moves};
+ return {...stats,finalSize:room.terrain.length,finalPieces:room.cells.length,invaderPieces:room.cells.filter(p=>p.symbol==='*').length,figures:room.players.reduce((n,p)=>n+p.figures,0)-openingFigures,points:room.players.reduce((n,p)=>n+p.score,0),finishReason:room.finishReason,completed:stats.placements===moves||room.status==='finished'};
 }
 export function simulateTurns(options={}){
  const original=crypto.randomUUID;let serial=0;

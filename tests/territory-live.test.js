@@ -28,8 +28,8 @@ for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
   assert.ok(region.length>0,kind+' selects region');
   assert.equal(new Set(region.map(p=>p.x+','+p.y)).size,region.length);
   assert.ok(region.every(p=>present(r).has(p.x+','+p.y)));
-  if(kind==='invader-colony'||kind==='blackhole')assert.equal(region.length,9);
-  if(kind==='meteorites'||kind==='earthquake')assert.equal(region.length,99);
+  if(kind==='invader-colony'||kind==='blackhole')assert.equal(region.length,18);
+  if(kind==='meteorites'||kind==='earthquake')assert.equal(region.length,27);
   r.territoryEvents=[{id:'event:'+kind,kind,region,...(plan.groups?{groups:plan.groups}:{}),nextAt:2000}];
   const effect=advanceTerritory(r,2000),expected=TERRITORY_EVENT_RULES[kind].effect;
   assert.ok(effect.length>0);
@@ -50,30 +50,30 @@ for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
    assert.equal(r.cells.length,oldCells);
   }else if(expected==='blackhole'){
    assert.equal(r.terrain.length,oldTerrain);
-   assert.equal(r.cells.length,oldCells-9);
+   assert.equal(r.cells.length,oldCells-region.length);
   }
  });
 }
-test('Metorite and earthquake demolition shares the same 33/333 budget, with distinct distributions',()=>{
+test('Metorite and earthquake demolition shares the same 3% budget, with distinct distributions',()=>{
  const room=make(),m=plannedEventRegion(room,'meteorites',()=>.2,1000);
  const e=territoryRegion(room,'cataclysm',()=>.31,impactCount(room,'earthquake'));
  assert.equal(m.length,e.length);
- assert.equal(m.length,99);
+ assert.equal(m.length,27);
  const concentration=points=>{
   const set=new Set(points.map(p=>p.x+','+p.y));
   return points.reduce((sum,p)=>sum+[[1,0],[-1,0],[0,1],[0,-1]].filter(([x,y])=>set.has((p.x+x)+','+(p.y+y))).length,0);
  };
  assert.ok(concentration(e)>concentration(m));
 });
-test('Each family rotates independently and survives serialization',()=>{
+test('Each family draws without replacement independently and survives serialization',()=>{
  let r=make();const natural=[],invaders=[];
  for(let i=0;i<7;i++){
   const n=pickEventKind(r,'natural');natural.push(n.order[0]);confirmEventKind(r,n);
   if(i<4){const v=pickEventKind(r,'invaders');invaders.push(v.order[0]);confirmEventKind(r,v);}
   r=JSON.parse(JSON.stringify(r));
  }
- assert.deepEqual(natural,NATURAL_EVENT_ROTATION);
- assert.deepEqual(invaders,['invader-rain','invader-colony','invader-rain','invader-colony']);
+ assert.deepEqual([...natural].sort(),[...NATURAL_EVENT_ROTATION].sort());
+ for(const pair of [invaders.slice(0,2),invaders.slice(2)])assert.deepEqual(pair.sort(),[...INVADER_EVENT_ROTATION].sort());
 });
 test('Historical rain/cataclysm definitions remain recognised and do not become asterisks',()=>{
  for(const kind of ['rain','cataclysm']){
@@ -102,5 +102,5 @@ test('Proportional event intervals leave fauna time to appear before a territori
  r.cells=r.terrain.slice(100,200).map((c,i)=>({...c,id:'food:'+i,symbol:'O',owner:'local-o'}));
  delete r.territoryActivityVersion;
  for(let i=0;i<33;i++)r=localCommand(r,'move',{x:i%33,y:Math.floor(i/33)},1000+i,()=>.3);
- assert.equal(r.territoryEvents.length,0);assert.ok(r.rodentRaids.length);assert.ok(r.worms.length);
+ assert.equal(r.territoryEvents.length,0);assert.equal(r.rodentRaids.length,0);assert.ok(r.worms.length);
 });

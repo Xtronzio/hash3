@@ -14,7 +14,7 @@ test('Local pause freezes board, turn, scores and the exact remaining clock acro
  const resumed=localCommand(frozen,'resume',{},now+7*86400000);assert.equal(Date.parse(resumed.pairs[0].deadline),now+7*86400000+25000);assert.deepEqual(resumed.cells,g.cells);
 });
 test('Unlimited local turns and expansion never place a timeout move',()=>{
- let g=createLocal('local','A','B',now,'normal','untimed');assert.equal(g.pairs[0].deadline,null);
+ let g=createLocal('local','A','B',now,'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});assert.equal(g.pairs[0].deadline,null);
  assert.equal(localCommand(g,'tick',{},now+100*86400000),g);
  for(let i=0;i<9;i++)g=localCommand(g,'move',{x:i%3,y:Math.floor(i/3)},now+(i+1)*86400000);
  assert.equal(g.pairs[0].pending,1);assert.equal(localCommand(g,'tick',{},now+100*86400000),g);
