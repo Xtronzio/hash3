@@ -51,6 +51,7 @@ export function simulateEcology({sizes=[333,999,3333],densities=[.35,.7,.95],tri
  }
  return results;
 }
-const results=simulateEcology();
+const results=simulateEcology({trials:process.argv.includes('--quick')?2:12});
+if(results.some(r=>r.viable+r.unavailable!==r.attempts||Object.values(r).some(v=>typeof v==='number'&&!Number.isFinite(v))))throw Error('Invalid simulation metrics');
 if(process.argv.includes('--json'))console.log(JSON.stringify(results,null,2));
 else console.table(results);
