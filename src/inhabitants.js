@@ -99,12 +99,19 @@ function project(room,point,player,random,now){
  }
  const territory=new Set(area.map(c=>key(c.x,c.y)));
  const blocked=new Set(frontierSegments(room).map(edgeKey));
+ const boundary=new Map();
+ for(const c of area)for(const p of fourNeighbors(c)){
+  const k=key(p.x,p.y);
+  if(!known.has(k)&&!reserved.has(k)&&!blocked.has(edgeKey({a:c,b:p})))boundary.set(k,p);
+ }
  const buildSites=new Map();
- for(const c of area)for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]])for(let xOffset=0;xOffset<3;xOffset++)for(let yOffset=0;yOffset<3;yOffset++){
-  const origin={x:c.x+dx-xOffset,y:c.y+dy-yOffset},group=plot(origin);
+ for(const edge of boundary.values())for(let xOffset=0;xOffset<3;xOffset++)for(let yOffset=0;yOffset<3;yOffset++){
+  const origin={x:edge.x-xOffset,y:edge.y-yOffset},k=key(origin.x,origin.y);
+  if(buildSites.has(k))continue;
+  const group=plot(origin);
   if(group.some(p=>known.has(key(p.x,p.y))||reserved.has(key(p.x,p.y))))continue;
   const joins=group.some(p=>fourNeighbors(p).some(n=>territory.has(key(n.x,n.y))&&!blocked.has(edgeKey({a:p,b:n}))));
-  if(joins)buildSites.set(key(origin.x,origin.y),group);
+  if(joins)buildSites.set(k,group);
  }
  const build=buildSites.size?choose([...buildSites.values()],random):[];
  if(!build.length){
