@@ -8,6 +8,7 @@ on:
       - release/local-visual-r33
       - release/local-ecology-r34
       - release/local-living-r35
+      - release/local-symbols-r36
   workflow_dispatch:
 permissions:
   contents: write

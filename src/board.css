@@ -44,7 +44,7 @@
 .game .tornado-destination>svg{visibility:hidden}
 .game .tornado-piece{position:absolute;display:grid;place-items:center;background:transparent;border:0;pointer-events:none;z-index:4;animation:tornado-piece 900ms ease-in-out both;animation-delay:var(--tornado-delay,0ms);will-change:transform,opacity}
 .game .tornado-piece.foreign{color:#7b8492}
-@keyframes tornado-zone{0%,30%,60%{background:#00e5ff26;box-shadow:inset 0 0 0 2px #00e5ff80}15%,45%,75%{background:#b88bff20;box-shadow:inset 0 0 0 1px #b88bff60}100%{background:transparent;box-shadow:none}}
+@keyframes tornado-zone{0%,30%,60%{background:#00e5ff26;box-shadow:inset 0 0 0 2px #00e5ff80}15%,45%,75%{background:#ffce3320;box-shadow:inset 0 0 0 1px #ffce3360}100%{background:transparent;box-shadow:none}}
 @keyframes tornado-piece{0%{transform:translate(0,0) rotate(0deg);opacity:1}25%{transform:translate(calc(var(--tornado-dx)*.15 + var(--tornado-spin)*10px),calc(var(--tornado-dy)*.2 - 9px)) rotate(calc(var(--tornado-spin)*80deg));opacity:.35}50%{transform:translate(calc(var(--tornado-dx)*.6 - var(--tornado-spin)*9px),calc(var(--tornado-dy)*.45 + 8px)) rotate(calc(var(--tornado-spin)*210deg));opacity:1}75%{transform:translate(calc(var(--tornado-dx)*.9 + var(--tornado-spin)*4px),calc(var(--tornado-dy)*.85 - 4px)) rotate(calc(var(--tornado-spin)*315deg));opacity:.45}100%{transform:translate(var(--tornado-dx),var(--tornado-dy)) rotate(calc(var(--tornado-spin)*360deg));opacity:1}}
 @media(prefers-reduced-motion:reduce){.game .tornado-piece{animation:none;transform:translate(var(--tornado-dx),var(--tornado-dy))}.game .tornado-zone{animation:none;background:#00e5ff18;box-shadow:inset 0 0 0 2px #00e5ff80}}
 .cell.neutral{color:#c5cbd4;background:#20252d}
@@ -61,9 +61,9 @@
 @keyframes bomb-action{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.1)}45%{opacity:1;transform:scale(.9)}100%{opacity:0;transform:scale(1.2)}}
 @media(prefers-reduced-motion:reduce){.board-action-bomb{animation:none}}
 
-.board-action-ufo{color:#d9efff;background:#1e324433;animation:ufo-abduction .9s both}
+.board-action-ufo{color:var(--yellow);background:#ffce3320;animation:ufo-abduction .9s both}
 @keyframes ufo-abduction{0%{opacity:0;transform:translateY(20%) scale(.8)}25%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1;transform:translateY(-20%) scale(.7)}100%{opacity:0;transform:translateY(-60%) scale(.2)}}
-.board-action-cataclysm{color:var(--red);background:#ff4a5830;animation:cataclysm-demolition .9s both}
+.board-action-cataclysm{color:var(--yellow);background:#ffce3330;animation:cataclysm-demolition .9s both}
 @keyframes cataclysm-demolition{0%{opacity:0}20%,45%,70%{opacity:1;transform:translateX(-3%)}30%,55%{transform:translateX(3%)}100%{opacity:0;transform:scale(.3)}}
 .territory-warning{pointer-events:none;z-index:8;box-shadow:inset 0 0 0 1px #f4c65d99;background:#f4c65d0a}
 .territory-notice{margin:0;padding:5px 12px;color:var(--yellow);font-size:11px;border-bottom:1px solid #655226}
@@ -99,13 +99,13 @@ button.territory-notice{display:flex;align-items:center;justify-content:center;g
 .game .board{isolation:isolate}
 
 /* #3_11: la ocupación invasora es ajena a X, O y al neutral #. */
-.cell.invader{color:#e6b8ff;background:#25162e;box-shadow:inset 0 0 0 1px #b95bf088}
-.invader-asterisk{font-size:clamp(19px,2.8vw,38px);font-weight:900;line-height:1;color:#dba9ff;text-shadow:0 0 12px #d37bff88}
-.board-action-invader-rain,.board-action-invader-colony{color:#dba9ff;background:radial-gradient(circle,#d37bff77,transparent 70%);animation:bomb-action .9s both;animation-delay:var(--visit-delay,0ms)}
-.board-action-meteorites{animation:bomb-action .9s both;color:#ffb368;background:radial-gradient(circle,#ffa35066,transparent 75%)}
-.board-action-earthquake{animation:cataclysm-demolition .9s both;color:#ff7b74}
-.board-action-pandemic,.board-action-ufo{animation:ufo-abduction .9s both;color:#c0f1e7}
-.board-action-tornado-rain,.board-action-hurricane,.board-action-blackhole{animation:cataclysm-demolition .9s both;color:#c3d6fc}
+.cell.invader{color:var(--yellow);background:#161109;box-shadow:inset 0 0 0 1px #ffce3344}
+.cell svg.invader-asterisk{width:82%;height:82%;max-width:none;color:var(--yellow);filter:drop-shadow(0 0 4px #ffce3344)}
+.board-action-invader-rain,.board-action-invader-colony{color:var(--yellow);background:radial-gradient(circle,#ffce3377,transparent 70%);animation:bomb-action .9s both;animation-delay:var(--visit-delay,0ms)}
+.board-action-meteorites{animation:bomb-action .9s both;color:var(--yellow);background:radial-gradient(circle,#ffce3366,transparent 75%)}
+.board-action-earthquake{animation:cataclysm-demolition .9s both;color:var(--yellow)}
+.board-action-pandemic,.board-action-ufo{animation:ufo-abduction .9s both;color:var(--yellow)}
+.board-action-tornado-rain,.board-action-hurricane,.board-action-blackhole{animation:cataclysm-demolition .9s both;color:var(--yellow)}
 @media(prefers-reduced-motion:reduce){.board-action-invader-rain,.board-action-invader-colony,.board-action-meteorites,.board-action-earthquake,.board-action-pandemic,.board-action-tornado-rain,.board-action-hurricane,.board-action-blackhole{animation:none}}
 
 .game .board>.board-overview-map{position:absolute;display:block;overflow:hidden;cursor:zoom-in;fill:none;stroke:none}
