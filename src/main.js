@@ -661,13 +661,32 @@ app.addEventListener('click',async e=>{
   }
   if(action==='hall-achievements'){achievementView=achievementSelection(loadTerritoryResults(localStorage,localGames()),achievementView||{});openHallDialog('achievements','hall-achievements');return;}
   if(action==='hall-inventory'){openHallDialog('inventory','hall-inventory');return;}
-  if(action==='profile-copy-ready'){
-    const field=document.querySelector('#profile-export');if(!field?.value)return;
-    const ok=await copyText(field.value,{fallback:legacyCopyText});
-    document.querySelector('#profile-copy-status').textContent=ok?'Enlace copiado. Ya puedes pegarlo.':'Selecciona el enlace y usa Copiar en tu dispositivo.';
-    if(!ok){field.focus();field.select();}notify(ok?'Enlace privado copiado. Ya puedes pegarlo.':'Selecciona el enlace y usa Copiar.');return;
+  if(action==='profile-copy-ready'){await copySavedProfileLink();return;}
+  if(action==='profile-generate'||action==='profile-renew-confirm'){
+   if(busy)return;
+   const renew=action==='profile-renew-confirm';
+   profileStatus('profile-copy-status',renew?'Renovando el enlace…':'Generando tu enlace…');
+   busy=true;
+   try{
+    await generateProfileAccess(renew);
+    document.querySelector('#profile-renew-confirm').hidden=true;
+    profileStatus('profile-copy-status',renew?'Enlace renovado. El anterior ya no sirve. Pulsa Copiar enlace.':'Enlace creado. Pulsa Copiar enlace para llevártelo a otro navegador.','ok');
+   }catch(error){
+    profileStatus('profile-copy-status',error.message||'No se pudo generar el enlace.','error');
+    if(error.message?.includes('Ya existe un enlace'))document.querySelector('#profile-renew-confirm').hidden=false;
+   }finally{busy=false;}
+   return;
   }
-  if(action==='profile-copy'||action==='profile-renew'){await run(()=>copyProfileAccess(action==='profile-renew'));return;}
+  if(action==='profile-renew'){document.querySelector('#profile-renew-confirm').hidden=false;return;}
+  if(action==='profile-renew-cancel'){document.querySelector('#profile-renew-confirm').hidden=true;return;}
+  if(action==='profile-share'){
+   const link=localProfileLink();if(!link)return;
+   if(navigator.share){
+    try{await navigator.share({title:'#3 · Acceso a mi perfil',url:link});}
+    catch(error){if(error?.name!=='AbortError')profileStatus('profile-copy-status','No se pudo compartir. Prueba Copiar enlace.','error');}
+   }else await copySavedProfileLink();
+   return;
+  }
   if(action==='events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
   if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
@@ -881,11 +900,18 @@ window.addEventListener('online',poll);
 window.addEventListener('resize',()=>{if(room?.status==='playing'){blinkId=null;if(mapInteracting)mapDeferred=true;else render();}});
 setInterval(poll,1800);
 async function init(){
-  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
-  if(hasProfile)history.replaceState(null,'',location.pathname+location.search);
-  renderHome();
-  if(incoming){await loadProfileAccess(profileUrl(incoming,location.href));return;}
-  if(hasProfile)throw Error('El enlace de perfil no es válido. Tu perfil actual se conserva.');
+ const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
+ renderHome();
+ if(incoming){
+  try{await loadProfileAccess(profileUrl(incoming,location.href));}
+  catch(error){hallDialog='profile';renderHome();profileStatus('profile-restore-status','No se pudo cargar automáticamente: '+error.message+' Puedes volver a intentarlo desde aquí.','error');}
+  return;
+ }
+ if(hasProfile){
+  hallDialog='profile';renderHome();
+  profileStatus('profile-restore-status','El enlace no tiene el formato correcto. Tu perfil actual se conserva.','error');
+  return;
+ }
   const pendingPair=read('hash3_pair');if(pendingPair&&navigator.onLine){try{uid=await ensurePlayer();acceptPair(await command('pair_get',{code:pendingPair}));return;}catch{save('hash3_pair',null);}}
   try{
     if(sessionStorage.getItem('hash3_restore_local')==='1'){
