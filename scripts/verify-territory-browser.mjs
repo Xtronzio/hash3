@@ -5,7 +5,7 @@ import path from 'node:path';
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
 import {createLocal,localCommand} from '../src/local.js';
-import {seedInvasions} from '../src/invasion-paths.js';
+import {seedInvasions,advanceInvasions} from '../src/invasion-paths.js';
 import {initializeHabitats} from '../src/inhabitants.js';
 import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
 import {plannedEventRegion} from '../src/territory-event-actions.js';
@@ -290,11 +290,11 @@ try{
  const moveCell=turnPage.locator('.board [data-action="move"][data-x="0"][data-y="0"]');await moveCell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(turnPage);await moveCell.tap();
  await turnPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].worms[0].eaten===1);
  assert.match(await turnPage.locator('.habitat-worm b').first().innerText(),/1\/9.*3↷/);
- await turnPage.locator('[data-action="events"]').tap();assert.match(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
+ await turnPage.locator('[data-action="events"][aria-label="Próximos eventos"]').tap();assert.match(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
  await turnPage.screenshot({path:path.join(output,'worm-turns-r37.png')});
  assert.deepEqual(turnErrors,[]);results.push({wormNineMealsTurnBadge:true,passed:true});await turnPage.close();
  // A live invasion remains active without a fictitious seconds clock.
- const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');growthRoom.invasions[0].grown=4;
+ const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');for(let i=0;i<3;i++)advanceInvasions(growthRoom,Date.now(),()=>0);
  const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
  await growthPage.locator('[data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
  assert.match(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
