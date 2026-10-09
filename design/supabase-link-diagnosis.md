@@ -4,17 +4,27 @@ Jorge observa que los problemas aparecieron al intentar generar el enlace para o
 
 ## Cronología comprobada
 
-Consulta de registros unificados en ventana UTC 8/10 10:00–9/10 09:55. Horas de esta tabla convertidas a Europe/Madrid (UTC+2).
+Se amplió la búsqueda a ventanas diarias desde la creación del proyecto el 4/10. Hay registros históricos de Auth, PostgreSQL y cron. Los días 4–6 no muestran errores de servidor (5xx) de renovación en los registros revisados. Horas de esta tabla convertidas a Europe/Madrid (UTC+2).
 
 | Momento | Evidencia |
 | --- | --- |
-| 8/10 12:10:24 | Primer 504 de renovación de sesión observado en esta ventana, desde Safari/iPhone. No equivale a primera incidencia de toda la historia. |
-| 8/10 12:46:50 | 504 al crear sesión anónima, desde Edge/Windows. |
-| 8/10 18:09:19 | Creación y única actualización del servicio `profile-link`, versión 1. |
-| 8/10 18:19:24 | Commit `fd8566b`: incorporación de enlaces de perfil R0.21.18. |
-| 9/10 10:53:26 | Commit `698edf2`: P1 elimina la dependencia de una sesión antigua para solicitar restauración y mejora errores/recuperación. |
+| 7/10 23:00:31 | Última renovación correcta (200) observada antes del incidente. |
+| 7/10 23:32:58–23:33:45 | Intentos de aplicación del SQL R0.21.0 de habitantes; la función nueva aparece después en el stack del reloj. |
+| 7/10 23:33:58 | Arranca una ejecución del cron `advance_worlds()` que no termina a tiempo. |
+| 7/10 23:36:31 | Timeout del cron dentro de `habitat_reserved`, llamado desde `advance_state`, línea 24. |
+| 7/10 23:37:34 | PostgreSQL informa interrupción, cierre incorrecto y recuperación automática. Después se repite el ciclo de reinicios. |
+| 8/10 00:07:14 | Primer fallo interno de renovación de Auth localizado: 500, `error finding refresh token: context canceled`. |
+| 8/10 00:10:10 | Primera respuesta 502 de renovación en el gateway. |
+| 8/10 00:12:10 | Primera respuesta 504 de renovación en el gateway. |
+| 8/10 18:09:19 | Creación y única actualización de `profile-link`, versión 1. |
+| 8/10 18:19:24 | Commit `fd8566b`: incorporación de enlaces R0.21.18. |
+| 9/10 10:53:26 | Commit `698edf2`: P1 elimina la dependencia de sesión antigua en la petición de restauración. |
 
-La ventana contiene 815 respuestas 504 en renovaciones y 13 en creación de sesión. Hay cuatro mensajes de arranque/cierre de la función, sin detalle de sus acciones; esos mensajes no prueban generación o restauración correctas. Los registros disponibles sitúan fallos de Auth casi seis horas antes de desplegar el enlace. Por tanto, la instalación del enlace no explica el inicio de esos fallos. No descarta otros cambios previos de nuestra aplicación o tareas del servidor.
+El primer error del gateway no es el primer síntoma: la base de datos y el reloj fallan antes de Auth. El cambio inmediatamente relevante es `20261007213210_board_inhabitants_33_66_99.sql`, incorporado en `31ab5b2` (R0.21.0, 7/10 23:44 Madrid). La hora de commit es posterior a la aplicación SQL y no debe usarse como hora de despliegue del servidor.
+
+El registro del timeout da el recorrido exacto `advance_worlds → advance_state → habitat_reserved`. El nuevo filtro ejecuta esa comprobación para cada celda del terreno conectado al buscar movimientos. Se registran 13 timeouts de pg_cron con ese contexto entre 23:36 y 00:59; en la misma ventana también fallan PostgREST y administración. Esto confirma un problema en nuestra consulta online. La relación de esa carga con los reinicios y la caída general es la principal hipótesis; no está confirmado agotamiento de memoria ni un motivo de reinicio específico.
+
+La ventana posterior 8/10 10:00–9/10 09:55 UTC contiene otros 815 refresh 504 y 13 signup 504. Los mensajes de arranque/cierre de la función de enlace no prueban generación o recuperación correctas. El enlace se instaló muchas horas después del comienzo de los errores; no explica su inicio.
 
 ## Qué hace realmente el enlace
 
@@ -26,6 +36,6 @@ El cliente Supabase se inicializaba también en modos locales con renovación au
 
 ## Lo que sigue sin resolverse
 
-Las consultas SQL mínimas, migraciones y asesores agotan el plazo de conexión, aunque administración muestra ACTIVE_HEALTHY. No hay registros PostgreSQL en la ventana disponible. No es posible distinguir todavía bloqueo, saturación, conectividad o avería del servicio. El cron `hash3-world-clock` existe en las migraciones, con intervalo de dos segundos; no se pudo verificar si sigue activo remotamente. Desactivar Duelo/Mundo en el navegador no detiene ese trabajo del servidor.
+Las consultas SQL mínimas, migraciones y asesores agotan el plazo de conexión, aunque administración muestra ACTIVE_HEALTHY. La ventana reciente no contiene registros PostgreSQL, pero las ventanas históricas sí permitieron encontrar los timeouts y reinicios anteriores. Todavía no se confirmó el mecanismo que provoca el reinicio (memoria, bloqueo u otro). El cron `hash3-world-clock`, cada dos segundos, está confirmado en los registros históricos. El 9/10 se intentó desactivarlo reversiblemente con `cron.alter_job(..., active := false)` y consultar su estado; la conexión volvió a agotar el plazo. No hay confirmación de pausa ni del estado actual. No repetir cambios a ciegas. Desactivar Duelo/Mundo en el navegador no detiene ese trabajo del servidor.
 
-Siguiente diagnóstico cuando SQL responda: revisar actividad y bloqueos, planificador y coste de `hash3_private.advance_worlds()`, después probar Auth sin enlace, crear un único enlace y restaurar una vez en otro navegador, midiendo solicitudes y latencias. No borrar usuarios, sesiones, mundos ni enlaces para ocultar el fallo. No habilitar Duelo ni Mundo hasta cerrar su fase correspondiente.
+Siguiente diagnóstico cuando SQL responda: confirmar/desactivar el cron, revisar actividad y bloqueos, y corregir el filtro de reservas identificado en `advance_state` para preparar reservas/ocupación una vez por estado, evitando recorridos repetidos por celda. Medir terreno real grande con/sin habitantes antes de reactivarlo. Después probar Auth sin enlace, crear un único enlace y restaurar una vez en otro navegador, midiendo solicitudes y latencias. No borrar usuarios, sesiones, mundos ni enlaces para ocultar el fallo. No habilitar Duelo ni Mundo hasta cerrar su fase correspondiente.
