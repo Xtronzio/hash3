@@ -106,8 +106,11 @@
     min-width:0;
     max-width:100%;
   }
+  /* iOS Safari zooms the entire page when editable inputs use <16px.
+     Last profile redesign set 15px; keep mobile form controls at 16px. */
   .profile-screen input,.profile-screen textarea{
     max-width:100%;
+    font-size:16px;
   }
   #notice{max-width:calc(100vw - 20px)}
 }
