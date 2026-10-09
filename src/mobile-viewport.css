@@ -1,0 +1,130 @@
+/* #3 · Mobile viewport contract. The application shell never pans.
+   Only board cameras and deliberately scrollable panels can move. */
+@media(max-width:760px){
+  html,body{
+    width:100%;
+    height:100%;
+    min-width:0;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  body{margin:0;padding:0;position:relative}
+  #app{
+    position:relative;
+    width:100%;
+    max-width:100%;
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  /* Hall owns its scroll; the document behind it stays fixed. */
+  #app>.hall{
+    width:100%;
+    max-width:100%;
+    height:100%;
+    min-height:0;
+    margin:0 auto;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:max(12px,env(safe-area-inset-bottom));
+  }
+  #app>.hall .hall-header,
+  #app>.hall .hall-main{min-width:0;max-width:100%}
+  /* The actual game remains fullscreen. Board viewport alone pans/zooms. */
+  #app>.game{
+    width:100%;
+    height:100%;
+    min-height:0;
+    min-width:0;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  #app>.game .workspace,
+  #app>.game .arena,
+  #app>.game .map-wrap{min-width:0;min-height:0}
+  #app>.game .viewport{
+    min-width:0;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* Other screens may scroll in the app, not by dragging the document. */
+  #app>.lobby,
+  #app>.entry,
+  #app>.paused-game{
+    height:100%;
+    min-height:0;
+    max-width:100%;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  /* Backdrop respects safe areas; a dialog can NEVER be taller than its
+     backdrop plus padding. iOS won't drag the page behind it. */
+  #app>.dialog-backdrop{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    max-height:100dvh;
+    min-width:0;
+    min-height:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    padding:
+      max(10px,env(safe-area-inset-top))
+      max(10px,env(safe-area-inset-right))
+      max(10px,env(safe-area-inset-bottom))
+      max(10px,env(safe-area-inset-left));
+    overscroll-behavior:none;
+    touch-action:pan-y;
+  }
+  #app>.dialog-backdrop>.dialog{
+    width:min(100%,590px);
+    max-width:100%;
+    min-width:0;
+    min-height:0;
+    max-height:100%;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* Override the 94dvh profile panel: the actual available space after
+     backdrop safe-area padding is always smaller than the visual viewport. */
+  #app>.hall-dialog:has(.profile-screen)>.dialog{
+    max-height:100%;
+  }
+  .profile-screen,.profile-identity,.profile-section,
+  .profile-link-actions,.profile-import-form,.profile-alias-form{
+    min-width:0;
+    max-width:100%;
+  }
+  .profile-screen input,.profile-screen textarea{
+    max-width:100%;
+  }
+  #notice{max-width:calc(100vw - 20px)}
+}
+/* Short-height handsets: compress visual decoration before hiding actions.
+   Hall is scrollable internally if even the compressed layout will not fit. */
+@media(max-width:600px) and (max-height:850px){
+  #app>.hall{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .hall-header{min-height:64px}
+  .hall-board{height:clamp(130px,19dvh,174px);margin:2px 0 8px}
+  .hall-board-cells{--hall-cell:clamp(19px,2.6dvh,26px)}
+  .hall .hall-play{min-height:58px}
+  .hall-modes{margin-top:10px;gap:8px}
+  .hall .hall-mode{min-height:96px;gap:6px;padding-block:8px}
+  .hall .hall-mode.is-selected{padding-block:7px}
+  .hall .hall-mode svg{width:32px;height:32px}
+  .hall-more{margin:12px 0 8px}
+  .hall .hall-secondary button{min-height:81px;padding:9px 6px;gap:5px}
+  .hall-secondary svg{width:23px;height:23px}
+  .hall-bottom{margin-top:9px;padding-top:8px}
+}
