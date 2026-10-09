@@ -1,3 +1,4 @@
+import {borderChains} from './area-tools.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
 import {localCommand,machineChoice} from './local.js';
 import {availableCells,expansionOptions,terrainOf,key} from './game.js';
@@ -25,6 +26,7 @@ function cardCandidates(room,player,now){
  for(const tool of ['combo','double','opposite','erase','activate','bomb','tornado','shift','rival','block','destroy','immunity','shield','frontier','border']){
   if(!canUsePracticeTool(room,player,tool,now))continue;
   if(['combo','double','rival','immunity'].includes(tool)){commands.push({action:'inventory',payload:{tool,playerId:player}});continue;}
+  if(tool==='border'){for(const cells of borderChains(room,3))commands.push({action:'inventory',payload:{tool,playerId:player,cells}});continue;}
   const points=toolCells(room,player,tool).sort((a,b)=>proximity(b)-proximity(a)).slice(0,3);
   for(const p of points){
    if(tool==='shift'){

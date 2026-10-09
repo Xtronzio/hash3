@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
-import {canUsePracticeTool,initializeInventory,completeInventoryTurn,toolCells,practiceTools} from '../src/practice-tools.js';
+import {canUsePracticeTool,initializeInventory,completeInventoryTurn,toolCells,practiceTools,inventoryDrawWeight} from '../src/practice-tools.js';
 import {tornadoOptions,bombBlast,frontierOptions,frontierAnchors} from '../src/area-tools.js';
 import {frontierReachable,frontierEdges,frontierMarkup,frontierTiles,frontierCells,selectFrontier} from '../src/frontiers.js';
 import {expansionOptions,terrainOf,figureWindows} from '../src/game.js';
@@ -13,13 +13,13 @@ const start=()=>{const r=createLocal('local','A','B',now,'normal','untimed');for
 const card=(r,tool,point,random=()=>.4)=>localCommand(r,'inventory',{tool,playerId:'local-x',...point},now,random);
 const expanding=(r=start())=>{r.cells=r.terrain.map((p,i)=>({...p,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));Object.assign(r.pairs[0],{pending:1,expander:'local-x',credits:1});return r;};
 const fill=r=>{r.cells=r.terrain.filter(p=>p.x!==2||p.y!==2).map((p,i)=>({...p,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));return r;};
-test('Tornado mixes a selected 3×3 and its empty slots without creating terrain, symbols, score or a turn',()=>{
+test('Tornado mixes a selected 3×3 and its empty slots preserving terrain and symbols while awarding new landing figures without completing a turn',()=>{
  const r=fill(start());r.players[0].score=123;r.players[1].lastMove={...r.cells[1]};const before=structuredClone(r);
  const next=card(r,'tornado',{x:0,y:0},()=>0);
  assert.deepEqual(r,before);assert.deepEqual(next.terrain,r.terrain);assert.equal(next.cells.length,r.cells.length);
  assert.deepEqual(next.cells.map(c=>`${c.id}:${c.symbol}:${c.owner}`).sort(),r.cells.map(c=>`${c.id}:${c.symbol}:${c.owner}`).sort());
  assert.notDeepEqual(next.cells.map(c=>`${c.x},${c.y}:${c.symbol}`).sort(),r.cells.map(c=>`${c.x},${c.y}:${c.symbol}`).sort());
- assert.deepEqual(next.pairs,r.pairs);assert.equal(next.players[0].score,123);assert.equal(next.players[0].inventory.cards.tornado,0);
+ assert.equal(next.pairs[0].turn,r.pairs[0].turn);assert.equal(next.pairs[0].credits,next.lastEvent.landing.reduce((n,s)=>n+s.figures,0));assert.equal(next.players[0].score,123+(next.lastEvent.landing.find(s=>s.symbol==='X')?.points||0));assert.equal(next.players[0].inventory.cards.tornado,0);
  assert.deepEqual(next.players[1].lastMove,next.cells.find(c=>c.id===r.cells[1].id));assert.equal(next.players[0].placements,r.players[0].placements);
  assert.equal(canUsePracticeTool(next,'local-x','double',now),false);
 });
@@ -76,7 +76,7 @@ test('New cards enter refill at zero stock in old saves, preserve eight starting
  for(const t of ['tornado','bomb','frontier','hint-expand','super-hint']){assert.equal(r.players[0].inventory.cards[t],0);delete r.players[0].inventory.cards[t];}
  initializeInventory(r);assert.equal(r.players[0].inventory.cards['super-hint'],0);
  for(const t of practiceTools)r.players[0].inventory.received[t.id]=0;
- const index=practiceTools.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>index/practiceTools.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
+ const tickets=practiceTools.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));const index=tickets.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>index/tickets.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
  const ready=fill(start());for(const t of ['tornado','bomb','frontier']){assert.equal(canUsePracticeTool(localCommand(ready,'pause',{},now),'local-x',t,now),false);assert.equal(canUsePracticeTool({...ready,timeMode:'timed',pairs:[{...ready.pairs[0],deadline:new Date(now).toISOString()}]},'local-x',t,now),false);}
 });
 

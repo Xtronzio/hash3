@@ -4,7 +4,7 @@ import {boardCellLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game.js';
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
-import {tornadoOptions,bombOptions,frontierOptions,borderOptions} from './area-tools.js';
+import {tornadoOptions,bombOptions,frontierOptions,borderOptions,borderChains} from './area-tools.js';
 import {expansionFrontierContext,edgeKey,frontierDirections} from './frontiers.js';
 export const REFILL_TURNS=1,MAX_PER_CARD=3;
 export const practiceTools=[
@@ -18,10 +18,10 @@ export const practiceTools=[
   {id:'hint',group:'help',label:'Ayuda de movimiento',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'activate',label:'Construir celda',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
-  {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos, conservando símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
+  {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos; las figuras nuevas al aterrizar puntúan para X y O. Conserva símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
   {id:'frontier',label:'Muro',description:'Coloca una casilla de muro en un hueco sin construir junto al territorio, durante tu turno y sin necesitar una ampliación. Cuenta como herramienta y después colocas tu ficha. La diagonal morada / bloquea construir o ampliar sobre esa casilla; solo Bomba lo rompe. También puedes colocarlo una vez antes de una ampliación pendiente que te corresponda.',button:'Elegir casilla de muro'},
-  {id:'border',label:'Frontera',description:'Traza una frontera de tres celdas construidas en línea. Gírala para contener la entrada anunciada de una invasión. No ocupa ni borra fichas; los fenómenos naturales siguen atravesándola. Bomba puede romperla. Después coloca tu ficha.',button:'Situar frontera de tres celdas'},
+  {id:'border',label:'Frontera',description:'Toca tres casillas vacías contiguas por un lado; pueden formar una L. Se convierten en tres muros y contienen el avance invasor. No borra fichas. Bomba puede romperla. Después coloca tu ficha.',button:'Situar frontera de tres celdas'},
   {id:'hint-expand',group:'help',label:'Ampliación inteligente',description:'Propone un 3×3 favorable al quedarte sin movimientos. Desde 333 figuras cobradas en la partida también permite ampliar por estrategia aunque queden huecos. Tú confirmas o eliges otra; la ampliación voluntaria gasta la carta al colocarla.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
@@ -61,11 +61,11 @@ export function toolAllowance(game,playerId){
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
-export function toolCells(game,playerId,tool,{side='north',pivot=false}={}){
+export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
   const p=game?.pairs?.[0];if(!p)return [];
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
-  if(tool==='border')return borderOptions(game,side);
+  if(tool==='border')return borderOptions(game,selected);
   if(tool==='frontier')return frontierOptions(game,side,playerId,{pivot});
   const linked=new Set(playableTerrain(game,p).map(c=>key(c.x,c.y)));
   if(tool==='activate'){
@@ -93,7 +93,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='immunity')return toolStock(game,playerId,tool)>0&&!isImmune(game,playerId,now)&&game.players.some(v=>v.id===playerId);
   if(p.pending){
     if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
-    if(tool==='border')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierDirections.some(side=>borderOptions(game,side).length);
+    if(tool==='border')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&borderChains(game,1).length>0;
     if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierOptions(game,'north',playerId).length>0;
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
@@ -114,7 +114,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='hint')return availableCells(game,p).length>0;
   if(tool==='shift'&&!availableCells(game,p).length)return false;
   if(tool==='block'&&availableCells(game,p).length<2)return false;
-  if(tool==='border')return frontierDirections.some(side=>borderOptions(game,side).length>0);
+  if(tool==='border')return borderChains(game,1).length>0;
   return toolCells(game,playerId,tool).length>0;
 }
 export function spendCard(game,playerId,tool){
@@ -142,11 +142,15 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
   const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
   if(inv.turns>=REFILL_TURNS&&Object.values(inv.cards).reduce((a,b)=>a+b,0)<MAX_CARDS&&heldTypes<=MAX_CARD_TYPES&&eligible.length){
-    // Draw from all eligible types, including duplicates. A cap is not a refill target.
-    const draw=eligible[Math.min(eligible.length-1,Math.floor(Math.max(0,random())*eligible.length))];
+    // Tactical piece cards receive three tickets, the rest one. Still a draw:
+    // missing cards and quantities 0/1/2/3 coexist, without filling each type.
+    const tickets=eligible.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));
+    const draw=tickets[Math.min(tickets.length-1,Math.floor(Math.max(0,random())*tickets.length))];
     inv.cards[draw.id]++;inv.received[draw.id]++;inv.turns=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;
   }
 }
+export const TACTICAL_CARDS=Object.freeze(['double','opposite','rival','erase','shift','combo']);
+export const inventoryDrawWeight=tool=>TACTICAL_CARDS.includes(tool)?3:1;
 export function moveDestination(game,playerId,cell){
   if(!cell)return false;
   const pair=game.pairs[0],linked=playableTerrain(game,pair);

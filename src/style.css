@@ -69,3 +69,7 @@ body{padding-bottom:26px}.game{height:calc(100dvh - 26px)}.entry{min-height:calc
 .invasion-entry{position:absolute;left:50%;top:-10px;color:var(--yellow);font-size:20px;font-weight:bold;transform-origin:50% 100%}
 
 .cell.worm-body.blocked::after{display:none}
+
+/* Growth and intercepted warnings must leave the occupied symbol or wall visible. */
+.phenomenon-marker.is-growing,.phenomenon-marker.on-barrier{background:transparent;border:0;align-items:flex-start;justify-content:flex-end}
+.phenomenon-marker.is-growing svg,.phenomenon-marker.on-barrier svg{width:14px;height:14px;margin:2px}

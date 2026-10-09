@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand,machineChoice} from '../src/local.js';
 import {availableCells,key} from '../src/game.js';
-import {initializeHabitats,countHabitatPlacement,advanceHabitats} from '../src/inhabitants.js';
+import {initializeHabitats,countHabitatPlacement,advanceHabitats,visitWorms} from '../src/inhabitants.js';
 import {localLiving,livingFactor,livingInterval,livingClock,LIVING_FREQUENCIES} from '../src/living-balance.js';
 import {impactCount,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,pickEventKind,confirmEventKind} from '../src/territory-event-rules.js';
 import {recordTerritoryPlacement,territoryIcons} from '../src/territory-tools.js';
 import {plannedEventRegion,applyPlannedEvent} from '../src/territory-event-actions.js';
-import {borderOptions} from '../src/area-tools.js';
+import {borderOptions,borderChains} from '../src/area-tools.js';
 import {frontierEdges,frontierSegments,frontierMarkup} from '../src/frontiers.js';
 import {planInvasion,defendedInvasionCells} from '../src/invasion-paths.js';
 import {migrateLegacyWalls} from '../src/wall-migration.js';
@@ -44,19 +44,20 @@ test('A newly blocked worker destination is rejected without spending a turn; a 
  assert.throws(()=>localCommand(r,old.action,old.payload,1000),/celda vacía/);assert.deepEqual(r,snapshot);
  const next=machineChoice(r,()=>0);assert.notDeepEqual(next.payload,old.payload);assert.equal(localCommand(r,next.action,next.payload,1000).pairs[0].turn,'X');
 });
-test('Three consecutive foodless cycles retire the whole worm, including after pause and reload',()=>{
- let r=board();r.worms=[worm()];
- r=localCommand(r,'tick',{},34000);r=localCommand(r,'tick',{},67000);assert.equal(r.worms[0].failedMeals,2);
- r=localCommand(r,'pause',{},77000);assert.equal(r.worms[0].remainingMs,23000);
- r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);
- r=localCommand(r,'tick',{},1023000);assert.equal(r.worms.length,0);assert.ok(availableCells(r,r.pairs[0]).some(p=>p.x===2&&p.y===0));
+test('Three foodless meal attempts retire the worm after nine completed turns, including save and pause',()=>{
+ let r=board();r.worms=[worm()];initializeHabitats(r,1000);
+ for(let i=0;i<6;i++)visitWorms(r,null,1000+i,()=>0);
+ assert.equal(r.worms[0].failedMeals,2);r=localCommand(r,'pause',{},77000);
+ assert.equal(r.worms[0].remainingMs,undefined);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);
+ assert.equal(r.worms[0].failedMeals,2);for(let i=0;i<3;i++)visitWorms(r,null,1000000+i,()=>0);
+ assert.equal(r.worms.length,0);assert.ok(availableCells(r,r.pairs[0]).some(p=>p.x===2&&p.y===0));
 });
-test('A successful meal breaks the foodless streak, and the third actual meal still removes the body',()=>{
- const r=board();r.worms=[{...worm(),eaten:0,failedMeals:2}];
+test('A successful meal breaks the foodless streak; legacy worms finish at three meals under the new turn model',()=>{
+ const r=board();r.worms=[{...worm(),eaten:0,failedMeals:2}];initializeHabitats(r,1000);
  r.cells=[{id:'a',x:2,y:0,symbol:'O',owner:'local-o'},{id:'b',x:3,y:1,symbol:'X',owner:'local-x'},{id:'c',x:4,y:1,symbol:'O',owner:'local-o'}];
- advanceHabitats(r,34000,()=>0);assert.equal(r.worms[0].failedMeals,0);
- advanceHabitats(r,67000,()=>0);assert.equal(r.worms[0].eaten,2);
- advanceHabitats(r,100000,()=>0);assert.equal(r.worms.length,0);
+ for(let i=0;i<3;i++)visitWorms(r,null,1000+i,()=>0);assert.equal(r.worms[0].failedMeals,0);
+ for(let i=0;i<3;i++)visitWorms(r,null,1010+i,()=>0);assert.equal(r.worms[0].eaten,2);
+ for(let i=0;i<3;i++)visitWorms(r,null,1020+i,()=>0);assert.equal(r.worms.length,0);
 });
 test('Worm nodes and continuous links share exact geometry across active and paused maps',()=>{
  const r=board();r.worms=[{...worm({x:3,y:1}),body:[{x:1,y:0},{x:2,y:0},{x:3,y:1}]}];
@@ -72,7 +73,7 @@ test('Sqrt population scaling and every effect budget remain bounded and tied to
   for(const [kind,n] of Object.entries(LIVING_FREQUENCIES)){assert.equal(livingInterval(n,size)%3,0);if(kind!=='bomb')assert.equal(livingClock(kind,size)%33000,0);}
   const r=board(size);r.cells=r.terrain;
   for(const kind of NATURAL_EVENT_ROTATION){const count=impactCount(r,kind);assert.equal(count%3,0);assert.ok(count<=99*factor);}
-  assert.equal(impactCount(r,'invader-colony'),9*factor);assert.equal(impactCount(r,'invader-rain'),3*factor);
+  assert.equal(impactCount(r,'invader-colony'),factor);assert.equal(impactCount(r,'invader-rain'),3*factor);
  }
  assert.equal(localLiving({mode:'world'}),false);const legacy={mode:'world',terrain:Array(999),cells:Array(999)};assert.equal(impactCount(legacy,'meteorites'),99);
 });
@@ -104,45 +105,33 @@ test('A short match cannot announce an effect that would land after its final se
  assert.equal(recordTerritoryPlacement(r,1001,()=>0),false);
  r.endsAt=new Date(34001).toISOString();assert.equal(recordTerritoryPlacement(r,1001,()=>0),true);
 });
-test('Frontera is a separate refundable-safe card: rotating/previewing is free, placing spends once and leaves cells playable',()=>{
- let r=board(99);r.players[0].inventory.cards.border=1;
- for(const side of ['north','east','south','west'])assert.ok(borderOptions(r,side).length);
- const point=borderOptions(r,'north')[0],before=structuredClone(r);assert.deepEqual(r,before);
- r=localCommand(r,'inventory',{tool:'border',playerId:'local-x',...point},1000);
- assert.equal(r.players[0].inventory.cards.border,0);assert.equal(r.players[0].inventory.cards.frontier,0);
- assert.equal(r.frontiers[0].edges.length,3);assert.equal(r.frontiers[0].type,'border');assert.equal(r.cells.length,0);assert.equal(r.pairs[0].turn,'X');
- assert.equal(availableCells(r,r.pairs[0]).length,99);assert.equal(canUsePracticeTool(r,'local-x','border',1000),false);
- assert.match(frontierMarkup(r),/Frontera/);delete r.wallMigrationVersion;migrateLegacyWalls(r);assert.equal(r.frontiers.length,1);assert.equal(r.players[0].inventory.cards.frontier,0);
+test('Three-cell borders spend once, block their chosen cells and may form an L',()=>{
+ let r=board(99);r.players[0].inventory.cards.border=1;const cells=[{x:1,y:0},{x:2,y:0},{x:2,y:1}],before=structuredClone(r);
+ assert.ok(borderOptions(r).length);assert.deepEqual(r,before);
+ r=localCommand(r,'inventory',{tool:'border',playerId:'local-x',cells},1000);
+ assert.equal(r.players[0].inventory.cards.border,0);assert.deepEqual(r.frontiers[0].cells,cells);assert.equal(r.frontiers[0].type,'border');
+ assert.equal(availableCells(r,r.pairs[0]).length,96);assert.equal(r.pairs[0].turn,'X');assert.match(frontierMarkup(r),/Frontera/);
+ delete r.wallMigrationVersion;migrateLegacyWalls(r);assert.equal(r.frontiers.length,1);
 });
-for(const side of ['north','east','south','west'])test('An invasion from '+side+' is stopped at the warned entrance, without bypassing the three-cell border',()=>{
- const r=board(99);r.territoryEnabled=true;const plan=planInvasion(r,r.terrain,9,true,()=>0);
- // Fix an actual boundary plot and direction, then preserve each lane's path.
- const origins={north:{x:10,y:0},south:{x:10,y:2},west:{x:0,y:0},east:{x:32,y:0}},origin=origins[side];
- const eligible=r.terrain.filter(c=>side==='north'||side==='south'?c.x>=10&&c.x<13:side==='west'?c.x<3:c.x>=30);
- let candidate;
- for(let seed=0;seed<100&&!candidate;seed++){const p=planInvasion(r,eligible,9,true,()=>seed/100);if(p.approaches[0]?.side===side)candidate=p;}
- assert.ok(candidate?.paths.length===9);assert.equal(plan.paths.length,9);
- const entry=candidate.approaches[0],point={x:entry.x-(side==='east'?2:0),y:entry.y-(side==='south'?2:0),side};
- r.territoryEvents=[{id:'attack',kind:'invader-colony',...candidate,nextAt:34000}];r.players[0].inventory.cards.border=1;
- const protectedRoom=localCommand(r,'inventory',{tool:'border',playerId:'local-x',...point},1000);
- assert.equal(defendedInvasionCells(protectedRoom,protectedRoom.territoryEvents[0]).size,9);
- const result=applyPlannedEvent(protectedRoom,protectedRoom.territoryEvents[0],34000);assert.equal(result.actions.length,0);assert.equal(protectedRoom.cells.length,0);
- assert.equal(frontierSegments(protectedRoom).length,3);
+for(const side of ['north','east','south','west'])test('Saved edge borders still intercept a seed from '+side,()=>{
+ const r=board(99);r.territoryEnabled=true;const target={north:{x:10,y:0},south:{x:10,y:2},west:{x:0,y:1},east:{x:32,y:1}}[side];
+ const delta={north:[0,-1],south:[0,1],west:[-1,0],east:[1,0]}[side],outside={x:target.x+delta[0],y:target.y+delta[1]};
+ const event={id:'attack',kind:'invader-colony',seeded:true,region:[target],paths:[{target,path:[outside,target]}]};
+ r.frontiers=[{id:'old',type:'border',edges:[{a:target,b:outside}]}];assert.equal(defendedInvasionCells(r,event).size,1);
+ assert.equal(applyPlannedEvent(r,event,34000).actions.length,0);assert.equal(r.cells.length,0);
 });
-test('A partial or interior border blocks only crossed lanes; natural effects still act through it',()=>{
- const r=board(99);r.territoryEnabled=true;const plan=planInvasion(r,r.terrain,9,true,()=>0),entry=plan.approaches[0];
- const side=entry.side,point={x:entry.x-(side==='east'?2:0),y:entry.y-(side==='south'?2:0),side};
- r.frontiers=[{type:'border',edges:frontierEdges(point).slice(0,1)}];
- const event={id:'one',kind:'invader-colony',...plan};const defended=defendedInvasionCells(r,event);assert.equal(defended.size,3);
- assert.equal(applyPlannedEvent(r,event,1000).actions.length,6);
- const meteor={id:'natural',kind:'meteorites',region:plan.region};assert.equal(applyPlannedEvent(r,meteor,1000).actions.length,8);
+test('Seed plans are dispersed single cells; a cell wall blocks its seed while natural effects retain historical geometry',()=>{
+ const r=board(999);r.territoryEnabled=true;const plan=planInvasion(r,r.terrain,2,true,()=>0);
+ assert.equal(plan.paths.length,2);assert.equal(plan.groups.length,2);assert.ok(plan.groups.every(g=>g.length===1));
+ r.frontiers=[{id:'f',type:'border',cells:[plan.region[0]]}];const event={id:'one',kind:'invader-colony',...plan};
+ assert.equal(defendedInvasionCells(r,event).size,1);assert.equal(applyPlannedEvent(r,event,1000).actions.length,1);
 });
 test('The machine can spend its own border card to contain a warned attack',()=>{
  const r=board(99,'solo');r.machineInventory=true;r.pairs[0].turn='O';
  for(const p of r.players)for(const kind of Object.keys(p.inventory.cards))p.inventory.cards[kind]=0;
  r.players[1].inventory.cards.border=1;r.territoryEnabled=true;r.territoryEvents=[{id:'attack',kind:'invader-colony',...planInvasion(r,r.terrain,9,true,()=>0),nextAt:34000}];
  const choice=chooseMachineCard(r,1000);assert.equal(choice?.payload.tool,'border');
- const next=localCommand(r,choice.action,choice.payload,1000);assert.ok(defendedInvasionCells(next,next.territoryEvents[0]).size>=3);
+ const next=localCommand(r,choice.action,choice.payload,1000);assert.ok(defendedInvasionCells(next,next.territoryEvents[0]).size>=1);
 });
 test('Bomba breaks an entire border, while owner immunity keeps all its segments',()=>{
  for(const immune of [false,true]){
@@ -157,7 +146,7 @@ test('Bomba breaks an entire border, while owner immunity keeps all its segments
 test('One border can be placed in a pending expansion without consuming the expansion or resetting its clock',()=>{
  let r=board(99);r.cells=r.terrain.map((c,i)=>({...c,id:String(i),symbol:'X',owner:'local-x'}));
  r.pairs[0].pending=1;r.pairs[0].expander='local-x';r.pairs[0].credits=1;r.players[0].inventory.cards.border=2;
- r=localCommand(r,'inventory',{tool:'border',playerId:'local-x',x:3,y:0,side:'north'},1000);
+ r=localCommand(r,'inventory',{tool:'border',playerId:'local-x',cells:borderChains(r,1)[0]},1000);
  assert.equal(r.pairs[0].pending,1);assert.equal(r.pairs[0].credits,1);assert.equal(r.pairs[0].deadline,null);
  assert.equal(r.players[0].inventory.cards.border,1);assert.equal(canUsePracticeTool(r,'local-x','border',1000),false);
 });

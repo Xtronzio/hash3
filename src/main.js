@@ -7,7 +7,7 @@ import {machineTurnKey} from './machine-turn.js';
 import {copyText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
-import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
+import {ecologyNames,ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
 import {ecologySeconds} from './ecology-clock.js';
 import {matchGoalsMarkup} from './match-goals-ui.js';
 import {loadTerritoryResults,achievementsMarkup,achievementSelection} from './achievements.js';
@@ -46,7 +46,7 @@ import {cellIndex,viewportCellWindow,cachedCellWindow,reconcileCells} from './bo
 import {inventoryStatusMarkup,inventoryMarkup,inventoryShortcutsMarkup,usePracticeHint,inventoryRefill,inventoryDockMarkup,immunityComboNotice} from './inventory.js';
 import {canUsePracticeTool,practiceTurn,practiceTools,toolCells,toolAllowance} from './practice-tools.js';
 import {selectFrontier,frontierTiles,frontierCells,frontierGroups,frontierSlash,frontierDirections,frontierEdges,frontierFootprint,borderPath} from './frontiers.js';
-import {frontierAnchors,borderOptions} from './area-tools.js';
+import {frontierAnchors,borderOptions,validBorder} from './area-tools.js';
 import {useExpansionHint,planSuperHelp,suggestExpansion,executeSuperHelp} from './assistance.js';
 import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySelector,machineLevelHints,hallMarkup,hallDialogMarkup,rulesMarkup,hallIcon,hallReturnButton} from './hall.js';
 import {client, ensurePlayer, command, profileAccess} from './api.js';
@@ -176,7 +176,7 @@ function accept(next) {
   if(show)startFigureEffect(feedback);
   if(tornado)startTornadoEffect(tornado);
   if(rodentVisit)startRodentEffect(rodentVisit);
-  if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);scheduleMachine();
+  if(mapInteracting)mapDeferred=true;else render();if(show)showScore(feedback,comboNotice);if(!changed&&next.landingEvent?.id!==previousRoom?.landingEvent?.id&&next.landingEvent?.scores.length)notify(`${next.landingEvent.kind==='tornado'?'Tornado':ecologyNames[next.landingEvent.kind]} · ${next.landingEvent.scores.map(s=>`${s.symbol} +${s.points} puntos (${s.figures} figuras)`).join(' · ')}${show?` · Jugada ${feedback.symbol} +${feedback.points}`:''}`);scheduleMachine();
 }
 function render() {
   const scoreFocus=document.activeElement?.closest('.team-score-bottom')!=null;
@@ -208,8 +208,8 @@ function render() {
   const turnSymbol=room.inventoryEffects?.forced?.find(e=>e.player===pair[pair.turn.toLowerCase()])?.symbol||pair.turn;
   const comboStatus=tools?.used.includes('combo')?toolAllowance(room,uid):null;
   const instructions={destroy:'Toca una celda vacía resaltada para eliminarla del tablero; después coloca tu ficha.',activate:'Toca un hueco resaltado para construir una celda; después coloca tu ficha normalmente.',erase:'Toca una ficha rival resaltada para borrarla.',opposite:'Toca una ficha rival resaltada para convertirla en tuya.',shift:inventorySelection?.source?'Elige una celda vacía para desplazar la ficha seleccionada.':'Toca la ficha rival que quieres mover.',block:'Elige una celda vacía para reservarla; después coloca tu ficha en otra.',shield:'Toca una ficha tuya para protegerla.'};
-  Object.assign(instructions,{border:'Sitúa una línea de tres celdas y gírala hacia la entrada de la invasión.',tornado:'Sitúa el marco 3×3 para mezclar sus fichas y huecos.',bomb:'Elige el centro; vuelve a tocarlo o pulsa Aplicar. La bomba vacía tres celdas contiguas al azar.',frontier:'Toca un + para situar una casilla de muro; vuelve a tocarla o pulsa Colocar.'});
-  const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span>${inventorySelection.tool==='border'?'<button class="small" data-action="rotate-border">Girar ↻</button>':''}${['tornado','bomb','frontier','border'].includes(inventorySelection.tool)?`<button class="small primary" data-action="confirm-area-tool" ${inventorySelection.point&&(!['frontier','border'].includes(inventorySelection.tool)||toolCells(room,uid,inventorySelection.tool,{side:inventorySelection.side||'north'}).some(p=>p.x===inventorySelection.point.x&&p.y===inventorySelection.point.y))?'':'disabled'}>${inventorySelection.tool==='frontier'?'Colocar':'Aplicar'}</button>`:''}<button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(comboStatus||tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${comboStatus?`Combo · ${comboStatus.remaining} herramienta${comboStatus.remaining===1?'':'s'} disponible${comboStatus.remaining===1?'':'s'}. `:''}${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
+  Object.assign(instructions,{border:`Toca tres casillas vacías contiguas por un lado; pueden formar una L. ${inventorySelection?.cells?.length||0}/3 seleccionadas.`,tornado:'Sitúa el marco 3×3 para mezclar sus fichas y huecos.',bomb:'Elige el centro; vuelve a tocarlo o pulsa Aplicar. La bomba vacía tres celdas contiguas al azar.',frontier:'Toca un + para situar una casilla de muro; vuelve a tocarla o pulsa Colocar.'});
+  const toolBanner=inventorySelection?`<div class="practice-banner inventory-target-banner" role="status"><span>${instructions[inventorySelection.tool]}</span>${['tornado','bomb','frontier','border'].includes(inventorySelection.tool)?`<button class="small primary" data-action="confirm-area-tool" ${inventorySelection.tool==='border'?validBorder(room,inventorySelection.cells):inventorySelection.point&&(inventorySelection.tool!=='frontier'||toolCells(room,uid,inventorySelection.tool,{side:inventorySelection.side||'north'}).some(p=>p.x===inventorySelection.point.x&&p.y===inventorySelection.point.y))?'':'disabled'}>${inventorySelection.tool==='frontier'?'Colocar':'Aplicar'}</button>`:''}<button class="small" data-action="cancel-tool-selection">Cancelar</button></div>`:tools&&(comboStatus||tools.used.includes('double')||room.inventoryEffects?.forced?.length)?`<div class="practice-banner" role="status"><span>${comboStatus?`Combo · ${comboStatus.remaining} herramienta${comboStatus.remaining===1?'':'s'} disponible${comboStatus.remaining===1?'':'s'}. `:''}${tools.used.includes('double')?`Doble · ${tools.remaining} ficha${tools.remaining===1?'':'s'} por colocar. `:''}${room.inventoryEffects?.forced?.map(e=>`Ficha rival · ${escape(room.players.find(p=>p.id===e.player)?.name||'Rival')} pondrá ${e.symbol} en su próxima colocación.`).join(' ')||''}</span></div>`:'';
   const blockedTurn=isLocal()&&ready&&!availableCells(room,pair).length&&availableCells(room,pair,{ignoreBlocks:true}).length;
   const modeLabel=isLocal()?(room.mode==='solo'?'VS MÁQUINA':'SIN CONEXIÓN'):room.commonWorld?'MUNDO':room.kind==='duel'?'DUELO':'SALA LIBRE';
   app.innerHTML=`<section class="game ${hallModeClass(isLocal()?(room.mode==='solo'?'solo':'offline'):room.commonWorld?'world':'duel')} ${inventoryOpen?'inventory-visible':''}">
@@ -234,7 +234,7 @@ function boardFrontierCell(cell,minX,minY,size,padding,preview=false,pivot=false
  if(cell.borderSide)return `<span class="board-border-cell ${preview?'is-preview':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="${preview?'Propuesta de frontera':'Frontera'} · ${cell.borderSide}"><svg viewBox="${cell.x} ${cell.y} 1 1"><path d="${borderPath(cell)}"/></svg></span>`;
  if(bombTarget)return `<button class="board-frontier-cell is-bomb-target" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="Bomba sobre muro en ${cell.x}, ${cell.y}">${frontierSlash}</button>`;
  const controls=pivot?`<button class="frontier-pivot-place" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" aria-label="Colocar muro en el punto elegido ${cell.x}, ${cell.y}" ${valid?'':'disabled'}></button>`:'';
- return `<span class="board-frontier-cell ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${preview?'Propuesta de muro':'Muro, solo se rompe con Bomba'} · ${cell.x}, ${cell.y}">${frontierSlash}${controls}</span>`;
+ return `<span class="board-frontier-cell ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${preview?(cell.borderCell?'Propuesta de frontera':'Propuesta de muro'):(cell.borderCell?'Frontera, solo se rompe con Bomba':'Muro, solo se rompe con Bomba')} · ${cell.x}, ${cell.y}">${frontierSlash}${controls}</span>`;
 }
 async function analyzeHelp(kind){
  const snapshot=structuredClone(room),player=uid,now=Date.now();notify(kind==='expand'?'Buscando una ampliación favorable…':'Analizando movimientos e inventario…');
@@ -265,13 +265,13 @@ function drawBoard(canExpand,ready,target) {
   const selection=inventorySelection?.player===uid?inventorySelection:null;
   const activationTargets=selection?.tool==='activate'?snapshotMemo(room,'board-activation:'+uid,()=>toolCells(room,uid,'activate')):[];
   const choices=canExpand&&!selection?snapshotMemo(room,'expansion:'+pair.id,()=>expansionOptions(terrain,pair.terrainAnchor||pair.active,room)):[],choiceKeys=new Set(choices.map(c=>key(c.x,c.y)));
-  const areaSelection=['tornado','bomb','frontier','border'].includes(selection?.tool),areaOptions=areaSelection?snapshotMemo(room,'board-area:'+uid+':'+selection.tool+':'+selection.side,()=>selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool,{side:selection.side||'north'})):[];
+  const areaSelection=['tornado','bomb','frontier','border'].includes(selection?.tool),areaOptions=areaSelection?snapshotMemo(room,'board-area:'+uid+':'+selection.tool+':'+selection.side+':'+JSON.stringify(selection.cells||[]),()=>selection.tool==='frontier'?frontierAnchors(room,uid):toolCells(room,uid,selection.tool,{side:selection.side||'north',selected:selection.cells||[]})):[];
   const areaKeys=new Set(areaOptions.map(c=>key(c.x,c.y)));
   if(selectedExpansion&&!choiceKeys.has(key(selectedExpansion.x,selectedExpansion.y)))selectedExpansion=null;
   const barriers=snapshotMemo(room,'board-barriers',()=>frontierCells(room)),reservations=snapshotMemo(room,'board-reservations',()=>habitatReservations(room));
   const barrierKeys=new Set(barriers.filter(c=>!c.borderSide).map(c=>key(c.x,c.y)));
-  const {minX,minY,maxX,maxY}=snapshotMemo(room,'board-bounds:'+uid+':'+canExpand+':'+selection?.tool+':'+selection?.point?.x+','+selection?.point?.y,()=>{
-    const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,side:selection.side||'north'}):[]),...reservations,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
+  const {minX,minY,maxX,maxY}=snapshotMemo(room,'board-bounds:'+uid+':'+canExpand+':'+selection?.tool+':'+selection?.point?.x+','+selection?.point?.y+':'+JSON.stringify(selection?.cells||[]),()=>{
+    const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,cells:selection.cells,side:selection.side||'north'}):[]),...reservations,...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(const c of all){minX=Math.min(minX,c.x);minY=Math.min(minY,c.y);maxX=Math.max(maxX,c.x);maxY=Math.max(maxY,c.y);}
     return {minX,minY,maxX,maxY};
@@ -287,10 +287,10 @@ function drawBoard(canExpand,ready,target) {
     const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
     return {cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten};
   });
-  const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north'})).map(c=>key(c.x,c.y))):null;
+  const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north',selected:selection.cells||[]})).map(c=>key(c.x,c.y))):null;
   const style=c=>`left:${(c.x-minX)*size+padding}px;top:${(c.y-minY)*size+padding}px;width:${size}px;height:${size}px`;
   const index=snapshotMemo(room,'board-index',()=>cellIndex(terrain)),choiceIndex=snapshotMemo(room,'board-choice-index:'+pair.id+':'+canExpand,()=>cellIndex(choices.filter(c=>!known.has(key(c.x,c.y))))),activationIndex=snapshotMemo(room,'board-activation-index:'+uid+':'+selection?.tool,()=>cellIndex(activationTargets));
-  const areaIndex=snapshotMemo(room,'board-area-index:'+uid+':'+selection?.tool+':'+selection?.side,()=>cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y))))));
+  const areaIndex=snapshotMemo(room,'board-area-index:'+uid+':'+selection?.tool+':'+selection?.side+':'+JSON.stringify(selection?.cells||[]),()=>cellIndex(areaOptions.filter(p=>!known.has(key(p.x,p.y))&&!(selection?.tool==='bomb'&&barrierKeys.has(key(p.x,p.y))))));
   const reservationIndex=snapshotMemo(room,'board-reservation-index',()=>cellIndex(reservations.filter(c=>!known.has(key(c.x,c.y)))));
   const liveHabitatIndex=snapshotMemo(room,'board-inhabitants',()=>cellIndex(habitatLocations(room)));
   const phenomenonIndex=snapshotMemo(room,'board-phenomena:'+uid,()=>cellIndex(ecologyPinTargets(room,uid).filter(e=>!!territoryIcons[e.kind])));
@@ -334,7 +334,7 @@ function drawBoard(canExpand,ready,target) {
    if(density){
     const entries=[{id:'board-map',markup:`<svg class="board-overview-map ${size>=MAP_SYMBOL_SCALE?'show-symbols':''}" data-action="board-overview" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" role="img" aria-label="Vista general del tablero; toca para acercarte">${mapWindowMarkup(density.model,density.index,window,size)}</svg>`}];
     for(const e of liveHabitatIndex.query(window).slice(0,33))entries.push({id:'inhabitant:'+e.id+':'+e.kind,markup:`<span class="cell inhabitant-overview" style="${style(e)};width:32px;height:32px" aria-label="${e.kind}">${habitatMark(e.kind,e.kind==='rodent'?rodentTurnsRemaining(e)+'↷':'',e)}</span>`});
-    for(const e of phenomenonIndex.query(window).slice(0,33))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)};width:32px;height:32px" aria-hidden="true">${ecologyIcon(e.kind)}${e.approach?`<span class="invasion-entry" style="transform:rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]}deg)">↓</span>`:''}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
+    for(const e of phenomenonIndex.query(window).slice(0,33))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker ${e.invasion?'is-growing':barrierKeys.has(key(e.x,e.y))?'on-barrier':''}" style="${style(e)};width:32px;height:32px" aria-hidden="true">${ecologyIcon(e.kind)}${e.approach?`<span class="invasion-entry" style="transform:rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]}deg)">↓</span>`:''}<b class="${e.invasion?'':'ecology-clock'} mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${e.invasion?`${e.grown}/9`:ecologySeconds(e)}</b></span>`});
     nodes=reconcileCells(board,entries,nodes);return;
    }
    const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now}:${swirling}:${visiting}`);
@@ -349,7 +349,7 @@ function drawBoard(canExpand,ready,target) {
    for(const point of areaIndex.query(window).filter(p=>selection.tool!=='tornado'||!known.has(key(p.x,p.y))))entries.push({id:'area:'+key(point.x,point.y),markup:`<button class="cell ${selection.tool==='tornado'?'tornado-anchor':'tool-target'} area-anchor ${['frontier','border'].includes(selection.tool)?'frontier-anchor':''}" data-action="inventory-target" data-x="${point.x}" data-y="${point.y}" style="${style(point)}" aria-label="Situar ${selection.tool==='tornado'?'Tornado 3×3':selection.tool==='bomb'?'Bomba':selection.tool==='border'?'Frontera de tres celdas':'Muro de una casilla'} en ${point.x}, ${point.y}">${['frontier','border'].includes(selection.tool)?'+':selection.tool==='tornado'?'·':'◇'}</button>`});
    if(selection.point){const p=selection.point;if(['frontier','border'].includes(selection.tool)){
     const valid=targets.has(key(p.x,p.y));
-    for(const [i,cell] of (selection.tool==='border'?frontierFootprint({type:'border',edges:frontierEdges({...p,side:selection.side||'north'})},room):frontierTiles({...p,side:selection.side||'north'})).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,i===0,valid)});
+    for(const [i,cell] of (selection.tool==='border'?(selection.cells||[]).map(c=>({...c,borderCell:true})):frontierTiles({...p,side:selection.side||'north'})).entries())entries.push({id:'frontier-preview:'+key(cell.x,cell.y),markup:boardFrontierCell(cell,minX,minY,size,padding,true,selection.tool!=='border'&&i===0,valid)});
    }else entries.push({id:'area-preview',markup:`<div class="placement-preview area-preview ${selection.tool==='bomb'?'bomb-preview':'tornado-preview'}" style="left:${(p.x-minX)*size+padding}px;top:${(p.y-minY)*size+padding}px;width:${(selection.tool==='bomb'?1:3)*size}px;height:${(selection.tool==='bomb'?1:3)*size}px" aria-hidden="true"></div>`});}
   }
   for(const c of reservationIndex.query(window))entries.push({id:'project:'+key(c.x,c.y),markup:`<div class="cell project-build construction-ghost" style="${style(c)}" aria-label="Proyecto de construcción: celda reservada ${c.x}, ${c.y}">${habitatPoints.has(key(c.x,c.y))?habitatMark('build','',habitatPoints.get(key(c.x,c.y))):'<span class="project-reservation">·</span>'}</div>`});
@@ -362,7 +362,7 @@ function drawBoard(canExpand,ready,target) {
     const b=selectedExpansion;
     entries.push({id:'preview',markup:`<div class="placement-preview" style="left:${(b.x-minX)*size+padding}px;top:${(b.y-minY)*size+padding}px;width:${3*size}px;height:${3*size}px" aria-hidden="true"></div>`});
   }
-  for(const e of phenomenonIndex.query(window))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker" style="${style(e)}" aria-hidden="true">${ecologyIcon(e.kind)}${e.approach?`<span class="invasion-entry" style="transform:rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]}deg)">↓</span>`:''}<b class="ecology-clock mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${ecologySeconds(e)}</b></span>`});
+  for(const e of phenomenonIndex.query(window))entries.push({id:'phenomenon:'+e.id,markup:`<span class="cell phenomenon-marker ${e.invasion?'is-growing':barrierKeys.has(key(e.x,e.y))?'on-barrier':''}" style="${style(e)}" aria-hidden="true">${ecologyIcon(e.kind)}${e.approach?`<span class="invasion-entry" style="transform:rotate(${{north:0,east:90,south:180,west:270}[e.approach.side]}deg)">↓</span>`:''}<b class="${e.invasion?'':'ecology-clock'} mono" data-ecology-kind="${e.kind}" data-ecology-source="${e.sourceId}">${e.invasion?`${e.grown}/9`:ecologySeconds(e)}</b></span>`});
   for(const c of territoryIndex.query(window))entries.push({id:'territory-warning:'+c.eventId+key(c.x,c.y),markup:`<span class="cell territory-warning territory-${c.kind}" style="${style(c)}" aria-hidden="true"></span>`});
   if(visiting)for(const visit of rodentEffect.index.query(window).filter(v=>v.kind!=='rodent')){
    const id='board-action:'+visit.kind+key(visit.x,visit.y),path=visit.kind==='neutral'?neutralIcon:visit.kind==='rodent'?rodentIcon:territoryIcons[visit.kind]||habitatIcons[visit.kind];
@@ -730,9 +730,16 @@ app.addEventListener('click',async e=>{
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:toolPlayer});inventoryOpen=false;accept(next);});return;
   }
   if(action==='cancel-tool-selection'){inventoryCardChoice=null;inventorySelection=null;render();return;}
-  if(action==='rotate-border'&&inventorySelection?.tool==='border'){const i=frontierDirections.indexOf(inventorySelection.side||'north');inventorySelection.side=frontierDirections[(i+1)%4];delete inventorySelection.point;render();return;}
-  if(action==='inventory-target'&&['frontier','border'].includes(inventorySelection?.tool)){
-    const choice=selectFrontier(inventorySelection,{x:Number(b.dataset.x),y:Number(b.dataset.y)},inventorySelection.tool==='border'?borderOptions(room,inventorySelection.side||'north'):frontierAnchors(room,uid));
+  if(action==='inventory-target'&&inventorySelection?.tool==='border'){
+    const selection=inventorySelection,point={x:Number(b.dataset.x),y:Number(b.dataset.y)},chosen=selection.cells||[];
+    const index=chosen.findIndex(c=>c.x===point.x&&c.y===point.y);
+    if(index>=0)selection.cells=chosen.slice(0,index);
+    else if(borderOptions(room,chosen).some(c=>c.x===point.x&&c.y===point.y))selection.cells=[...chosen,point];
+    selection.point=selection.cells?.[0];
+    if(selection.cells?.length===3)action='confirm-area-tool';else{render();return;}
+  }
+  if(action==='inventory-target'&&inventorySelection?.tool==='frontier'){
+    const choice=selectFrontier(inventorySelection,{x:Number(b.dataset.x),y:Number(b.dataset.y)},frontierAnchors(room,uid));
     inventorySelection=choice.selected;
     if(choice.confirm)action='confirm-area-tool';else{render();return;}
   }
@@ -744,7 +751,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='confirm-area-tool'){
     const selection=inventorySelection;if(!selection?.point)return;
-    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,side:selection.side||'north'});inventorySelection=null;accept(next);notify(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?(next.pairs[0].pending?'Muro colocado. Ahora sitúa tu ampliación 3×3.':'Muro colocado. Coloca tu ficha.'):`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
+    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,cells:selection.cells,side:selection.side||'north'});inventorySelection=null;accept(next);if(!next.lastEvent.landing?.length)notify(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?(next.pairs[0].pending?'Muro colocado. Ahora sitúa tu ampliación 3×3.':'Muro colocado. Coloca tu ficha.'):`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
   }
   if(action==='inventory-target'){
     const selection=inventorySelection;

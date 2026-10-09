@@ -6,6 +6,9 @@ import {frontierHit} from './frontiers.js';
 import {eventRule,eventLabel,pickEventKind,confirmEventKind,EVENT_BALANCE,territoryAttemptInterval,impactCount} from './territory-event-rules.js';
 import {plannedEventRegion,applyPlannedEvent} from './territory-event-actions.js';
 import {localLiving,livingFactor,livingMinimum,livingAttempt,livingEventClock,livingFirstClock} from './living-balance.js';
+import {initializeInvasions} from './invasion-paths.js';
+import {scoreLandings,pruneBrokenForms} from './landing-score.js';
+import {isTurnWorm} from './worm-turns.js';
 
 export const TERRITORY_MIN_SIZE=333,TERRITORY_WARNING_MS=EVENT_BALANCE.warningMs,TERRITORY_PLACEMENTS=EVENT_BALANCE.placementsPerAttempt;
 export const TERRITORY_MIN_FIGURES=99;
@@ -27,6 +30,7 @@ export const territoryIcons={
 };
 export function initializeTerritory(room){
  room.territoryEvents||=[];
+ initializeInvasions(room);
  if(localLiving(room)&&room.livingTerritoryVersion!==1){
   const now=room.clockNow??Date.now();
   room.territoryNextPlacement=territoryPlacements(room)+livingAttempt(room,'natural');
@@ -107,11 +111,11 @@ function announceTerritory(room,now,random,trigger,family){
   if(!region?.length)continue;
   // All event parameters live in territory-event-rules.js. No work here
   // depends on rendering, navigation or the size of the visible window.
-  if(family!=='invaders')for(const e of [...(room.worms||[]),...(room.works||[]),...(room.bombs||[])])
+  if(family!=='invaders')for(const e of [...(room.worms||[]).filter(w=>!isTurnWorm(w)),...(room.works||[]),...(room.bombs||[])])
    if(e.remainingMs==null)e.remainingMs=Math.max(0,(e.nextAt||now+33000)-now);
   confirmEventKind(room,choice,kind);
   room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,trigger,region,
-   ...(planned.groups?{groups:planned.groups}:{}),...(planned.paths?{paths:planned.paths}:{}),...(planned.approaches?{approaches:planned.approaches}:{}),x:region[0].x,y:region[0].y,
+   ...(planned.groups?{groups:planned.groups}:{}),...(planned.paths?{paths:planned.paths}:{}),...(planned.approaches?{approaches:planned.approaches}:{}),...(planned.seeded?{seeded:true}:{}),x:region[0].x,y:region[0].y,
    nextAt:now+EVENT_BALANCE.warningMs});return true;
  }
  // An impossible attack is skipped, never queued up for a later burst.
@@ -143,7 +147,9 @@ export function advanceTerritory(room,now=Date.now()){
   const {hit,actions:changes,demolish}=applyPlannedEvent(room,event,now);
   const removed=new Set([...hit].map(k=>before.get(k)?.id).filter(Boolean));
   const survivors=new Map(room.cells.map(c=>[c.id,c]));
-  room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
+  const mixes=['shuffle','blackhole'].includes(eventRule(event.kind)?.effect);
+  if(mixes)pruneBrokenForms(room);
+  else room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
   for(const p of room.players)if(p.lastMove){const moved=survivors.get(p.lastMove.id);if(moved)p.lastMove={...moved};else delete p.lastMove;}
   room.eatenCells=(room.eatenCells||[]).filter(c=>!hit.has(key(c.x,c.y)));
   if(['vacate','blackhole'].includes(eventRule(event.kind)?.effect)){
@@ -164,6 +170,7 @@ export function advanceTerritory(room,now=Date.now()){
    room.inventoryEffects.blocks=(room.inventoryEffects.blocks||[]).filter(c=>!hit.has(key(c.x,c.y)));
   }
   actions.push(...changes);
+  if(mixes&&localLiving(room))scoreLandings(room,[...before.values()],changes,{kind:event.kind});
   room.territoryEvents=room.territoryEvents.filter(e=>e.id!==event.id);
   if(eventRule(event.kind)?.family!=='invaders')rebalanceAfterTerritory(room,now);
  }
@@ -178,11 +185,11 @@ export function rebalanceAfterTerritory(room,now=Date.now()){
  const terrain=terrainOf(room),size=terrain.length,known=new Set(terrain.map(c=>key(c.x,c.y))),unit=localLiving(room)?livingFactor(size):Math.ceil(size/333);
  const before={rodents:(room.rodentRaids||[]).reduce((n,r)=>n+r.count,0),worms:(room.worms||[]).length,workers:(room.works||[]).length};
  room.worms=(room.worms||[]).filter(w=>(w.body||[]).every(c=>known.has(key(c.x,c.y)))).slice(0,unit);
- room.works=(room.works||[]).filter(w=>w.destroy.slice(w.done).every(c=>known.has(key(c.x,c.y)))).slice(0,unit*3);
+ room.works=(room.works||[]).filter(w=>(w.role==='build'?w.build:w.destroy).slice(w.done).every(c=>known.has(key(c.x,c.y)))).slice(0,unit*3);
  let rats=localLiving(room)?unit*3:Math.ceil(size*3/333);
  room.rodentRaids=(room.rodentRaids||[]).filter(r=>known.has(key(r.x,r.y))).flatMap(r=>{const count=Math.min(r.count,rats);rats-=count;return count?[{...r,count}]:[];});
  if(!localLiving(room))for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries(HABITAT_FREQUENCIES))zone.next[kind]=zone.placements+habitatInterval(n,size);}
  room.ecologyRecovery={until:now+EVENT_BALANCE.recoveryMs,moves:EVENT_BALANCE.recoveryMoves};
  room.ecologyRecalibration={at:now,size,pieces:room.cells.length,before,after:{rodents:room.rodentRaids.reduce((n,r)=>n+r.count,0),worms:room.worms.length,workers:room.works.length}};
- for(const e of [...room.worms,...room.works,...(room.bombs||[])])e.remainingMs=EVENT_BALANCE.recoveryMs;
+ for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...(room.bombs||[])])e.remainingMs=EVENT_BALANCE.recoveryMs;
 }

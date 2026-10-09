@@ -21,19 +21,19 @@ const eventRegion=(room,kind)=>{
  return planned;
 };
 for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
- test(kind+' has a valid footprint, preserves scores, and executes the declared consequence',()=>{
+ test(kind+' has a valid footprint, preserves earned scores, scores new landing figures, and executes the declared consequence',()=>{
   const r=make(),oldCells=r.cells.length,oldTerrain=r.terrain.length,oldScore=73;
   r.players[0].score=oldScore;
   const plan=eventRegion(r,kind),region=Array.isArray(plan)?plan:plan.region;
   assert.ok(region.length>0,kind+' selects region');
   assert.equal(new Set(region.map(p=>p.x+','+p.y)).size,region.length);
   assert.ok(region.every(p=>present(r).has(p.x+','+p.y)));
-  if(kind==='invader-colony'||kind==='blackhole')assert.equal(region.length,18);
+  if(kind==='blackhole')assert.equal(region.length,18);if(kind==='invader-colony')assert.equal(region.length,2);
   if(kind==='meteorites'||kind==='earthquake')assert.equal(region.length,27);
   r.territoryEvents=[{id:'event:'+kind,kind,region,...(plan.groups?{groups:plan.groups}:{}),nextAt:2000}];
   const effect=advanceTerritory(r,2000),expected=TERRITORY_EVENT_RULES[kind].effect;
   assert.ok(effect.length>0);
-  assert.equal(r.players[0].score,oldScore);
+  if(['shuffle','blackhole'].includes(expected)){assert.equal(r.players[0].score,oldScore+(r.landingEvent?.scores.find(s=>s.symbol==='X')?.points||0));}else assert.equal(r.players[0].score,oldScore);
   assert.equal(r.territoryEvents.length,0);
   if(expected==='demolish'){
    assert.equal(r.terrain.length,oldTerrain-region.length);

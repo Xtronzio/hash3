@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {recordImmunityCombo,immunitySeconds,protectedTerritoryKeys} from '../src/immunity.js';
-import {advanceHabitats,countHabitatPlacement} from '../src/inhabitants.js';
+import {advanceHabitats,countHabitatPlacement,visitWorms} from '../src/inhabitants.js';
 import {needsLocalTick} from '../src/local-clock.js';
 import {canUsePracticeTool,toolAllowance} from '../src/practice-tools.js';
 const now=1700000000000;
@@ -24,8 +24,8 @@ test('Lluvia respeta fichas y sus celdas, celdas propias vacías y fronteras pro
 });
 test('Gusano permanece vivo sin alimento desprotegido y vuelve a comer después de caducar',()=>{
  let r=start();r.cells=[cell('x',1)];r.worms=[{id:'w',kind:'worm',x:1,y:1,body:[{x:1,y:1}],eaten:0,nextAt:now+20000}];r=activate(r);advanceHabitats(r,now+20000,()=>0);
- assert.equal(r.cells.length,1);assert.equal(r.worms[0].eaten,0);assert.equal(r.worms[0].nextAt,now+53000);
- advanceHabitats(r,now+53000,()=>0);assert.equal(r.cells.length,0);assert.equal(r.worms[0].eaten,1);
+ assert.equal(r.cells.length,1);assert.equal(r.worms[0].eaten,0);for(let i=0;i<3;i++)visitWorms(r,null,now+20000,()=>0);assert.equal(r.worms[0].eaten,0);assert.equal(r.worms[0].failedMeals,1);
+ for(let i=0;i<3;i++)visitWorms(r,null,now+53000,()=>0);assert.equal(r.cells.length,0);assert.equal(r.worms[0].eaten,1);
 });
 test('Roedores siguen por turnos y omiten las fichas protegidas sin acumular comidas',()=>{
  let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.rodentRaids=[{id:'r',x:0,y:0,count:1,remaining:3,visited:[]}];r=activate(r);
@@ -34,7 +34,7 @@ test('Roedores siguen por turnos y omiten las fichas protegidas sin acumular com
 });
 test('Obra protegida pospone el par construir/destruir, conservando el equilibrio',()=>{
  let r=start();r.terrain.find(c=>c.x===1&&c.y===1).owner='local-x';r.works=[{id:'w',kind:'work',done:0,destroy:[{x:1,y:1}],build:[{x:3,y:1}],nextAt:now+20000}];r=activate(r);advanceHabitats(r,now+20000,()=>0);
- assert.equal(r.terrain.length,9);assert.equal(r.works[0].done,0);advanceHabitats(r,now+53000,()=>0);assert.equal(r.terrain.length,9);assert.ok(r.terrain.some(c=>c.x===3&&c.y===1));assert.equal(r.works[0].done,1);
+ assert.equal(r.terrain.length,9);assert.equal(r.works[0].done,0);advanceHabitats(r,now+53000,()=>0);assert.equal(r.terrain.length,9);assert.ok(r.terrain.some(c=>c.x===3&&c.y===1));assert.equal(r.works.length,0);
 });
 test('Pausa conserva exactamente el tiempo restante y el reloj de vencimiento no recorre el tablero',()=>{
  let r=activate(start());r=localCommand(r,'pause',{},now+7000);assert.equal(immunitySeconds(r,'local-x'),26);r=localCommand(r,'resume',{},now+86400000);assert.equal(immunitySeconds(r,'local-x'),26);

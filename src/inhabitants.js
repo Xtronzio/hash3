@@ -9,6 +9,8 @@ import {placeNeutral,NEUTRAL_FREQUENCY} from './neutral.js';
 import {habitatZone,habitatInterval,proportionalBudget,HABITAT_REFERENCE,HABITAT_WEIGHTS,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {initializeTerritory,advanceTerritory,recordTerritoryPlacement} from './territory-tools.js';
 import {localLiving,LIVING_FREQUENCIES,livingFactor,livingInterval,livingClock,livingBirthBudget,freezeLiving,resumeLiving} from './living-balance.js';
+import {initializeTurnWorms,isTurnWorm,wormTurnsToMeal,WORM_TAIL_LIMIT} from './worm-turns.js';
+import {advanceInvasions} from './invasion-paths.js';
 export const HABITAT_INTERVAL=33000;
 export {HABITAT_FREQUENCIES} from './habitat-budget.js';
 const same=(a,b)=>a.x===b.x&&a.y===b.y;
@@ -18,6 +20,7 @@ const uuid=()=>crypto.randomUUID();
 export function initializeHabitats(room,now=Date.now()){
  initializeTerritory(room);room.habitatZones||=[];
  room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
+ initializeTurnWorms(room);
  if(!faunaEnabled(room)){room.rodents=[];room.rodentRaids=[];room.worms=[];room.works=[];}
  if(!territoryEnabled(room)){room.territoryEvents=[];room.bombs=[];}
  if(localLiving(room)&&room.livingHabitatVersion!==1){
@@ -93,6 +96,17 @@ function automaticBlast(room,point,random){
 }
 function project(room,point,player,random,now){
  const area=areaAt(room,point),known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),taken=new Set(room.cells.map(c=>key(c.x,c.y))),reserved=new Set(habitatReservations(room).map(c=>key(c.x,c.y))),barriers=new Set(frontierSegments(room).flatMap(e=>[key(e.a.x,e.a.y),key(e.b.x,e.b.y)]));
+ if(localLiving(room)){
+  const protectedKeys=protectedTerritoryKeys(room,now),anchors=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y)));
+  const invaded=room.cells.filter(c=>c.symbol==='*'&&known.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!reserved.has(key(c.x,c.y))&&!barriers.has(key(c.x,c.y))&&!occupiedByOther(room,c));
+  if(invaded.length){
+   const pool=[...invaded],targets=[];
+   while(pool.length&&targets.length<6)targets.push(pool.splice(Math.min(pool.length-1,Math.floor(Math.max(0,random())*pool.length)),1)[0]);
+   const first=(room.defenderProjects||0)%2===0?'build':'destroy';room.defenderProjects=(room.defenderProjects||0)+1;
+   for(let i=0;i<targets.length;i+=3){const role=i===0?first:first==='build'?'destroy':'build',points=targets.slice(i,i+3).filter(c=>role!=='destroy'||!anchors.has(key(c.x,c.y))).map(c=>({x:c.x,y:c.y}));if(points.length)room.works.push({id:uuid(),player,kind:'work',role,destroy:role==='destroy'?points:[],build:role==='build'?points:[],done:0,nextAt:now+HABITAT_INTERVAL});}
+   return true;
+  }
+ }
  const empty=area.filter(c=>!taken.has(key(c.x,c.y))&&!reserved.has(key(c.x,c.y))&&!barriers.has(key(c.x,c.y))&&!occupiedByOther(room,c));
  // Prefer non-anchor cells, but allow cutting bridges. Never erase the last local anchor.
  const anchors=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y)));
@@ -155,7 +169,12 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
  const previouslySuspended=faunaSuspended(room,now);if(room.ecologyRecovery?.moves>0)room.ecologyRecovery.moves--;
  p.placements++;zone.placements++;recordTerritoryPlacement(room,now,random);
  const suspended=previouslySuspended||faunaSuspended(room,now);room.eatenCells=room.eatenCells.filter(c=>!same(c,point));
+ if(completed){
+  const actions=advanceInvasions(room,now,random,room.cells.find(c=>same(c,point))?.id);
+  if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};
+ }
  if(faunaEnabled(room)&&!suspended&&completed)visitRodents(room,point,now,random);
+ if(faunaEnabled(room)&&!suspended&&completed)visitWorms(room,point,now,random);
  for(const [kind,frequency]of Object.entries(frequencies)){
   p.habitatNext[kind]=(Math.floor(p.placements/frequency)+1)*frequency;
   if(!faunaEnabled(room)||suspended)continue;
@@ -166,16 +185,18 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
   let count=localLiving(room)?livingBirthBudget(zone,kind,area.length,HABITAT_WEIGHTS):proportionalBudget(zone,kind,area.length);
   // A bounded shared population: waiting for food never piles up generations.
   const cap=localLiving(room)?livingFactor(area.length)*HABITAT_WEIGHTS[kind]:Math.ceil(area.length/HABITAT_REFERENCE*HABITAT_WEIGHTS[kind]);
-  const residents=kind==='rodent'?room.rodentRaids.filter(r=>areaSet.has(key(r.x,r.y))).reduce((n,r)=>n+r.count,0):kind==='work'?room.works.filter(w=>areaSet.has(key(w.destroy[w.done].x,w.destroy[w.done].y))).length/3:(kind==='bomb'?room.bombs:room.worms).filter(e=>areaSet.has(key(e.x,e.y))).length;
+  const residents=kind==='rodent'?room.rodentRaids.filter(r=>areaSet.has(key(r.x,r.y))).reduce((n,r)=>n+r.count,0):kind==='work'?room.works.filter(w=>{const c=w.destroy[w.done]||w.build[w.done];return c&&areaSet.has(key(c.x,c.y));}).length/3:(kind==='bomb'?room.bombs:room.worms).filter(e=>areaSet.has(key(e.x,e.y))).length;
   count=Math.max(0,Math.min(count,Math.floor(cap-residents)));
   if(kind==='rodent'){if(count){const raid={id:uuid(),player:playerId,...point,count,remaining:3,mealsLeft:3,turn:0,phase:'arriving',phaseAt:now,visited:[],members:[]};room.rodentRaids.push(raid);positionRodents(room,raid,point,random);}continue;}
+  let bornWorms=0;
   for(let i=0;i<count;i++){
    if(kind==='work'){if(!project(room,point,playerId,random,now))break;continue;}
    if(kind==='bomb'){const blast=automaticBlast(room,point,random);if(blast)room.bombs.push({id:uuid(),player:playerId,...blast[0],blast,nextAt:now+HABITAT_INTERVAL});continue;}
    const r={id:uuid(),player:playerId,kind,x:point.x,y:point.y,eaten:0,phase:0,nextAt:now+HABITAT_INTERVAL};
    const food=foodFor(room,r,random,{exclude:room.cells.find(c=>same(c,point))?.id});
-   if(food){r.x=food.x;r.y=food.y;r.body=[{x:r.x,y:r.y}];room.worms.push(r);}
+   if(food){r.x=food.x;r.y=food.y;r.body=[{x:r.x,y:r.y}];if(localLiving(room)){r.turnDriven=true;r.mealLimit=3*Math.min(3,(room.wormAppearances||0)+1);r.turnsSinceMeal=0;delete r.nextAt;}room.worms.push(r);bornWorms++;}
   }
+  if(bornWorms&&localLiving(room))room.wormAppearances=(room.wormAppearances||0)+1;
  }
  if(territoryEnabled(room)&&!suspended&&p.placements%NEUTRAL_FREQUENCY===0)placeNeutral(room,areaAt(room,point),now,random,point);
  p.rodentNextSpawn=p.habitatNext.rodent;
@@ -218,6 +239,22 @@ export function visitRodents(room,point,now=Date.now(),random=Math.random){
  room.rodentRaids=room.rodentRaids.filter(r=>r.mealsLeft>0);
  if(visits.length){clearHabitatCells(room,visits);room.rodentVisit={id:uuid(),kind:'rodent',at:now,visits};}
 }
+export function visitWorms(room,point,now=Date.now(),random=Math.random){
+ if(room.status!=='playing'||!faunaEnabled(room)||faunaSuspended(room,now))return;
+ room.clockNow=now;
+ const exclude=point?room.cells.find(c=>same(c,point))?.id:null,actions=[];
+ for(const w of room.worms.filter(isTurnWorm)){
+  w.turnsSinceMeal=(w.turnsSinceMeal||0)+1;if(w.turnsSinceMeal<3)continue;w.turnsSinceMeal=0;
+  let food=w.eaten?foodFor(room,w,random,{adjacent:true,exclude}):room.cells.find(c=>same(c,w)&&c.id!==exclude&&!isImmune(room,c.owner)&&!occupiedByOther(room,c,w.id));
+  if(!food&&!w.eaten)food=foodFor(room,w,random,{exclude});
+  if(!food){w.failedMeals=(w.failedMeals||0)+1;continue;}
+  clearHabitatCell(room,food);w.x=food.x;w.y=food.y;w.eaten++;w.failedMeals=0;w.phaseAt=now;
+  w.body=[...new Map([...(w.body||[]),{x:w.x,y:w.y}].map(c=>[key(c.x,c.y),c])).values()].slice(-WORM_TAIL_LIMIT);
+  actions.push({x:w.x,y:w.y,kind:'worm'});
+ }
+ room.worms=room.worms.filter(w=>!isTurnWorm(w)||w.eaten<w.mealLimit&&(w.failedMeals||0)<3);
+ if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};
+}
 function activeAt(room,point){
  if(['solo','local'].includes(room.mode))return true;
  const area=new Set(connectedTerrain(terrainOf(room),point).map(c=>key(c.x,c.y)));
@@ -225,21 +262,21 @@ function activeAt(room,point){
 }
 export function freezeHabitats(room,now=Date.now()){
  initializeHabitats(room,now);freezeLiving(room,now);
- for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=e.remainingMs??Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
+ for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=e.remainingMs??Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
  if(room.ecologyRecovery)room.ecologyRecovery.remainingMs=room.ecologyRecovery.remainingMs??Math.max(0,room.ecologyRecovery.until-now);
  room.habitatLastCheck=now;
 }
 export function resumeHabitats(room,now=Date.now()){
  initializeHabitats(room,now);resumeLiving(room,now);
- if(room.ecologyRecovery?.remainingMs!=null){room.ecologyRecovery.until=now+room.ecologyRecovery.remainingMs;delete room.ecologyRecovery.remainingMs;}for(const e of [...room.worms,...room.works,...room.bombs,...room.territoryEvents]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
+ if(room.ecologyRecovery?.remainingMs!=null){room.ecologyRecovery.until=now+room.ecologyRecovery.remainingMs;delete room.ecologyRecovery.remainingMs;}for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...room.bombs,...room.territoryEvents]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
 }
 export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppressFauna=false}={}){
  initializeHabitats(room,now);if(room.status!=='playing')return false;room.clockNow=now;
  const eventCount=room.territoryEvents.length,actions=advanceTerritory(room,now);let changed=actions.length>0||eventCount!==room.territoryEvents.length;
  if(actions.length||suppressFauna||!faunaEnabled(room)||faunaSuspended(room,now)){if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions};return changed;}
  if(room.ecologyRecovery){delete room.ecologyRecovery;changed=true;}
- for(const e of [...room.worms,...room.works,...room.bombs]){
-  const point=e.kind==='work'?e.destroy[e.done]:e;
+ for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...room.bombs]){
+  const point=e.kind==='work'?e.destroy[e.done]||e.build[e.done]:e;
   if(!point)continue;
   if(!activeAt(room,point)){if(e.remainingMs==null)e.remainingMs=Math.max(0,e.nextAt-Math.min(now,room.habitatLastCheck??now));continue;}
   if(e.remainingMs!=null){e.nextAt=now+e.remainingMs;delete e.remainingMs;changed=true;continue;}
@@ -247,6 +284,16 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppress
   if(e.nextAt>now)continue;
   e.nextAt=now+HABITAT_INTERVAL;changed=true;
   if(e.kind==='work'){
+   if(e.role){
+    const target=e[e.role==='build'?'build':'destroy'][e.done],piece=room.cells.find(c=>same(c,target));
+    if(protectedTerritoryKeys(room).has(key(target.x,target.y)))continue;
+    const anchor=e.role==='destroy'&&room.pairs.some(p=>same(p.terrainAnchor||p.active,target));
+    if(piece?.symbol==='*'&&!anchor&&!room.worms.some(w=>(w.body||[]).some(c=>same(c,target)))){
+     clearHabitatCell(room,target);if(e.role==='destroy')room.terrain=terrainOf(room).filter(c=>!same(c,target));
+     actions.push({...target,kind:e.role});
+    }
+    e.done++;continue;
+   }
    const remove=e.destroy[e.done],add=e.build[e.done];
    if(protectedTerritoryKeys(room).has(key(remove.x,remove.y)))continue;
    const valid=terrainOf(room).some(c=>same(c,remove))&&!room.cells.some(c=>same(c,remove))&&!terrainOf(room).some(c=>same(c,add));
@@ -269,7 +316,7 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppress
    else{const target=foodFor(room,e,random);if(target){e.x=target.x;e.y=target.y;}}
   }
  }
- room.works=room.works.filter(w=>w.done<3);
+ room.works=room.works.filter(w=>w.done<Math.max(w.destroy.length,w.build.length));
  room.habitatLastCheck=now;
  if(actions.length){room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions};}
  return changed;
@@ -289,8 +336,8 @@ export function habitatAnimationDelay(event,kind,now=Date.now()){
  return -Math.max(0,elapsed)%duration;
 }
 export function habitatMark(kind,label='',event=null){
- const timed=event&&['worm','build','destroy','bomb'].includes(kind);
- const badge=timed?`<b><span class="ecology-clock" data-ecology-kind="${kind}" data-ecology-source="${event.id}" aria-label="${ecologySeconds(event)} segundos">${ecologySeconds(event)}</span>s</b>`:label!==''?`<b>${label}</b>`:'';
+ const timed=event&&['worm','build','destroy','bomb'].includes(kind)&&!isTurnWorm(event);
+ const badge=isTurnWorm(event)?`<b aria-label="${event.eaten||0} de ${event.mealLimit} comidas; faltan ${wormTurnsToMeal(event)} turnos">${event.eaten||0}/${event.mealLimit} · ${wormTurnsToMeal(event)}↷</b>`:timed?`<b><span class="ecology-clock" data-ecology-kind="${kind}" data-ecology-source="${event.id}" aria-label="${ecologySeconds(event)} segundos">${ecologySeconds(event)}</span>s</b>`:label!==''?`<b>${label}</b>`:'';
  return `<span class="habitat-mark habitat-${kind} visible-inhabitant phase-${event?.phase||'working'} ${event?.frozen||event?.remainingMs!=null?'is-frozen':''}" style="--inhabitant-delay:${habitatAnimationDelay(event,kind)}ms"><svg viewBox="0 0 32 32" aria-hidden="true">${habitatIcons[kind]||''}</svg>${badge}</span>`;
 }
 

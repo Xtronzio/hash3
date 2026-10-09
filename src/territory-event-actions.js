@@ -5,7 +5,7 @@ import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {EVENT_BALANCE,eventRule,impactCount} from './territory-event-rules.js';
 import {localLiving} from './living-balance.js';
-import {planInvasion,defendedInvasionCells} from './invasion-paths.js';
+import {planInvasion,defendedInvasionCells,seedInvasions} from './invasion-paths.js';
 
 const choose=(list,random)=>list[Math.min(list.length-1,Math.floor(Math.max(0,random())*list.length))];
 const four=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -19,6 +19,8 @@ const randomSubset=(items,count,random)=>{
 };
 const immutable=(room,now)=>{
  const result=protectedTerritoryKeys(room,now);
+ const shields=localLiving(room)?new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell)):new Set();
+ for(const c of room.cells)if(shields.has(c.id))result.add(key(c.x,c.y));
  for(const c of room.cells)if(isImmune(room,c.owner,now))result.add(key(c.x,c.y));
  return result;
 };
@@ -152,7 +154,8 @@ export function applyPlannedEvent(room,event,now=Date.now()){
  }else{
   room.cells=room.cells.filter(c=>!hit.has(key(c.x,c.y)));
   if(rule.effect==='colonize'){
-   for(const c of region)room.cells.push({...c,id:crypto.randomUUID(),symbol:'*',owner:null,invader:true});
+   if(localLiving(room))seedInvasions(room,region,event.kind);
+   else for(const c of region)room.cells.push({...c,id:crypto.randomUUID(),symbol:'*',owner:null,invader:true});
   }
   actions.push(...region.map((c,i)=>({...c,kind:event.kind,...(rule.distribution==='dispersed'?{group:Math.floor(i/3)}:{})})));
  }
