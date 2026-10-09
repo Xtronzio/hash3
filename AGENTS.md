@@ -147,3 +147,13 @@ Logros conserva el código de modalidad en todos sus selectores de objetivo, lí
 # Variedad y escasez de mochila R0.21.28
 
 Tres por tipo es un máximo, nunca un objetivo de reposición. Jorge pide coexistencia de stocks 0/1/2/3 y parte del catálogo ausente. Sustituir el tope global de 48 por 18 cartas normales y hasta 12 tipos simultáneos. Mantener ocho iniciales y una recarga por turno propio manual completo; sortear uniformemente entre todos los tipos permitidos, incluidos duplicados, sin completar primero los menos recibidos. No introducir un tipo decimotercero hasta agotar alguno; ninguna recarga supera total, tipos o tres unidades. Protecciones aparte sin tope. Conservar reservas y reembolsos históricos que excedan límites; impedir recargas mientras los excedan, sin sorteos acumulados ni premios al abrir guardados. Reglas activas y resultados nuevos versión 8; finales históricos intactos. Mismo sorteo para ambos jugadores y máquina. No calcular recargas en navegación o reloj.
+
+## #3_11 · Territorio vivo (R0.21.29, rama de trabajo)
+
+Referencia de diseño y alcance: `design/3-11-territorio-vivo.md`. Trabajo en rama `feature/3-11-territorio-vivo`, pull request borrador #1. `main` R0.21.28 sigue estable y no debe publicarse la nueva mecánica parcialmente como disponible en todos los modos.
+
+Los jugadores son COLONOS; fauna (roedores dispersos/gusanos localizados), habitantes (promociones 3×3, construir y destruir iguales, dispersos al aparecer/localizados al intervenir), invasores (lluvia dispersa de bombas que deja asteriscos * y colonias localizadas de 3×3). Familias de fenómenos: meteoritos/terremoto destruyen terreno + signos; pandemia/OVNI vacían signos; lluvia de tornados/huracán reordenan signos; agujero negro vacía signos de 3×3 y reordena zona circundante de hasta tres celdas. OVNI y agujero negro son estelares. No confundir bombas del inventario con meteoritos naturales o invasores.
+
+Motor local parametrizado en `src/territory-event-rules.js` + `src/territory-event-actions.js`; frecuencias invasoras heredan un turno de cada tres anuncios de la antigua lluvia de bombas. Inventario X/O junto a mochila, mapas y rendimiento en ampliación revisados. Pruebas: `npm test` + `npm run simulate:ecology -- --quick` + `npm run build:github`.
+
+Para que #3_11 se considere terminado falta reproducir en SQL Supabase el comportamiento en Mundo/Duelo, QA táctil de grandes tableros y animaciones, integrar y publicar Pages. NO confundir rama validada con despliegue online. La simulación de efectos geométricos es base: ampliar a secuencias de turnos para ajustar patrones y frecuencias por separado.
