@@ -94,8 +94,16 @@ function project(room,point,player,random,now){
  const plot=origin=>Array.from({length:9},(_,i)=>({x:origin.x+i%3,y:origin.y+Math.floor(i/3)}));
  const demolitionSites=eligible.map(plot).filter(block=>block.every(c=>eligibleKeys.has(key(c.x,c.y))));
  const destroy=demolitionSites.length?choose(demolitionSites,random):[];
- if(!destroy.length)while(destroy.length<9){
-  const c=choose(eligible,random);destroy.push({x:c.x,y:c.y});eligible.splice(eligible.indexOf(c),1);
+ if(!destroy.length){
+  const remaining=[...eligible];
+  while(remaining.length&&!destroy.length){
+   const seed=choose(remaining,random),queue=[seed],seen=new Set([key(seed.x,seed.y)]);
+   for(let i=0;i<queue.length&&queue.length<9;i++)for(const c of fourNeighbors(queue[i])){
+    const k=key(c.x,c.y);if(eligibleKeys.has(k)&&!seen.has(k)){seen.add(k);queue.push(c);if(queue.length===9)break;}
+   }
+   if(queue.length===9)destroy.push(...queue);else for(let i=remaining.length-1;i>=0;i--)if(seen.has(key(remaining[i].x,remaining[i].y)))remaining.splice(i,1);
+  }
+  if(!destroy.length)return false;
  }
  const territory=new Set(area.map(c=>key(c.x,c.y)));
  const blocked=new Set(frontierSegments(room).map(edgeKey));

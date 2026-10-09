@@ -1,8 +1,9 @@
 import test from 'node:test';
+import {key} from '../src/game.js';
 import assert from 'node:assert/strict';
-import {createLocal} from '../src/local.js';
+import {createLocal,localCommand} from '../src/local.js';
 import {territoryRegion,advanceTerritory} from '../src/territory-tools.js';
-import {TERRITORY_EVENT_RULES,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,EVENT_RHYTHM,impactCount,pickEventKind,confirmEventKind} from '../src/territory-event-rules.js';
+import {TERRITORY_EVENT_RULES,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount,pickEventKind,confirmEventKind,territoryAttemptInterval} from '../src/territory-event-rules.js';
 import {plannedEventRegion} from '../src/territory-event-actions.js';
 
 const make=()=>{
@@ -64,14 +65,15 @@ test('Metorite and earthquake demolition shares the same 33/333 budget, with dis
  };
  assert.ok(concentration(e)>concentration(m));
 });
-test('Invaders inherit one slot of each three announcements while natural types rotate',()=>{
- const r=make(),families=[],kinds=[];
- for(let i=0;i<15;i++){
-  const current=pickEventKind(r,()=>0);families.push(current.family);kinds.push(current.order[0]);confirmEventKind(r,current);
+test('Each family rotates independently and survives serialization',()=>{
+ let r=make();const natural=[],invaders=[];
+ for(let i=0;i<7;i++){
+  const n=pickEventKind(r,'natural');natural.push(n.order[0]);confirmEventKind(r,n);
+  if(i<4){const v=pickEventKind(r,'invaders');invaders.push(v.order[0]);confirmEventKind(r,v);}
+  r=JSON.parse(JSON.stringify(r));
  }
- assert.deepEqual(families.slice(0,6),['invaders','natural','natural','invaders','natural','natural']);
- assert.equal(kinds.filter(k=>INVADER_EVENT_ROTATION.includes(k)).length,5);
- assert.equal(new Set(kinds.filter(k=>NATURAL_EVENT_ROTATION.includes(k))).size,7);
+ assert.deepEqual(natural,NATURAL_EVENT_ROTATION);
+ assert.deepEqual(invaders,['invader-rain','invader-colony','invader-rain','invader-colony']);
 });
 test('Historical rain/cataclysm definitions remain recognised and do not become asterisks',()=>{
  for(const kind of ['rain','cataclysm']){
@@ -80,4 +82,25 @@ test('Historical rain/cataclysm definitions remain recognised and do not become 
   assert.equal(advanceTerritory(room,2000).length,99);
   assert.equal(room.cells.filter(c=>c.symbol==='*').length,0);
  }
+});
+test('Impact rechecks current anchors, protected cells and work reservations',()=>{
+ const r=make(),first={x:10,y:10};
+ r.pairs[0].terrainAnchor=first;r.works=[{id:'work',kind:'work',done:0,destroy:[{x:11,y:10}],build:[{x:33,y:0}]}];
+ r.territoryEvents=[{id:'recheck',kind:'meteorites',region:[first,{x:11,y:10},{x:12,y:10}],nextAt:2000}];
+ const actions=advanceTerritory(r,2000);
+ assert.deepEqual(actions.map(c=>key(c.x,c.y)),['12,10']);assert.ok(r.terrain.some(c=>c.x===10&&c.y===10));assert.equal(r.works.length,1);
+});
+test('A stale tornado group cannot move pieces onto removed terrain',()=>{
+ const r=make(),plan=plannedEventRegion(r,'tornado-rain',()=>.31,1000),removed=plan.region[0];
+ r.terrain=r.terrain.filter(c=>key(c.x,c.y)!==key(removed.x,removed.y));r.cells=r.cells.filter(c=>key(c.x,c.y)!==key(removed.x,removed.y));
+ r.territoryEvents=[{id:'stale-tornado',kind:'tornado-rain',...plan,nextAt:2000}];advanceTerritory(r,2000);
+ assert.ok(r.cells.every(c=>present(r).has(key(c.x,c.y))));
+});
+test('Proportional event intervals leave fauna time to appear before a territorial warning',()=>{
+ for(const [size,interval] of [[333,333],[990,495],[999,501],[3333,1668]])assert.equal(territoryAttemptInterval(size),interval);
+ let r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:333},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.players[0].figures=99;
+ r.cells=r.terrain.slice(100,200).map((c,i)=>({...c,id:'food:'+i,symbol:'O',owner:'local-o'}));
+ delete r.territoryActivityVersion;
+ for(let i=0;i<33;i++)r=localCommand(r,'move',{x:i%33,y:Math.floor(i/33)},1000+i,()=>.3);
+ assert.equal(r.territoryEvents.length,0);assert.ok(r.rodentRaids.length);assert.ok(r.worms.length);
 });

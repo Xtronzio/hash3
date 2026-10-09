@@ -1,6 +1,6 @@
 import {snapshotMemo} from './snapshot-memo.js';
 import {machineTurnKey} from './machine-turn.js';
-import {copyText,copyPreparedText,legacyCopyText} from './clipboard.js';
+import {copyText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
 import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
@@ -415,6 +415,7 @@ function renderHallDialog() {
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local,hasPrevious:hallHistory.length>0});
   app.insertAdjacentHTML('beforeend',markup);
+  if(hallDialog==='profile')hydrateProfileAccess();
   if(hallDialog==='games')bindOnlineThumbnails();
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
@@ -435,42 +436,82 @@ function renderHallDialog() {
   const preference=document.querySelector('#preference'),pairField=document.querySelector('#pair-code-field');
   if(pairField){const refreshPairField=()=>{pairField.hidden=preference.value!=='pair';const button=document.querySelector('#entry-form button[value="world"]');button.textContent=preference.value==='new'?'Crear pareja':preference.value==='pair'?'Unirme a la pareja':'Entrar en Mundo';};preference.addEventListener('change',refreshPairField);if(pairUrlCode){preference.value='pair';document.querySelector('#pair-code').value=pairUrlCode;}refreshPairField();}
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{
-    e.preventDefault();const name=document.querySelector('#profile-name').value.trim();
-    if(name.length<2||name.length>18){notify('El apodo debe tener entre 2 y 18 caracteres.');return;}
-    save('hash3_name',name);try{if(read('hash3_profile_token'))await profileAccess('sync',{name});}catch(error){notify(error.message);return;}closeHallDialog(false);renderHome();document.querySelector('[data-action="hall-profile"]')?.focus();notify('Apodo guardado.');
+    e.preventDefault();if(busy)return;
+    const name=document.querySelector('#profile-name').value.trim();
+    if(name.length<2||name.length>18){profileStatus('profile-name-status','El apodo debe tener entre 2 y 18 caracteres.','error');return;}
+    save('hash3_name',name);
+    document.querySelector('.profile-identity strong').textContent=name;
+    profileStatus('profile-name-status','Apodo guardado en este navegador.','ok');
+    if(read('hash3_profile_token')){
+     try{await profileAccess('sync',{name});profileStatus('profile-name-status','Apodo guardado y sincronizado con tu perfil online.','ok');}
+     catch(error){profileStatus('profile-name-status','Apodo guardado aquí, pero no se ha sincronizado: '+error.message,'error');}
+    }
   });
-  document.querySelector('#profile-import')?.addEventListener('submit',async e=>{e.preventDefault();if(busy)return;await run(()=>loadProfileAccess(document.querySelector('#profile-link').value));});
+  document.querySelector('#profile-import')?.addEventListener('submit',async e=>{
+    e.preventDefault();if(busy)return;
+    const input=document.querySelector('#profile-link')?.value.trim();
+    profileStatus('profile-restore-status','Verificando tu enlace…');
+    busy=true;
+    const submit=document.querySelector('#profile-import button[type="submit"]');if(submit)submit.disabled=true;
+    try{await loadProfileAccess(input);}
+    catch(error){profileStatus('profile-restore-status',error.message||'No se pudo cargar el perfil.','error');}
+    finally{busy=false;if(submit?.isConnected)submit.disabled=false;}
+  });
   const dialog=document.querySelector('.hall-dialog');
   dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
   (document.querySelector('#name:not([type="hidden"])')||document.querySelector('#profile-name')||form?.querySelector('select,input:not([type="hidden"])')||dialog.querySelector('[data-action="hall-close"]')).focus();
   updateOfflineStatus();renderDeleteGame();
 }
-async function loadProfileAccess(input){
- const token=profileToken(input,location.href);if(!token)throw Error('Pega un enlace privado válido de #3.');
- const result=await profileAccess('restore',{token}),id=await restoreProfile(client,result);
- clearGameView();uid=id;save('hash3_name',result.name);save('hash3_profile_token',token);save('hash3_profile_owner',id);save('hash3_pair',null);save('hash3_room',null);
- myGames={};onlinePreviews.clear();gamesRequest++;metricsRequest++;metricState={entries:[],loading:false,error:''};hallDialog='profile';hallHistory=[];renderHome();notify('Perfil cargado. Tus partidas online están en Mis partidas.');
+function profileStatus(id,message,state='info'){
+ const el=document.getElementById(id);if(el){el.textContent=message;el.dataset.state=state;}
 }
-async function prepareProfileAccess(renew=false){
- const name=(document.querySelector('#profile-name')?.value||read('hash3_name')||'').trim();if(name.length<2||name.length>18)throw Error('Escribe un apodo de 2 a 18 caracteres.');
- let timeout;const id=await Promise.race([ensurePlayer(),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error('El servicio de perfiles no responde. Inténtalo cuando vuelva la conexión.')),12000);})]).finally(()=>clearTimeout(timeout)),saved=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
- const result=await profileAccess(renew?'renew':'copy',{name,token:saved});if(!validProfileToken(result.token))throw Error('No se pudo generar el enlace.');
+function localProfileLink(){
+ const token=read('hash3_profile_token'),owner=read('hash3_profile_owner');
+ if(!owner||!validProfileToken(token)||!token.startsWith('h31_'+owner+'_'))return null;
+ try{return profileUrl(token,location.href);}catch{return null;}
+}
+function hydrateProfileAccess(){
+ const link=localProfileLink(),ready=document.querySelector('#profile-ready');
+ if(ready)ready.hidden=!link;
+ const field=document.querySelector('#profile-export');if(field)field.value=link||'';
+ const generate=document.querySelector('#profile-generate');if(generate)generate.hidden=!!link;
+ const copy=document.querySelector('#profile-copy-ready');if(copy)copy.hidden=!link;
+ const share=document.querySelector('#profile-share');if(share)share.hidden=!link||typeof navigator.share!=='function';
+ const incoming=profileToken(location.href,location.href),importField=document.querySelector('#profile-link');
+ if(incoming&&importField&&!importField.value)importField.value=profileUrl(incoming,location.href);
+}
+async function loadProfileAccess(input){
+ const token=profileToken(input,location.href);
+ if(!token)throw Error('Pega un enlace de perfil válido de #3. Comprueba que está completo.');
+ const result=await profileAccess('restore',{token}),id=await restoreProfile(client,result);
+ if(new URLSearchParams(location.hash.slice(1)).has('perfil'))
+  history.replaceState(null,'',location.pathname+location.search);
+ clearGameView();uid=id;save('hash3_name',result.name);
+ save('hash3_profile_token',token);save('hash3_profile_owner',id);
+ save('hash3_pair',null);save('hash3_room',null);
+ myGames={};onlinePreviews.clear();gamesRequest++;metricsRequest++;
+ metricState={entries:[],loading:false,error:''};
+ hallDialog='profile';hallHistory=[];renderHome();
+ profileStatus('profile-restore-status','Perfil recuperado correctamente. Ya puedes entrar en tus partidas online.','ok');
+ notify('Perfil recuperado. Tus partidas online están en Mis partidas.');
+}
+async function generateProfileAccess(renew=false){
+ const name=(document.querySelector('#profile-name')?.value||read('hash3_name')||'').trim();
+ if(name.length<2||name.length>18)throw Error('Escribe primero un apodo de 2 a 18 caracteres.');
+ if(!renew&&localProfileLink())return localProfileLink();
+ const id=await ensurePlayer(),existing=read('hash3_profile_owner')===id?read('hash3_profile_token'):null;
+ const result=await profileAccess(renew?'renew':'copy',{name,token:existing});
+ if(!validProfileToken(result?.token))throw Error('El servidor no ha generado un enlace válido.');
  save('hash3_profile_token',result.token);save('hash3_profile_owner',id);save('hash3_name',name);
+ hydrateProfileAccess();
  return profileUrl(result.token,location.href);
 }
-async function copyProfileAccess(renew=false){
- const status=document.querySelector('#profile-copy-status');status.textContent='Preparando enlace…';
- const task=prepareProfileAccess(renew);
- const copied=copyPreparedText(task,{fallback:legacyCopyText});
- // A generation failure must be reported even if the clipboard rejects first.
- copied.catch(()=>{});
- try{
-  const link=await task,field=document.querySelector('#profile-export');if(!field)return;
-  field.hidden=false;field.value=link;document.querySelector('[data-action="profile-copy-ready"]').hidden=false;
-  const ok=await copied;status.textContent=ok?'Enlace copiado. Ya puedes pegarlo.':'Enlace preparado. Pulsa Copiar enlace preparado o selecciónalo para copiarlo.';
-  if(!ok){field.focus();field.select();}
-  notify(ok?(renew?'Nuevo enlace copiado. El anterior queda invalidado.':'Enlace privado copiado. Ya puedes pegarlo.'):status.textContent);
- }catch(error){status.textContent='No se ha podido preparar el enlace. '+error.message;throw error;}
+async function copySavedProfileLink(){
+ const link=localProfileLink();
+ if(!link){profileStatus('profile-copy-status','Primero genera un enlace de acceso.','error');return;}
+ const copied=await copyText(link,{fallback:legacyCopyText}),field=document.querySelector('#profile-export');
+ if(!copied){field?.focus();field?.select();}
+ profileStatus('profile-copy-status',copied?'Enlace copiado. Pégalo en el otro navegador.':'Enlace preparado: selecciónalo y utiliza Copiar.',copied?'ok':'info');
 }
 
 function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}}
@@ -621,13 +662,32 @@ app.addEventListener('click',async e=>{
   }
   if(action==='hall-achievements'){achievementView=achievementSelection(loadTerritoryResults(localStorage,localGames()),achievementView||{});openHallDialog('achievements','hall-achievements');return;}
   if(action==='hall-inventory'){openHallDialog('inventory','hall-inventory');return;}
-  if(action==='profile-copy-ready'){
-    const field=document.querySelector('#profile-export');if(!field?.value)return;
-    const ok=await copyText(field.value,{fallback:legacyCopyText});
-    document.querySelector('#profile-copy-status').textContent=ok?'Enlace copiado. Ya puedes pegarlo.':'Selecciona el enlace y usa Copiar en tu dispositivo.';
-    if(!ok){field.focus();field.select();}notify(ok?'Enlace privado copiado. Ya puedes pegarlo.':'Selecciona el enlace y usa Copiar.');return;
+  if(action==='profile-copy-ready'){await copySavedProfileLink();return;}
+  if(action==='profile-generate'||action==='profile-renew-confirm'){
+   if(busy)return;
+   const renew=action==='profile-renew-confirm';
+   profileStatus('profile-copy-status',renew?'Renovando el enlace…':'Generando tu enlace…');
+   busy=true;
+   try{
+    await generateProfileAccess(renew);
+    document.querySelector('#profile-renew-confirm').hidden=true;
+    profileStatus('profile-copy-status',renew?'Enlace renovado. El anterior ya no sirve. Pulsa Copiar enlace.':'Enlace creado. Pulsa Copiar enlace para llevártelo a otro navegador.','ok');
+   }catch(error){
+    profileStatus('profile-copy-status',error.message||'No se pudo generar el enlace.','error');
+    if(error.message?.includes('Ya existe un enlace'))document.querySelector('#profile-renew-confirm').hidden=false;
+   }finally{busy=false;}
+   return;
   }
-  if(action==='profile-copy'||action==='profile-renew'){await run(()=>copyProfileAccess(action==='profile-renew'));return;}
+  if(action==='profile-renew'){document.querySelector('#profile-renew-confirm').hidden=false;return;}
+  if(action==='profile-renew-cancel'){document.querySelector('#profile-renew-confirm').hidden=true;return;}
+  if(action==='profile-share'){
+   const link=localProfileLink();if(!link)return;
+   if(navigator.share){
+    try{await navigator.share({title:'#3 · Acceso a mi perfil',url:link});}
+    catch(error){if(error?.name!=='AbortError')profileStatus('profile-copy-status','No se pudo compartir. Prueba Copiar enlace.','error');}
+   }else await copySavedProfileLink();
+   return;
+  }
   if(action==='events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
   if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
@@ -841,11 +901,18 @@ window.addEventListener('online',poll);
 window.addEventListener('resize',()=>{if(room?.status==='playing'){blinkId=null;if(mapInteracting)mapDeferred=true;else render();}});
 setInterval(poll,1800);
 async function init(){
-  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
-  if(hasProfile)history.replaceState(null,'',location.pathname+location.search);
-  renderHome();
-  if(incoming){await loadProfileAccess(profileUrl(incoming,location.href));return;}
-  if(hasProfile)throw Error('El enlace de perfil no es válido. Tu perfil actual se conserva.');
+ const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
+ renderHome();
+ if(incoming){
+  try{await loadProfileAccess(profileUrl(incoming,location.href));}
+  catch(error){hallDialog='profile';renderHome();profileStatus('profile-restore-status','No se pudo cargar automáticamente: '+error.message+' Puedes volver a intentarlo desde aquí.','error');}
+  return;
+ }
+ if(hasProfile){
+  hallDialog='profile';renderHome();
+  profileStatus('profile-restore-status','El enlace no tiene el formato correcto. Tu perfil actual se conserva.','error');
+  return;
+ }
   const pendingPair=read('hash3_pair');if(pendingPair&&navigator.onLine){try{uid=await ensurePlayer();acceptPair(await command('pair_get',{code:pendingPair}));return;}catch{save('hash3_pair',null);}}
   try{
     if(sessionStorage.getItem('hash3_restore_local')==='1'){

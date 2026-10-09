@@ -1,59 +1,62 @@
-# HASH3 · #3_11 · Territorio vivo (R0.21.29)
+# HASH3 · #3_11 · Territorio vivo (R0.21.30, rama de trabajo)
 
-## Propósito
+Los jugadores son **COLONOS**. El territorio combina fauna, habitantes, invasores y fenómenos naturales o estelares. Los efectos conservan la relación con el 3; las frecuencias responden al impacto en el juego, según la indicación de Jorge del 9 de octubre de 2026.
 
-Los jugadores son **COLONOS**. #3 es un territorio dinámico: fauna, promociones inmobiliarias, ataques invasores y fenómenos naturales/estelares interactúan con X, O, huecos, puntuación, protecciones, inventario y expansión.
+Fuente: `feature/3-11-territorio-vivo`, PR borrador #1. `main` continúa en R0.21.28-P1. Esta rama no está publicada ni aplicada al Supabase real.
 
-**Fuente de implementación:** rama `feature/3-11-territorio-vivo`; `main` sigue en R0.21.28 hasta verificar/promover. El catálogo de variantes y sus frecuencias se configura en `src/territory-event-rules.js`. No duplicar cálculos de probabilidad o geometría dentro del pintado.
+## Efectos
 
-## Matriz oficial
-
-| Familia | Consecuencia | Disperso | Localizado |
+| Familia | Disperso | Localizado | Consecuencia |
 | --- | --- | --- | --- |
-| Fauna | Come fichas | Roedores | Gusanos |
-| Habitantes | Construcción y demolición en equilibrio | Aparecen promociones en distintas áreas | Cada promoción ejecuta obra concentrada, 9 destruidas y 9 construidas |
-| Invasores | Ataque y ocupación `*` | Bombardeo disperso, bomba → `*` | Colonización de 3×3, `*` |
-| Naturales | Destruye signos **y terreno** | Lluvia de meteoritos | Terremoto |
-| Naturales + estelares | Vacía fichas pero **mantiene terreno** | Pandemia | OVNI (estelar, geometría original) |
-| Naturales | Desordena fichas sin perder terreno | Lluvia de tornados | Huracán |
-| Estelares | Vacía + desordena | — | Agujero negro, vacía centro 3×3 y desordena anillo de hasta 3 celdas |
+| Fauna | Roedores | Gusanos | Comen fichas; tres comidas. Roedores: tres visitas en nueve turnos. |
+| Habitantes | Promociones en distintas áreas | Cada promoción opera en una zona conectada | Nueve celdas demolidas y nueve construidas; tres parejas de obreros. |
+| Invasores | Bombardeo en tres celdas | Colonia 3×3 | Ocupan con `*` sin propietario, conservando terreno. |
+| Naturales | Meteoritos | Terremoto | Destruyen signos y terreno. |
+| Naturales y estelares | Pandemia | OVNI | Vacían signos y conservan terreno. |
+| Naturales | Lluvia de tornados en grupos 3×3 | Huracán | Desordenan signos y conservan terreno. |
+| Estelares | — | Agujero negro | Vacía núcleo 3×3 y desordena el anillo de hasta tres celdas. |
 
-El antiguo Cataclismo se renombra **Terremoto** (no duplicar fenómeno). La antigua lluvia de bombas pasa a ser ataque de los invasores, y lluvia de **meteoritos** es el fenómeno destructor disperso. Los códigos de eventos `rain` y `cataclysm` quedan como alias **históricos** para no romper guardados antiguos.
+Impacto proporcional de los fenómenos: 33/333 del terreno o de las fichas, según su efecto. Agujero negro e invasiones usan su geometría fija. `rain` y `cataclysm` mantienen su comportamiento histórico para avisos y guardados antiguos. Las bombas del inventario conservan sus reglas propias.
 
-Los habitantes aparecen dispersos como promociones inmobiliarias, pero cada equipo opera de forma localizada; siguen intercambiando una celda demolida por una nueva, sin crecimiento neto.
+## Frecuencias por impacto
 
-## Ritmo inicial (provisional, pendiente de revisión en conjunto)
+| Aparición | Hasta 666 celdas | 999 celdas | 3.333 celdas |
+| --- | ---: | ---: | ---: |
+| Roedores y gusanos | 33 | 50 | 166 |
+| Obras | 66 | 99 | 331 |
+| Invasores | 66 | 99 | 333 |
+| Fenómenos naturales y estelares | 333 | 501 | 1.668 |
 
-- **Actividad cotidiana:** fauna y constructores/destructores conservan por ahora los contadores anteriores `HABITAT_FREQUENCIES` y sus restricciones de población/recuperación.
-- **Invasores:** ocupa **el turno de sorteo** de la antigua lluvia de bombas; provisionalmente una posición de cada tres anuncios territoriales, alternando bombardero disperso (3 posiciones) y colonia localizada (3×3).
-- **Otros fenómenos:** los dos turnos restantes rotan entre meteoritos, terremoto, pandemia, OVNI, tornados y huracán, agujero negro; la ocurrencia sigue condicionada a hitos existentes de la partida (figuras, colocaciones, territorio) y a la elegibilidad del área.
-- **Impacto natural:** referencia 33/333 en base a terreno (meteoritos/terremoto/reordenamiento) o piezas (pandemia/OVNI); el agujero negro usa núcleo 3×3 y anillo de hasta tres celdas. Configuración en `EVENT_BALANCE`. El nuevo volumen de ataque invasor es de pequeña incidencia.
-- Aviso de 33 segundos y recuperación de 33 segundos y tres colocaciones tras el evento; suspensión temporal de fauna, sin pérdida de puntos.
-- Respetar inmunidades, anclas protegidas y reservas; nunca repetir eventos históricos al cargar un guardado.
+Valores en colocaciones aceptadas. Fauna y obras comparten el contador de su zona; invasores y fenómenos tienen relojes de colocaciones independientes, con escala `max(1,N/666)` y redondeo a múltiplos de tres para esos dos ciclos. Sus avisos empiezan desde 99 figuras cobradas entre ambos. Son intentos condicionados por geometría, alimento y población, no apariciones garantizadas.
 
-No afirmar que el equilibrio se ha optimizado: **los patrones y frecuencias todavía deben calibrarse con simulación y prueba de juego**.
+- Las ampliaciones no adelantan fenómenos fuera del ciclo. Se conserva el hito máximo como dato histórico.
+- Un solo aviso territorial activo; si coinciden los dos ciclos, el fenómeno grande tiene prioridad. No se acumulan ataques por intervalos perdidos.
+- Invasores alternan bombardeo y colonia; los siete fenómenos rotan por separado. Una familia no reinicia el plazo de la otra.
+- Todos los avisos duran 33 segundos. Las invasiones pequeñas dejan actuar a la fauna y conservan sus presupuestos y nacimientos.
+- Solo los fenómenos grandes suspenden fauna y aplican recuperación de 33 segundos y tres colocaciones, con recalibración posterior.
+- Pausar conserva los milisegundos exactos de avisos, fauna, inmunidad y recuperación.
+- Guardados previos reciben ciclos futuros, sin ataques ni nacimientos históricos. Resultados locales nuevos usan reglas 9; finales previos permanecen intactos.
 
-## Qué está implementado en esta rama
+Configuración central: `src/territory-event-rules.js` y `src/habitat-budget.js`. El SQL se genera desde esa misma configuración con `node scripts/generate-ecology-sql.mjs`.
 
-- Motor **Solo / Sin conexión**: selección, huella, aplicación, protección, anuncio y recuperación de los nuevos eventos, conservando compatibilidad con los eventos viejos.
-- Iconos localizadores, marcadores y cuenta atrás, mapa activo, mapa en pausa, símbolos `*` y animaciones de invasores, meteoritos, terremoto, pandemia y reorganizaciones.
-- Mochila: últimas cartas usadas por **ambos** X/O, coloreadas; incluye uso de inventario de la máquina cuando el evento llega a la interfaz.
-- Dibujado más ligero del mapa alejado y reutilización de índices espaciales en fases de ampliación.
-- La lógica de promociones prefiere cuadrantes 3×3 contiguos, con fallback seguro si el tablero es irregular, construye/demuele el mismo número de celdas.
-- Batería automatizada `npm test`, construcción `npm run build:github`, calibración rápida `npm run simulate:ecology -- --quick`; simulación extensa `npm run simulate:ecology -- --json`.
+## Implementación y comprobación
 
-## Limitaciones y siguiente paso obligatorio ANTES de llamarlo definitivo
+El motor local y la migración SQL preparada incluyen el catálogo completo, protección por propietario, anclas actuales, reservas de obras, limpieza de formas y conservación de puntos cobrados. Los impactos vuelven a comprobar terreno y protecciones: un tornado anunciado no puede mover fichas a una celda que dejó de existir. Las promociones irregulares conservan una región conectada de nueve celdas; no se demuelen nueve huecos dispersos como sustitución.
 
-1. **No está desplegado en la web pública**: trabajar en rama y verificar PR antes de integrar a `main`; generar y publicar `docs/` con pipeline oficial. R0.21.28 es la versión jugable estable.
-2. La lógica de **Duelo y Mundo conectados a Supabase** funciona en PostgreSQL, no en `src/local.js`. La versión actual de esta rama **no modifica** esa lógica remota. Hay que portar los nuevos tipos al SQL, generar migración, test SQL, revisar RLS/seguridad y verificar **antes** de activar el nuevo ecosistema en modos online. No presentar el comportamiento de Solo como disponible online.
-3. El simulador actual compara **efectos geométricos por tamaño y densidad**; para equilibrar incidencias reales de largo plazo conviene extenderlo a secuencias de miles de colocaciones que incluyan fauna, obras, inventario, recuperación y desorden. Evitar adivinar tasas. 
-4. Confirmar en móvil/táctil: fluidez al arrastrar durante ampliación de tableros grandes; animación bomba → `*`; protección/última carta del rival, ampliación conservada y mapas con `*`.
-5. Guardados grandes anteriores: los nuevos sorteos comienzan desde actividad posterior a actualizar el guardado, sin reanunciar hitos pasados. Históricos conservan reglas/estadísticas.
+- `npm test`: reglas, interacción, pausas, navegación, inventario, guardados y secuencias reproducibles.
+- `npm run verify:sql`: deriva de configuración, aplicación y reaplicación de migración en PostgreSQL desechable, RPC público, reintentos, permisos, reloj, protecciones, efectos y convivencia de fauna con invasores. Usa PGlite; la planificación cron se sustituye por una función de prueba, por lo que no valida el planificador remoto.
+- `npm run simulate:turns`: secuencias de 1.500 colocaciones en 333/999 celdas y 2.000 en 3.333, dos semillas, con/sin territorio activo. Incluye herramientas, Doble, expansiones, pausas de una hora y comprobaciones de integridad. UUID y azar reproducibles; seis segundos activos por colocación, ocupación inicial del 35 %, comienzo tras la apertura de 99 figuras. Es juego aleatorio, no mide decisiones humanas ni tasa de victoria.
+- `npm run build:github`: genera y verifica los paquetes de Pages y de raíz. Los archivos públicos se mantienen en la versión estable hasta promoción completa.
+- `node scripts/benchmark-board.mjs`: consulta de ventana y comandos sintéticos en 9.999/33.333/99.999 celdas. No valida hardware móvil.
 
-## Siguiente conversación
+Resultados de secuencias y rendimiento: `benchmarks/territory-r02130-turns.json` y `benchmarks/territory-r02130-board.json`. La batería suma 20.000 colocaciones aceptadas sin fallos de integridad ni desequilibrio de obras. El ensayo corto de 180 colocaciones confirma fauna y obras junto a dos invasiones y ningún fenómeno grande. Las pruebas ayudan a ajustar la convivencia; el equilibrio final requiere partidas humanas.
 
-Abrir **#3_11** con esta rama como referencia. Completar homologación Supabase, QA táctil, publicación y simulación de partidas completas. **Después** modificar solo lo que salga de los datos: patrones, frecuencias e intensidades.
+## Bloqueos antes de integrar y publicar
 
-## Compatibilidad con corrección de perfiles publicada
+1. El Supabase real `vyzugvepzylidyxitojo` devuelve timeout incluso en consultas simples. La migración está preparada y probada localmente, **no aplicada**. Verificar migraciones previas, aplicar con el flujo de migraciones y validar Mundo/Duelo y asesores sobre el servidor antes de promoción.
+2. QA táctil de grandes tableros, ampliaciones y animaciones pendiente. El entorno no tiene navegador ejecutable; la descarga de Chromium devuelve archivos vacíos. Los ensayos Node y las pruebas de navegación no sustituyen esa comprobación.
+3. Mantener PR borrador, sin integrar a `main` ni publicar Pages parcialmente. Una vez resueltos servidor y QA táctil, ejecutar el pipeline oficial y verificar la versión pública.
 
-El 9/10/2026 se publicó por separado en `main` la revisión `R0.21.28-P1` (PR #2, commit `698edf259cad0c9b47fc43ab4b114daf8f77bbe0`): acceso entre navegadores más fiable y Perfil rediseñado. **Antes de integrar #3_11, conservar/cherry-pick las mejoras de** `src/profile-access-ui.js`, `src/profile-link.js`, `src/api.js`, `src/hall.js`, `src/hall.css`, `src/main.js`, las pruebas y versión. No sobrescribirlas con el `main.js` antiguo de esta rama. Las ramas comparten `hall.js`/`main.js`; resolver conflictos con prioridad al flujo de perfil más reciente.
+## Compatibilidad con Perfil
+
+Conservar la corrección publicada el 9 de octubre en `main`, R0.21.28-P1 (PR #2, commit `698edf259cad0c9b47fc43ab4b114daf8f77bbe0`): acceso entre navegadores y Perfil rediseñado. La rama incorpora esa revisión de `main`, incluidos `src/profile-access-ui.js`, `src/profile-link.js`, `src/api.js`, `src/hall.js`, `src/hall.css`, `src/main.js` y sus pruebas. Se resolvió únicamente el identificador de versión para mantener R0.21.30; el flujo nuevo de Perfil se conserva. La versión de desarrollo sigue identificada como R0.21.30.

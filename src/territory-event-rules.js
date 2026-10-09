@@ -16,13 +16,12 @@ export const TERRITORY_EVENT_RULES=Object.freeze({
 });
 export const NATURAL_EVENT_ROTATION=Object.freeze(['meteorites','earthquake','pandemic','ufo','tornado-rain','hurricane','blackhole']);
 export const INVADER_EVENT_ROTATION=Object.freeze(['invader-rain','invader-colony']);
-export const EVENT_RHYTHM=Object.freeze(['invaders','natural','natural']);
-
-// Ajustes para el futuro simulador. La familia invasora conserva el turno de
-// aparición de la antigua lluvia de bombas (1 de cada 3 anuncios).
+// Efectos ligados al 3; frecuencias ajustadas por impacto y tamaño.
 export const EVENT_BALANCE=Object.freeze({
   warningMs:33000,
-  placementsPerAttempt:33,
+  placementsPerAttempt:333,
+  invaderPlacementsPerAttempt:66,
+  placementScaleReference:666,
   incidenceNumerator:33,
   incidenceDenominator:333,
   invasionRainCells:3,
@@ -34,6 +33,7 @@ export const EVENT_BALANCE=Object.freeze({
   recoveryMoves:3
 });
 export const eventRule=kind=>TERRITORY_EVENT_RULES[kind]||null;
+export const territoryAttemptInterval=(size,family='natural')=>3*Math.ceil(EVENT_BALANCE[family==='invaders'?'invaderPlacementsPerAttempt':'placementsPerAttempt']*Math.max(EVENT_BALANCE.placementScaleReference,size)/(3*EVENT_BALANCE.placementScaleReference));
 export const eventLabel=kind=>eventRule(kind)?.label||kind;
 export const isTimedTerritoryKind=kind=>!!eventRule(kind);
 export function impactCount(room,kind){
@@ -46,16 +46,15 @@ export function impactCount(room,kind){
  const count=Math.floor(size*b.incidenceNumerator/b.incidenceDenominator);
  return kind==='rain'?3*Math.floor(count/3):Math.max(0,count);
 }
-export function pickEventKind(room,random=Math.random){
- if(room.territoryCatalogueVersion!==1){
+export function pickEventKind(room,family='natural'){
+ if(room.territoryCatalogueVersion!==2){
   // Versionado idempotente: no repetir la actividad pasada.
-  room.territoryCatalogueVersion=1;
+  room.territoryCatalogueVersion=2;
   room.territoryKindCounter=0;
   room.territoryNaturalIndex=0;
   room.territoryInvasionIndex=0;
   room.territoryBag=[];
  }
- const family=EVENT_RHYTHM[room.territoryKindCounter%EVENT_RHYTHM.length];
  const rotation=family==='invaders'?INVADER_EVENT_ROTATION:NATURAL_EVENT_ROTATION;
  const index=family==='invaders'?'territoryInvasionIndex':'territoryNaturalIndex';
  const offset=room[index]%rotation.length;

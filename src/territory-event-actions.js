@@ -51,7 +51,7 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
  const r=eventRule(kind);if(!r)return [];
  const count=impactCount(room,kind);
  if(!count)return [];
- if(kind==='blackhole'||kind==='invader-colony')return wholeSquare(room,3,random,now);
+ if(kind==='blackhole'||kind==='invader-colony')return wholeSquare(room,kind==='blackhole'?EVENT_BALANCE.blackholeSide:EVENT_BALANCE.invasionColonySide,random,now);
  if(kind==='invader-rain')return randomSubset(allowed(room,now),count,random);
  if(kind==='pandemic'){
   const protectedKeys=immutable(room,now),available=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
@@ -89,8 +89,9 @@ function randomGenerator(id){
  return ()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
 }
 function shuffle(room,region,random,blocked){
+ const known=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
  const set=new Set(region.map(c=>key(c.x,c.y)));
- const slots=region.filter(c=>!blocked.has(key(c.x,c.y)));
+ const slots=region.filter(c=>known.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
  if(slots.length<2)return [];
  const current=new Map(room.cells.filter(c=>set.has(key(c.x,c.y))).map(c=>[key(c.x,c.y),c]));
  const before=slots.map(p=>current.get(key(p.x,p.y))||null),after=[...before];
@@ -108,7 +109,14 @@ function shuffle(room,region,random,blocked){
 export function applyPlannedEvent(room,event,now=Date.now()){
  const rule=eventRule(event.kind);if(!rule)return {hit:new Set(),actions:[],demolish:false};
  const blocked=immutable(room,now),known=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
- const region=(event.region||[]).filter(c=>known.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y)));
+ if(rule.effect==='demolish')for(const p of room.pairs){const a=p.terrainAnchor||p.active;blocked.add(key(a.x,a.y));}
+ let region=(event.region||[]).filter(c=>known.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
+ if(['earthquake','cataclysm'].includes(event.kind)){
+  const remaining=new Set(region.map(c=>key(c.x,c.y)));
+  let changed=true;
+  while(changed){changed=false;for(const p of region){const k=key(p.x,p.y);if(remaining.has(k)&&four.filter(([dx,dy])=>remaining.has(key(p.x+dx,p.y+dy))).length<2){remaining.delete(k);changed=true;}}}
+  region=region.filter(c=>remaining.has(key(c.x,c.y)));
+ }
  const actions=[],hit=new Set(region.map(c=>key(c.x,c.y)));
  const random=randomGenerator(event.id);
  if(rule.effect==='shuffle'){
@@ -119,8 +127,9 @@ export function applyPlannedEvent(room,event,now=Date.now()){
   // three Chebyshev steps of the core, never inventing/removing cells.
   room.cells=room.cells.filter(c=>!hit.has(key(c.x,c.y)));
   actions.push(...region.map(c=>({...c,kind:'blackhole'})));
-  const x0=Math.min(...region.map(c=>c.x)),x1=Math.max(...region.map(c=>c.x));
-  const y0=Math.min(...region.map(c=>c.y)),y1=Math.max(...region.map(c=>c.y));
+  const core=event.region||[];
+  const x0=Math.min(...core.map(c=>c.x)),x1=Math.max(...core.map(c=>c.x));
+  const y0=Math.min(...core.map(c=>c.y)),y1=Math.max(...core.map(c=>c.y));
   const halo=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&
    c.x>=x0-EVENT_BALANCE.blackholeHalo&&c.x<=x1+EVENT_BALANCE.blackholeHalo&&
    c.y>=y0-EVENT_BALANCE.blackholeHalo&&c.y<=y1+EVENT_BALANCE.blackholeHalo);
