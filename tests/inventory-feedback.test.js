@@ -66,7 +66,7 @@ test('The prepared card and active protection coexist as separate bag icons',()=
  game=localCommand(game,'inventory',{tool:'immunity',playerId:'local-x'},now);
  const html=inventoryDockMarkup(game,'local-x',{choice:{player:'local-x',tool:'erase',prepared:true,at:1000}});
  assert.match(html,/dock-immunity-active/);assert.match(html,/data-immunity-clock="local-x"/);assert.match(html,/data-dock-card="erase"/);
- assert.match(html,/left:29px/);assert.match(html,/padding-left:58px/);
+ assert.match(html,/left:29px/);assert.match(html,/padding-left:29px/);
  const protectedOnly=inventoryDockMarkup(game,'local-x',{choice:{player:'local-x',tool:'immunity',at:1000}});
  assert.equal((protectedOnly.match(/dock-immunity-active/g)||[]).length,1);assert.doesNotMatch(protectedOnly,/dock-card-choice/);
 });
@@ -80,4 +80,25 @@ test('Últimas cartas usadas se muestran juntas en la mochila con color de ambos
  assert.match(html,/X usó Doble/);
  assert.match(html,/O usó Bomba/);
  assert.deepEqual(game,state);
+});
+
+test('Cartas realmente gastadas conservan ambos lados, Doble/Combo y pausa sin depender de la UI',()=>{
+ let game=start();game.players[0].inventory.cards.combo=1;
+ game=localCommand(game,'inventory',{tool:'combo',playerId:'local-x'},now);
+ game=localCommand(game,'inventory',{tool:'double',playerId:'local-x'},now);
+ game=localCommand(game,'inventory',{tool:'rival',playerId:'local-x'},now);
+ game=localCommand(game,'move',{x:0,y:0},now);
+ game=localCommand(game,'move',{x:1,y:0},now);
+ assert.deepEqual(game.players[0].inventory.turnUse.tools,['combo','double','rival']);
+ game=localCommand(game,'inventory',{tool:'double',playerId:'local-o'},now);
+ let html=inventoryDockMarkup(game,'local-o');
+ assert.match(html,/X usó Doble/);assert.match(html,/O usó Doble/);
+ assert.equal((html.match(/class="dock-used-cell /g)||[]).length,4);
+ assert.ok(html.indexOf('dock-used-cards x')<html.indexOf('data-action="inventory"'));
+ assert.ok(html.indexOf('dock-used-cards o')>html.indexOf('data-action="inventory"'));
+ game=localCommand(game,'pause',{},now);game=localCommand(game,'resume',{},now+1000);
+ assert.match(inventoryDockMarkup(JSON.parse(JSON.stringify(game)),'local-o'),/X usó Doble/);
+ game=localCommand(game,'move',{x:2,y:0},now+1000);game=localCommand(game,'move',{x:0,y:1},now+1000);
+ game=localCommand(game,'move',{x:1,y:1},now+1000);
+ assert.deepEqual(game.players[0].inventory.turnUse.tools,[],'An empty completed turn clears older usage');
 });

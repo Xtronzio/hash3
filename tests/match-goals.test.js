@@ -33,7 +33,7 @@ test('Completed result is deduplicated, retained after deleting the board and gr
  deleteLocalGame(storage,r.id);assert.equal(loadLocalGames(storage).length,0);const [result]=loadTerritoryResults(storage);assert.equal(result.players[0].placements,33);
  assert.notEqual(territoryComparisonKey(result),territoryComparisonKey({...result,target:333}));assert.notEqual(territoryComparisonKey(result),territoryComparisonKey({...result,machineInventory:true}));
  assert.match(achievementsMarkup([result]),/Movimientos · 33/);assert.doesNotMatch(achievementsMarkup([result]),/undefined/);
- const options=matchGoalsMarkup('time',33);assert.match(options,/Relámpago · 33 segundos/);assert.match(options,/6 minutos/);assert.match(options,/9 minutos/);assert.doesNotMatch(options,/5 minutos|10 minutos/);
+ const options=matchGoalsMarkup('time',33);assert.match(options,/⚡ · 33 segundos/);assert.match(options,/6 minutos/);assert.match(options,/9 minutos/);assert.doesNotMatch(options,/5 minutos|10 minutos/);
 });
 test('33 seconds and 3/6/9 minutes expire before an overdue action in both local modes and preserve pause time',()=>{
  for(const mode of ['solo','local'])for(const timeMode of ['timed','untimed'])for(const target of MATCH_TIME_TARGETS){

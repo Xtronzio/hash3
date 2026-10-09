@@ -1,0 +1,123 @@
+[
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "size": 999,
+    "detailNodes": 88,
+    "afterDragNodes": 120,
+    "elapsedMs": 3187,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "size": 33333,
+    "detailNodes": 88,
+    "afterDragNodes": 120,
+    "elapsedMs": 4888,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "size": 999,
+    "detailNodes": 117,
+    "afterDragNodes": 150,
+    "elapsedMs": 3088,
+    "passed": true
+  },
+  {
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "size": 33333,
+    "detailNodes": 117,
+    "afterDragNodes": 150,
+    "elapsedMs": 4858,
+    "passed": true
+  },
+  {
+    "kind": "meteorites",
+    "passed": true
+  },
+  {
+    "kind": "earthquake",
+    "passed": true
+  },
+  {
+    "kind": "pandemic",
+    "passed": true
+  },
+  {
+    "kind": "ufo",
+    "passed": true
+  },
+  {
+    "kind": "tornado-rain",
+    "passed": true
+  },
+  {
+    "kind": "hurricane",
+    "passed": true
+  },
+  {
+    "kind": "blackhole",
+    "passed": true
+  },
+  {
+    "kind": "invader-rain",
+    "passed": true
+  },
+  {
+    "kind": "invader-colony",
+    "passed": true
+  },
+  {
+    "sharedMaps": true,
+    "readableZoomGlyphs": true,
+    "phenomenaForecasts": true,
+    "inventoryBothSides": true,
+    "passed": true
+  },
+  {
+    "expansion": true,
+    "passed": true
+  },
+  {
+    "tornadoAnimation": true,
+    "passed": true
+  },
+  {
+    "profileMobile": true,
+    "passed": true
+  },
+  {
+    "localStart": "solo",
+    "moves": 2,
+    "matchDurationSeconds": 33,
+    "setupEcologyIcons": 8,
+    "networkOffline": true,
+    "noSupabaseRequests": true,
+    "passed": true
+  },
+  {
+    "localStart": "offline",
+    "moves": 1,
+    "matchDurationSeconds": 540,
+    "setupEcologyIcons": 8,
+    "networkOffline": true,
+    "noSupabaseRequests": true,
+    "passed": true
+  },
+  {
+    "supabaseRequests": 0,
+    "passed": true
+  }
+]

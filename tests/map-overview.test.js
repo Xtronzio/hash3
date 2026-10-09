@@ -14,7 +14,7 @@ test('overview keeps negative coordinates, symbol colours and precise active-zon
   assert.deepEqual(model.bounds,{x:-6,y:-4,width:17,height:12});
   assert.equal(model.terrain[0].fill,'var(--red)');
   assert.equal(model.terrain[1].fill,'#343e4c');
-  assert.equal(model.terrain[2].fill,'#7b8492');
+  assert.equal(model.terrain[2].fill,'var(--green)');
   assert.deepEqual(model.target,{x:9.5,y:6.5});
   assert.deepEqual(overviewModel(room,own,{pair:'other-pair',lastMove:{x:8,y:5}}).target,{x:8.5,y:5.5});
   assert.equal(overviewModel(room,own,null).target,null);

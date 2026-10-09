@@ -53,7 +53,7 @@ test('A pinned closed or paused game appears once above ongoing games with its b
 test('Inspection preserves the saved state, distinguishes both teams and empties, and supports irregular negative terrain',()=>{
  const r={terrain:[{x:-9,y:-2},{x:-8,y:-2},{x:20,y:5}],cells:[{x:-9,y:-2,symbol:'X'},{x:20,y:5,symbol:'O'}],pairs:[]};
  const before=JSON.stringify(r),model=savedMapModel(r);assert.deepEqual(model.bounds,{x:-11,y:-4,width:34,height:12});assert.deepEqual(model.terrain.map(p=>p.fill),['var(--red)','#343e4c','var(--green)']);
- assert.match(inspectionCells(model),/inspection-symbols/);assert.match(inspectionCells(model),/<circle cx="20.5"/);assert.match(thumbnailMarkup(r),/viewBox="-11 -4 34 12"/);assert.equal(JSON.stringify(r),before);
+ assert.match(inspectionCells(model),/inspection-symbols/);assert.match(inspectionCells(model),/<circle[^>]*cx="20.5"/);assert.match(thumbnailMarkup(r),/viewBox="-11 -4 34 12"/);assert.equal(JSON.stringify(r),before);
  assert.equal(savedMapModel(null),null);assert.equal(savedMapModel({...r,terrain:[]}),null);assert.match(thumbnailMarkup(null),/Mapa no disponible/);
 });
 test('Large-map pinch coalesces visible-window redraws without rescanning the snapshot, and cancellation remains usable',()=>{
@@ -73,7 +73,7 @@ test('Large-map pinch coalesces visible-window redraws without rescanning the sn
    model.terrain=new Proxy(model.terrain,{get(target,prop){if(prop===Symbol.iterator)throw Error('Full terrain scan during navigation');return Reflect.get(target,prop);}});
    send('pointerdown',1,130,320);send('pointerdown',2,260,320);
    for(let i=0;i<30;i++){send('pointermove',1,130-i,320);send('pointermove',2,260+i,320);}
-   assert.equal(frames.size,1);assert.equal(windowBuilds,initialBuilds);flush();assert.equal(windowBuilds,initialBuilds+1);assert.ok((drawn.match(/<rect/g)||[]).length<=4098);assert.ok(state.box.width<initial.width);assert.equal(builds,1);
+   assert.equal(frames.size,1);assert.equal(windowBuilds,initialBuilds);flush();assert.equal(windowBuilds,initialBuilds+1);assert.ok((drawn.match(/<path|<circle|<rect/g)||[]).length<=4100);assert.ok(state.box.width<initial.width);assert.equal(builds,1);
    send('pointercancel',2,289,320);send('pointermove',1,90,370);flush();send('pointerup',1,90,370);assert.deepEqual(states,[true,false]);
    send('pointerdown',3,100,100);send('pointerup',3,100,100);assert.deepEqual(states,[true,false,true,false]);
    listeners.get('panel:click')({target:{closest:()=>({dataset:{inspectAction:'fit'}})}});flush();assert.deepEqual(state.box,initial);assert.equal(JSON.stringify(room),original);assert.equal(builds,1);

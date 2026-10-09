@@ -30,24 +30,32 @@ export function inventoryRefill(previous,next,playerId){
  }
  return refill;
 }
-export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null,choice=null,uses=[]}={}){
+export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null,choice=null,uses=null}={}){
  const total=inventoryTotal(game,playerId),inv=inventoryFor(game,playerId),turns=REFILL_TURNS-inv.turns;
  const protectedNow=immunityRemaining(game,playerId)>0,team=game?.players?.find(p=>p.id===playerId)?.symbol==='O'?'o':'x';
  const selected=choice?.player===playerId&&practiceTools.some(t=>t.id===choice.tool),card=selected?practiceTools.find(t=>t.id===choice.tool):null;
  const delay=choice?Math.min(0,choice.at-(choice.now??choice.at)):0;
  const chosenLabel=card?`${card.label} · ${choice.prepared?'Preparada':'Usada'} · quedan ${toolStock(game,playerId,card.id)}`:'';
- const chosen=card?`<span class="dock-card-choice ${team} ${choice.prepared?'is-prepared':''}" data-dock-card="${card.id}" role="img" aria-label="${chosenLabel}" title="${chosenLabel}" style="left:${protectedNow?29:0}px;--card-choice-delay:${delay}ms">${toolIcon(card.id)}<b>×${toolStock(game,playerId,card.id)}</b></span>`:'';
- const lastUses=uses.filter(u=>practiceTools.some(t=>t.id===u.tool)).map(u=>{
+ const chosen=card?`<span class="dock-card-choice ${team} ${choice.prepared?'is-prepared':'dock-used-card'}" data-dock-card="${card.id}" role="img" aria-label="${chosenLabel}" title="${chosenLabel}" style="left:${protectedNow?29:0}px;--card-choice-delay:${delay}ms">${toolIcon(card.id)}<b>×${toolStock(game,playerId,card.id)}</b></span>`:'';
+ const recorded=uses??game.players.flatMap(p=>(p.inventory?.turnUse?.tools||game.practiceTurn?.player===p.id&&game.practiceTurn.used||[]).map(tool=>({player:p.id,tool})));
+ const lastUses=recorded.filter(u=>practiceTools.some(t=>t.id===u.tool)).map(u=>{
   const played=game.players.find(p=>p.id===u.player),tool=practiceTools.find(t=>t.id===u.tool);
   const team=played?.symbol==='O'?'o':'x',symbol=played?.symbol||'?';
   const label=symbol+' usó '+tool.label;
-  return '<span class="dock-used-card '+team+'" title="'+label+'" aria-label="'+label+'"><b>'+symbol+'</b>'+toolIcon(u.tool)+'</span>';
- }).join('');
- const playedMarkup=lastUses?'<span class="dock-used-cards" role="group" aria-label="Últimas cartas usadas por los colonos">'+lastUses+'</span>':'';
+  return {symbol,tool:u.tool,markup:'<span class="dock-used-card '+team+'" title="'+label+'" aria-label="'+label+'"><b>'+symbol+'</b>'+toolIcon(u.tool)+'</span>'};
+ });
+ const side=symbol=>{
+  const selectedHere=card&&team===symbol.toLowerCase();
+  const used=lastUses.filter(u=>u.symbol===symbol&&!(selectedHere&&u.tool===card.id)).slice(-(selectedHere?1:2)).map(u=>u.markup);
+  if(selectedHere)used.push(chosen);
+  const slots=Array.from({length:2},(_,i)=>`<span class="dock-used-cell ${used[i]?'':'is-empty'}" ${used[i]?'':`aria-label="${symbol} · sin carta"`}>${used[i]||''}</span>`).join('');
+  return `<span class="dock-used-cards ${symbol.toLowerCase()}" role="group" aria-label="Últimas cartas usadas por los colonos · ${symbol}">${slots}</span>`;
+ };
+
  const protection=protectedNow?`<span class="dock-immunity-active ${team} ${choice?.player===playerId&&choice.tool==='immunity'?'is-newly-chosen':''}" style="--card-choice-delay:${delay}ms" role="img" aria-label="Inmunidad activa · 33 segundos" title="Inmunidad activa · 33 segundos de partida activa">${toolIcon('immunity')}<b data-immunity-clock="${playerId}">${immunitySeconds(game,playerId)}</b></span>`:'';
  const label=`Inventario · ${total} carta${total===1?'':'s'}${protectedNow?' · Inmunidad activa de 33 segundos':''}${chosenLabel?' · '+chosenLabel:''} · ${turns<=0?'Recarga lista cuando haya hueco':`Recarga en ${turns} turno${turns===1?'':'s'} propio${turns===1?'':'s'}`}`;
  const active=refill?.player===playerId;
- return `<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-icon ${protectedNow?'is-protected':''}" style="padding-left:${(protectedNow?29:0)+(card?29:0)}px">${chosen}${icon}${protection}${playedMarkup}<span class="inventory-badge ${total?'':'is-empty'}" aria-hidden="true">${total}</span></span></button>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">${refill.message||`Inventario recargado · +${refill.added} ${refill.tool}`}</span>`:''}`;
+ return `<div class="inventory-dock">${side('X')}<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-icon ${protectedNow?'is-protected':''}" style="padding-left:${protectedNow?29:0}px">${icon}${protection}<span class="inventory-badge ${total?'':'is-empty'}" aria-hidden="true">${total}</span></span></button>${side('O')}</div>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">${refill.message||`Inventario recargado · +${refill.added} ${refill.tool}`}</span>`:''}`;
 }
 export function immunityComboNotice(previous,next,playerId){
  if(!previous||previous.id!==next?.id||!['solo','local'].includes(next.mode))return null;
