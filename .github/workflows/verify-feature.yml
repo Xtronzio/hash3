@@ -3,7 +3,10 @@ on:
   push:
     branches:
       - feature/3-11-territorio-vivo
+      - release/local-diagnostics
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -26,3 +29,13 @@ jobs:
         with:
           name: territory-browser-qa
           path: browser-results/
+      - name: Package local diagnosis for Pages
+        if: github.ref == 'refs/heads/release/local-diagnostics' && success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Pages R0.21.31 for local diagnosis"
+            git push origin HEAD:release/local-diagnostics
+          fi

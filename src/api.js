@@ -1,7 +1,12 @@
 import {createClient} from '@supabase/supabase-js';
 import {supabaseUrl, supabaseKey} from './config.js';
-export const client = createClient(supabaseUrl, supabaseKey);
+import {ONLINE_ENABLED,requireOnline} from './online-availability.js';
+export const client = createClient(supabaseUrl, supabaseKey,{
+ auth:{autoRefreshToken:ONLINE_ENABLED,detectSessionInUrl:ONLINE_ENABLED,persistSession:true},
+ global:{fetch:(...args)=>{requireOnline();return fetch(...args);}}
+});
 export async function ensurePlayer() {
+  requireOnline();
   const {data: {session}, error: sessionError} = await client.auth.getSession();
   if (sessionError) throw sessionError;
   if (session) return session.user.id;
@@ -10,6 +15,7 @@ export async function ensurePlayer() {
   return data.user.id;
 }
 export async function command(action, payload = {}) {
+  requireOnline();
   const {data, error} = await client.rpc('hash3_command', {action, payload}).abortSignal(AbortSignal.timeout(12000));
   if (error) throw error;
   return data;
@@ -17,6 +23,7 @@ export async function command(action, payload = {}) {
 // The recovery endpoint works without a pre-existing session. In particular
 // never refresh a stale/failed anonymous session before importing a link.
 export async function profileAccess(action,payload={}){
+ requireOnline();
  let session=null;
  if(action!=='restore'){
   const {data,error}=await client.auth.getSession();

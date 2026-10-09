@@ -1,4 +1,5 @@
 import {localHumanId} from './local.js';
+import {modeAvailable} from './online-availability.js';
 import {hallIcon,hallModeClass} from './hall.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const metricModes=[['solo','VS máquina','robot'],['local','Sin conexión','players'],['duel','Duelo','duel'],['world','Mundo','world']];
@@ -20,7 +21,7 @@ function tiles(entries,mode){
 }
 export const metricModeClass=mode=>hallModeClass(mode==='local'?'offline':mode);
 export function metricsModePicker(mode='solo',{action='metrics-mode',label='Modalidad de las métricas'}={}){
- return `<div class="metric-modes" role="group" aria-label="${esc(label)}">${metricModes.map(([id,label,icon])=>`<button class="${metricModeClass(id)}" data-action="${esc(action)}" data-mode="${id}" aria-pressed="${id===mode}">${hallIcon(icon)}${label}</button>`).join('')}</div>`;
+ return `<div class="metric-modes" role="group" aria-label="${esc(label)}">${metricModes.map(([id,label,icon])=>`<button class="${metricModeClass(id)}" data-action="${esc(action)}" data-mode="${id}" aria-pressed="${id===mode}" ${modeAvailable(id)?'':'disabled title="En construcción"'}>${hallIcon(icon)}${label}${modeAvailable(id)?'':' · En construcción'}</button>`).join('')}</div>`;
 }
 export function metricsMarkup({entries=[],mode='solo',loading=false,error='',showModes=true}={}){
  const selected=entries.filter(e=>e.mode===mode),name=metricModes.find(m=>m[0]===mode)?.[1]||'VS máquina';

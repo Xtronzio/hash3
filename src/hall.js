@@ -1,4 +1,5 @@
 import {profileAccessMarkup} from './profile-access-ui.js';
+import {ONLINE_ENABLED,modeAvailable} from './online-availability.js';
 import {VERSION_LABEL} from './version.js';
 import {machineLevels} from './machine.js';
 import {territoryIcons} from './territory-tools.js';
@@ -64,11 +65,11 @@ function hallBoard(){
   return `<div class="hall-board" aria-hidden="true"><div class="hall-board-cells">${tiles.map(([x,y,symbol,style])=>`<span class="hall-cell ${style}" style="--cx:${x+4};--cy:${y+2}">${boardMark(symbol)}</span>`).join('')}<span class="hall-territory"></span></div></div>`;
 }
 export function hallMarkup({name='',mode='world',modeSelected=true,lastCode='',hasLocal=false}={}){
-  const selected=hallModes.find(m=>m.id===mode)||hallModes[0];
+  const selected=hallModes.find(m=>m.id===mode&&modeAvailable(m.id))||hallModes.find(m=>modeAvailable(m.id));
   return `<section class="hall" aria-labelledby="hall-title"><header class="hall-header"><button class="hall-icon-button" data-action="hall-menu" aria-label="Abrir menú">${hallIcon('menu')}</button><span class="brand heading hall-brand">#3</span><button class="hall-profile" data-action="hall-profile" aria-label="Perfil y estadísticas">${hallIcon('profile')}<span>${escape(name||'Invitado')}</span></button></header>
   <div class="hall-main"><h1 id="hall-title" class="sr-only">Elige cómo jugar a #3</h1>${hallBoard()}
   <button class="hall-play heading mode-${modeSelected?selected.color:'white'}" data-action="hall-play" aria-label="Jugar: ${selected.label}">${hallIcon('play')}<span>Jugar</span><small>${modeSelected?selected.label:''}</small></button>
-  <div class="hall-modes" role="radiogroup" aria-label="Modo de juego">${hallModes.map(m=>`<button class="hall-mode mode-${m.color} ${modeSelected&&selected.id===m.id?'is-selected':''}" role="radio" aria-checked="${modeSelected&&selected.id===m.id}" tabindex="${selected.id===m.id?'0':'-1'}" data-action="hall-mode" data-mode="${m.id}">${hallIcon(m.icon)}<strong class="heading">${m.label}</strong><span>${m.description}</span></button>`).join('')}</div>
+  <div class="hall-modes" role="radiogroup" aria-label="Modo de juego">${hallModes.map(m=>`<button class="hall-mode mode-${m.color} ${modeSelected&&selected.id===m.id?'is-selected':''}" role="radio" aria-checked="${modeSelected&&selected.id===m.id}" tabindex="${selected.id===m.id?'0':'-1'}" data-action="hall-mode" data-mode="${m.id}" ${modeAvailable(m.id)?'':'disabled aria-disabled="true" title="En construcción"'}>${hallIcon(m.icon)}<strong class="heading">${m.label}</strong><span>${modeAvailable(m.id)?m.description:'En construcción'}</span></button>`).join('')}</div>
   <div class="hall-more"><span>Más</span></div><nav class="hall-secondary" aria-label="Más opciones"><button data-action="hall-games">${hallIcon('games')}<strong class="heading">Mis partidas</strong><span>Abrir o retomar</span></button><button data-action="hall-ranking">${hallIcon('ranking')}<strong class="heading">Ranking</strong><span>Tus métricas y clasificación</span></button><button data-action="hall-inventory">${hallIcon('inventory')}<strong class="heading">Inventario</strong><span>Herramientas de prueba</span></button><button data-action="hall-achievements">${hallIcon('achievements')}<strong class="heading">Logros</strong><span>Partidas completadas</span></button></nav>
   <div class="hall-bottom"><button class="ghost small" data-action="hall-help">${hallIcon('help')}Cómo se juega</button><span id="offline-status" class="sr-only" role="status"></span><span class="hall-guest">Acceso como invitado</span></div></div></section>`;
 }
@@ -76,6 +77,7 @@ export function hallDialogMarkup(kind,{name='',mode='world',code='',friendInvite
   const duel=mode==='duel';
   let title,body;
   if(kind==='online'){
+    if(!ONLINE_ENABLED)return `<div class="dialog-backdrop hall-dialog"><section class="dialog" role="dialog" aria-labelledby="hall-dialog-title"><h2 id="hall-dialog-title">En construcción</h2><p>Prueba VS máquina o Sin conexión.</p>${hallReturnButton('hall-home',{home:true})}</section></div>`;
     title=duel?'Duelo':'Mundo';
     body=`<form id="entry-form" class="hall-form">${hallNameField(name)}<button class="primary" type="submit" name="intent" value="create">Crear ${duel?'sala':'sala libre'}</button><div class="hall-or"><span>o entra en una sala</span></div><label for="code">Código de sala</label><input id="code" name="code" placeholder="8 CARACTERES" value="${escape(code)}" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"><label for="preference">Al entrar en un mundo</label><select id="preference" name="preference"><option value="auto">Buscar rival disponible</option><option value="new">Entrar con un amigo · nueva pareja</option></select>${friendInvite?'<p class="instructions">Esta invitación te une a la pareja de quien te la envió.</p>':''}<button type="submit" name="intent" value="join">Entrar en la sala</button></form>`;
     if(duel){body=`<p>Crea un duelo con reloj o por turnos, o entra con el código de tus compañeros.</p><form id="entry-form" class="hall-form">${hallNameField(name)}<button class="primary" type="submit" name="intent" value="create">Crear duelo</button><div class="hall-or"><span>o unirte a un duelo</span></div><label for="code">Código de sala</label><input id="code" name="code" value="${escape(code)}" maxlength="8" placeholder="8 CARACTERES" autocapitalize="characters" autocomplete="off"><button type="submit" name="intent" value="join">Unirme al duelo</button></form>`;}
@@ -83,7 +85,7 @@ export function hallDialogMarkup(kind,{name='',mode='world',code='',friendInvite
   }else if(kind==='offline'){
     title='Sin conexión';body=`<p>Juega contra la máquina o comparte el dispositivo con otra persona. No necesitas cobertura durante la partida.</p><div class="hall-dialog-options"><button data-action="setup-solo">${hallIcon('robot')}Contra la máquina</button><button data-action="setup-local">${boardMark('X')}Dos en este dispositivo</button><button class="ghost" data-action="hall-games">Mis partidas</button></div><p id="offline-status" class="muted"></p>`;
   }else if(kind==='profile'){
-    title='Perfil';body=profileAccessMarkup(name);
+    title='Perfil';body=profileAccessMarkup(name,{online:ONLINE_ENABLED});
 
   }else{
     title='Menú';body=`<p class="menu-version">#3 · ${VERSION_LABEL}</p><div class="hall-dialog-options"><button data-action="hall-profile">${hallIcon('profile')}Perfil</button><button data-action="hall-games">${hallIcon('games')}Mis partidas</button><button data-action="hall-ranking">${hallIcon('ranking')}Ranking y métricas</button><button data-action="hall-inventory">${hallIcon('inventory')}Inventario de práctica</button><button data-action="hall-help">${hallIcon('help')}Cómo se juega</button></div>`;

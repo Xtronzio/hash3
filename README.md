@@ -1,10 +1,12 @@
-# #3 — R0.21.30 (rama de trabajo)
+# #3 — R0.21.31 · Diagnóstico local
 
 ## Territorio vivo · #3_11
 
 Fauna y habitantes aparecen con mayor frecuencia que los fenómenos grandes. Invasores y fenómenos usan ciclos independientes: bases de 66 y 333 colocaciones, escaladas por tamaño. Los efectos conservan grupos de tres y geometrías 3×3. Las invasiones pequeñas permiten actuar a la fauna; ampliar no adelanta ataques. Catálogo, frecuencias, validación y bloqueos en [el diseño de territorio vivo](design/3-11-territorio-vivo.md).
 
-Motor local y migración SQL preparados. Ejecutar `npm test`, `npm run verify:sql`, `npm run simulate:turns -- --quick` y `npm run build:github`. La migración no se ha aplicado al servidor real por timeout; QA táctil pendiente. La web pública permanece en R0.21.28-P1 hasta verificar e integrar el conjunto.
+Territorio vivo disponible para probar en VS máquina y Sin conexión. Duelo y Mundo están desactivados y muestran «En construcción»; la aplicación no inicia llamadas ni renovaciones de sesión Supabase durante esta fase. Conserva partidas, apodo y enlaces guardados. El cron del servidor puede seguir activo: bloquear el navegador no implica consumo total cero.
+
+Perfil incorpora la cuadrícula # con X/O y un icono visible para el enlace privado. La migración SQL está preparada y probada en PostgreSQL desechable, pero no aplicada al servidor real. Habilitar primero Duelo y después Mundo requiere validación remota. La emulación táctil pasa; la prueba física sigue pendiente. Investigación del enlace y cronología en [diagnóstico de Supabase](design/supabase-link-diagnosis.md).
 
 
 ## Fila de navegación · R0.19.9

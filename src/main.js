@@ -1,4 +1,5 @@
 import {snapshotMemo} from './snapshot-memo.js';
+import {ONLINE_ENABLED,ONLINE_NOTICE,modeAvailable} from './online-availability.js';
 import {machineTurnKey} from './machine-turn.js';
 import {copyText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
@@ -86,7 +87,7 @@ const recentInventoryUses=new Map();
 let superHelpPlan=null;
 const pendingInventoryRefills=new Map();
 const madridNow=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-let hallMode='world',hallModeSelected=false,hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
+let hallMode=hallModes.find(mode=>modeAvailable(mode.id)).id,hallModeSelected=false,hallDialog=null,hallReturnAction='hall-play',hallRanking={period:'all',date:madridNow,hour:Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'}).format(new Date())),offset:0},myGames={},gamesRequest=0,rankRequest=0;
 let achievementView=null;
 let metricView='personal',metricMode='solo',metricState={entries:[],loading:false,error:''},metricsRequest=0;
 let previousTarget = null, blinkId = null, activeKey = null, noticeTimer, connected = true;
@@ -94,7 +95,7 @@ const ecologyFocus={};
 const urlCode = new URL(location.href).searchParams.get('sala') || '';
 const urlRival = new URL(location.href).searchParams.get('rival') || '';
 const pairUrlCode=new URL(location.href).searchParams.get('pareja')||'';
-if(urlCode||pairUrlCode)hallDialog='online';
+if(ONLINE_ENABLED&&(urlCode||pairUrlCode))hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
 const above=()=>immediateAbove(humans(),uid,!!room.commonWorld);
@@ -412,7 +413,7 @@ function renderHallDialog() {
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
   else if(hallDialog==='achievements')markup=hallDialogFrame('Logros',achievementsMarkup(loadTerritoryResults(localStorage,localGames()),achievementView||{}),{home:true});
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',`<div class="inventory-catalog">${inventoryMarkup(null,null,{showShortcuts:false})}</div>`,{home:true,actions:inventoryShortcutsMarkup()});
-  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`${metricsModePicker(metricView==='personal'?metricMode:null)}<div class="metrics-classification"><button class="mode-green" data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}">${hallIcon('world')}Clasificación Mundo</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode,showModes:false})}`,{home:true});
+  else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`${metricsModePicker(metricView==='personal'?metricMode:null)}<div class="metrics-classification"><button class="mode-green" data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}" ${modeAvailable('world')?'':'disabled title="En construcción"'}>${hallIcon('world')}Clasificación Mundo${modeAvailable('world')?'':' · En construcción'}</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode,showModes:false})}`,{home:true});
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local,hasPrevious:hallHistory.length>0});
   app.insertAdjacentHTML('beforeend',markup);
@@ -443,7 +444,7 @@ function renderHallDialog() {
     save('hash3_name',name);
     document.querySelector('.profile-identity strong').textContent=name;
     profileStatus('profile-name-status','Apodo guardado en este navegador.','ok');
-    if(read('hash3_profile_token')){
+    if(ONLINE_ENABLED&&read('hash3_profile_token')){
      try{await profileAccess('sync',{name});profileStatus('profile-name-status','Apodo guardado y sincronizado con tu perfil online.','ok');}
      catch(error){profileStatus('profile-name-status','Apodo guardado aquí, pero no se ha sincronizado: '+error.message,'error');}
     }
@@ -539,8 +540,9 @@ async function goToGames(){
  if(timed)notify('La sala sigue jugando. En Mundo no hay pausa; en Duelo puedes solicitarla por votación.');
 }
 async function openMyGames(){
- const request=++gamesRequest;myGames={online:[],loading:navigator.onLine,error:''};
+ const request=++gamesRequest;myGames={online:[],loading:ONLINE_ENABLED&&navigator.onLine,error:''};
  openHallDialog('games','hall-games');
+ if(!ONLINE_ENABLED){myGames.error='Duelo y Mundo · En construcción. Aquí están tus partidas locales.';renderHallDialog();return;}
  if(!navigator.onLine){myGames.error='Sin conexión: puedes abrir tus partidas locales. Las salas online se mostrarán al reconectar.';renderHallDialog();return;}
  try{uid=await ensurePlayer();const next=await command('my_games');if(hallDialog!=='games'||request!==gamesRequest)return;myGames.online=next.games.map(g=>({...g,preview:onlinePreviews.get(`${uid}:${g.id}`)?.room}));}
  catch(error){if(hallDialog!=='games'||request!==gamesRequest)return;myGames.error=error.message||'No se han podido consultar tus salas.';}
@@ -570,6 +572,7 @@ function requestOnlinePreview(game,player,current){
  return previewRequests.request(`${player}:${game.id}`,game.code,()=>current()&&myGames.online?.some(g=>g.id===game.id));
 }
 async function refreshWorldRank(){
+ if(!ONLINE_ENABLED){hallRanking.loading=false;hallRanking.error=ONLINE_NOTICE;if(hallDialog==='ranking')renderHallDialog();return;}
  const request=++rankRequest;hallRanking.loading=true;hallRanking.error='';if(hallDialog==='ranking')renderHallDialog();
  if(!navigator.onLine){hallRanking.loading=false;hallRanking.error='El Ranking de Mundo necesita conexión.';if(hallDialog==='ranking')renderHallDialog();return;}
  try{uid=await ensurePlayer();const next=await command('world_rank',{period:hallRanking.period,date:hallRanking.date,hour:Number(hallRanking.hour),offset:hallRanking.offset});if(request!==rankRequest)return;hallRanking.data=next;}
@@ -577,6 +580,7 @@ async function refreshWorldRank(){
  if(request===rankRequest){hallRanking.loading=false;if(hallDialog==='ranking')renderHallDialog();}
 }
 async function refreshMetrics(){
+ if(!ONLINE_ENABLED){metricState={entries:[],loading:false,error:''};renderHallDialog();return;}
  const request=++metricsRequest;metricState.loading=navigator.onLine;metricState.error='';renderHallDialog();
  if(!navigator.onLine){metricState.error='Sin conexión: se muestran tus partidas locales. Conecta para consultar Mundo y Duelo.';renderHallDialog();return;}
  try{uid=await ensurePlayer();const next=await command('my_metrics');if(request!==metricsRequest)return;metricState.entries=next.entries||[];}
@@ -615,6 +619,7 @@ function timeModeSelector(id,value='timed'){
 }
 
 function playHallMode() {
+  if(!modeAvailable(hallMode)){notify(ONLINE_NOTICE);return;}
   if(hallMode==='solo'){localSetup='solo';renderLocalSetup();}
   else openHallDialog(hallMode==='offline'?'offline':'online');
 }
@@ -767,7 +772,7 @@ app.addEventListener('click',async e=>{
   if(action==='pair-share'){const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('pareja',pairLobby.code);await copyGameCode(url.href,'Invitación de pareja');return;}
 
   if(action==='hall-mode'){
-    if(!hallModes.some(m=>m.id===b.dataset.mode))return;hallMode=b.dataset.mode;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
+    if(!hallModes.some(m=>m.id===b.dataset.mode)||!modeAvailable(b.dataset.mode))return;hallMode=b.dataset.mode;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
   }
   if(action==='hall-play'){playHallMode();return;}
   if(action==='hall-home'){if(!pendingDelete){hallHistory=[];closeHallDialog();}return;}
@@ -870,9 +875,9 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&worldMapOpen){e.preventDefault();worldMapOpen=false;document.querySelector('.world-map').hidden=true;document.querySelector('.game-minimap')?.focus({preventScroll:true});return;}
   const radio=e.target.closest?.('.hall-modes [role="radio"]');
   if(radio&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
-    e.preventDefault();const i=hallModes.findIndex(m=>m.id===radio.dataset.mode),step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
-    const next=e.key==='Home'?0:e.key==='End'?hallModes.length-1:(i+step+hallModes.length)%hallModes.length;
-    hallMode=hallModes[next].id;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
+    e.preventDefault();const enabled=hallModes.filter(m=>modeAvailable(m.id)),i=enabled.findIndex(m=>m.id===radio.dataset.mode),step=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
+    const next=e.key==='Home'?0:e.key==='End'?enabled.length-1:(i+step+enabled.length)%enabled.length;
+    hallMode=enabled[next].id;hallModeSelected=true;renderHome();document.querySelector(`[data-mode="${hallMode}"][role="radio"]`)?.focus();return;
   }
   if(pauseMapOpen){
     if(e.key==='Escape'){e.preventDefault();pauseMapOpen=false;renderPaused();document.querySelector('[data-action="expand-pause-map"]')?.focus({preventScroll:true});return;}
@@ -894,6 +899,7 @@ document.addEventListener('keydown',e=>{
   }
 });
 async function poll() {
+  if(!ONLINE_ENABLED)return;
   if(pairLobby&&!busy&&!polling&&!document.hidden){polling=true;const code=pairLobby.code;try{const next=await command('pair_get',{code});if(pairLobby?.code===code)acceptPair(next);}catch(error){notify(error.message);}finally{polling=false;}return;}
   if(!room||isLocal()||room.status==='finished'||polling||busy||document.hidden)return;
   polling=true;const currentCode=room.code;
@@ -911,17 +917,17 @@ setInterval(poll,1800);
 async function init(){
  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
  renderHome();
- if(incoming){
+ if(ONLINE_ENABLED&&incoming){
   try{await loadProfileAccess(profileUrl(incoming,location.href));}
   catch(error){hallDialog='profile';renderHome();profileStatus('profile-restore-status','No se pudo cargar automáticamente: '+error.message+' Puedes volver a intentarlo desde aquí.','error');}
   return;
  }
  if(hasProfile){
   hallDialog='profile';renderHome();
-  profileStatus('profile-restore-status','El enlace no tiene el formato correcto. Tu perfil actual se conserva.','error');
+  profileStatus('profile-restore-status',ONLINE_ENABLED?'El enlace no tiene el formato correcto. Tu perfil actual se conserva.':'Perfil online · En construcción. Tu acceso guardado se conserva.',ONLINE_ENABLED?'error':'info');
   return;
  }
-  const pendingPair=read('hash3_pair');if(pendingPair&&navigator.onLine){try{uid=await ensurePlayer();acceptPair(await command('pair_get',{code:pendingPair}));return;}catch{save('hash3_pair',null);}}
+  const pendingPair=read('hash3_pair');if(ONLINE_ENABLED&&pendingPair&&navigator.onLine){try{uid=await ensurePlayer();acceptPair(await command('pair_get',{code:pendingPair}));return;}catch{save('hash3_pair',null);}}
   try{
     if(sessionStorage.getItem('hash3_restore_local')==='1'){
       sessionStorage.removeItem('hash3_restore_local');

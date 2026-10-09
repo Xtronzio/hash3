@@ -81,10 +81,10 @@ test('La máquina usa el mismo stock y respeta bloqueos e imposiciones en Alto y
 
 test('Inventario de máquina desactivado por defecto y validado también por el árbitro',()=>{
  let r=createLocal('solo','A','',now,'advanced','timed','pro','O');assert.equal(r.machineInventory,false);assert.equal(r.level,'advanced');assert.equal(r.difficulty,'pro');
- assert.equal(chooseMachineCard(r,now),null);assert.equal(canUsePracticeTool(r,'local-x','double',now),false);
+ assert.equal(chooseMachineCard(r,now),null);assert.equal(canUsePracticeTool(r,'local-x','double',now),false);assert.equal(r.players[0].inventory.cards.double,1);
  assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now));
- const action=chooseMachineMove(r,()=>0,{maxTimeMs:20,maxNodes:1000});assert.equal(action.action,'move');r=localCommand(r,action.action,action.payload,now);
- assert.equal(canUsePracticeTool(r,'local-o','double',now),true);assert.equal(r.players[0].inventory.cards.double,1);
+ const action=chooseMachineMove(r,()=>0,{maxTimeMs:20,maxNodes:1000});assert.equal(action.action,'move');r=localCommand(r,action.action,action.payload,now,()=>0);
+ assert.equal(canUsePracticeTool(r,'local-o','double',now),true);
  r=localCommand(r,'pause',{},now+1000);r=localCommand(r,'resume',{},now+86400000);assert.equal(r.machineInventory,false);
  const enabled=createLocal('solo','A','',now,'normal','timed','medium','O',true);assert.equal(canUsePracticeTool(enabled,'local-x','double',now),true);
  const legacy=structuredClone(enabled);delete legacy.machineInventory;assert.equal(chooseMachineCard(legacy,now),null);

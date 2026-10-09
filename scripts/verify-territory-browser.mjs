@@ -15,6 +15,8 @@ await server.listen();
 const origin=`http://127.0.0.1:${server.httpServer.address().port}`;
 const browser=await chromium.launch({args:['--no-sandbox']});
 const results=[];
+const onlineRequests=[];
+const track=context=>context.on('request',request=>{if(new URL(request.url()).hostname.endsWith('.supabase.co'))onlineRequests.push(request.url());});
 function fixture(size,kind='invader-colony'){
  const now=Date.now(),r=createLocal('local','Colono X','Colono O',now,'normal','untimed');
  r.terrain=Array.from({length:size},(_,i)=>({x:i%Math.ceil(Math.sqrt(size)),y:Math.floor(i/Math.ceil(Math.sqrt(size)))}));
@@ -65,6 +67,7 @@ async function pinch(page){
 try{
  for(const viewport of [{width:390,height:844},{width:1024,height:768}]){
   const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,serviceWorkers:'block'});
+  track(context);
   for(const size of [999,33333]){
    const {page,errors}=await load(context,fixture(size));
    const started=Date.now();
@@ -93,6 +96,7 @@ try{
   await context.close();
  }
  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:'block'});
+ track(context);
  for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
   const {page,errors}=await load(context,fixture(999,kind));
   await page.locator(`[data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
@@ -138,6 +142,31 @@ try{
  assert.equal(profileLayout.scrollX,0);assert.equal(profileLayout.scrollY,0);
  await profile.screenshot({path:path.join(output,'profile-mobile.png')});assert.deepEqual(profileErrors,[]);
  results.push({profileMobile:true,passed:true});await profile.close();
+ for(const mode of ['solo','offline']){
+  const isolated=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:'block'});track(isolated);
+  const page=await isolated.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/version.json*',route=>route.fulfill({status:404,body:''}));
+  await page.addInitScript(()=>{
+   localStorage.setItem('hash3_pair','OLDPAIR1');localStorage.setItem('hash3_room','OLDROOM1');
+   localStorage.setItem('sb-vyzugvepzylidyxitojo-auth-token',JSON.stringify({access_token:'expired.test.session',refresh_token:'diagnostic-only',expires_at:1,user:{id:'11111111-1111-4111-8111-111111111111'}}));
+  });
+  await page.goto(origin+'?sala=OLDROOM1&pareja=OLDPAIR1');
+  for(const id of ['duel','world'])assert.equal(await page.locator(`.hall-mode[data-mode="${id}"]`).isDisabled(),true);
+  if(mode==='solo')await page.screenshot({path:path.join(output,'hall-local-diagnosis.png')});
+  await page.locator(`.hall-mode[data-mode="${mode}"]`).tap();await page.locator('[data-action="hall-play"]').tap();
+  if(mode==='offline')await page.locator('[data-action="setup-local"]').tap();
+  await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
+  await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();await frame(page);
+  await isolated.setOffline(true);
+  await page.locator('.board .available').first().tap();
+  await page.waitForFunction(minimum=>JSON.parse(localStorage.getItem('hash3_locals'))?.[0]?.cells.length>=minimum,mode==='solo'?2:1,{timeout:15000});
+  const local=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(local.mode,mode==='solo'?'solo':'local');assert.ok(local.cells.length>=(mode==='solo'?2:1));
+  const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
+  await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+ }
+ assert.deepEqual(onlineRequests,[],'Local diagnosis contacted Supabase');
+ results.push({supabaseRequests:0,passed:true});
  await context.close();
  console.log(JSON.stringify({browser:browser.version(),physicalDevice:false,results},null,2));
 }catch(error){

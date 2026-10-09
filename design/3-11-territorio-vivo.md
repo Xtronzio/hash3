@@ -2,7 +2,7 @@
 
 Los jugadores son **COLONOS**. El territorio combina fauna, habitantes, invasores y fenómenos naturales o estelares. Los efectos conservan la relación con el 3; las frecuencias responden al impacto en el juego, según la indicación de Jorge del 9 de octubre de 2026.
 
-Fuente: `feature/3-11-territorio-vivo`, PR borrador #1. `main` continúa en R0.21.28-P2. Esta rama no está publicada ni aplicada al Supabase real.
+Primera implementación: `feature/3-11-territorio-vivo`, PR borrador #1. Revisión R0.21.31: `release/local-diagnostics`, autorizada el 9 de octubre para publicar exclusivamente VS máquina y Sin conexión. Duelo y Mundo permanecen desactivados. La migración no está aplicada al Supabase real.
 
 ## Efectos
 
@@ -56,7 +56,7 @@ Resultados de secuencias y rendimiento: `benchmarks/territory-r02130-turns.json`
 
 1. El Supabase real `vyzugvepzylidyxitojo` devuelve timeout incluso en consultas simples. La migración está preparada y probada localmente, **no aplicada**. Verificar migraciones previas, aplicar con el flujo de migraciones y validar Mundo/Duelo y asesores sobre el servidor antes de promoción.
 2. QA de navegador completada: la descarga alternativa de Playwright ha permitido ejecutar Chromium. Pasan los gestos táctiles emulados y la revisión de capturas; sigue pendiente una partida en dispositivo físico (especialmente Safari/iOS). Los resultados están en `benchmarks/territory-r02130-browser.json`.
-3. Mantener PR borrador, sin integrar a `main` ni publicar Pages parcialmente. Una vez resueltos servidor y comprobación física, ejecutar el pipeline oficial y verificar la versión pública.
+3. El alcance inicial conjunto fue sustituido expresamente por Jorge el 9 de octubre: publicar R0.21.31 para diagnóstico local con Duelo y Mundo en construcción. El servidor y QA física siguen siendo requisitos para habilitar las modalidades online; no bloquean esta revisión local.
 
 ## Compatibilidad con Perfil
 
