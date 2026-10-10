@@ -1,3 +1,4 @@
+import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
@@ -83,24 +84,24 @@ test('Legacy colony warning migration keeps its deadline, seeds once and never s
 test('Saved defensive roles clean invasion marks, including anchors, preserving terrain',()=>{
  for(const role of ['build','destroy']){
   const r=board(99);r.cells=[piece('*',1,0)];r.works=[{id:'defender',kind:'work',role,build:role==='build'?[{x:1,y:0}]:[],destroy:role==='destroy'?[{x:1,y:0}]:[],done:0,nextAt:34000}];
-  advanceHabitats(r,34000,()=>0);assert.equal(r.cells.length,0);assert.equal(r.terrain.length,99);assert.equal(r.works.length,0);
+  completeEventTurns(r,34000);assert.equal(r.cells.length,0);assert.equal(r.terrain.length,99);assert.equal(r.works.length,0);
  }
- const r=board();r.cells=[piece('*',0,0)];r.works=[{id:'anchor',kind:'work',role:'destroy',build:[],destroy:[{x:0,y:0}],done:0,nextAt:34000}];advanceHabitats(r,34000);assert.equal(r.cells.length,0);assert.equal(r.terrain.length,333);
+ const r=board();r.cells=[piece('*',0,0)];r.works=[{id:'anchor',kind:'work',role:'destroy',build:[],destroy:[{x:0,y:0}],done:0,nextAt:34000}];completeEventTurns(r,34000);assert.equal(r.cells.length,0);assert.equal(r.terrain.length,333);
 });
 test('Habitant births prioritise invaded cells and supply builders alongside reconquerers',()=>{
  const r=board();r.cells=Array.from({length:6},(_,i)=>piece('*',i+1,0));
  countHabitatPlacement(r,'local-x',{x:20,y:5},1000,()=>0);const z=r.habitatZones[0];z.next.work=z.placements+1;z.next.rodent=z.next.worm=9999;
  countHabitatPlacement(r,'local-o',{x:20,y:5},1001,()=>0);assert.equal(r.works.length,3);assert.ok(r.works.every(w=>w.reconquer));
- advanceHabitats(r,34001,()=>0);assert.equal(r.cells.length,4);assert.equal(r.terrain.length,336);
+ completeEventTurns(r,34001);assert.equal(r.cells.length,4);assert.equal(r.terrain.length,336);
 });
 test('Worm successful appearance batches progress 3,6,9,9 without counting failed births or individuals',()=>{
  const r=board(999);r.territoryEnabled=false;r.cells=Array.from({length:25},(_,i)=>piece('O',i,0));
  countHabitatPlacement(r,'local-x',{x:30,y:5},1000,()=>0);
- const z=r.habitatZones[0];z.next.rodent=z.next.work=1000000;z.clockNext.rodent=z.clockNext.work=1000000;
+ const z=r.habitatZones[0];z.next.rodent=z.next.work=1000000;
  for(const limit of [3,6,9,9]){
   r.worms=[];z.next.worm=z.placements+1;z.credit.worm=0;
   countHabitatPlacement(r,'local-x',{x:30,y:5},1001,()=>0);
-  assert.equal(r.worms.length,2);assert.ok(r.worms.every(w=>w.mealLimit===limit));assert.ok(r.worms.every(w=>!('nextAt'in w)));
+  assert.equal(r.worms.length,limit===3||limit===9&&r.wormAppearances===2?1:6);completeEventTurns(r,1001);assert.ok(r.worms.every(w=>w.mealLimit===limit));assert.ok(r.worms.every(w=>!('nextAt'in w)));
  }
  assert.equal(r.wormAppearances,4);r.worms=[];r.cells=[];z.next.worm=z.placements+1;countHabitatPlacement(r,'local-x',{x:30,y:5},1002,()=>0);assert.equal(r.wormAppearances,4);
 });
@@ -119,7 +120,7 @@ test('Doble, inventory, expansion, pauses and ticks preserve turn-worm progress 
  r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},1001);r=localCommand(r,'move',{x:0,y:0},1002);assert.equal(r.worms[0].eaten,0);
  r=localCommand(r,'pause',{},1003);const copy=structuredClone(r.worms);assert.equal(localCommand(r,'tick',{},999999),r);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},999999);assert.deepEqual(r.worms,copy);
  r=localCommand(r,'move',{x:1,y:0},999999);assert.equal(r.worms[0].eaten,1);assert.equal(r.worms[0].turnsSinceMeal,0);
- assert.equal(ecologyClockEvents(r,'worm').length,0);assert.match(ecologyWarningsMarkup(r),/Gusanos: próxima comida en 3 turnos/);assert.doesNotMatch(eventOutlookMarkup(r,'local-x'),/1\/6 comidas/);
+ assert.equal(ecologyClockEvents(r,'worm').length,0);assert.match(eventOutlookMarkup(r,'local-x'),/3<small>turnos hasta comer/);assert.doesNotMatch(eventOutlookMarkup(r,'local-x'),/1\/6 comidas/);
 });
 test('R36 saves retain the entire board, scores, bag and pins when worms migrate; finished records stay unchanged',()=>{
  const r=board(991);r.players[0].score=25912;r.players[0].placements=1422;r.worms=[{id:'old',x:20,y:0,eaten:1,body:[{x:20,y:0}],nextAt:10000}];delete r.wormLifecycleVersion;delete r.wormAppearances;delete r.invasionVersion;
@@ -132,7 +133,7 @@ test('Tactical refill weights increase piece inventory while keeping all bag and
  assert.ok(TACTICAL_CARDS.every(t=>inventoryDrawWeight(t)===3));assert.ok(practiceTools.filter(t=>!TACTICAL_CARDS.includes(t.id)).every(t=>inventoryDrawWeight(t.id)===1));
  const rng=random(21);let tactical=0,total=0;
  for(let i=0;i<3000;i++){const r=board(9);for(const t of practiceTools)r.players[0].inventory.cards[t.id]=0;completeInventoryTurn(r,'local-x',{random:rng});tactical+=TACTICAL_CARDS.includes(r.players[0].inventory.lastDraw);total++;}
- assert.ok(tactical/total>.58&&tactical/total<.68);
+ const expected=TACTICAL_CARDS.length*3/practiceTools.reduce((n,t)=>n+inventoryDrawWeight(t.id),0);assert.ok(Math.abs(tactical/total-expected)<.04);
  const r=board(9);for(let i=0;i<300;i++)completeInventoryTurn(r,'local-x',{random:rng});const counts=Object.values(r.players[0].inventory.cards);assert.ok(counts.reduce((a,b)=>a+b,0)<=MAX_CARDS);assert.ok(counts.every(n=>n<=MAX_PER_CARD));assert.ok(counts.filter(Boolean).length<=MAX_CARD_TYPES);
 });
 test('Borders require exactly three unique empty orthogonally contiguous choices; illegal selection preserves the bag',()=>{

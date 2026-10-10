@@ -1,3 +1,4 @@
+import {turnEcology,eventTurns} from './turn-ecology.js';
 import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {terrainOf,key} from './game.js';
 import {territoryEnabled,faunaSuspended} from './ecology.js';
@@ -28,6 +29,7 @@ export const territoryIcons={
  'invader-rain':'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/><path d="m9 19 12 0m-6-6v12"/>',
  'invader-colony':'<rect x="3" y="3" width="26" height="26" rx="2"/><path d="M12 3v26M20 3v26M3 12h26M3 20h26m3-14 3 3m0-3-3 3m12 13 4 4m0-4-4 4"/>'
 };
+territoryIcons.contagion=territoryIcons.pandemic;territoryIcons.tornado='<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>';
 export function initializeTerritory(room){
  room.territoryEvents||=[];
  initializeInvasions(room);
@@ -35,9 +37,9 @@ export function initializeTerritory(room){
   const now=room.clockNow??Date.now();
   room.territoryNextPlacement=territoryPlacements(room)+livingAttempt(room,'natural');
   room.territoryNextInvasion=territoryPlacements(room)+livingAttempt(room,'invaders');
-  room.territoryNextNaturalAt=now+livingFirstClock(room,'natural');room.territoryNextInvaderAt=now+livingFirstClock(room,'invaders');
+  if(!turnEcology(room)){room.territoryNextNaturalAt=now+livingFirstClock(room,'natural');room.territoryNextInvaderAt=now+livingFirstClock(room,'invaders');}
   room.livingTerritoryVersion=1;room.territoryActivityVersion=4;
-  if(room.status==='paused'){room.territoryNextNaturalAtRemaining=livingFirstClock(room,'natural');room.territoryNextInvaderAtRemaining=livingFirstClock(room,'invaders');}
+  if(room.status==='paused'&&!turnEcology(room)){room.territoryNextNaturalAtRemaining=livingFirstClock(room,'natural');room.territoryNextInvaderAtRemaining=livingFirstClock(room,'invaders');}
  }
  // Adopt current terrain without firing historical growth again.
  room.territoryMilestone??=Math.floor(terrainOf(room).length/333);
@@ -101,7 +103,7 @@ function announceTerritory(room,now,random,trigger,family){
  const size=terrainOf(room).length,milestone=Math.floor(size/333);
  room.territoryMilestone=Math.max(room.territoryMilestone,milestone);
  room[family==='invaders'?'territoryNextInvasion':'territoryNextPlacement']=territoryPlacements(room)+(livingAttempt(room,family)??territoryAttemptInterval(size,family));
- if(localLiving(room))room[family==='invaders'?'territoryNextInvaderAt':'territoryNextNaturalAt']=now+livingEventClock(room,family);
+ if(localLiving(room)&&!turnEcology(room))room[family==='invaders'?'territoryNextInvaderAt':'territoryNextNaturalAt']=now+livingEventClock(room,family);
  const choice=pickEventKind(room,family,random);
  for(const kind of choice.order){
   const planned=kind==='ufo'?territoryRegion(room,'ufo',random,impactCount(room,kind)):
@@ -111,12 +113,12 @@ function announceTerritory(room,now,random,trigger,family){
   if(!region?.length)continue;
   // All event parameters live in territory-event-rules.js. No work here
   // depends on rendering, navigation or the size of the visible window.
-  if(family!=='invaders')for(const e of [...(room.worms||[]).filter(w=>!isTurnWorm(w)),...(room.works||[]),...(room.bombs||[])])
+  if(family!=='invaders'&&!turnEcology(room))for(const e of [...(room.worms||[]).filter(w=>!isTurnWorm(w)),...(room.works||[]),...(room.bombs||[])])
    if(e.remainingMs==null)e.remainingMs=Math.max(0,(e.nextAt||now+33000)-now);
   confirmEventKind(room,choice,kind);
   room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,trigger,region,
    ...(planned.groups?{groups:planned.groups}:{}),...(planned.paths?{paths:planned.paths}:{}),...(planned.approaches?{approaches:planned.approaches}:{}),...(planned.seeded?{seeded:true}:{}),x:region[0].x,y:region[0].y,
-   nextAt:now+EVENT_BALANCE.warningMs});return true;
+   ...(turnEcology(room)?{turnsRemaining:3,announcedTurn:room.ecologyTurns||0}:{nextAt:now+EVENT_BALANCE.warningMs})});return true;
  }
  // An impossible attack is skipped, never queued up for a later burst.
  confirmEventKind(room,choice);
@@ -130,19 +132,19 @@ export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.rand
 }
 export function territoryPlacementDue(room,now=Date.now(),increment=0,{naturalOnly=false}={}){
  return territoryEnabled(room)&&territoryReady(room)&&!room.territoryEvents?.length&&!faunaSuspended(room,now)&&
-  (!localLiving(room)||!room.endsAt||Date.parse(room.endsAt)-now>=EVENT_BALANCE.warningMs)&&
-  (territoryPlacements(room)+increment>=room.territoryNextPlacement||localLiving(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&(territoryPlacements(room)+increment>=room.territoryNextInvasion||localLiving(room)&&now>=room.territoryNextInvaderAt));
+  (turnEcology(room)||!localLiving(room)||!room.endsAt||Date.parse(room.endsAt)-now>=EVENT_BALANCE.warningMs)&&
+  (territoryPlacements(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&(territoryPlacements(room)+increment>=room.territoryNextInvasion||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextInvaderAt));
 }
 export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random){
  initializeTerritory(room);if(!territoryPlacementDue(room,now))return false;
- const family=territoryPlacements(room)>=room.territoryNextPlacement||localLiving(room)&&now>=room.territoryNextNaturalAt?'natural':'invaders';
+ const family=territoryPlacements(room)>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt?'natural':'invaders';
  return announceTerritory(room,now,random,'placements',family);
 }
 export function advanceTerritory(room,now=Date.now()){
  initializeTerritory(room);if(room.status!=='playing'||!territoryEnabled(room))return [];
  const actions=[];
  for(const event of [...room.territoryEvents]){
-  if(event.remainingMs!=null||event.nextAt>now)continue;
+  if(turnEcology(room)?event.turnsRemaining>0:event.remainingMs!=null||event.nextAt>now)continue;
   const before=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
   const {hit,actions:changes,demolish}=applyPlannedEvent(room,event,now);
   const removed=new Set([...hit].map(k=>before.get(k)?.id).filter(Boolean));
@@ -178,7 +180,7 @@ export function advanceTerritory(room,now=Date.now()){
 }
 export function territoryNotice(room,now=Date.now()){
  return (room.territoryEvents||[]).map(e=>eventLabel(e.kind)+': '+e.region.length+
-  ' celdas afectadas · en '+Math.max(0,Math.ceil((e.remainingMs??e.nextAt-now)/1000))+' s').join(' · ');
+  ' celdas afectadas · en '+(turnEcology(room)?eventTurns(e)+' turnos':Math.max(0,Math.ceil((e.remainingMs??e.nextAt-now)/1000))+' s')).join(' · ');
 }
 
 export function rebalanceAfterTerritory(room,now=Date.now()){
@@ -189,7 +191,7 @@ export function rebalanceAfterTerritory(room,now=Date.now()){
  let rats=localLiving(room)?unit*3:Math.ceil(size*3/333);
  room.rodentRaids=(room.rodentRaids||[]).filter(r=>known.has(key(r.x,r.y))).flatMap(r=>{const count=Math.min(r.count,rats);rats-=count;return count?[{...r,count}]:[];});
  if(!localLiving(room))for(const zone of room.habitatZones||[]){zone.credit={};for(const [kind,n]of Object.entries(HABITAT_FREQUENCIES))zone.next[kind]=zone.placements+habitatInterval(n,size);}
- room.ecologyRecovery={until:now+EVENT_BALANCE.recoveryMs,moves:EVENT_BALANCE.recoveryMoves};
+ room.ecologyRecovery=turnEcology(room)?{moves:3}:{until:now+EVENT_BALANCE.recoveryMs,moves:EVENT_BALANCE.recoveryMoves};
  room.ecologyRecalibration={at:now,size,pieces:room.cells.length,before,after:{rodents:room.rodentRaids.reduce((n,r)=>n+r.count,0),worms:room.worms.length,workers:room.works.length}};
- for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...(room.bombs||[])])e.remainingMs=EVENT_BALANCE.recoveryMs;
+ if(!turnEcology(room))for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...(room.bombs||[])])e.remainingMs=EVENT_BALANCE.recoveryMs;
 }

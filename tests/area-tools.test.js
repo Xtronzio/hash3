@@ -1,3 +1,4 @@
+import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
@@ -110,7 +111,7 @@ test('Saved old edge barriers remain readable and bombable',()=>{
 test('An automatic bomb breaks the unbuilt wall cell without building or deleting terrain',()=>{
  const r=card(expanding(),'frontier',{x:3,y:0,side:'south'}),terrain=structuredClone(r.terrain);
  r.bombs=[{id:'auto',player:'local-x',x:3,y:0,blast:frontierCells(r),nextAt:now+1000}];
- advanceHabitats(r,now+1000);assert.equal(r.frontiers.length,0);assert.equal(r.bombs.length,0);assert.deepEqual(r.terrain,terrain);
+ completeEventTurns(r,now+1000);assert.equal(r.frontiers.length,0);assert.equal(r.bombs.length,0);assert.deepEqual(r.terrain,terrain);
 });
 test('Only the expander can place Frontier before the 3×3; it preserves the phase, deadline and next-turn allowance',()=>{
  for(const timeMode of ['timed','untimed']){

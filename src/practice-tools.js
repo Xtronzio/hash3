@@ -1,3 +1,5 @@
+import {microLength,microExpansionOptions} from './micro-expansion.js';
+import {pendingInvasionBombs} from './pending-bombs.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
 import {migrateLegacyWalls} from './wall-migration.js';
 import {boardCellLimit} from './board-limits.js';
@@ -12,11 +14,13 @@ export const practiceTools=[
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
   {id:'rival',label:'Ficha rival',description:'Obliga al rival a poner una ficha de tu color en su próxima colocación. Esa figura puntúa para tu símbolo.',button:'Activar ficha rival'},
   {id:'erase',label:'Borrar',description:'Borra una ficha rival y después juega. Tus propias fichas no se pueden borrar.',button:'Elegir ficha rival'},
-  {id:'shift',label:'Desplazar',description:'Mueve una ficha rival a una celda vacía. Conserva su símbolo y dueño; las figuras nuevas puntúan para ese símbolo.',button:'Mover ficha rival'},
+  {id:'shift',label:'Desplazar',description:'Mueve una ficha rival a una celda vacía o una bomba de bombardeo pendiente a otra casilla válida sin reiniciar el preaviso. Conserva su símbolo y dueño; las figuras nuevas puntúan para ese símbolo.',button:'Mover ficha rival'},
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
   {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',group:'help',label:'Ayuda de movimiento',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'activate',label:'Construir celda',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
+  {id:'expand-2',label:'Ampliación 2×1',description:'Añade dos celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar dos celdas'},
+  {id:'expand-3',label:'Ampliación 3×1',description:'Añade tres celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar tres celdas'},
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos; las figuras nuevas al aterrizar puntúan para X y O. Conserva símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
@@ -61,8 +65,9 @@ export function toolAllowance(game,playerId){
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
-export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
+export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[],orientation='horizontal'}={}){
   const p=game?.pairs?.[0];if(!p)return [];
+  if(['expand-2','expand-3'].includes(tool))return microExpansionOptions(game,microLength(tool),orientation);
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
   if(tool==='border')return borderOptions(game,selected);
@@ -84,7 +89,7 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=
   }
   if(tool==='block'){const protectedKeys=protectedTerritoryKeys(game);return availableCells(game,p).filter(c=>!protectedKeys.has(key(c.x,c.y))&&!game.inventoryEffects?.blocks?.some(e=>e.x===c.x&&e.y===c.y&&e.remaining>0));}
   if(tool==='shield')return game.cells.filter(c=>linked.has(key(c.x,c.y))&&c.owner===playerId&&!isShielded(game,c));
-  return game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c)&&(c.symbol!=='#'||tool==='erase'));
+  return [...game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c)&&(c.symbol!=='#'||tool==='erase')), ...(tool==='shift'?pendingInvasionBombs(game).map(b=>({...b,bombId:b.id,symbol:'bomb',owner:null})):[])];
 }
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];
@@ -95,6 +100,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
     if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
     if(tool==='border')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&borderChains(game,1).length>0;
     if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierOptions(game,'north',playerId).length>0;
+    if(microLength(tool))return toolAllowance(game,playerId).remaining>0&&!practiceTurn(game,playerId).used.includes(tool)&&(toolCells(game,playerId,tool).length>0||microExpansionOptions(game,microLength(tool),'vertical').length>0);
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
   if(tool==='hint-expand')return canRequestStrategicExpansion(game,playerId)&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now);
@@ -112,10 +118,10 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='double')return availableCells(game,p).length>=2;
   if(tool==='rival')return !game.players.some(v=>v.id!==playerId&&isImmune(game,v.id))&&!game.inventoryEffects?.forced?.some(e=>e.player!==playerId);
   if(tool==='hint')return availableCells(game,p).length>0;
-  if(tool==='shift'&&!availableCells(game,p).length)return false;
+  if(tool==='shift'&&!availableCells(game,p).length&&!pendingInvasionBombs(game).length)return false;
   if(tool==='block'&&availableCells(game,p).length<2)return false;
   if(tool==='border')return borderChains(game,1).length>0;
-  return toolCells(game,playerId,tool).length>0;
+  return toolCells(game,playerId,tool).length>0||['expand-2','expand-3'].includes(tool)&&microExpansionOptions(game,microLength(tool),'vertical').length>0;
 }
 export function spendCard(game,playerId,tool){
   initializeInventory(game);const player=game.players.find(p=>p.id===playerId);

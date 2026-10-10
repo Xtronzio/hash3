@@ -1,3 +1,4 @@
+import {turnOutlook,turnOutlookMarkup,turnWarningsMarkup} from './turn-event-ui.js';
 import {neutralFrequency} from './neutral.js';
 import {isTurnWorm,wormTurnsToMeal} from './worm-turns.js';
 import {localLiving,LIVING_FREQUENCIES,livingMinimum,livingAttempt,livingFirstClock} from './living-balance.js';
@@ -10,6 +11,7 @@ import {ecologySeconds} from './ecology-clock.js';
 import {ecologyIcon,ecologyNames} from './ecology-navigation.js';
 
 export function eventOutlook(game,playerId,now=game.clockNow??Date.now()){
+ if(game.turnEcologyVersion===1)return turnOutlook(game,playerId);
  const rows=[],suspended=faunaSuspended(game,now)||(game.ecologyRecovery?.remainingMs??0)>0;
  for(const kind of ['rodent','worm','work']){
   const frequency=(localLiving(game)?LIVING_FREQUENCIES:HABITAT_FREQUENCIES)[kind];
@@ -27,6 +29,7 @@ export function eventOutlook(game,playerId,now=game.clockNow??Date.now()){
 
 // Prepared once per snapshot. Clock updates only touch the displayed digits.
 export function ecologyWarningsMarkup(game,now=game.clockNow??Date.now()){
+ if(game.turnEcologyVersion===1)return turnWarningsMarkup(game);
  const groups=new Map();
  const events=[...(game.worms||[]).filter(w=>!isTurnWorm(w)).map(e=>({...e,kind:'worm'})),...(game.works||[]).map(e=>({...e,kind:'build'})),...(game.bombs||[]).map(e=>({...e,kind:'bomb'})),...(game.territoryEvents||[])];
  for(const e of events){const prior=groups.get(e.kind);if(!prior||ecologySeconds(e,now)<ecologySeconds(prior,now))groups.set(e.kind,e);}
@@ -39,6 +42,7 @@ export function ecologyWarningsMarkup(game,now=game.clockNow??Date.now()){
 }
 
 export function eventOutlookMarkup(game,playerId){
+ if(game.turnEcologyVersion===1)return turnOutlookMarkup(game,playerId);
  const {rows,timed,recovery}=eventOutlook(game,playerId);
  const icons=kind=>kind==='invaders'?['invader-rain','invader-colony'].map(ecologyIcon).join(''):kind==='territory'?['meteorites','ufo','blackhole'].map(ecologyIcon).join(''):kind==='work'?ecologyIcon('build')+ecologyIcon('destroy'):ecologyIcon(kind);
  const label=kind=>kind==='invaders'?'Invasores':kind==='territory'?'Fenómenos naturales y estelares':kind==='work'?'Constructores y reconquistadores':ecologyNames[kind];

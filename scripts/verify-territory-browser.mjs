@@ -7,7 +7,7 @@ import {createServer} from 'vite';
 import {createLocal,localCommand} from '../src/local.js';
 import {seedInvasions,advanceInvasions} from '../src/invasion-paths.js';
 import {initializeHabitats} from '../src/inhabitants.js';
-import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
+import {LOCAL_NATURAL_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
 import {plannedEventRegion} from '../src/territory-event-actions.js';
 
 const output=path.resolve(process.env.HASH3_QA_OUTPUT||'browser-results');
@@ -25,15 +25,16 @@ function fixture(size,kind='invader-colony'){
  r.players.forEach(p=>{p.figures=333;p.score=999;p.inventory.cards={tornado:1,bomb:1,frontier:1,'hint-expand':1};});
  r.cells=[{id:'invader',x:2,y:2,symbol:'*',owner:null},{id:'x',x:3,y:3,symbol:'X',owner:'local-x'},{id:'o',x:4,y:3,symbol:'O',owner:'local-o'}];
  initializeHabitats(r,now);
- r.worms=[{id:'worm',x:5,y:5,body:[{x:5,y:5}],eaten:0,nextAt:now+600000}];
+ r.worms=[{id:'worm',x:5,y:5,body:[{x:5,y:5}],eaten:0,turnsRemaining:3}];
  r.rodentRaids=[{id:'raid',x:6,y:6,count:1,turn:0,mealsLeft:3,phase:'arriving',members:[{id:'rat',x:6,y:6}],visited:[]}];
- r.works=[{id:'work',x:9,y:9,done:0,nextAt:now+600000,destroy:Array.from({length:9},(_,i)=>({x:9+i%3,y:9+Math.floor(i/3)})),build:Array.from({length:9},(_,i)=>({x:-3+i%3,y:9+Math.floor(i/3)}))}];
+ r.works=[{id:'work',x:9,y:9,done:0,turnsRemaining:3,destroy:Array.from({length:9},(_,i)=>({x:9+i%3,y:9+Math.floor(i/3)})),build:Array.from({length:9},(_,i)=>({x:-3+i%3,y:9+Math.floor(i/3)}))}];
  r.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];
  const region=Array.from({length:9},(_,i)=>({x:12+i%3,y:12+Math.floor(i/3)}));
- r.territoryEvents=[{id:'event',kind,region,groups:[region],nextAt:now+600000}];
+ r.territoryEvents=[{id:'event',kind,region,groups:[region],turnsRemaining:3}];
  return r;
 }
 async function load(context,r){
+ r=structuredClone(r);for(const e of [...r.territoryEvents||[],...r.works||[]]){e.turnsRemaining??=3;delete e.nextAt;delete e.remainingMs;}
  const page=await context.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  // No real identity, room or service is accessed by these local fixtures.
@@ -100,9 +101,9 @@ try{
    await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
    assert.equal(saved.terrain.length,size);assert.equal(saved.players[0].inventory.cards.tornado,1,'Cancelled tool spent stock');
-   assert.ok(saved.territoryEvents[0].remainingMs>0);const remaining=saved.territoryEvents[0].remainingMs;
+   assert.ok(saved.territoryEvents[0].turnsRemaining===3);const remaining=saved.territoryEvents[0].turnsRemaining;
    await page.waitForTimeout(1100);
-   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents[0].remainingMs),remaining,'Paused warning advanced');
+   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents[0].turnsRemaining),remaining,'Paused warning advanced');
    await page.locator('[data-action="resume"]').tap();await page.locator('.game .viewport').waitFor();await frame(page);
    await page.screenshot({path:path.join(output,`board-${viewport.width}-${size}.png`)});
    assert.deepEqual(errors,[]);results.push({viewport,size,detailNodes:before.nodes,afterDragNodes:after.nodes,elapsedMs:Date.now()-started,passed:true});
@@ -112,11 +113,11 @@ try{
  }
  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:'block'});
  track(context);
- for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
+ for(const kind of [...LOCAL_NATURAL_ROTATION,...INVADER_EVENT_ROTATION]){
   const {page,errors}=await load(context,fixture(999,kind));
-  const active=page.locator(`.map-jumps button[data-ecology-kind="${kind}"]`);
-  assert.equal(await page.locator('.map-jumps .is-announced').count(),1);
-  assert.equal(await page.locator('.map-jumps [data-ecology-attempt].is-inactive:disabled').count(),8);
+  const active=page.locator(`.board-territory-status button[data-ecology-kind="${kind}"]`);
+  assert.equal(await page.locator('.board-territory-status .is-announced').count(),1);
+  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),9);
   assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
   await page.locator(`[data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
@@ -132,15 +133,15 @@ try{
   r.cells=[{id:'x',x:0,y:0,symbol:'X',owner:'local-x'},{id:'o',x:1,y:0,symbol:'O',owner:'local-o'},{id:'n',x:2,y:0,symbol:'#',owner:null},{id:'i',x:3,y:0,symbol:'*',owner:null}];
   return r;
  })());
- assert.equal(await visual.locator('.map-jumps [data-ecology-attempt].is-inactive:disabled').count(),9);
- assert.equal(await visual.locator('.map-jumps [data-ecology-attempt] .ecology-clock').count(),0);
- assert.equal(await visual.locator('.map-jumps [data-ecology-attempt]').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),10);
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt] .ecology-clock').count(),0);
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt]').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
  await visual.locator('[data-action="map"]').tap();await frame(visual);
  const liveMap=await visual.locator('.map-terrain').innerHTML();
  await visual.screenshot({path:path.join(output,'shared-live-map.png')});
  await visual.locator('[data-action="close-map"]').tap();
  await visual.locator('[data-action="pause"]').tap();await visual.locator('.inspection-canvas').waitFor();await frame(visual);
- assert.equal(await visual.locator('.ecology-controls [data-ecology-attempt].is-inactive:disabled').count(),9);
+ assert.equal(await visual.locator('.ecology-controls [data-ecology-attempt].is-inactive:disabled').count(),10);
  assert.equal(await visual.locator('.inspection-terrain').innerHTML(),liveMap);
  await visual.screenshot({path:path.join(output,'shared-paused-map.png')});
  await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
@@ -247,8 +248,8 @@ try{
  for(const difficulty of ['basic','medium','high','pro']){
   const now=Date.now(),r=createLocal('solo','X','',now,'normal','untimed',difficulty);
   r.pairs[0].turn='O';r.cells=[{id:'a',x:0,y:0,symbol:'O',owner:'local-o'},{id:'b',x:1,y:0,symbol:'O',owner:'local-o'}];
-  r.worms=[{id:'blocked',kind:'worm',x:2,y:0,body:[{x:2,y:0}],eaten:1,nextAt:now+600000}];
-  r.works=[{id:'work',kind:'work',done:0,destroy:[{x:2,y:1}],build:[{x:3,y:1}],nextAt:now+600000}];
+  r.worms=[{id:'blocked',kind:'worm',x:2,y:0,body:[{x:2,y:0}],eaten:1,turnsRemaining:3}];
+  r.works=[{id:'work',kind:'work',done:0,destroy:[{x:2,y:1}],build:[{x:3,y:1}],turnsRemaining:3}];
   const {page,errors}=await load(context,r);
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].pairs[0].turn==='X',{},{timeout:15000});
   const next=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
@@ -259,7 +260,7 @@ try{
  borderRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));
  borderRoom.players[0].inventory.cards.border=1;
  const invasion=plannedEventRegion(borderRoom,'invader-colony',()=>0,Date.now());
- borderRoom.territoryEvents=[{id:'border-warning',kind:'invader-colony',...invasion,nextAt:Date.now()+600000}];
+ borderRoom.territoryEvents=[{id:'border-warning',kind:'invader-colony',...invasion,turnsRemaining:3}];
  const {page:borderPage,errors:borderErrors}=await load(context,borderRoom);
  const selectBorder=()=>borderPage.locator('[data-action="practice-tool"][data-tool="border"]').first().tap();
  await selectBorder();
@@ -282,7 +283,7 @@ try{
  assert.deepEqual(borderErrors,[]);results.push({borderThreeTapsLAndCancel:true,borderSpendOnce:true,borderSharedMaps:true,passed:true});await borderPage.close();
  // The head uses the creature icon; body links use the same map geometry.
  const trailRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
- trailRoom.worms=[{id:'trail',kind:'worm',x:2,y:1,body:[{x:0,y:0},{x:1,y:0},{x:2,y:1}],eaten:2,nextAt:Date.now()+600000}];
+ trailRoom.worms=[{id:'trail',kind:'worm',x:2,y:1,body:[{x:0,y:0},{x:1,y:0},{x:2,y:1}],eaten:2,turnsRemaining:3}];
  const {page:trailPage,errors:trailErrors}=await load(context,trailRoom);
  assert.equal(await trailPage.locator('.worm-trail-layer path').count(),2);assert.equal(await trailPage.locator('.worm-body').first().evaluate(el=>getComputedStyle(el,'::after').display),'none');assert.equal(await trailPage.locator('.board .habitat-worm').count(),1);
  await trailPage.screenshot({path:path.join(output,'worm-trail.png')});
@@ -297,7 +298,7 @@ try{
  turnRoom.worms=[{id:'turn-worm',kind:'worm',x:3,y:3,body:[{x:3,y:3}],eaten:0,mealLimit:9,turnDriven:true,turnsSinceMeal:2}];
  const {page:turnPage,errors:turnErrors}=await load(context,turnRoom);
  assert.equal(await turnPage.locator('.habitat-worm b').count(),0);
- assert.equal(await turnPage.locator('.map-jumps [data-ecology-kind="worm"] .ecology-clock').count(),0);
+ assert.equal(await turnPage.locator('.board-territory-status [data-ecology-kind="worm"] .ecology-clock').count(),0);
  const moveCell=turnPage.locator('.board [data-action="move"][data-x="0"][data-y="0"]');await moveCell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(turnPage);await moveCell.tap();
  await turnPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].worms[0].eaten===1);
  assert.equal(await turnPage.locator('.habitat-worm b').count(),0);
@@ -308,8 +309,8 @@ try{
  const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');for(let i=0;i<3;i++)advanceInvasions(growthRoom,Date.now(),()=>0);
  const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
  await growthPage.locator('[data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
- assert.doesNotMatch(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
- assert.equal(await growthPage.locator('.map-jumps [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
+ assert.doesNotMatch(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
+ assert.equal(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
  assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.ok(await growthPage.locator('.board .invasion-growth').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth').first().evaluate(el=>getComputedStyle(el,'::after').borderTopStyle),'dashed');assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
  await growthPage.screenshot({path:path.join(output,'invasion-growing-r38.png')});
  await growthPage.locator('[data-action="map"]').tap();
@@ -328,35 +329,39 @@ try{
  await wildPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[1].score===3);
  assert.equal(await wildPage.locator('.board .neutral[data-x="1"][data-y="1"]').count(),1);
  await wildPage.screenshot({path:path.join(output,'shared-wildcard-r38.png')});assert.deepEqual(wildErrors,[]);results.push({wildcardScoresBothSymbols:true,passed:true});await wildPage.close();
- // A real ecology tick converts four signs; no landing payout or recreated colony.
+ // Three completed UI turns convert four signs; no landing payout or recreated colony.
  const flipRoom=createLocal('local','X','O',Date.now(),'normal','untimed');flipRoom.faunaEnabled=false;seedInvasions(flipRoom,[{x:2,y:0}],'invader-colony');
  flipRoom.cells.push({id:'x',symbol:'X',x:0,y:0,owner:'local-x'},{id:'o',symbol:'O',x:1,y:0,owner:'local-o'},{id:'wild',symbol:'#',x:2,y:1,owner:null});
- flipRoom.players[0].score=25912;flipRoom.territoryEvents=[{id:'flip-four',kind:'pandemic',region:flipRoom.cells.map(c=>({x:c.x,y:c.y})),nextAt:Date.now()+2000}];
+ flipRoom.players[0].score=25912;flipRoom.territoryEvents=[{id:'flip-four',kind:'pandemic',region:flipRoom.cells.map(c=>({x:c.x,y:c.y})),turnsRemaining:3}];
  const {page:flipPage,errors:flipErrors}=await load(context,flipRoom);
+ for(const [x,y] of [[0,1],[1,1],[0,2]])await flipPage.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
  await flipPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);
  const flipped=await flipPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- assert.deepEqual(flipped.cells.slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(c=>c.symbol),['O','X','#','*']);assert.equal(flipped.players[0].score,25912);assert.equal(flipped.invasions.length,0);
+ assert.deepEqual(flipped.cells.filter(c=>['x','o','wild'].includes(c.id)||c.x===2&&c.y===0).slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(c=>c.symbol),['O','X','#','*']);assert.equal(flipped.players[0].score,25912);assert.equal(flipped.invasions.length,0);
  assert.equal(await flipPage.locator('.board .invasion-growth').count(),0);await flipPage.screenshot({path:path.join(output,'pandemic-flips-r38.png')});assert.deepEqual(flipErrors,[]);results.push({pandemicFourSignsPreservesScore:true,passed:true});await flipPage.close();
  // Reconquest frees a playable tile, preserves a large saved score and adds terrain.
  const reclaimRoom=createLocal('local','X','O',Date.now(),'normal','untimed');reclaimRoom.terrain=Array.from({length:991},(_,i)=>({x:i%33,y:Math.floor(i/33)}));reclaimRoom.players[0].score=25912;reclaimRoom.players[0].placements=1422;
- seedInvasions(reclaimRoom,[{x:1,y:0}],'invader-colony');reclaimRoom.works=[{id:'reclaim',kind:'work',reconquer:true,destroy:[{x:1,y:0}],build:[{x:-1,y:0}],done:0,nextAt:Date.now()+2000}];
+ seedInvasions(reclaimRoom,[{x:1,y:0}],'invader-colony');reclaimRoom.works=[{id:'reclaim',kind:'work',reconquer:true,destroy:[{x:1,y:0}],build:[{x:-1,y:0}],done:0,turnsRemaining:3}];
  const {page:reclaimPage,errors:reclaimErrors}=await load(context,reclaimRoom);
+ for(const [x,y] of [[0,1],[1,1],[2,1]])await reclaimPage.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
  await reclaimPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].works.length===0);
  const reclaimed=await reclaimPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- assert.equal(reclaimed.terrain.length,992);assert.ok(reclaimed.terrain.some(c=>c.x===1&&c.y===0));assert.equal(reclaimed.cells.length,0);assert.equal(reclaimed.players[0].score,25912);assert.equal(reclaimed.invasions.length,0);
+ assert.equal(reclaimed.terrain.length,992);assert.ok(reclaimed.terrain.some(c=>c.x===1&&c.y===0));assert.equal(reclaimed.cells.filter(c=>c.symbol==='*').length,0);assert.equal(reclaimed.players[0].score,25912);assert.equal(reclaimed.invasions.length,0);
  assert.equal(await reclaimPage.locator('.board [data-action="move"][data-x="1"][data-y="0"]').count(),1);
  await reclaimPage.screenshot({path:path.join(output,'reconquered-terrain-r38.png')});assert.deepEqual(reclaimErrors,[]);results.push({reconquerPreservesLargeSave:true,passed:true});await reclaimPage.close();
  // A due storm pays both symbols with normal large coloured numbers only.
  const stormRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  stormRoom.cells=[['X',0,0],['X',1,0],['X',2,1],['O',0,1],['O',1,1],['O',2,0]].map(([symbol,x,y],i)=>({id:'s'+i,symbol,x,y,owner:symbol==='X'?'local-x':'local-o'}));
+ const stormRegion=structuredClone(stormRoom.terrain);stormRoom.terrain.push({x:0,y:3});stormRoom.faunaEnabled=false;
  let expectedStorm;
  for(let i=0;i<100;i++){
-  stormRoom.territoryEvents=[{id:'storm-qa-'+i,kind:'hurricane',region:stormRoom.terrain,nextAt:Date.now()+1500}];
-  const candidate=localCommand(stormRoom,'tick',{},stormRoom.territoryEvents[0].nextAt);
+  stormRoom.territoryEvents=[{id:'storm-qa-'+i,kind:'hurricane',region:stormRegion,turnsRemaining:1}];
+  const candidate=localCommand(stormRoom,'move',{x:0,y:3},Date.now());
   if(candidate.landingEvent?.scores.length===2){expectedStorm=candidate;break;}
  }
  assert.ok(expectedStorm,'Find a reproducible storm scoring both symbols');
  const {page:stormPage,errors:stormErrors}=await load(context,stormRoom);
+ await stormPage.locator('.board [data-action="move"][data-x="0"][data-y="3"]').tap();
  await stormPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);
  assert.equal(await stormPage.locator('.landing-score-float.x').count(),1);
  assert.equal(await stormPage.locator('.landing-score-float.o').count(),1);
@@ -371,6 +376,42 @@ try{
  assert.equal(await stormPage.locator('#notice .score-notice-total.o').evaluate(el=>getComputedStyle(el).color),'rgb(36, 211, 147)');
  await stormPage.screenshot({path:path.join(output,'landing-scores-r38.png')});
  assert.deepEqual(stormErrors,[]);results.push({landingBothSymbolsLargeNumbersOnly:true,passed:true});await stormPage.close();
+ // R39 player and territory panels: two columns, independent counters and no horizontal overflow.
+ const strategyRoom=createLocal('local','X','O',Date.now(),'normal','untimed');strategyRoom.faunaEnabled=false;strategyRoom.players.forEach(p=>p.figures=33);
+ strategyRoom.players[0].inventory.cards['expand-2']=1;strategyRoom.players[0].inventory.cards['expand-3']=1;
+ strategyRoom.territoryEvents=[{id:'movable-r39',kind:'invader-rain',region:[{x:2,y:0}],groups:[[{x:2,y:0}]],seeded:true,turnsRemaining:3}];
+ strategyRoom.cells=[{id:'target-x',symbol:'X',owner:'local-x',x:0,y:0},{id:'target-o',symbol:'O',owner:'local-o',x:1,y:0}];
+ const {page:strategy,errors:strategyErrors}=await load(context,strategyRoom);
+ for(const width of [320,390]){
+  await strategy.setViewportSize({width,height:844});await frame(strategy);
+  assert.ok(await strategy.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  for(const selector of ['.player-inventory-columns','.territory-columns'])assert.equal(await strategy.locator(selector).first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);
+  assert.equal(await strategy.locator('.board-inventory-status [data-ecology-kind]').count(),0);
+  assert.equal(await strategy.locator('.board-territory-status [data-tool]').count(),0);
+ }
+ await strategy.locator('[data-action="mark-target"]').tap();
+ for(const [x,y]of [[0,0],[1,0],[2,2]])await strategy.locator(`.board [data-action="watch-target-cell"][data-x="${x}"][data-y="${y}"]`).tap();
+ assert.equal(await strategy.locator('.map-jumps [data-action="locate-target"]').count(),3);
+ await strategy.locator('[data-action="mark-target"]').tap();
+ await strategy.locator('.board-inventory-status [data-action="practice-tool"][data-tool="shift"]').tap();
+ await strategy.locator('.pending-invasion-bomb[data-bomb-id="movable-r39:0"]').tap();
+ await strategy.locator('.board [data-action="inventory-target"][data-x="2"][data-y="1"]').tap();
+ let strategySaved=await strategy.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ assert.equal(strategySaved.territoryEvents[0].turnsRemaining,3);assert.deepEqual(strategySaved.territoryEvents[0].region,[{x:2,y:1}]);assert.equal(strategySaved.cells.length,2);
+ await strategy.locator('.board-inventory-status [data-tool="expand-2"]').evaluate(el=>el.scrollIntoView());
+ await strategy.screenshot({path:path.join(output,'strategy-columns-r39.png')});
+ for(const [x,y]of [[0,1],[1,1],[0,2]])await strategy.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
+ strategySaved=await strategy.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(strategySaved.territoryEvents.length,0);assert.ok(strategySaved.cells.some(c=>c.x===2&&c.y===1&&c.symbol==='*'));assert.equal(strategySaved.watchTargets.length,3);
+ await strategy.locator('[data-action="pause"]').tap();assert.equal(await strategy.locator('[data-inspect-action="target"]').count(),3);await strategy.locator('[data-inspect-action="target"]').first().tap();
+ assert.deepEqual(strategyErrors,[]);results.push({separateInventoryColumns:true,appearanceVsImpactCounters:true,movableBomb:true,threeDianas:true,threeTurnWarning:true,passed:true});await strategy.close();
+ const microRoom=createLocal('local','X','O',Date.now(),'normal','untimed');microRoom.faunaEnabled=false;microRoom.territoryEnabled=false;microRoom.players[0].inventory.cards['expand-2']=1;
+ const {page:micro,errors:microErrors}=await load(context,microRoom);
+ await micro.locator('.board-inventory-status [data-tool="expand-2"]').tap();await micro.locator('[data-action="rotate-micro"]').tap();await micro.locator('[data-action="suggest-micro"]').tap();
+ assert.equal((await micro.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0])).terrain.length,9);
+ await micro.locator('[data-action="cancel-tool-selection"]').tap();assert.equal((await micro.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0])).players[0].inventory.cards['expand-2'],1);
+ await micro.locator('.board-inventory-status [data-tool="expand-2"]').tap();await micro.locator('[data-action="suggest-micro"]').tap();await micro.locator('[data-action="confirm-area-tool"]').tap();
+ const microSaved=await micro.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(microSaved.terrain.length,11);assert.equal(microSaved.players[0].inventory.cards['expand-2'],0);assert.equal(microSaved.ecologyTurns,0);assert.equal(microSaved.pairs[0].turn,'X');
+ await micro.screenshot({path:path.join(output,'micro-expansion-r39.png')});assert.deepEqual(microErrors,[]);results.push({microExpansionPreviewRotateCancelAndConfirm:true,passed:true});await micro.close();
  assert.deepEqual(onlineRequests,[],'Local diagnosis contacted Supabase');
  results.push({supabaseRequests:0,passed:true});
  await context.close();

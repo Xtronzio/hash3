@@ -130,7 +130,7 @@ test('No entra un tipo 13; agotar una carta abre sitio para otro tipo sin repone
  const r=start(),inv=r.players[0].inventory;
  for(const t of practiceTools)inv.cards[t.id]=0;
  for(const t of practiceTools.slice(0,MAX_CARD_TYPES))inv.cards[t.id]=1;
- completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(inv.lastDraw,'bomb');assert.equal(inv.cards.frontier,0);
+ completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(inv.lastDraw,practiceTools[MAX_CARD_TYPES-1].id);assert.equal(inv.cards.frontier,0);
  inv.cards.double=0;completeInventoryTurn(r,'local-x',{random:()=>.999});assert.equal(inv.lastDraw,'combo');assert.equal(inv.cards.combo,1);assert.equal(inv.cards.double,0);
  assert.equal(practiceTools.filter(t=>inv.cards[t.id]>0).length,MAX_CARD_TYPES);
 });

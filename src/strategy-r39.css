@@ -1,0 +1,34 @@
+/* Player tools and autonomous territory events are separate inventories. */
+.player-inventory-columns,.territory-columns{display:grid;grid-template-columns:repeat(2,44px);gap:4px;align-content:start;}
+.inventory-column-category,.territory-column-title{grid-column:1/-1;font-size:9px;line-height:1.3;letter-spacing:.035em;color:#98a3b2;pointer-events:none;text-align:center;}
+.inventory-column-category{padding-top:5px;}
+.board-inventory-status{left:8px;top:8px;right:auto;width:92px;max-height:calc(100% - 90px);overflow:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;pointer-events:auto;}
+.board-inventory-status .inventory-effects-bar{display:flex;flex-direction:column;align-items:stretch;gap:6px;}
+.board-inventory-status .inventory-shortcuts{display:block;overflow:visible;touch-action:pan-y;}
+.board-inventory-status .inventory-active-effects{display:flex;flex-wrap:wrap;max-width:100%;overflow:visible;}
+.player-inventory-columns .inventory-effect{width:44px;height:44px;min-height:44px;}
+.board-territory-status{position:absolute;right:8px;top:62px;z-index:3;width:92px;max-height:calc(100% - 220px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;touch-action:pan-y;}
+.board-territory-status .ecology-jump{position:relative;width:44px;height:44px;min-height:44px;padding:9px;display:grid;place-items:center;background:#101216;border-radius:7px;}
+.board-territory-status svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.territory-columns .ecology-jump{position:relative;}
+.territory-columns .ecology-badge{position:absolute;bottom:0;right:1px;line-height:12px;background:#101216;font-size:10px;}
+.game .map-jumps{max-width:calc(100vw - 124px);}
+.watch-jump{position:relative;}.watch-jump small{position:absolute;bottom:0;right:4px;font-size:11px;}
+.watch-cell-symbol{position:absolute;top:2px;left:2px;color:#fff;pointer-events:none;display:flex;align-items:center;font-size:10px;z-index:4;}
+.cell .watch-cell-symbol svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;}
+.pending-invasion-bomb{position:absolute;z-index:4;color:var(--yellow);background:#251e0de6;}.pending-invasion-bomb b{position:absolute;bottom:0;right:2px;font-size:11px;}
+.game .project-build,.game .construction-ghost{border-color:var(--yellow);color:var(--yellow);outline:none;}
+.game .construction-ghost{border:2px dotted var(--yellow);background:#251f0e33;}
+.game .project-destroy{outline-color:var(--yellow);}
+.habitat-build,.habitat-destroy{color:var(--yellow)!important;}.event-outlook-icons svg:has([data-worker-sign]),.event-outlook-icons svg:has([data-worker="soldier"]){color:var(--yellow);}
+.turn-warnings{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:6px 10px;pointer-events:auto;touch-action:pan-x;}
+.turn-warnings .ecology-warning-chip{display:flex;align-items:center;gap:7px;min-height:44px;flex:none;padding:7px 10px;border:1px solid var(--yellow);border-radius:9px;background:#211b0e;color:var(--yellow);font-size:11px;}
+.turn-warnings .ecology-warning-chip svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;}
+.turn-warnings .ecology-warning-chip strong{font-size:18px;white-space:nowrap;}
+.announced-event{background:#282110;padding:8px;border:1px solid #786332;margin-bottom:5px;border-radius:7px;}.announced-event button{min-width:44px;min-height:44px;}
+.inventory-sheet .player-inventory-columns{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.inventory-sheet .inventory-column-category{font-size:12px;text-align:left;padding:10px 0 2px;}
+.inventory-sheet .inventory-icon-card{min-height:58px;flex-direction:row;gap:12px;}
+.world-map .inventory-shortcuts{display:block;overflow:auto;max-height:180px;touch-action:pan-y;}.world-map .inventory-effects-bar{justify-content:flex-start;align-items:flex-start;}
+.world-map .ecology-controls .territory-columns,.inspection-panel .ecology-controls .territory-columns{grid-template-columns:repeat(2,44px);max-height:220px;overflow:auto;}
+@media(max-height:500px){.board-inventory-status{max-height:calc(100% - 42px);}.board-territory-status{top:8px;max-height:calc(100% - 145px);}.turn-warnings{padding:2px 8px;}.turn-warnings .ecology-warning-chip{min-height:36px;}.inventory-column-category{padding-top:2px;}}

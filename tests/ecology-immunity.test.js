@@ -1,3 +1,4 @@
+import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
@@ -10,17 +11,17 @@ function start(){const r=createLocal('local','A','B',now,'normal','untimed');for
 const activate=(r,id='local-x',at=now)=>localCommand(r,'inventory',{tool:'immunity',playerId:id},at,()=>0);
 const cell=(id,x,owner='local-x')=>({id,x,y:1,owner,symbol:owner==='local-x'?'X':'O'});
 test('OVNI sigue su cuenta atrás y solo abduce fichas sin protección; el rival puede protegerse también',()=>{
- let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.territoryEvents=[{id:'u',kind:'ufo',region:r.cells.map(({x,y})=>({x,y})),nextAt:now+33000}];
- r=activate(r,'local-x',now+10000);assert.equal(r.territoryEvents[0].nextAt,now+33000);assert.equal(r.pairs[0].turn,'X');assert.equal(toolAllowance(r,'local-x').remaining,1);
- let impacted=localCommand(r,'tick',{},now+33000);assert.deepEqual(impacted.cells.map(c=>c.id),['x']);assert.equal(impacted.terrain.length,9);assert.equal(impacted.territoryEvents.length,0);
- r=activate(r,'local-o',now+20000);impacted=localCommand(r,'tick',{},now+33000);assert.equal(impacted.cells.length,2);assert.equal(impacted.territoryEvents.length,0);assert.equal(impacted.ecologyRecovery.moves,3);
+ let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.territoryEvents=[{id:'u',kind:'ufo',region:r.cells.map(({x,y})=>({x,y})),turnsRemaining:3}];
+ r=activate(r,'local-x',now+10000);assert.equal(r.territoryEvents[0].turnsRemaining,3);assert.equal(r.pairs[0].turn,'X');assert.equal(toolAllowance(r,'local-x').remaining,1);
+ let impacted=completeEventTurns(structuredClone(r),now+33000);assert.deepEqual(impacted.cells.map(c=>c.id),['x']);assert.equal(impacted.terrain.length,9);assert.equal(impacted.territoryEvents.length,0);
+ r=activate(r,'local-o',now+20000);impacted=completeEventTurns(structuredClone(r),now+33000);assert.equal(impacted.cells.length,2);assert.equal(impacted.territoryEvents.length,0);assert.equal(impacted.ecologyRecovery.moves,3);
  assert.equal(canUsePracticeTool(r,'local-x','immunity',now+42999),false);assert.equal(canUsePracticeTool(r,'local-x','immunity',now+43000),false); // Stock exhausted, independent of turn.
 });
 test('Lluvia respeta fichas y sus celdas, celdas propias vacías y fronteras protegidas',()=>{
  let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.terrain.find(c=>c.x===2&&c.y===1).owner='local-x';r.frontiers=[{id:'f',by:'local-x',cells:[{x:3,y:1},{x:4,y:1},{x:5,y:1}]}];
  r.territoryEvents=[{id:'rain',kind:'rain',nextAt:now+20000,region:[{x:0,y:1},{x:1,y:1},{x:2,y:1},{x:3,y:1}]}];r=activate(r);
  const keys=protectedTerritoryKeys(r);assert.ok(keys.has('0,1'));assert.ok(keys.has('2,1'));assert.ok(keys.has('3,1'));assert.ok(!keys.has('1,1'));
- r=localCommand(r,'tick',{},now+20000);assert.deepEqual(r.cells.map(c=>c.id),['x']);assert.ok(r.terrain.some(c=>c.x===0&&c.y===1));assert.ok(r.terrain.some(c=>c.x===2&&c.y===1));assert.ok(!r.terrain.some(c=>c.x===1&&c.y===1));assert.equal(r.frontiers.length,1);
+ r=completeEventTurns(r,now+20000);assert.deepEqual(r.cells.map(c=>c.id),['x']);assert.ok(r.terrain.some(c=>c.x===0&&c.y===1));assert.ok(r.terrain.some(c=>c.x===2&&c.y===1));assert.ok(!r.terrain.some(c=>c.x===1&&c.y===1));assert.equal(r.frontiers.length,1);
 });
 test('Gusano permanece vivo sin alimento desprotegido y vuelve a comer después de caducar',()=>{
  let r=start();r.cells=[cell('x',1)];r.worms=[{id:'w',kind:'worm',x:1,y:1,body:[{x:1,y:1}],eaten:0,nextAt:now+20000}];r=activate(r);advanceHabitats(r,now+20000,()=>0);
@@ -33,7 +34,7 @@ test('Roedores siguen por turnos y omiten las fichas protegidas sin acumular com
  countHabitatPlacement(r,'local-o',{x:2,y:1},now,()=>0);assert.equal(r.cells.length,1);assert.equal(r.rodentRaids[0].phase,'eating');
 });
 test('Obra protegida pospone el par construir/destruir, conservando el equilibrio',()=>{
- let r=start();r.terrain.find(c=>c.x===1&&c.y===1).owner='local-x';r.works=[{id:'w',kind:'work',done:0,destroy:[{x:1,y:1}],build:[{x:3,y:1}],nextAt:now+20000}];r=activate(r);advanceHabitats(r,now+20000,()=>0);
+ let r=start();r.terrain.find(c=>c.x===1&&c.y===1).owner='local-x';r.works=[{id:'w',kind:'work',done:0,destroy:[{x:1,y:1}],build:[{x:3,y:1}],nextAt:now+20000}];r=activate(r);r.mode='world';advanceHabitats(r,now+20000,()=>0);
  assert.equal(r.terrain.length,9);assert.equal(r.works[0].done,0);advanceHabitats(r,now+53000,()=>0);assert.equal(r.terrain.length,9);assert.ok(r.terrain.some(c=>c.x===3&&c.y===1));assert.equal(r.works.length,0);
 });
 test('Pausa conserva exactamente el tiempo restante y el reloj de vencimiento no recorre el tablero',()=>{

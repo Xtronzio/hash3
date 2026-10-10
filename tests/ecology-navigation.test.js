@@ -12,9 +12,9 @@ test('Cada grupo de lluvia y cada fenómeno se recorre con identidad estable y v
  let item;const visited=[];for(let i=0;i<12;i++){item=nextEcologyTarget(items,item?.id);visited.push(item.id);}assert.equal(new Set(visited).size,11);assert.equal(visited[0],visited[11]);
  assert.equal(nextEcologyTarget(items.slice(1),items[0].id).id,items[1].id);assert.equal(ecologyTargets(room,'ufo')[0].x,10);
 });
-test('Obreros comparten casco, pero signo y color distinguen construcción y destrucción',()=>{
- assert.ok(habitatIcons.build.startsWith(workerHelmet));assert.ok(habitatIcons.destroy.startsWith(workerHelmet));assert.match(habitatIcons.build,/data-worker-sign="plus"/);assert.match(habitatIcons.destroy,/data-worker-sign="minus"/);
- const pins=ecologyMapPins(ecologyPinTargets(room),now);assert.match(pins,/color:var\(--green\)/);assert.match(pins,/color:var\(--red\)/);
+test('Ampliadores use a yellow plus and soldiers use yellow crossed swords',()=>{
+ assert.ok(!habitatIcons.build.includes(workerHelmet));assert.ok(!habitatIcons.destroy.includes(workerHelmet));assert.match(habitatIcons.build,/data-worker-sign="plus"/);assert.match(habitatIcons.destroy,/data-worker="soldier"/);
+ const pins=ecologyMapPins(ecologyPinTargets(room),now);assert.match(pins,/color:var\(--yellow\)/);assert.doesNotMatch(pins,/color:var\(--green\)|color:var\(--red\)/);
 });
 test('Avisos discretos distinguen relojes reales, visitas por jugada y futuros intentos de nacimiento',()=>{
  const markup=ecologyNavigationMarkup(room,null,{now});assert.match(markup,/data-ecology-kind="ufo" aria-label="31 segundos"/);

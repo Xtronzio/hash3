@@ -4,7 +4,7 @@ import {createLocal,localCommand,machineChoice} from '../src/local.js';
 import {availableCells,key} from '../src/game.js';
 import {initializeHabitats,countHabitatPlacement,advanceHabitats,visitWorms} from '../src/inhabitants.js';
 import {localLiving,livingFactor,livingInterval,livingClock,LIVING_FREQUENCIES} from '../src/living-balance.js';
-import {impactCount,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,pickEventKind,confirmEventKind} from '../src/territory-event-rules.js';
+import {impactCount,LOCAL_NATURAL_ROTATION,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,pickEventKind,confirmEventKind} from '../src/territory-event-rules.js';
 import {recordTerritoryPlacement,territoryIcons} from '../src/territory-tools.js';
 import {plannedEventRegion,applyPlannedEvent} from '../src/territory-event-actions.js';
 import {borderOptions,borderChains} from '../src/area-tools.js';
@@ -77,13 +77,13 @@ test('Sqrt population scaling and every effect budget remain bounded and tied to
  }
  assert.equal(localLiving({mode:'world'}),false);const legacy={mode:'world',terrain:Array(999),cells:Array(999)};assert.equal(impactCount(legacy,'meteorites'),99);
 });
-test('Birth attempts can be due by clock, stay dormant without placement, and preserve time across pause',()=>{
+test('Birth attempts require placements and never acquire a wall-clock trigger across pause',()=>{
  let r=board();r.cells=[{id:'food',x:10,y:2,symbol:'O',owner:'local-o'}];
- r=localCommand(r,'move',{x:0,y:0},1000,()=>0);const zone=r.habitatZones[0];
- assert.equal(zone.clockNext.rodent,133000);assert.equal(needsLocalTick(r,133000),false);
- r=localCommand(r,'pause',{},34000);assert.equal(r.habitatZones[0].clockRemaining.rodent,99000);
- r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.habitatZones[0].clockNext.rodent,1099000);
- r=localCommand(r,'move',{x:1,y:0},1099000,()=>0);assert.ok(r.rodentRaids.length);assert.equal(r.habitatZones[0].placements,2);
+ r=localCommand(r,'move',{x:0,y:0},1000,()=>0);const remaining=r.habitatZones[0].next.rodent-r.habitatZones[0].placements;
+ assert.equal(r.habitatZones[0].clockNext,undefined);assert.equal(needsLocalTick(r,133000),false);
+ r=localCommand(r,'pause',{},34000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);
+ assert.equal(r.habitatZones[0].next.rodent-r.habitatZones[0].placements,remaining);
+ r=localCommand(r,'move',{x:1,y:0},1099000,()=>0);assert.equal(r.rodentRaids.length,0);assert.equal(r.habitatZones[0].placements,2);
 });
 test('Adopting historic active or paused counters cannot produce retrospective births or attacks',()=>{
  for(const status of ['playing','paused']){
@@ -97,13 +97,12 @@ test('Adopting historic active or paused counters cannot produce retrospective b
 });
 test('Each event bag survives save/reload without repeating a viable kind before the family is exhausted',()=>{
  let r=board();const seen=[];
- for(let i=0;i<7;i++){const choice=pickEventKind(r,'natural',()=>.3),kind=choice.order[0];seen.push(kind);confirmEventKind(r,choice,kind);r=JSON.parse(JSON.stringify(r));}
- assert.equal(new Set(seen).size,7);assert.deepEqual([...seen].sort(),[...NATURAL_EVENT_ROTATION].sort());
+ for(let i=0;i<8;i++){const choice=pickEventKind(r,'natural',()=>.3),kind=choice.order[0];seen.push(kind);confirmEventKind(r,choice,kind);r=JSON.parse(JSON.stringify(r));}
+ assert.equal(new Set(seen).size,8);assert.deepEqual([...seen].sort(),[...LOCAL_NATURAL_ROTATION].sort());
 });
-test('A short match cannot announce an effect that would land after its final second',()=>{
+test('A timed match can announce turn-driven warnings while it is still running',()=>{
  const r=board();r.territoryEnabled=true;r.players[0].figures=33;r.territoryNextInvasion=0;r.endsAt=new Date(33000).toISOString();
- assert.equal(recordTerritoryPlacement(r,1001,()=>0),false);
- r.endsAt=new Date(34001).toISOString();assert.equal(recordTerritoryPlacement(r,1001,()=>0),true);
+ assert.equal(recordTerritoryPlacement(r,1001,()=>0),true);assert.equal(r.territoryEvents[0].turnsRemaining,3);
 });
 test('Three-cell borders spend once, block their chosen cells and may form an L',()=>{
  let r=board(99);r.players[0].inventory.cards.border=1;const cells=[{x:1,y:0},{x:2,y:0},{x:2,y:1}],before=structuredClone(r);

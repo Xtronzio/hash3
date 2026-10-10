@@ -1,3 +1,4 @@
+import {completeEventTurns} from './helpers/turn-ecology.js';
 import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount} from '../src/territory-event-rules.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
@@ -5,7 +6,7 @@ import {proportionalBudget,habitatZone,habitatInterval,HABITAT_FREQUENCIES} from
 import {recordTerritoryGrowth,territoryRegion,advanceTerritory,initializeTerritory,recordTerritoryPlacement} from '../src/territory-tools.js';
 import {countHabitatPlacement} from '../src/inhabitants.js';
 import {key} from '../src/game.js';
-const board=(size=999)=>{const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.map((c,i)=>({...c,id:'f'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;r.livingBags={natural:[...NATURAL_EVENT_ROTATION],invaders:[...INVADER_EVENT_ROTATION]};return r;};
+const board=(size=999)=>{const r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.map((c,i)=>({...c,id:'f'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players[0].figures=99;r.territoryNextPlacement=1000000;r.territoryNextInvasion=1000000;r.localEventCatalogue=3;r.livingBags={natural:[...NATURAL_EVENT_ROTATION],invaders:[...INVADER_EVENT_ROTATION]};return r;};
 test('100 and 1000 cells receive exactly the same budget density over repeated activations, including fractional animals',()=>{
  for(const kind of ['rodent','worm','bomb','work']){
   const a={},b={};let small=0,large=0;
@@ -16,8 +17,8 @@ test('100 and 1000 cells receive exactly the same budget density over repeated a
 });
 test('Two players share zone cadence, and no-food generations stay bounded',()=>{
  const r=board(333);r.cells=[];r.players[0].placements=65;
- countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,66);assert.equal(r.rodentRaids[0].count,3);
- countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,67);
+ countHabitatPlacement(r,'local-x',{x:0,y:0},2000,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,66);assert.equal(r.rodentRaids[0].count,1);
+ completeEventTurns(r,2000);countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.habitatZones.length,1);assert.equal(r.habitatZones[0].placements,67);
  for(let turn=2;turn<=9;turn++)countHabitatPlacement(r,turn%2?'local-o':'local-x',{x:1,y:0},2000+turn,()=>0);assert.equal(r.rodentRaids.length,0);
 });
 test('Merged zones combine one fractional budget without replaying old milestones',()=>{
@@ -34,8 +35,8 @@ test('Regions scale 33/333; compact demolition has two side-neighbors and rain s
 test('UFO scales with occupied pieces rather than terrain; demolition removes cells and pieces and keeps scores',()=>{
  for(const kind of ['ufo','cataclysm','rain']){
   const r=board(999),count=kind==='ufo'?Math.floor(r.cells.length*33/333):99,region=territoryRegion(r,kind,()=>.4,count),first=region[0];r.players[0].score=333;r.forms=[`X:test:${key(first.x,first.y)}`];
-  r.territoryEvents=[{id:'t',kind,region,nextAt:34000}];assert.equal(advanceTerritory(r,33999).length,0);
-  const actions=advanceTerritory(r,34000);assert.equal(actions.length,99);assert.equal(r.cells.length,900);assert.equal(r.players[0].score,333);assert.equal(r.forms.length,0);
+  r.territoryEvents=[{id:'t',kind,region,turnsRemaining:3}];assert.equal(advanceTerritory(r,33999).length,0);
+  completeEventTurns(r,34000);const actions=r.habitatEvent.actions;assert.equal(actions.length,99);assert.equal(r.cells.length,900);assert.equal(r.players[0].score,333);assert.equal(r.forms.length,0);
   assert.equal(r.terrain.length,kind==='ufo'?999:900);assert.equal(advanceTerritory(r,1000000).length,0);
  }
  const r=board(999);r.cells=r.cells.slice(0,100);assert.equal(territoryRegion(r,'ufo',()=>0,Math.floor(100*33/333)).length,9);
@@ -45,10 +46,10 @@ test('Growth does not bypass independent clocks; invasion warnings pause exactly
  assert.equal(recordTerritoryGrowth(r,1,1000,()=>0),false);assert.equal(r.territoryMilestone,1);
  r.territoryNextInvasion=0;assert.equal(recordTerritoryGrowth(r,1,1000,()=>0),true);
  assert.equal(r.territoryEvents[0].kind,'invader-rain');assert.equal(r.territoryEvents[0].region.length,3);
- r=localCommand(r,'pause',{},11000);assert.equal(r.territoryEvents[0].remainingMs,23000);
+ r=localCommand(r,'pause',{},11000);assert.equal(r.territoryEvents[0].turnsRemaining,3);
  const paused=JSON.stringify(r);assert.equal(localCommand(r,'tick',{},1000000),r);
- r=localCommand(JSON.parse(paused),'resume',{},1000000);assert.equal(r.territoryEvents[0].nextAt,1023000);
- r=localCommand(r,'tick',{},1023000);assert.equal(r.cells.filter(c=>c.symbol==='*').length,3);assert.equal(r.ecologyRecovery,undefined);
+ r=localCommand(JSON.parse(paused),'resume',{},1000000);assert.equal(r.territoryEvents[0].turnsRemaining,3);
+ r=completeEventTurns(r,1023000);assert.equal(r.cells.filter(c=>c.symbol==='*').length,3);assert.equal(r.ecologyRecovery,undefined);
  r.terrain=board(666).terrain;assert.equal(recordTerritoryGrowth(r,333,1056000,()=>0),false);
 });
 test('Scaling birth intervals and population limits potential meals below one meal per placement across large boards',()=>{
@@ -73,7 +74,7 @@ test('Warning, impact and recovery suppress fauna; populations and future interv
  r.worms=[{id:'worm',kind:'worm',player:'local-x',x:10,y:5,body:[{x:10,y:5}],eaten:0,nextAt:34000}];
  r.territoryNextPlacement=0;recordTerritoryGrowth(r,1,1000,()=>0);const before=r.cells.length,raids=JSON.stringify(r.rodentRaids);
  countHabitatPlacement(r,'local-o',{x:1,y:0},2001,()=>0);assert.equal(r.cells.length,before);assert.equal(JSON.stringify(r.rodentRaids),raids);
- const impacted=localCommand(r,'tick',{},34000,()=>0);assert.ok(impacted.habitatEvent.actions.every(a=>a.kind==='meteorites'));assert.equal(impacted.worms[0]?.eaten||0,0);
+ const impacted=completeEventTurns(structuredClone(r),34000,()=>0,2);assert.ok(impacted.habitatEvent.actions.every(a=>a.kind==='meteorites'));assert.equal(impacted.worms[0]?.eaten||0,0);
  assert.equal(impacted.ecologyRecalibration.size,324);assert.equal(impacted.ecologyRecovery.moves,3);
  countHabitatPlacement(impacted,'local-x',{x:0,y:0},34001,()=>0);assert.equal(impacted.ecologyRecovery.moves,2);
 });
@@ -99,8 +100,8 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
  r=localCommand(r,'move',{x:8,y:30},34000,()=>0);
  assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'placements');assert.equal(r.territoryEvents[0].region.length,27);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,100);
- r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.territoryEvents[0].nextAt,1023000);
- r=localCommand(r,'tick',{},1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,972);
+ r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.territoryEvents[0].turnsRemaining,3);
+ r=completeEventTurns(r,1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,972);
  r.territoryNextPlacement=1;assert.equal(recordTerritoryPlacement(r,1023001,()=>0),false);assert.equal(r.territoryEvents.length,0);
  r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'earthquake');assert.equal(r.territoryEvents[0].region.length,impactCount(r,'earthquake'));
  });
@@ -120,7 +121,7 @@ test('Invasions do not stop fauna, change natural deadlines or reset birth budge
  assert.equal(r.territoryEvents[0].kind,'invader-rain');assert.equal(r.territoryNextPlacement,333);
  assert.ok(r.rodentRaids.length);assert.ok(r.worms.length);
  const nexts=structuredClone(r.habitatZones[0].next);
- advanceTerritory(r,34000);assert.equal(r.ecologyRecovery,undefined);assert.deepEqual(r.habitatZones[0].next,nexts);
+ completeEventTurns(r,34000);assert.equal(r.ecologyRecovery,undefined);assert.deepEqual(r.habitatZones[0].next,nexts);
  r.territoryNextInvasion=0;recordTerritoryPlacement(r,35000,()=>.3);assert.equal(r.territoryEvents[0].kind,'invader-colony');
 });
 test('The placement that reaches 99 figures announces without executing a due worm meal',()=>{

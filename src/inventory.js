@@ -1,3 +1,4 @@
+import {inventoryColumns} from './inventory-layout.js';
 import {localLiving} from './living-balance.js';
 import {borderIcon,wallIcon} from './frontiers.js';
 import {machineChoice,localHumanId} from './local.js';
@@ -16,6 +17,7 @@ Object.assign(toolIcons,{
  'hint-expand':'<rect x="3" y="12" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M3 18h18M3 24h18M9 12v18M15 12v18M19 3h10v10m-10 0L29 3"/>',
  'super-hint':'<path d="M9 20c0-3-4-4-4-9a9 9 0 0 1 18 0c0 5-4 6-4 9M9 24h10m-9 4h8M26 15l2 4 3 1-3 2-2 4-1-4-4-2 4-1 1-4Z"/>'
 });
+for(const length of [2,3])toolIcons['expand-'+length]=`<rect x="3" y="9" width="26" height="14" rx="1" stroke-dasharray="2 2"/>${Array.from({length:length-1},(_,i)=>`<path d="M${3+26*(i+1)/length} 9v14"/>`).join('')}<path d="M13 16h6m-3-3v6"/>`;
 export const toolIcon=kind=>kind==='hint'?hintIcon:`<svg viewBox="0 0 32 32" ${['frontier','border'].includes(kind)?'style="color:var(--frontier)"':''} aria-hidden="true">${toolIcons[kind]||''}</svg>`;
 
 export function inventoryTotal(game,playerId){
@@ -97,10 +99,10 @@ export function compactInventoryMarkup(game,playerId){
    const count=inv.cards[t.id]||0,enabled=t.id==='hint'?canUsePracticeHint(game,playerId):canUsePracticeTool(game,playerId,t.id),status=t.id==='frontier'&&game.pairs[0]?.pending?(game.pairs[0]?.frontierUsed?'Usada en esta ampliación':!count?'Agotada':enabled?'Colocar muro antes del 3×3':'No disponible en esta ampliación'):state.used.includes(t.id)?'Usada este turno':!count?'Agotada':enabled?'Usar':'Sin protecciones disponibles o ya activa';
    return `<button class="inventory-card inventory-icon-card" data-action="${t.group==='help'?'practice-hint':'practice-tool'}" data-tool="${t.id}" aria-label="${t.label}, ${count} carta${count===1?'':'s'}, ${status}" title="${t.label} · ${status}" ${enabled?'':'disabled'}><span class="inventory-icon">${toolIcon(t.id)}</span><span class="inventory-count">×${count}</span></button>`;
  };
- const cards=practiceTools.filter(t=>t.group!=='help').map(cardMarkup).join('');
+ const cards=inventoryColumns(id=>cardMarkup(practiceTools.find(t=>t.id===id)));
  const help=practiceTools.filter(t=>t.group==='help').map(cardMarkup).join('');
  const enabled=canUsePracticeTool(game,playerId,'immunity'),label=`Inmunidad de todo el territorio: ${stock} protecciones guardadas. ${active?'Protección activa de 33 segundos':enabled?'Activar 33 segundos':'Sin protecciones disponibles o ya activa'}`;
- return `<div class="inventory-cards inventory-compact-grid">${cards}</div><section class="inventory-help" aria-label="Ayuda"><h3>Ayuda</h3><div class="inventory-help-grid">${help}</div></section><section class="inventory-immunity-bottom" aria-label="Inmunidad y progreso de los objetivos"><button class="inventory-card inventory-icon-card immunity-reserve ${active?'is-active':''}" data-immunity="immunity" data-action="practice-tool" data-tool="immunity" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}><span class="inventory-icon">${toolIcon('immunity')}</span><span class="immunity-stock inventory-count">×${stock}</span>${active?`<span class="immunity-active-indicator" data-immunity-clock="${playerId}">${immunitySeconds(game,playerId)}</span>`:''}</button>${goals.map(g=>`<div class="immunity-compact-goal" data-immunity-goal="${g.id}" aria-label="Premio de ${g.protections} protecciones de 33 segundos. Faltan ${g.missing} combos de al menos 33 puntos" title="+${g.protections} protecciones · faltan ${g.missing} combos de ≥33 puntos"><span>+${g.protections}</span><b class="immunity-missing">−${g.missing}</b><progress max="${g.combos}" value="${g.progress}" aria-label="${g.progress} de ${g.combos} combos"></progress></div>`).join('')}</section>`;
+ return `${cards}<section class="inventory-immunity-bottom" aria-label="Inmunidad y progreso de los objetivos"><button class="inventory-card inventory-icon-card immunity-reserve ${active?'is-active':''}" data-immunity="immunity" data-action="practice-tool" data-tool="immunity" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}><span class="inventory-icon">${toolIcon('immunity')}</span><span class="immunity-stock inventory-count">×${stock}</span>${active?`<span class="immunity-active-indicator" data-immunity-clock="${playerId}">${immunitySeconds(game,playerId)}</span>`:''}</button>${goals.map(g=>`<div class="immunity-compact-goal" data-immunity-goal="${g.id}" aria-label="Premio de ${g.protections} protecciones de 33 segundos. Faltan ${g.missing} combos de al menos 33 puntos" title="+${g.protections} protecciones · faltan ${g.missing} combos de ≥33 puntos"><span>+${g.protections}</span><b class="immunity-missing">−${g.missing}</b><progress max="${g.combos}" value="${g.progress}" aria-label="${g.progress} de ${g.combos} combos"></progress></div>`).join('')}</section>`;
 }
 export const inventoryShortcutsMarkup=()=>`<button data-action="setup-solo" aria-label="Practicar contra la máquina" title="Practicar contra la máquina">${hallIcon('robot')}</button><button data-action="setup-local" aria-label="Dos en este dispositivo" title="Dos en este dispositivo">${hallIcon('players')}</button><button data-action="hall-games" aria-label="Abrir una partida guardada" title="Abrir una partida guardada">${hallIcon('games')}</button>`;
 export function inventoryMarkup(game,playerId,{showShortcuts=true}={}){
@@ -130,12 +132,12 @@ export function inventoryStatusMarkup(game,{paused=false,playerId}={}){
  const player=game.players.find(p=>p.id===actor);if(!player)return '';
  const effects=activeInventoryEffects(game),cards=inventoryFor(game,actor).cards;
  // Prepared only when a game snapshot renders; never during pan, zoom or clock ticks.
- const catalog=[...practiceTools].sort((a,b)=>Number(cards[b.id]>0)-Number(cards[a.id]>0));
- const shortcuts=catalog.map(t=>{
+ const catalog=[...practiceTools];
+ const shortcuts=inventoryColumns(id=>{const t=catalog.find(t=>t.id===id);
   const stock=cards[t.id]||0,enabled=!paused&&stock>0&&canUsePracticeTool(game,actor,t.id);
   const label=`${t.label} · ${stock} carta${stock===1?'':'s'}${paused?' · pausado':enabled?' · usar ahora':t.id==='hint-expand'?' · al ampliar o desde 333 figuras':' · no disponible en este turno'}`;
   return `<button class="inventory-effect inventory-shortcut ${stock?'has-stock':'is-inactive'} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="${t.group==='help'?'practice-hint':'practice-tool'}" data-tool="${t.id}" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(t.id)}<small>×${stock}</small></button>`;
- }).join('');
+ });
  const pending=effects.filter(e=>!['frontier','border'].includes(e.tool)&&(e.tool!=='immunity'||paused||game.mode==='solo'&&e.player!==actor)).map(e=>{
   const name=e.tool==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===e.tool).label;
   const detail=e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';

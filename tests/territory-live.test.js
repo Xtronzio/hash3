@@ -3,7 +3,7 @@ import {key} from '../src/game.js';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {territoryRegion,advanceTerritory} from '../src/territory-tools.js';
-import {TERRITORY_EVENT_RULES,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount,pickEventKind,confirmEventKind,territoryAttemptInterval} from '../src/territory-event-rules.js';
+import {TERRITORY_EVENT_RULES,LOCAL_NATURAL_ROTATION,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount,pickEventKind,confirmEventKind,territoryAttemptInterval} from '../src/territory-event-rules.js';
 import {plannedEventRegion} from '../src/territory-event-actions.js';
 
 const make=()=>{
@@ -70,12 +70,12 @@ test('Metorite and earthquake demolition shares the same 3% budget, with distinc
 });
 test('Each family draws without replacement independently and survives serialization',()=>{
  let r=make();const natural=[],invaders=[];
- for(let i=0;i<7;i++){
+ for(let i=0;i<8;i++){
   const n=pickEventKind(r,'natural');natural.push(n.order[0]);confirmEventKind(r,n);
   if(i<4){const v=pickEventKind(r,'invaders');invaders.push(v.order[0]);confirmEventKind(r,v);}
   r=JSON.parse(JSON.stringify(r));
  }
- assert.deepEqual([...natural].sort(),[...NATURAL_EVENT_ROTATION].sort());
+ assert.deepEqual([...natural].sort(),[...LOCAL_NATURAL_ROTATION].sort());
  for(const pair of [invaders.slice(0,2),invaders.slice(2)])assert.deepEqual(pair.sort(),[...INVADER_EVENT_ROTATION].sort());
 });
 test('Historical rain/cataclysm definitions remain recognised and do not become asterisks',()=>{
