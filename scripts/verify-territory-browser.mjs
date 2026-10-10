@@ -120,7 +120,7 @@ try{
   assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),9);
   assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
-  await page.locator(`[data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
+  await page.locator(`.board-territory-status [data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
   await frame(page);
   assert.ok(await page.locator(`.board .phenomenon-marker [data-ecology-kind="${kind}"]`).count()>0,`No visible marker for ${kind}`);
   await page.screenshot({path:path.join(output,`${kind}.png`)});
@@ -308,7 +308,7 @@ try{
  // A live invasion remains active without a fictitious seconds clock.
  const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');for(let i=0;i<3;i++)advanceInvasions(growthRoom,Date.now(),()=>0);
  const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
- await growthPage.locator('[data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
+ await growthPage.locator('.board-territory-status [data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
  assert.doesNotMatch(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
  assert.equal(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
  assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.ok(await growthPage.locator('.board .invasion-growth').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth').first().evaluate(el=>getComputedStyle(el,'::after').borderTopStyle),'dashed');assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
