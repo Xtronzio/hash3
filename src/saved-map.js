@@ -63,7 +63,8 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
   };
   listen(panel,'click',e=>{
     const control=e.target.closest('[data-inspect-action]'),action=control?.dataset.inspectAction;if(!action)return;
-    if(action==='target'){const p=model.watchTargets?.find(p=>p.id===control.dataset.id);if(p)focus({x:p.x+.5,y:p.y+.5});return;}
+    if(action==='target'){const p=model.watchTargets?.find(p=>p.id===control.dataset.id);control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
+    if(action==='last-move'){const p=model.lastNavigationMove;control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
     if(action==='ecology'){const kind=control.dataset.ecologyKind,item=nextEcologyTarget(model.ecologyTargets?.[kind]||[],state[kind+'Id']);if(item){state[kind+'Id']=item.id;focus({x:item.x+.5,y:item.y+.5});}return;}
     if(action==='fit')setCamera({...fitted});
     if(action==='own'&&model.active)focus({x:model.active.x+1.5,y:model.active.y+1.5});
