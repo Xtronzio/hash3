@@ -1,8 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {ecologyChoicesMarkup,territoryWarningMarkup} from '../src/ecology-ui.js';
-test('Complexity has three independent accessible icon checkboxes, without visible explanatory copy',()=>{
+test('Complexity has four independent accessible icon checkboxes, own inventory enabled by default',()=>{
  const html=ecologyChoicesMarkup({machine:true,machineInventory:false,faunaEnabled:true,territoryEnabled:false},'<svg></svg>');
- assert.equal((html.match(/type="checkbox"/g)||[]).length,3);assert.match(html,/aria-label="Inventario rival"/);assert.match(html,/id="fauna-enabled"[^>]*checked/);assert.doesNotMatch(html,/id="territory-enabled"[^>]*checked/);assert.doesNotMatch(html,/<strong>|<small>/);
+ assert.equal((html.match(/type="checkbox"/g)||[]).length,4);assert.match(html,/id="player-inventory"[^>]*checked/);assert.match(html,/aria-label="Tu inventario"/);assert.match(html,/aria-label="Inventario rival"/);assert.match(html,/id="fauna-enabled"[^>]*checked/);assert.doesNotMatch(html,/id="territory-enabled"[^>]*checked/);assert.doesNotMatch(html,/<strong>|<small>/);
  for(const kind of ['rodent','worm','build','destroy','invader-colony','meteorites','hurricane','ufo'])assert.ok(html.includes(`data-ecology-kind="${kind}"`));
  assert.match(html,/Invasores y fenómenos naturales y estelares/);
 });

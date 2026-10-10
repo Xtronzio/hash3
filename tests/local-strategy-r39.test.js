@@ -4,7 +4,7 @@ import {createLocal,localCommand} from '../src/local.js';
 import {availableCells} from '../src/game.js';
 import {advanceEcologyTurn,countHabitatPlacement,initializeHabitats} from '../src/inhabitants.js';
 import {pendingInvasionBombs} from '../src/pending-bombs.js';
-import {microExpansionOptions} from '../src/micro-expansion.js';
+import {microExpansionChains,microSelectionOptions} from '../src/micro-expansion.js';
 import {ecologyNavigationMarkup} from '../src/ecology-navigation.js';
 import {ecologyWarningsMarkup,eventOutlook,eventOutlookMarkup} from '../src/event-outlook.js';
 import {inventoryStatusMarkup} from '../src/inventory.js';
@@ -44,15 +44,15 @@ test('Desplazar transports only a pending bomb, spending one card and preserving
  assert.throws(()=>localCommand(r,'inventory',{tool:'shift',playerId:'local-x',bombId:'meteorite',toX:0,toY:0},now));
 });
 
-test('2×1 and 3×1 cards add exact adjacent cells in either orientation without advancing turn, scoring, or overwriting terrain',()=>{
- for(const length of [2,3])for(const orientation of ['horizontal','vertical']){
+test('+2 and +3 cards add exact adjacent cells by taps without advancing turn, scoring, or overwriting terrain',()=>{
+ for(const length of [2,3]){
   let r=fresh();const tool='expand-'+length;r.players[0].inventory.cards[tool]=1;
-  const choice=microExpansionOptions(r,length,orientation)[0];assert.ok(choice);
-  r=localCommand(r,'inventory',{playerId:'local-x',tool,...choice},now);
+  const cells=microExpansionChains(r,length)[0];assert.ok(cells);
+  r=localCommand(r,'inventory',{playerId:'local-x',tool,cells},now);
   assert.equal(r.terrain.length,9+length);assert.equal(r.pairs[0].turn,'X');assert.equal(r.players[0].score,0);assert.equal(r.ecologyTurns,0);assert.equal(r.players[0].inventory.cards[tool],0);
   assert.equal(new Set(r.terrain.map(c=>c.x+','+c.y)).size,r.terrain.length);
  }
- const capped=fresh();capped.cellTarget=33;capped.terrain=Array.from({length:32},(_,i)=>({x:i%8,y:Math.floor(i/8)}));assert.equal(microExpansionOptions(capped,2).length,0);
+ const capped=fresh();capped.cellTarget=33;capped.terrain=Array.from({length:32},(_,i)=>({x:i%8,y:Math.floor(i/8)}));assert.equal(microSelectionOptions(capped,2).length,0);
 });
 
 test('Three dianas follow positions across piece changes, terrain loss, pause and reload, and can be removed without spending a turn',()=>{

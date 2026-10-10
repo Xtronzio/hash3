@@ -16,7 +16,7 @@ export function archiveTerritoryResult(storage,game){
  if(game.status!=='finished'||!['board-limit','time-limit','move-limit'].includes(game.finalResult?.kind))return;
  storage.setItem(archiveKey,JSON.stringify(loadTerritoryResults(storage,[game])));
 }
-export const territoryComparisonKey=r=>JSON.stringify([r.goalType||'cells',r.target||r.limit,r.mode,r.level,r.timeMode,r.difficulty,r.machineInventory,r.faunaEnabled,r.territoryEnabled,r.ruleVersion,r.declaredGoal]);
+export const territoryComparisonKey=r=>JSON.stringify([r.goalType||'cells',r.target||r.limit,r.mode,r.level,r.timeMode,r.difficulty,r.playerInventory!==false,r.machineInventory,r.faunaEnabled,r.territoryEnabled,r.ruleVersion,r.declaredGoal]);
 const number=n=>n==null?'—':Number(n).toLocaleString('es-ES');
 const goalType=r=>r.goalType||({'time-limit':'time','move-limit':'moves'}[r.kind]||'cells');
 const goalTarget=r=>r.target||r.limit;
@@ -25,7 +25,7 @@ const targets=(goal,records=[])=>goal==='time'
  :CELL_TARGETS;
 const goalLabels={cells:'Celdas',moves:'Movimientos',time:'Tiempo'};
 const metrics={score:'Puntos',figures:'Figuras',placements:'Colocaciones',bestCombo:'Combo',max:'#MAX'};
-const settingsLabel=r=>`${r.level==='advanced'?'Avanzado':'Normal'} · ${r.timeMode==='untimed'?'Sin reloj':'Con reloj'}${r.difficulty?' · '+r.difficulty:''} · Inventario rival ${r.machineInventory?'✓':'—'} · Fauna ${r.faunaEnabled?'✓':'—'} · Fenómenos ${r.territoryEnabled?'✓':'—'}`;
+const settingsLabel=r=>`${r.level==='advanced'?'Avanzado':'Normal'} · ${r.timeMode==='untimed'?'Sin reloj':'Con reloj'}${r.difficulty?' · '+r.difficulty:''} · Tu inventario ${r.playerInventory!==false?'✓':'—'} · Inventario rival ${r.machineInventory?'✓':'—'} · Fauna ${r.faunaEnabled?'✓':'—'} · Fenómenos ${r.territoryEnabled?'✓':'—'}`;
 export function achievementSelection(results=[],view={}){
  const records=results.filter(valid),mode=metricModes.some(([m])=>m===view.mode)?view.mode:records[0]?.mode||'solo';
  const inMode=records.filter(r=>r.mode===mode),goal=goalLabels[view.goal]?view.goal:inMode[0]?goalType(inMode[0]):'cells';

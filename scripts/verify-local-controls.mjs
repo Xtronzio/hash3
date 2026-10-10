@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {createLocal} from '../src/local.js';
+export async function verifyLocalControls({context,load,output,results}){
+ const fresh=()=>createLocal('local','X','O',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});
+ const r=fresh();r.players[0].inventory.cards['expand-2']=1;r.players[0].inventory.immunity.cards['immunity-1']=1;
+ const {page,errors}=await load(context,r),saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ const widget=page.locator('[data-floating-player="local-x"]'),before=await widget.boundingBox();
+ const view=await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop}));
+ await page.mouse.move(before.x+24,before.y+7);await page.mouse.down();await page.mouse.move(before.x+124,before.y+67,{steps:12});await page.mouse.up();
+ const after=await widget.boundingBox();assert.ok(after.x>before.x+70);assert.ok(after.y>before.y+35);
+ assert.deepEqual(await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop})),view);
+ assert.equal((await saved()).players[0].inventory.immunity.cards['immunity-1'],1);
+ const select=()=>page.locator('.board-inventory-status [data-tool="expand-2"]').tap();
+ const target=(x,y)=>page.locator(`.area-anchor[data-x="${x}"][data-y="${y}"]`).tap();
+ await select();assert.equal(await page.locator('[data-action="rotate-micro"],[data-action="suggest-micro"]').count(),0);
+ await target(3,0);assert.equal((await saved()).terrain.length,9);
+ await page.locator('[data-action="cancel-tool-selection"]').tap();assert.equal((await saved()).players[0].inventory.cards['expand-2'],1);
+ assert.ok(Math.abs((await widget.boundingBox()).x-after.x)<1);
+ await select();await target(3,0);await target(3,1);
+ const next=await saved();assert.equal(next.terrain.length,11);assert.equal(next.players[0].inventory.cards['expand-2'],0);assert.equal(next.ecologyTurns,0);assert.equal(next.pairs[0].turn,'X');
+ await widget.locator('[data-tool="immunity"]').tap();assert.equal((await saved()).players[0].inventory.immunity.cards['immunity-1'],0);
+ await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').tap();
+ assert.ok(Math.abs((await widget.boundingBox()).x-after.x)<1);
+ await page.screenshot({path:path.join(output,'micro-floating-r41.png')});assert.deepEqual(errors,[]);results.push({microExpansionTapCancelAndPlace:true,floatingImmunityDragNoSpendTapActivateAndResume:true,passed:true});await page.close();
+ const l=fresh();l.players[0].inventory.cards['expand-3']=1;
+ const {page:lPage,errors:lErrors}=await load(context,l);await lPage.locator('.board-inventory-status [data-tool="expand-3"]').tap();
+ for(const [x,y]of [[3,0],[4,0],[4,1]])await lPage.locator(`.area-anchor[data-x="${x}"][data-y="${y}"]`).tap();
+ const lSaved=await lPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(lSaved.terrain.length,12);assert.equal(lSaved.players[0].inventory.cards['expand-3'],0);assert.equal(lSaved.ecologyTurns,0);
+ await lPage.screenshot({path:path.join(output,'micro-L-r41.png')});assert.deepEqual(lErrors,[]);results.push({microThreeTapsLShape:true,passed:true});await lPage.close();
+}

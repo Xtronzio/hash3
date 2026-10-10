@@ -1,4 +1,5 @@
 import {borderChains} from './area-tools.js';
+import {microLength,microExpansionChains} from './micro-expansion.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
 import {localCommand,machineChoice} from './local.js';
 import {availableCells,expansionOptions,terrainOf,key} from './game.js';
@@ -27,13 +28,14 @@ function cardCandidates(room,player,now){
   if(!canUsePracticeTool(room,player,tool,now))continue;
   if(['combo','double','rival','immunity'].includes(tool)){commands.push({action:'inventory',payload:{tool,playerId:player}});continue;}
   if(tool==='border'){for(const cells of borderChains(room,3))commands.push({action:'inventory',payload:{tool,playerId:player,cells}});continue;}
+  if(microLength(tool)>1){for(const cells of microExpansionChains(room,microLength(tool)))commands.push({action:'inventory',payload:{tool,playerId:player,cells}});continue;}
   const points=toolCells(room,player,tool).sort((a,b)=>proximity(b)-proximity(a)).slice(0,3);
   for(const p of points){
    if(tool==='shift'){
     if(p.bombId)continue;
     const destination=availableCells(room,room.pairs[0]).find(c=>moveDestination(room,player,c)&&moveDestination(room,p.owner,c));
     if(destination)commands.push({action:'inventory',payload:{tool,playerId:player,x:p.x,y:p.y,toX:destination.x,toY:destination.y}});
-   }else commands.push({action:'inventory',payload:{tool,playerId:player,x:p.x,y:p.y,...(['expand-2','expand-3'].includes(tool)?{orientation:p.orientation}:{}),...(['frontier','border'].includes(tool)?{side:'north'}:{})}});
+   }else commands.push({action:'inventory',payload:{tool,playerId:player,x:p.x,y:p.y,...(['frontier','border'].includes(tool)?{side:'north'}:{})}});
   }
  }
  return commands;

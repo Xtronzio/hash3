@@ -13,6 +13,7 @@ on:
       - release/local-reclaim-r38
       - release/local-strategy-r39
       - release/local-layout-r40
+      - release/local-controls-r41
   workflow_dispatch:
 permissions:
   contents: write
