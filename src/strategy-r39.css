@@ -52,3 +52,4 @@
 .floating-immunity .immunity-quick.is-active{color:var(--cyan);opacity:1}
 .micro-selected-preview{border:2px dashed var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent);color:var(--cyan);display:grid;place-items:center;pointer-events:none}
 .ecology-choices{flex-wrap:wrap}
+.inventory-setting-label{font-size:11px;line-height:12px;color:var(--text,#fff);margin-top:-6px;margin-bottom:-6px}
