@@ -102,6 +102,7 @@ function startTornadoEffect(feedback){
  tornadoTimer=setTimeout(()=>{tornadoEffect=null;scheduleBoard(true);},900);
 }
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
+const inventoryDescriptionsOpen=new Set();
 let inventoryRefillEffect=null,inventoryRefillTimer,inventoryCardChoice=null;
 let superHelpPlan=null;
 const pendingInventoryRefills=new Map();
@@ -690,6 +691,14 @@ async function run(operation) {
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
   let action=b.dataset.action;
+  if(action==='inventory-description'){
+    const id=b.dataset.tool,panel=document.getElementById(b.getAttribute('aria-controls'));if(!panel)return;
+    panel.hidden=!panel.hidden;b.setAttribute('aria-expanded',String(!panel.hidden));
+    b.setAttribute('aria-label',`${panel.querySelector('h3').textContent}: ${panel.hidden?'ver':'ocultar'} descripción`);
+    if(b.closest('.inventory-sheet')){if(panel.hidden)inventoryDescriptionsOpen.delete(id);else inventoryDescriptionsOpen.add(id);}
+    if(!panel.hidden)panel.scrollIntoView({block:'nearest',inline:'nearest'});
+    return;
+  }
   if(action==='expand-pause-map'||action==='close-pause-map'){
     pauseMapOpen=action==='expand-pause-map';renderPaused();document.querySelector(pauseMapOpen?'[data-action="close-pause-map"]':'[data-action="expand-pause-map"]')?.focus({preventScroll:true});return;
   }
@@ -759,10 +768,10 @@ app.addEventListener('click',async e=>{
   }
   if(action==='events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
-  if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
+  if(action==='inventory'){eventsOpen=false;inventoryOpen=!inventoryOpen;inventoryDescriptionsOpen.clear();if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
   if(action==='close-inventory'){inventoryOpen=false;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(action==='practice-hint'){
-    const kind=b.dataset.tool||'hint';
+    const kind=b.dataset.tool||b.dataset.useTool||'hint';
     if(!canUsePracticeTool(room,uid,kind)){notify('Herramienta no disponible en este turno.');return;}
     inventoryCardChoice={player:uid,tool:kind,at:performance.now(),applied:false};inventorySelection=null;inventoryOpen=false;render();
     if(kind==='hint-expand'){await run(async()=>{const id=room.id,version=room.version,point=await analyzeHelp('expand');if(room.id!==id||room.version!==version)throw new Error('La partida ha cambiado.');const next=useExpansionHint(room,uid,Date.now(),point);selectedExpansion={x:point.x,y:point.y};inventoryOpen=false;accept(next);center(point.x+1,point.y+1);notify('Ampliación sugerida. Puedes colocarla o elegir otra.');});return;}
@@ -772,7 +781,7 @@ app.addEventListener('click',async e=>{
   if(action==='cancel-super-help'){inventoryCardChoice=null;superHelpPlan=null;render();return;}
   if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notify(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
   if(action==='practice-tool'){
-    const tool=b.dataset.tool,toolPlayer=b.dataset.player||uid;
+    const tool=b.dataset.tool||b.dataset.useTool,toolPlayer=b.dataset.player||uid;
     if(!canUsePracticeTool(room,toolPlayer,tool)){notify('Herramienta no disponible en este turno.');return;}
     inventoryCardChoice={player:toolPlayer,tool,at:performance.now(),applied:false};inventorySelection=null;
     if(!['double','rival','combo','immunity'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
@@ -1212,7 +1221,7 @@ function renderEvents(){
 }
 function renderInventory(){
  document.querySelector('.inventory-sheet')?.remove();if(!inventoryOpen||room?.status!=='playing')return;
- document.querySelector('.game-dock').insertAdjacentHTML('beforebegin',`<section class="inventory-sheet" id="inventory-panel" role="region" aria-labelledby="inventory-title"><div class="inventory-sheet-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div><div class="inventory-sheet-body">${inventoryMarkup(room,uid)}</div></section>`);
+ document.querySelector('.game-dock').insertAdjacentHTML('beforebegin',`<section class="inventory-sheet" id="inventory-panel" role="region" aria-labelledby="inventory-title"><div class="inventory-sheet-heading"><h2 class="heading" id="inventory-title">Inventario</h2><button data-action="close-inventory" aria-label="Cerrar inventario">×</button></div><div class="inventory-sheet-body">${inventoryMarkup(room,uid,{openTools:inventoryDescriptionsOpen})}</div></section>`);
  document.querySelector('[data-action="close-inventory"]')?.focus({preventScroll:true});
 }
 function renderDeleteGame(){

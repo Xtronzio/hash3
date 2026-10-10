@@ -7,6 +7,7 @@ import {createServer} from 'vite';
 import {createLocal,localCommand} from '../src/local.js';
 import {verifyLocalControls} from './verify-local-controls.mjs';
 import {verifyLocalTargets} from './verify-local-targets.mjs';
+import {verifyInventoryDescriptions} from './verify-inventory-descriptions.mjs';
 import {seedInvasions,advanceInvasions} from '../src/invasion-paths.js';
 import {initializeHabitats} from '../src/inhabitants.js';
 import {LOCAL_NATURAL_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
@@ -416,6 +417,7 @@ try{
  assert.deepEqual(strategyErrors,[]);results.push({separateInventoryRows:true,appearanceVsImpactCounters:true,movableBomb:true,threeDianas:true,threeTurnWarning:true,passed:true});await strategy.close();
  await verifyLocalControls({context,load,output,results});
  await verifyLocalTargets({context,load,output,results});
+ await verifyInventoryDescriptions({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;

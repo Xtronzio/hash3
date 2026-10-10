@@ -36,6 +36,6 @@ test('Super help rejects stale versions, expiry, pause, missing stock and foreig
 });
 test('Aids have separate stocks and distinct icons within the player inventory categories',()=>{
  const r=start(),html=inventoryMarkup(r,'local-x');assert.match(html,/player-inventory-rows/);assert.doesNotMatch(html,/inventory-column-category/);
- for(const tool of ['hint','hint-expand','super-hint'])assert.match(html,new RegExp(`data-action="practice-hint" data-tool="${tool}"`));
+ for(const tool of ['hint','hint-expand','super-hint'])assert.match(html,new RegExp(`data-action="practice-hint" data-use-tool="${tool}"`));
  assert.notEqual(toolIcon('hint'),toolIcon('hint-expand'));assert.notEqual(toolIcon('hint-expand'),toolIcon('super-hint'));
 });
