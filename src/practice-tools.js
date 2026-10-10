@@ -1,3 +1,4 @@
+import {initializeWildcardUsage} from './wildcard-usage.js';
 import {microLength,microExpansionOptions} from './micro-expansion.js';
 import {pendingInvasionBombs} from './pending-bombs.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
@@ -14,13 +15,14 @@ export const practiceTools=[
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
   {id:'rival',label:'Ficha rival',description:'Obliga al rival a poner una ficha de tu color en su próxima colocación. Esa figura puntúa para tu símbolo.',button:'Activar ficha rival'},
   {id:'erase',label:'Borrar',description:'Borra una ficha rival y después juega. Tus propias fichas no se pueden borrar.',button:'Elegir ficha rival'},
+  {id:'swap',label:'Permutar fichas',description:'Intercambia las posiciones de dos fichas del tablero. Conserva símbolos y propietarios; puntúa las figuras nuevas de X y O al aterrizar. Respeta Escudo, Inmunidad y habitantes. Después coloca tu ficha.',button:'Elegir dos fichas'},
   {id:'shift',label:'Desplazar',description:'Mueve una ficha rival a una celda vacía o una bomba de bombardeo pendiente a otra casilla válida sin reiniciar el preaviso. Conserva su símbolo y dueño; las figuras nuevas puntúan para ese símbolo.',button:'Mover ficha rival'},
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
   {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',group:'help',label:'Ayuda de movimiento',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
-  {id:'activate',label:'Construir celda',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
-  {id:'expand-2',label:'Ampliación 2×1',description:'Añade dos celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar dos celdas'},
-  {id:'expand-3',label:'Ampliación 3×1',description:'Añade tres celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar tres celdas'},
+  {id:'activate',label:'Ampliación +1 (1×1)',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
+  {id:'expand-2',label:'Ampliación +2 (2×1)',description:'Añade dos celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar dos celdas'},
+  {id:'expand-3',label:'Ampliación +3 (3×1)',description:'Añade tres celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar tres celdas'},
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos; las figuras nuevas al aterrizar puntúan para X y O. Conserva símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
@@ -39,7 +41,7 @@ const startingCards=new Set(['double','opposite','rival','erase','shift','block'
 const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,startingCards.has(t.id)?1:0]));
 export function initializeInventory(game){
   if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
-  game.inventoryVersion=2;
+  game.inventoryVersion=2;initializeWildcardUsage(game);
   for(const player of game.players){
     player.inventory||={cards:initialCards(),turns:0};
     player.inventory.received||={};
@@ -73,6 +75,7 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=
   if(tool==='border')return borderOptions(game,selected);
   if(tool==='frontier')return frontierOptions(game,side,playerId,{pivot});
   const linked=new Set(playableTerrain(game,p).map(c=>key(c.x,c.y)));
+  if(tool==='swap'){const protectedKeys=protectedTerritoryKeys(game);return game.cells.filter(c=>linked.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&!isShielded(game,c)&&!isImmune(game,c.owner));}
   if(tool==='activate'){
     if(terrainOf(game).length>=boardCellLimit(game))return [];
     const known=new Set(terrainOf(game).map(c=>key(c.x,c.y))),occupied=new Set(game.cells.map(c=>key(c.x,c.y))),holes=new Map();
@@ -120,6 +123,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='hint')return availableCells(game,p).length>0;
   if(tool==='shift'&&!availableCells(game,p).length&&!pendingInvasionBombs(game).length)return false;
   if(tool==='block'&&availableCells(game,p).length<2)return false;
+  if(tool==='swap')return toolCells(game,playerId,tool).length>=2;
   if(tool==='border')return borderChains(game,1).length>0;
   return toolCells(game,playerId,tool).length>0||['expand-2','expand-3'].includes(tool)&&microExpansionOptions(game,microLength(tool),'vertical').length>0;
 }
@@ -155,7 +159,7 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
     inv.cards[draw.id]++;inv.received[draw.id]++;inv.turns=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;
   }
 }
-export const TACTICAL_CARDS=Object.freeze(['double','opposite','rival','erase','shift','combo']);
+export const TACTICAL_CARDS=Object.freeze(['double','opposite','rival','erase','shift','swap','combo']);
 export const inventoryDrawWeight=tool=>TACTICAL_CARDS.includes(tool)?3:1;
 export function moveDestination(game,playerId,cell){
   if(!cell)return false;

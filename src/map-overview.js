@@ -1,3 +1,4 @@
+import {wildcardFill} from './wildcard-usage.js';
 import {invasionGrowthCells} from './invasion-paths.js';
 import {habitatLocations,habitatReservations} from './habitat-tools.js';
 import {terrainOf,key} from './game.js';
@@ -14,7 +15,7 @@ export function overviewModel(room,own,target,{includeFrontiers=true}={}){
   const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
   const eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y))),rodents=new Map(habitatLocations(room).map(r=>[key(r.x,r.y),r]));
   const position=target?.lastMove?{x:target.lastMove.x+.5,y:target.lastMove.y+.5}:targetPair?{x:targetPair.active.x+1.5,y:targetPair.active.y+1.5}:null;
-  return {bounds,watchTargets:room.watchTargets||[],invasionGrowth:invasionGrowthCells(room),wormTrails:wormTrailParts(room),habitats:habitatLocations(room),frontiers:includeFrontiers?frontierMarkup(room):'',terrain:terrain.map(p=>{const c=cells.get(key(p.x,p.y)),r=rodents.get(key(p.x,p.y));return {...p,symbol:c?.symbol,fill:r?'var(--yellow)':c?(c.symbol==='#'?'#c5cbd4':c.symbol==='*'?'var(--yellow)':c.id&&c.id===target?.lastMove?.id?'var(--blue)':c.symbol==='X'?'var(--red)':'var(--green)'):'#343e4c',eaten:!c&&eaten.has(key(p.x,p.y)),rodent:r||null};}),active:myPair?.active,ownColor:own?.symbol==='X'?'var(--red)':'var(--green)',target:position};
+  return {bounds,watchTargets:room.watchTargets||[],invasionGrowth:invasionGrowthCells(room),wormTrails:wormTrailParts(room),habitats:habitatLocations(room),frontiers:includeFrontiers?frontierMarkup(room):'',terrain:terrain.map(p=>{const c=cells.get(key(p.x,p.y)),r=rodents.get(key(p.x,p.y));return {...p,symbol:c?.symbol,fill:r?'var(--yellow)':c?(c.symbol==='#'?wildcardFill(c):c.symbol==='*'?'var(--yellow)':c.id&&c.id===target?.lastMove?.id?'var(--blue)':c.symbol==='X'?'var(--red)':'var(--green)'):'#343e4c',eaten:!c&&eaten.has(key(p.x,p.y)),rodent:r||null};}),active:myPair?.active,ownColor:own?.symbol==='X'?'var(--red)':'var(--green)',target:position};
 }
 
 export function overviewPoint(bounds,rect,clientX,clientY){
@@ -30,6 +31,6 @@ export function overviewView(bounds,view){
   return {x,y,width:Math.max(0,Math.min(bounds.x+bounds.width,view.x+view.width)-x),height:Math.max(0,Math.min(bounds.y+bounds.height,view.y+view.height)-y)};
 }
 
-export function overviewMarkup({open,jumpButtons='',rodentButton='',habitatButtons=rodentButton,inventoryStatus=''}){
-  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><nav class="map-controls" aria-label="Controles del mapa"><p class="map-summary"></p><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">${navigationIcon('fit')}</button>${jumpButtons}<button data-action="close-map" aria-label="Volver al tablero" title="Volver al tablero">${navigationIcon('restore')}</button></nav>${inventoryStatus}<svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg><nav class="map-controls ecology-controls" aria-label="Fauna y fenómenos del territorio">${habitatButtons}</nav></section>`;
+export function overviewMarkup({open,jumpButtons='',rodentButton='',habitatButtons=rodentButton,inventoryStatus='',warningMarkup=''}){
+  return `<section class="world-map" aria-label="Mapa general" ${open?'':'hidden'}><nav class="map-controls" aria-label="Controles del mapa"><p class="map-summary"></p><button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">${navigationIcon('fit')}</button>${jumpButtons}<button data-action="close-map" aria-label="Volver al tablero" title="Volver al tablero">${navigationIcon('restore')}</button></nav>${warningMarkup}${inventoryStatus}<svg class="map-canvas" role="img" aria-label="Mapa navegable: arrastra o pellizca; toca una zona para ir allí"></svg><nav class="map-controls ecology-controls" aria-label="Fauna y fenómenos del territorio">${habitatButtons}</nav></section>`;
 }

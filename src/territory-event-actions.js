@@ -141,7 +141,7 @@ export function applyPlannedEvent(room,event,now=Date.now()){
   room.cells=room.cells.map(c=>{
    if(!hit.has(key(c.x,c.y))||!flip[c.symbol])return c;
    const symbol=flip[c.symbol],piece={...c,symbol,owner:room.players.find(p=>p.symbol===symbol)?.id??null};
-   delete piece.invasionId;delete piece.invader;delete piece.neutral;
+   delete piece.wildcardSymbol;delete piece.invasionId;delete piece.invader;delete piece.neutral;
    if(symbol==='#')piece.neutral=true;if(symbol==='*')piece.invader=true;
    return piece;
   });

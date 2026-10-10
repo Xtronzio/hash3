@@ -6,7 +6,7 @@ export function tornadoFeedback(previous,next){
  const affected=event.affected||[],positions=new Set(affected.map(p=>`${p.x},${p.y}`));
  const before=new Map(previous.cells.filter(c=>positions.has(`${c.x},${c.y}`)).map(c=>[c.id,c]));
  const moves=next.cells.filter(c=>before.has(c.id)).flatMap(c=>{
-  const from=before.get(c.id);return from.x===c.x&&from.y===c.y?[]:[{id:c.id,symbol:c.symbol,owner:c.owner,from:{x:from.x,y:from.y},to:{x:c.x,y:c.y}}];
+  const from=before.get(c.id);return from.x===c.x&&from.y===c.y?[]:[{id:c.id,symbol:c.symbol,owner:c.owner,...(c.wildcardSymbol?{wildcardSymbol:c.wildcardSymbol}:{}),from:{x:from.x,y:from.y},to:{x:c.x,y:c.y}}];
  });
  return moves.length?{id:event.id,affected,moves}:null;
 }

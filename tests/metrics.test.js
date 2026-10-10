@@ -23,7 +23,7 @@ test('Navigation icons distinguish fit, fullscreen and restore',()=>{
 });
 test('Construction rename preserves old inventories and destruction starts with zero stock',()=>{
  const g=createLocal('local');g.players[0].inventory.cards.activate=2;initializeInventory(g);
- assert.equal(practiceTools.find(t=>t.id==='activate').label,'Construir celda');assert.equal(g.players[0].inventory.cards.activate,2);
+ assert.equal(practiceTools.find(t=>t.id==='activate').label,'Ampliación +1 (1×1)');assert.equal(g.players[0].inventory.cards.activate,2);
  assert.equal(g.players[0].inventory.cards.destroy,0);assert.equal(pendingTools.length,0);
  const html=inventoryMarkup(null,null);assert.match(html,/Construir celda/);assert.doesNotMatch(html,/Activar celda/);assert.match(html,/Destruir celda/);assert.doesNotMatch(html,/Reglas de uso pendientes/);
  for(const action of ['setup-solo','setup-local','hall-games'])assert.match(html,new RegExp('data-action="'+action+'"[^>]*><svg'));
