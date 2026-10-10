@@ -1,3 +1,4 @@
+import {targetColors} from './watch-targets.js';
 import {invaderIcon} from './invader-mark.js';
 import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
 import {frontierMarkup} from './frontiers.js';
@@ -16,7 +17,7 @@ export function mapCellSymbols(terrain){
 }
 export function mapFrameMarkup(model){
  return (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="#e3e5e9" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
- (model.watchTargets||[]).map(p=>`<g class="map-watch-target" transform="translate(${p.x+.5} ${p.y+.5})" fill="none" stroke="#fff" stroke-width=".07"><circle r=".36"/><circle r=".12"/><path d="M-.5 0h.22m.56 0H.5M0-.5v.22m0 .56V.5"/><title>Diana ${p.number}</title></g>`).join('')+
+ (model.watchTargets||[]).map(p=>`<g class="map-watch-target" transform="translate(${p.x+.5} ${p.y+.5})" fill="none" stroke="${targetColors[(p.number||1)-1]}" stroke-width=".07"><circle r=".36"/><circle r=".12"/><path d="M-.5 0h.22m.56 0H.5M0-.5v.22m0 .56V.5"/><title>Diana ${p.number}</title></g>`).join('')+
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){

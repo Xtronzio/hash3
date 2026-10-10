@@ -6,6 +6,7 @@ import {chromium} from 'playwright';
 import {createServer} from 'vite';
 import {createLocal,localCommand} from '../src/local.js';
 import {verifyLocalControls} from './verify-local-controls.mjs';
+import {verifyLocalTargets} from './verify-local-targets.mjs';
 import {seedInvasions,advanceInvasions} from '../src/invasion-paths.js';
 import {initializeHabitats} from '../src/inhabitants.js';
 import {LOCAL_NATURAL_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
@@ -25,6 +26,7 @@ function fixture(size,kind='invader-colony'){
  r.terrain=Array.from({length:size},(_,i)=>({x:i%Math.ceil(Math.sqrt(size)),y:Math.floor(i/Math.ceil(Math.sqrt(size)))}));
  r.players.forEach(p=>{p.figures=333;p.score=999;p.inventory.cards={tornado:1,bomb:1,frontier:1,'hint-expand':1};});
  r.cells=[{id:'invader',x:2,y:2,symbol:'*',owner:null},{id:'x',x:3,y:3,symbol:'X',owner:'local-x'},{id:'o',x:4,y:3,symbol:'O',owner:'local-o'}];
+ r.players[0].navigationLastMove={x:3,y:3};
  initializeHabitats(r,now);
  r.worms=[{id:'worm',x:5,y:5,body:[{x:5,y:5}],eaten:0,turnDriven:true,mealLimit:3,turnsSinceMeal:0}];
  r.rodentRaids=[{id:'raid',x:6,y:6,count:1,turn:0,mealsLeft:3,phase:'arriving',members:[{id:'rat',x:6,y:6}],visited:[]}];
@@ -92,7 +94,7 @@ try{
    const before=await read();assert.ok(before.nodes>0&&before.nodes<1500,`Unbounded detailed cells: ${before.nodes}`);assert.ok(before.overflow<=1,`Horizontal overflow: ${before.overflow}`);
    await touchDrag(page,-110,-50);const after=await read();assert.notEqual(after.scroll,before.scroll,'Touch drag did not move board');
    await pinch(page);assert.ok((await read()).nodes<1500);
-   await page.locator('[data-action="center"]').first().tap();
+   await page.locator('.map-jumps .target-jump-menu summary').tap();await page.locator('.map-jumps [data-action="center"]').tap();
    await page.locator('[data-action="map"]').tap();await page.locator('.world-map:not([hidden])').waitFor();
    assert.ok(await page.locator('.world-map .ecology-map-pin').count()<=33);
    await page.screenshot({path:path.join(output,`map-${viewport.width}-${size}.png`)});
@@ -132,6 +134,7 @@ try{
   const r=createLocal('local','X','O',Date.now(),'normal','untimed',undefined,'X',false,{faunaEnabled:false,territoryEnabled:true});
   r.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));
   r.cells=[{id:'x',x:0,y:0,symbol:'X',owner:'local-x'},{id:'o',x:1,y:0,symbol:'O',owner:'local-o'},{id:'n',x:2,y:0,symbol:'#',owner:null},{id:'i',x:3,y:0,symbol:'*',owner:null}];
+  r.players[0].navigationLastMove={x:0,y:0};
   return r;
  })());
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),10);
@@ -150,7 +153,7 @@ try{
  assert.equal(await visual.locator('.board-overview-map').count(),1);
  for(const symbol of ['X','O','#','*'])assert.ok(await visual.locator(`.board-overview-map [data-symbol="${symbol}"]`).count()>0);
  await visual.screenshot({path:path.join(output,'shared-board-zoom-out.png')});
- await visual.locator('[data-action="center"]').first().tap();await frame(visual);
+ await visual.locator('.map-jumps .target-jump-menu summary').tap();await visual.locator('.map-jumps [data-action="center"]').tap();await frame(visual);
  await visual.locator('[data-action="practice-tool"][data-tool="double"]').first().tap();
  await visual.locator('.board .available').first().tap();await visual.locator('.board .available').first().tap();
  await visual.locator('[data-action="practice-tool"][data-tool="rival"]').first().tap();
@@ -396,10 +399,10 @@ try{
   assert.equal(await strategy.locator('.board-inventory-status [data-ecology-kind]').count(),0);
   assert.equal(await strategy.locator('.board-territory-status [data-tool]').count(),0);
  }
- await strategy.locator('.map-jumps [data-action="mark-target"]').tap();
+ await strategy.locator('.board-inventory-status [data-tool="target"]').tap();
  for(const [x,y]of [[0,0],[1,0],[2,2]])await strategy.locator(`.board [data-action="watch-target-cell"][data-x="${x}"][data-y="${y}"]`).tap();
  assert.equal(await strategy.locator('.map-jumps [data-action="locate-target"]').count(),3);
- await strategy.locator('.map-jumps [data-action="mark-target"]').tap();
+ await strategy.locator('.board-inventory-status [data-tool="target"]').tap();
  await strategy.locator('.board-inventory-status [data-action="practice-tool"][data-tool="shift"]').tap();
  await strategy.locator('.pending-invasion-bomb[data-bomb-id="movable-r39:0"]').tap();
  await strategy.locator('.board [data-action="inventory-target"][data-x="2"][data-y="1"]').tap();
@@ -409,9 +412,10 @@ try{
  await strategy.screenshot({path:path.join(output,'strategy-rows-r40.png')});
  for(const [x,y]of [[0,1],[1,1],[0,2]])await strategy.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
  strategySaved=await strategy.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(strategySaved.territoryEvents.length,0);assert.ok(strategySaved.cells.some(c=>c.x===2&&c.y===1&&c.symbol==='*'));assert.equal(strategySaved.watchTargets.length,3);
- await strategy.locator('[data-action="pause"]').tap();assert.equal(await strategy.locator('[data-inspect-action="target"]').count(),3);await strategy.locator('[data-inspect-action="target"]').first().tap();
+ await strategy.locator('[data-action="pause"]').tap();assert.equal(await strategy.locator('[data-inspect-action="target"]').count(),3);await strategy.locator('.target-jump-menu summary').tap();await strategy.locator('[data-inspect-action="target"]').first().tap();
  assert.deepEqual(strategyErrors,[]);results.push({separateInventoryRows:true,appearanceVsImpactCounters:true,movableBomb:true,threeDianas:true,threeTurnWarning:true,passed:true});await strategy.close();
  await verifyLocalControls({context,load,output,results});
+ await verifyLocalTargets({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;

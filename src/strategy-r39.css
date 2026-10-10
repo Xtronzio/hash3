@@ -54,3 +54,11 @@
 .game .board-inventory-status:empty{display:none}
 .ecology-choices{flex-wrap:wrap}
 .inventory-setting-label{font-size:11px;line-height:12px;color:var(--text,#fff);margin-top:-6px;margin-bottom:-6px}
+.target-jump-menu{position:relative;flex:none;pointer-events:auto}
+.target-jump-menu summary{list-style:none;cursor:pointer;width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;background:#101216;color:#fff}
+.target-jump-menu summary::-webkit-details-marker{display:none}
+.target-jump-menu summary svg,.target-jump-options svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
+.target-jump-options{position:absolute;bottom:calc(100% + 6px);right:0;display:grid;grid-template-columns:repeat(2,44px);gap:4px;padding:6px;background:#101216;border:1px solid var(--line);border-radius:8px;z-index:5;box-shadow:0 3px 12px #000a}
+.target-jump-options button{width:44px;height:44px;min-height:44px;padding:9px}
+.territory-impact-announcements{flex:none;position:relative;z-index:3;color:var(--yellow,#ffd34e);font-size:13px}
+.territory-impact-announcements p{padding:7px 10px;background:#201b0d;border:1px solid #5e5024;border-radius:6px;margin:3px 0}

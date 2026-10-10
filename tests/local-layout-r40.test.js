@@ -37,8 +37,8 @@ test('Permutar rejects missing, duplicate, shielded, immune, reserved and blocke
 test('Swap is drawn by refills and is present once in every two-row player inventory, including the hall',()=>{
  const r=fresh();for(const t of practiceTools)r.players[0].inventory.cards[t.id]=0;
  completeInventoryTurn(r,'local-x',{random:()=>.21});assert.equal(inventoryDrawWeight('swap'),3);
- assert.deepEqual(new Set(INVENTORY_ROWS.flat()),new Set(practiceTools.map(t=>t.id)));
- assert.equal(INVENTORY_ROWS.flat().length,practiceTools.length);const row=INVENTORY_ROWS.find(r=>r.includes('frontier'));assert.equal(row.indexOf('border'),row.indexOf('frontier')+1);
+ assert.deepEqual(new Set(INVENTORY_ROWS.flat()),new Set([...practiceTools.map(t=>t.id),'target']));
+ assert.equal(INVENTORY_ROWS.flat().length,practiceTools.length+1);const row=INVENTORY_ROWS.find(r=>r.includes('frontier'));assert.equal(row.indexOf('border'),row.indexOf('frontier')+1);
  for(const html of [inventoryMarkup(null,null),inventoryMarkup(r,'local-x'),inventoryStatusMarkup(r,{playerId:'local-x'})]){
   for(const tool of ['activate','expand-2','expand-3','swap'])assert.equal((html.match(new RegExp(`data-tool="${tool}"`,'g'))||[]).length,1);
   assert.doesNotMatch(html,/inventory-column-category/);assert.match(html,/player-inventory-rows/);

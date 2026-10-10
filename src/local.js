@@ -203,6 +203,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const {points,bonus,figures,paidFigures}=scoreCell(room,cell,scorer);player.lastMove=cell;
     recordCombo(scorer,{points,figures,automatic,moveId:cell.id});
     recordImmunityCombo(room,player.id,points,{automatic,scorer:scorer.id});
+    player.navigationLastMove={x:cell.x,y:cell.y,id:cell.id};
     recordMax(player,scorer===player?points-bonus:0,scorer===player?figures:0,automatic);
     let full=!availableCells(room,p,{ignoreBlocks:true}).length;
     const completed=automatic||state.remaining<=1||full||!availableCells(room,p).length;

@@ -1,4 +1,5 @@
 import {invaderIcon} from './invader-mark.js';
+import {recordTerritoryImpact} from './territory-impact.js';
 import {turnEcology,eventTurns} from './turn-ecology.js';
 import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {terrainOf,key} from './game.js';
@@ -173,6 +174,7 @@ export function advanceTerritory(room,now=Date.now()){
    room.inventoryEffects.shields=(room.inventoryEffects.shields||[]).filter(s=>!removed.has(s.cell));
    room.inventoryEffects.blocks=(room.inventoryEffects.blocks||[]).filter(c=>!hit.has(key(c.x,c.y)));
   }
+  recordTerritoryImpact(room,event,before,hit,now);
   actions.push(...changes);
   if(mixes&&localLiving(room))scoreLandings(room,[...before.values()],changes,{kind:event.kind});
   room.territoryEvents=room.territoryEvents.filter(e=>e.id!==event.id);
