@@ -67,6 +67,8 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
  }
  if(kind==='blackhole'||kind==='invader-colony')return wholeSquare(room,kind==='blackhole'?EVENT_BALANCE.blackholeSide:EVENT_BALANCE.invasionColonySide,random,now);
  if(kind==='invader-rain')return randomSubset(allowed(room,now),count,random);
+ if(kind==='contagion')return localCluster(room,count,random,now).filter(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y));
+ if(kind==='tornado')return wholeSquare(room,3,random,now);
  if(kind==='pandemic'){
   const protectedKeys=immutable(room,now),available=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
   return randomSubset(room.cells.filter(c=>available.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)),count,random).map(c=>({x:c.x,y:c.y}));
@@ -134,7 +136,7 @@ export function applyPlannedEvent(room,event,now=Date.now()){
  }
  const actions=[],hit=new Set(region.map(c=>key(c.x,c.y)));
  const random=randomGenerator(event.id);
- if(localLiving(room)&&event.kind==='pandemic'){
+ if(localLiving(room)&&['pandemic','contagion'].includes(event.kind)){
   const flip={X:'O',O:'X','*':'#','#':'*'};
   room.cells=room.cells.map(c=>{
    if(!hit.has(key(c.x,c.y))||!flip[c.symbol])return c;
@@ -145,7 +147,7 @@ export function applyPlannedEvent(room,event,now=Date.now()){
   });
   const live=new Set(room.cells.filter(c=>c.symbol==='*').map(c=>c.invasionId).filter(Boolean));
   room.invasions=(room.invasions||[]).filter(c=>live.has(c.id));
-  actions.push(...region.map(c=>({...c,kind:'pandemic'})));
+  actions.push(...region.map(c=>({...c,kind:event.kind})));
  }else if(rule.effect==='shuffle'){
   const groups=event.kind==='tornado-rain'?event.groups||[region]:[region];
   for(const group of groups)actions.push(...shuffle(room,group,random,blocked).map(c=>({...c,kind:event.kind})));

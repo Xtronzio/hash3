@@ -11,6 +11,7 @@ on:
       - release/local-symbols-r36
       - release/local-evolution-r37
       - release/local-reclaim-r38
+      - release/local-strategy-r39
   workflow_dispatch:
 permissions:
   contents: write

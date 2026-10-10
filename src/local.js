@@ -1,3 +1,6 @@
+import {toggleWatchTarget} from './watch-targets.js';
+import {microLength,microExpansionOptions} from './micro-expansion.js';
+import {movePendingBomb} from './pending-bombs.js';
 import {removeDefeatedInvasions} from './invasion-paths.js';
 import {localLiving} from './living-balance.js';
 import {boardCellLimit,finishAtMatchGoal,CELL_TARGETS} from './board-limits.js';
@@ -26,7 +29,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:12,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:13,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -57,7 +60,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=12;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=13;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -73,6 +76,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     resumeHabitats(room,now);resumeImmunities(room,now);if(room.matchGoal?.type==='time'){room.endsAt=new Date(now+(room.matchRemainingMs??room.matchGoal.target*1000)).toISOString();delete room.matchRemainingMs;}room.status='playing';normalize(room,now);p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
     delete room.pauseRemainingMs;delete room.pausedAt;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
+  if(action==='watch-target'){if(!['playing','paused'].includes(room.status))throw new Error('La partida no está disponible.');toggleWatchTarget(room,payload);room.updatedAt=new Date(now).toISOString();room.version++;return room;}
   if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   const grows=action==='expand'||action==='inventory'&&payload.tool==='activate'||action==='tick'&&p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;
@@ -86,7 +90,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(earned)territoryPreview={...room,players:room.players.map(player=>player.symbol===symbol?{...player,figures:player.figures+earned}:player)};
   }
   const mayAnnounce=places&&territoryPlacementDue(territoryPreview,now,1,{naturalOnly:true})||grows&&territoryPlacementDue(room,now,0,{naturalOnly:true});
-  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=immunityChanged||advanced||original.inhabitantReclaimVersion!==room.inhabitantReclaimVersion||original.habitatVersion!==room.habitatVersion||original.wormLifecycleVersion!==room.wormLifecycleVersion||original.invasionVersion!==room.invasionVersion||original.worms?.some(w=>!w.turnDriven)&&['local','solo'].includes(room.mode);
+  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=immunityChanged||advanced||original.turnEcologyVersion!==room.turnEcologyVersion||original.inhabitantReclaimVersion!==room.inhabitantReclaimVersion||original.habitatVersion!==room.habitatVersion||original.wormLifecycleVersion!==room.wormLifecycleVersion||original.invasionVersion!==room.invasionVersion||original.worms?.some(w=>!w.turnDriven)&&['local','solo'].includes(room.mode);
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='request-free-expansion'){
     throw new Error('La ampliación voluntaria se solicita con Ampliación inteligente desde 333 figuras.');
@@ -106,7 +110,15 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(['hint','hint-expand','super-hint'].includes(tool))throw new Error('Activa Ayuda desde el inventario.');
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
-    if(['tornado','bomb','frontier','border'].includes(tool)){
+    if(['expand-2','expand-3'].includes(tool)){
+      const choice=microExpansionOptions(room,microLength(tool),payload.orientation||'horizontal').find(c=>c.x===payload.x&&c.y===payload.y);
+      if(!choice)throw new Error('La ampliación debe añadir todas sus celdas, tocar el territorio y respetar los bloqueos.');
+      room.terrain.push(...choice.cells.map(c=>({...c,owner:playerId})));recordTerritoryGrowth(room,choice.cells.length,now,random);spendCard(room,playerId,tool);
+      room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,cells:choice.cells};
+    }else if(tool==='shift'&&payload.bombId){
+      movePendingBomb(room,payload.bombId,{x:payload.toX,y:payload.toY},now);spendCard(room,playerId,tool);
+      room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,bombId:payload.bombId};
+    }else if(['tornado','bomb','frontier','border'].includes(tool)){
       const result=applyAreaTool(room,playerId,tool,payload,random);
       if(tool==='tornado'){const own=result.landing.find(s=>s.player===playerId);recordMax(actor,own?own.points-own.bonus:0,own?.figures||0);}
       spendCard(room,playerId,tool);room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,...result};
@@ -153,7 +165,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       }
       spendCard(room,playerId,tool);
     }
-    if(tool!=='immunity')delete room.practiceHint;if(tool==='destroy'||tool==='activate')normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
+    if(tool!=='immunity')delete room.practiceHint;if(tool==='destroy'||microLength(tool))normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   let automatic=false;
   if(action==='tick') {

@@ -9,6 +9,7 @@ export function needsLocalTick(room,now=Date.now()){
  if(room.habitatVersion!==3)return true;
  if(['solo','local'].includes(room.mode)&&(room.worms||[]).some(w=>!isTurnWorm(w)))return true;
  if(room.timeMode!=='untimed'&&!(Date.parse(room.pairs[0].deadline)>now))return true;
+ if(room.turnEcologyVersion===1)return false;
  if((room.territoryEvents||[]).some(e=>e.remainingMs!=null||e.nextAt<=now))return true;
  if(!faunaEnabled(room)||faunaSuspended(room,now))return false;
  return ['worms','works','bombs'].some(kind=>(room[kind]||[]).some(e=>!isTurnWorm(e)&&(e.remainingMs!=null||e.nextAt<=now)));

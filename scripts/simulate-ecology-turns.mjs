@@ -17,7 +17,7 @@ function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,terr
  room.cells=room.terrain.filter(()=>random()<density).map((p,i)=>({...p,id:'initial:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));
  // Start after the opening gate; report separately from a fresh 3×3 game.
  room.players[0].figures=openingFigures;room.territoryMilestone=Math.floor(size/333);
- delete room.territoryActivityVersion;initializeTerritory(room);
+ delete room.territoryActivityVersion;delete room.livingTerritoryVersion;initializeTerritory(room);
  const stats={size,seed,territoryEnabled,requestedMoves:moves,secondsPerMove,density,openingFigures,durationSeconds,activeSeconds:0,placements:0,turns:0,expansions:0,cardsUsed:0,pauses:0,rodentMeals:0,wormMeals:0,constructed:0,demolished:0,announcements:{},impacts:{},piecesMoved:0,minSize:size,maxSize:size};
  const seen={events:new Set(),actions:new Set(),visits:new Set()};
  const collect=before=>{
