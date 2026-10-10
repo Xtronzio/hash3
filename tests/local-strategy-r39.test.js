@@ -6,7 +6,7 @@ import {advanceEcologyTurn,countHabitatPlacement,initializeHabitats} from '../sr
 import {pendingInvasionBombs} from '../src/pending-bombs.js';
 import {microExpansionOptions} from '../src/micro-expansion.js';
 import {ecologyNavigationMarkup} from '../src/ecology-navigation.js';
-import {ecologyWarningsMarkup,eventOutlook} from '../src/event-outlook.js';
+import {ecologyWarningsMarkup,eventOutlook,eventOutlookMarkup} from '../src/event-outlook.js';
 import {inventoryStatusMarkup} from '../src/inventory.js';
 import {LOCAL_NATURAL_ROTATION,NATURAL_EVENT_ROTATION,pickEventKind,confirmEventKind} from '../src/territory-event-rules.js';
 import {savedMapModel} from '../src/saved-map.js';
@@ -86,4 +86,12 @@ test('Migration replaces old event clocks once without changing scores, stocks, 
 test('Local small/large event catalogue draws every version; authoritative online catalogue stays unchanged',()=>{
  const r=fresh(),draws=[];for(let i=0;i<LOCAL_NATURAL_ROTATION.length;i++){const choice=pickEventKind(r,'natural',()=>0);draws.push(choice.order[0]);confirmEventKind(r,choice,choice.order[0]);}
  assert.equal(new Set(draws).size,8);assert.ok(draws.includes('contagion'));assert.ok(draws.includes('tornado'));assert.equal(NATURAL_EVENT_ROTATION.length,7);
+});
+
+
+test('Announcement panel distinguishes soldiers, builders, remaining worm meals and invasion growth from upcoming births',()=>{
+ const r=fresh();r.works=[{id:'work',done:1,turnsRemaining:2,build:[{x:3,y:0},{x:3,y:1}],destroy:[{x:1,y:0},{x:1,y:1}]}];
+ r.worms=[{id:'worm',turnDriven:true,mealLimit:9,eaten:3,turnsSinceMeal:1}];r.invasions=[{id:'colony',kind:'invader-colony',grown:4}];
+ const html=eventOutlookMarkup(r,'local-x');assert.match(html,/Soldados/);assert.match(html,/Ampliadores/);assert.match(html,/6 comidas restantes/);assert.match(html,/5<small>casillas hasta el límite/);assert.match(html,/2<small>turnos hasta comer/);
+ assert.doesNotMatch(html,/segundos|ecology-clock/);
 });

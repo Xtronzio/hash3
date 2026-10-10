@@ -25,7 +25,7 @@ function fixture(size,kind='invader-colony'){
  r.players.forEach(p=>{p.figures=333;p.score=999;p.inventory.cards={tornado:1,bomb:1,frontier:1,'hint-expand':1};});
  r.cells=[{id:'invader',x:2,y:2,symbol:'*',owner:null},{id:'x',x:3,y:3,symbol:'X',owner:'local-x'},{id:'o',x:4,y:3,symbol:'O',owner:'local-o'}];
  initializeHabitats(r,now);
- r.worms=[{id:'worm',x:5,y:5,body:[{x:5,y:5}],eaten:0,turnsRemaining:3}];
+ r.worms=[{id:'worm',x:5,y:5,body:[{x:5,y:5}],eaten:0,turnDriven:true,mealLimit:3,turnsSinceMeal:0}];
  r.rodentRaids=[{id:'raid',x:6,y:6,count:1,turn:0,mealsLeft:3,phase:'arriving',members:[{id:'rat',x:6,y:6}],visited:[]}];
  r.works=[{id:'work',x:9,y:9,done:0,turnsRemaining:3,destroy:Array.from({length:9},(_,i)=>({x:9+i%3,y:9+Math.floor(i/3)})),build:Array.from({length:9},(_,i)=>({x:-3+i%3,y:9+Math.floor(i/3)}))}];
  r.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];
@@ -332,16 +332,16 @@ try{
  // Three completed UI turns convert four signs; no landing payout or recreated colony.
  const flipRoom=createLocal('local','X','O',Date.now(),'normal','untimed');flipRoom.faunaEnabled=false;seedInvasions(flipRoom,[{x:2,y:0}],'invader-colony');
  flipRoom.cells.push({id:'x',symbol:'X',x:0,y:0,owner:'local-x'},{id:'o',symbol:'O',x:1,y:0,owner:'local-o'},{id:'wild',symbol:'#',x:2,y:1,owner:null});
- flipRoom.players[0].score=25912;flipRoom.territoryEvents=[{id:'flip-four',kind:'pandemic',region:flipRoom.cells.map(c=>({x:c.x,y:c.y})),turnsRemaining:3}];
+ flipRoom.invasions[0].grown=9;flipRoom.players[0].score=25912;flipRoom.territoryEvents=[{id:'flip-four',kind:'pandemic',region:flipRoom.cells.map(c=>({x:c.x,y:c.y})),turnsRemaining:3}];
  const {page:flipPage,errors:flipErrors}=await load(context,flipRoom);
- for(const [x,y] of [[0,1],[1,1],[0,2]])await flipPage.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
+ for(const [x,y] of [[0,1],[1,1],[1,2]])await flipPage.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
  await flipPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);
  const flipped=await flipPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- assert.deepEqual(flipped.cells.filter(c=>['x','o','wild'].includes(c.id)||c.x===2&&c.y===0).slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(c=>c.symbol),['O','X','#','*']);assert.equal(flipped.players[0].score,25912);assert.equal(flipped.invasions.length,0);
+ assert.deepEqual(flipped.cells.filter(c=>[[0,0],[1,0],[2,0],[2,1]].some(([x,y])=>c.x===x&&c.y===y)).slice().sort((a,b)=>a.y-b.y||a.x-b.x).map(c=>c.symbol),['O','X','#','*']);assert.equal(flipped.players[0].score,25912);assert.equal(flipped.invasions.length,0);
  assert.equal(await flipPage.locator('.board .invasion-growth').count(),0);await flipPage.screenshot({path:path.join(output,'pandemic-flips-r38.png')});assert.deepEqual(flipErrors,[]);results.push({pandemicFourSignsPreservesScore:true,passed:true});await flipPage.close();
  // Reconquest frees a playable tile, preserves a large saved score and adds terrain.
  const reclaimRoom=createLocal('local','X','O',Date.now(),'normal','untimed');reclaimRoom.terrain=Array.from({length:991},(_,i)=>({x:i%33,y:Math.floor(i/33)}));reclaimRoom.players[0].score=25912;reclaimRoom.players[0].placements=1422;
- seedInvasions(reclaimRoom,[{x:1,y:0}],'invader-colony');reclaimRoom.works=[{id:'reclaim',kind:'work',reconquer:true,destroy:[{x:1,y:0}],build:[{x:-1,y:0}],done:0,turnsRemaining:3}];
+ seedInvasions(reclaimRoom,[{x:1,y:0}],'invader-colony');reclaimRoom.invasions[0].grown=9;reclaimRoom.works=[{id:'reclaim',kind:'work',reconquer:true,destroy:[{x:1,y:0}],build:[{x:-1,y:0}],done:0,turnsRemaining:3}];
  const {page:reclaimPage,errors:reclaimErrors}=await load(context,reclaimRoom);
  for(const [x,y] of [[0,1],[1,1],[2,1]])await reclaimPage.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).tap();
  await reclaimPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].works.length===0);

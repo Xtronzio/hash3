@@ -1,3 +1,4 @@
+import {invaderIcon} from './invader-mark.js';
 import {turnEcology,eventTurns} from './turn-ecology.js';
 import {protectedTerritoryKeys,isImmune} from './immunity.js';
 import {terrainOf,key} from './game.js';
@@ -29,6 +30,7 @@ export const territoryIcons={
  'invader-rain':'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/><path d="m9 19 12 0m-6-6v12"/>',
  'invader-colony':'<rect x="3" y="3" width="26" height="26" rx="2"/><path d="M12 3v26M20 3v26M3 12h26M3 20h26m3-14 3 3m0-3-3 3m12 13 4 4m0-4-4 4"/>'
 };
+territoryIcons['invader-colony']=`<g transform="scale(.5)">${invaderIcon}</g>`;
 territoryIcons.contagion=territoryIcons.pandemic;territoryIcons.tornado='<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>';
 export function initializeTerritory(room){
  room.territoryEvents||=[];

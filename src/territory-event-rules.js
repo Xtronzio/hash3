@@ -37,7 +37,7 @@ export const LOCAL_EVENT_RULES=Object.freeze({tornado:{label:'Tornado',family:'n
 export const LOCAL_NATURAL_ROTATION=Object.freeze(['meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo']);
 export const eventRule=kind=>LOCAL_EVENT_RULES[kind]||TERRITORY_EVENT_RULES[kind]||null;
 export const territoryAttemptInterval=(size,family='natural')=>3*Math.ceil(EVENT_BALANCE[family==='invaders'?'invaderPlacementsPerAttempt':'placementsPerAttempt']*Math.max(EVENT_BALANCE.placementScaleReference,size)/(3*EVENT_BALANCE.placementScaleReference));
-export const eventLabel=kind=>({earthquake:'Cataclismo',meteorites:'Meteoritos',contagion:'Contagio',tornado:'Tornado'})[kind]||eventRule(kind)?.label||kind;
+export const eventLabel=kind=>({'invader-colony':'Colonia invasora',earthquake:'Cataclismo',meteorites:'Meteoritos',contagion:'Contagio',tornado:'Tornado'})[kind]||eventRule(kind)?.label||kind;
 export const isTimedTerritoryKind=kind=>!!eventRule(kind);
 export function impactCount(room,kind){
  const r=eventRule(kind),b=EVENT_BALANCE;

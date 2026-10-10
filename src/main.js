@@ -738,8 +738,8 @@ app.addEventListener('click',async e=>{
   }
   if(action==='open-event-warning'){eventsOpen=true;inventoryOpen=false;render();return;}
   if(action==='focus-event-warning'){
-    const e=turnWarnings(room).find(e=>e.id===b.dataset.id),kind=b.dataset.kind;
-    const item=e?.region?.[0]||e?.build?.[e.done||0]||e?.members?.[0]||e;
+    const kind=b.dataset.kind,e=turnWarnings(room).find(e=>e.id===b.dataset.id&&e.kind===kind);
+    const item=e?.region?.[0]||(kind==='destroy'?e?.destroy?.[e.done||0]:e?.build?.[e.done||0])||e?.members?.[0]||e;
     if(!item||!Number.isFinite(item.x))return;
     eventsOpen=false;worldMapOpen=false;zoom=1;render();center(item.x,item.y);return;
   }
