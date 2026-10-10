@@ -1,10 +1,7 @@
-export const INVENTORY_GROUPS=Object.freeze([
- {label:'Ataque',rows:[['opposite','rival'],['shift','tornado'],['erase','bomb'],['double','combo']]},
- {label:'Defensa',rows:[['shield','block'],['frontier','border']]},
- {label:'Ampliación',rows:[['activate','expand-2'],['expand-3','hint-expand']]},
- {label:'Eliminación',rows:[['destroy',null]]},
- {label:'Ayuda',rows:[['hint','super-hint']]}
+export const INVENTORY_ROWS=Object.freeze([
+ ['double','opposite','rival','swap','shift','erase','bomb','tornado','combo','shield','block'],
+ ['frontier','border','activate','expand-2','expand-3','destroy','hint','hint-expand','super-hint']
 ]);
-export function inventoryColumns(render){
- return `<div class="player-inventory-columns" role="group" aria-label="Herramientas del jugador en dos columnas">${INVENTORY_GROUPS.map(g=>`<span class="inventory-column-category">${g.label}</span>${g.rows.flat().map(id=>id?render(id):'<span class="inventory-column-empty" aria-hidden="true"></span>').join('')}`).join('')}</div>`;
+export function inventoryRows(render){
+ return `<div class="player-inventory-rows" role="group" aria-label="Herramientas del jugador en dos filas">${INVENTORY_ROWS.map(row=>`<div class="inventory-icon-row">${row.map(render).join('')}</div>`).join('')}</div>`;
 }

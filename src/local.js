@@ -17,7 +17,7 @@ import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInve
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,resumeImmunities} from './immunity.js';
 import {applyAreaTool} from './area-tools.js';
-import {awardFigures} from './landing-score.js';
+import {awardFigures,scoreLandings} from './landing-score.js';
 export const TURN_SECONDS=33;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
@@ -115,6 +115,16 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       if(!choice)throw new Error('La ampliación debe añadir todas sus celdas, tocar el territorio y respetar los bloqueos.');
       room.terrain.push(...choice.cells.map(c=>({...c,owner:playerId})));recordTerritoryGrowth(room,choice.cells.length,now,random);spendCard(room,playerId,tool);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,cells:choice.cells};
+    }else if(tool==='swap'){
+      const eligible=toolCells(room,playerId,tool),first=eligible.find(c=>c.x===payload.x&&c.y===payload.y),second=eligible.find(c=>c.x===payload.toX&&c.y===payload.toY);
+      if(!first||!second||first.id===second.id)throw new Error('Elige dos fichas distintas, sin protecciones ni habitantes.');
+      if(isBlockedCell(room,first.owner,second.x,second.y)||isBlockedCell(room,second.owner,first.x,first.y))throw new Error('Las fichas no pueden aterrizar en una celda bloqueada.');
+      const before=structuredClone(room.cells),a={x:first.x,y:first.y},b={x:second.x,y:second.y};
+      Object.assign(first,b);Object.assign(second,a);
+      for(const player of room.players){const moved=[first,second].find(c=>c.id===player.lastMove?.id);if(moved)player.lastMove={...moved};}
+      const landing=scoreLandings(room,before,[a,b],{kind:'swap',actor:playerId}),own=landing.find(s=>s.player===playerId);
+      recordMax(actor,own?own.points-own.bonus:0,own?.figures||0);spendCard(room,playerId,tool);
+      room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,landing,cells:[a,b]};
     }else if(tool==='shift'&&payload.bombId){
       movePendingBomb(room,payload.bombId,{x:payload.toX,y:payload.toY},now);spendCard(room,playerId,tool);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,bombId:payload.bombId};

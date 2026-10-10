@@ -31,7 +31,7 @@ export const territoryIcons={
  'invader-colony':'<rect x="3" y="3" width="26" height="26" rx="2"/><path d="M12 3v26M20 3v26M3 12h26M3 20h26m3-14 3 3m0-3-3 3m12 13 4 4m0-4-4 4"/>'
 };
 territoryIcons['invader-colony']=`<g transform="scale(.5)">${invaderIcon}</g>`;
-territoryIcons.contagion=territoryIcons.pandemic;territoryIcons.tornado='<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>';
+territoryIcons.contagion='<circle cx="9" cy="12" r="5"/><path d="M9 4v3m0 10v3M1 12h3m10 0h3M3 6l3 3m6 6 3 3M3 18l3-3m6-6 3-3M20 12h9m-4-4 4 4-4 4"/><circle cx="24" cy="24" r="3"/>';territoryIcons.tornado='<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>';
 export function initializeTerritory(room){
  room.territoryEvents||=[];
  initializeInvasions(room);

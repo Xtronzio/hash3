@@ -1,3 +1,4 @@
+import {scoreLandings} from './landing-score.js';
 import {localLiving} from './living-balance.js';
 import {borderChains} from './area-tools.js';
 import {defendedInvasionCells} from './invasion-paths.js';
@@ -26,6 +27,18 @@ export function chooseMachineCard(room,now=Date.now()){
       if(gain>points){best=target;points=gain;}
     }
     if(best&&points>=(level==='basic'?4:3))return command('opposite',best);
+  }
+  if(level!=='basic'&&usable('swap')){
+    const targets=toolCells(room,actor,'swap').sort((a,b)=>neighbors(b,player.symbol)-neighbors(a,player.symbol)).slice(0,12);
+    let best=null,net=0;
+    for(let i=0;i<targets.length;i++)for(let j=i+1;j<targets.length;j++){
+      const a=targets[i],b=targets[j];if(a.symbol===b.symbol||isBlockedCell(room,a.owner,b.x,b.y)||isBlockedCell(room,b.owner,a.x,a.y))continue;
+      const copy=structuredClone(room),first=copy.cells.find(c=>c.id===a.id),second=copy.cells.find(c=>c.id===b.id);
+      Object.assign(first,{x:b.x,y:b.y});Object.assign(second,{x:a.x,y:a.y});
+      const scores=scoreLandings(copy,room.cells,[a,b],{kind:'swap',actor}),gain=scores.reduce((n,s)=>n+(s.player===actor?s.points:-s.points),0);
+      if(gain>net){net=gain;best={a,b};}
+    }
+    if(best&&net>=3)return command('swap',best.a,{toX:best.b.x,toY:best.b.y});
   }
   if(usable('border')){
    for(const event of room.territoryEvents||[])if(event.kind.startsWith('invader-')&&event.paths?.length){

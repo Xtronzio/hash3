@@ -107,7 +107,7 @@ test('Recargas aleatorias permiten duplicados antes de completar el catálogo',(
  completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,2);
  completeInventoryTurn(r,'local-x',{random:()=>0});assert.equal(inv.cards.double,3);
  assert.equal(inv.cards.bomb,0);assert.equal(inv.cards.tornado,0);
- completeInventoryTurn(r,'local-x',{random:()=>.72});assert.ok(['bomb','frontier','hint-expand','super-hint','combo'].includes(inv.lastDraw));
+ completeInventoryTurn(r,'local-x',{random:()=>.72});assert.ok(practiceTools.some(t=>t.id===inv.lastDraw));
 });
 test('Fair refill survives saves, never exceeds stock caps and cannot draw a fourth copy',()=>{
  let r=start(),inv=r.players[0].inventory;inv.cards.hint=0;

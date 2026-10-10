@@ -60,9 +60,10 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
   const figures=Math.max(0,livingMinimum(room)-territoryFigures(room));
   return [family,` · próximo intento de la familia en ${remaining} colocaciones entre ambos${figures?' · faltan '+figures+' figuras para habilitarlo':''}${room.territoryEvents?.length?' · espera al aviso actual':''}`];
  }));
- const ordered=room.turnEcologyVersion===1?['rodent','rodent-plague','worm','worm-plague','build','destroy','meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo','invader-colony','invader-rain','neutral',...kinds.filter(k=>!['rodent','worm','build','destroy',...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION,'neutral'].includes(k))]:kinds;
+ const ordered=room.turnEcologyVersion===1?['rodent','rodent-plague','worm','worm-plague','build','destroy','meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo','invader-colony','invader-rain','frontier','border','neutral',...kinds.filter(k=>!['rodent','worm','build','destroy',...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION,'neutral'].includes(k))]:kinds;
  const columns=room.turnEcologyVersion===1;
- return (columns?'<div class="territory-columns" role="group" aria-label="Eventos locales y de gran escala">':'')+ordered.filter((kind,i,a)=>a.indexOf(kind)===i).filter(kind=>!['build','destroy','rodent','rodent-plague','worm','worm-plague'].includes(kind)||room.faunaEnabled!==false).filter(kind=>!isTimedTerritoryKind(kind)||room.territoryEnabled!==false).map(kind=>{
+ const visible=ordered.filter((kind,i,a)=>a.indexOf(kind)===i).filter(kind=>!['build','destroy','rodent','rodent-plague','worm','worm-plague'].includes(kind)||room.faunaEnabled!==false).filter(kind=>!isTimedTerritoryKind(kind)||room.territoryEnabled!==false);
+ const renderButton=kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
   const birthKind=['build','destroy'].includes(kind)?'work':kind==='rodent-plague'?'rodent':kind==='worm-plague'?'worm':kind,frequency=['rodent','worm','work'].includes(birthKind)?(localLiving(room)?LIVING_FREQUENCIES:HABITAT_FREQUENCIES)[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
   const colonies=targets.filter(e=>e.invasion);
@@ -81,7 +82,9 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
   const elapsed=timed&&events.length&&!columns?Math.min(...events.map(e=>Math.max(0,EVENT_BALANCE.warningMs-(e.remainingMs??(e.nextAt-now))))):0;
   const label=`${ecologyNames[kind]} · ${active?'activo':'inactivo'} · ${targets.length} ubicaciones${events.length?' · próxima intervención en '+Math.min(...events.map(e=>ecologySeconds(e,now)))+(columns?' turnos':' segundos'):['rodent','worm'].includes(kind)&&targets.length?' · actúa por turnos, sin cuenta atrás temporal':colonies.length?' · crece una casilla por turno hasta nueve':''}${frozen?' · cuenta atrás congelada':''}${upcoming}${timed&&!active?forecasts.get(family):''}${birth!=null?` · siguiente intento en ${birth} colocaciones de la zona`:''}`;
   return `<button ${inspection?'data-inspect-action="ecology"':'data-action="locate-ecology"'} data-ecology-kind="${kind}" ${timed?'data-ecology-attempt="'+family+'"':''} class="ecology-jump ${active?'is-active':'is-inactive'} ${timed&&events.length?'is-announced':''} ${frozen?'is-frozen':''}" style="--ecology-color:${color};--ecology-activation-delay:-${elapsed}ms" aria-label="${label}" title="${label}" ${targets.length?'':'disabled'}>${ecologyIcon(kind)}${badge}</button>`;
- }).join('')+(columns?'</div>':'');
+ };
+ const firstRow=new Set(['rodent','rodent-plague','worm','worm-plague','build','destroy','meteorites','earthquake']);
+ return columns?`<div class="territory-rows" role="group" aria-label="Eventos del territorio en dos filas">${[visible.filter(k=>firstRow.has(k)),visible.filter(k=>!firstRow.has(k))].map(row=>`<div class="inventory-icon-row">${row.map(renderButton).join('')}</div>`).join('')}</div>`:visible.map(renderButton).join('');
 }
 export function ecologyPinTargets(room,playerId){
  return (room.turnEcologyVersion===1?['rodent','rodent-plague','worm','worm-plague','build','destroy','bomb']:['rodent','worm','build','destroy','bomb']).concat([...new Set([...(room.territoryEvents||[]),...(room.invasions||[])].map(e=>e.kind))]).flatMap(kind=>ecologyTargets(room,kind,playerId));
