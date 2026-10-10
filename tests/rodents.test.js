@@ -13,7 +13,7 @@ function animal(kind='rodent',point={x:0,y:0}){return {id:kind,player:'local-x',
 function birth(r,count){r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
 test('Plagas de roedores scale 3/6/9 after a three-turn warning; three meals occupy nine completed turns with separate locations',()=>{
  for(const [size,group] of [[333,3],[999,6],[3333,9]]){
-  const r=fixture(size);r.territoryEnabled=false;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.habitatZones[0].birthScale={rodent:1};r.habitatZones[0].next.rodent=r.habitatZones[0].placements+1;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.worms=[];r.habitatZones[0].next.worm=1000000;completeEventTurns(r,1000);
+  const r=fixture(size);r.territoryEnabled=false;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.habitatZones[0].birthScale={rodent:1};r.habitatZones[0].next.rodent=r.habitatZones[0].placements+1;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.worms=[];r.habitatZones[0].next.worm=1000000;completeEventTurns(r,1000,()=>0,4);
   assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].members.length,group);assert.equal(r.cells.length,60);
   const visits=[];let oldId;
   for(let turn=1;turn<=9;turn++){

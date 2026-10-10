@@ -93,7 +93,7 @@ test('Pandemic respects immunity, shields, work reservations and worm trails; le
 test('Habitants can fully reconquer nine occupied cells while builders add nine playable cells',()=>{
  const r=board(333);seedInvasions(r,[{x:1,y:0}],'invader-colony');const cid=r.invasions[0].id;r.cells.push(...Array.from({length:8},(_,i)=>({...piece('*',i+2,0),invasionId:cid})));
  countHabitatPlacement(r,'local-x',{x:10,y:5},now,()=>0,{completed:false});const z=r.habitatZones[0];z.next.work=z.placements+1;z.next.rodent=z.next.worm=9999;
- countHabitatPlacement(r,'local-x',{x:10,y:5},now+1,()=>0,{completed:false});assert.equal(r.works.length,3);assert.equal(r.works.flatMap(w=>w.destroy).length,9);const recovered=r.cells.map(c=>key(c.x,c.y));
+ countHabitatPlacement(r,'local-x',{x:10,y:5},now+1,()=>0,{completed:false});assert.equal(r.works.length,3);assert.equal(r.works.flatMap(w=>w.destroy).length,9);const recovered=r.cells.map(c=>key(c.x,c.y));completeEventTurns(r,now+1,()=>0,1);assert.equal(r.works[0].turnsRemaining,3);
  for(let i=1;i<=3;i++)completeEventTurns(r,now+1+i*33000);
  assert.equal(r.cells.filter(c=>c.symbol==='*').length,0);assert.equal(r.terrain.length,342);assert.equal(r.works.length,0);assert.equal(r.invasions.length,0);
  assert.ok(recovered.every(k=>r.terrain.some(c=>key(c.x,c.y)===k)));assert.ok(recovered.every(k=>availableCells(r,r.pairs[0]).some(c=>key(c.x,c.y)===k)));

@@ -389,10 +389,10 @@ try{
   assert.equal(await strategy.locator('.board-inventory-status [data-ecology-kind]').count(),0);
   assert.equal(await strategy.locator('.board-territory-status [data-tool]').count(),0);
  }
- await strategy.locator('[data-action="mark-target"]').tap();
+ await strategy.locator('.map-jumps [data-action="mark-target"]').tap();
  for(const [x,y]of [[0,0],[1,0],[2,2]])await strategy.locator(`.board [data-action="watch-target-cell"][data-x="${x}"][data-y="${y}"]`).tap();
  assert.equal(await strategy.locator('.map-jumps [data-action="locate-target"]').count(),3);
- await strategy.locator('[data-action="mark-target"]').tap();
+ await strategy.locator('.map-jumps [data-action="mark-target"]').tap();
  await strategy.locator('.board-inventory-status [data-action="practice-tool"][data-tool="shift"]').tap();
  await strategy.locator('.pending-invasion-bomb[data-bomb-id="movable-r39:0"]').tap();
  await strategy.locator('.board [data-action="inventory-target"][data-x="2"][data-y="1"]').tap();

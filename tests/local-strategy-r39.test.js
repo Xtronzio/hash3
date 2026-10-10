@@ -95,3 +95,14 @@ test('Announcement panel distinguishes soldiers, builders, remaining worm meals 
  const html=eventOutlookMarkup(r,'local-x');assert.match(html,/Soldados/);assert.match(html,/Ampliadores/);assert.match(html,/6 comidas restantes/);assert.match(html,/5<small>casillas hasta el límite/);assert.match(html,/2<small>turnos hasta comer/);
  assert.doesNotMatch(html,/segundos|ecology-clock/);
 });
+
+
+test('An appearance announced on the first Doble placement retains all three warning turns when that same turn finishes',()=>{
+ for(const fauna of [false,true]){
+  let r=fresh();r.faunaEnabled=fauna;r.territoryEnabled=!fauna;r.players[0].figures=33;r.players[0].placements=fauna?65:0;r.territoryNextInvasion=1;
+  r=localCommand(r,'inventory',{playerId:'local-x',tool:'double'},now);r=move(r);
+  const pending=game=>fauna?game.rodentRaids[0]:game.territoryEvents[0];assert.ok(pending(r));assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,3);
+  r=move(r);assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,3);assert.equal(r.ecologyTurns,1);
+  r=move(r);assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,2);
+ }
+});

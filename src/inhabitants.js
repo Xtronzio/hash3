@@ -220,17 +220,21 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
  }
  if(territoryEnabled(room)&&!suspended&&p.placements%neutralFrequency(room)===0)placeNeutral(room,areaAt(room,point),now,random,point);
  p.rodentNextSpawn=p.habitatNext.rodent;
- if(completed&&turnEcology(room))advanceEcologyTurn(room,now,random,turnIds);
+ if(turnEcology(room)){
+  if(completed)advanceEcologyTurn(room,now,random,turnIds);
+  else for(const e of [...room.territoryEvents||[],...room.works||[],...room.bombs||[],...room.rodentRaids||[],...room.worms||[]])if(!turnIds.has(e.id))e.holdWarningTurn=room.ecologyTurns||0;
+ }
 }
 export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ecologyTurnIds(room)){
  if(!turnEcology(room)||room.status!=='playing')return;
- room.ecologyTurns=(room.ecologyTurns||0)+1;
+ const previousTurn=room.ecologyTurns||0;room.ecologyTurns=previousTurn+1;
+ const eligible=e=>ids.has(e.id)&&e.holdWarningTurn!==previousTurn;
  const suspended=faunaSuspended(room,now);
- for(const e of room.territoryEvents||[])if(ids.has(e.id))e.turnsRemaining=Math.max(0,(e.turnsRemaining??3)-1);
+ for(const e of room.territoryEvents||[])if(eligible(e))e.turnsRemaining=Math.max(0,(e.turnsRemaining??3)-1);
  if(!suspended){
-  for(const e of [...room.works||[],...room.bombs||[]])if(ids.has(e.id))e.turnsRemaining=Math.max(0,(e.turnsRemaining??3)-1);
+  for(const e of [...room.works||[],...room.bombs||[]])if(eligible(e))e.turnsRemaining=Math.max(0,(e.turnsRemaining??3)-1);
   const batches=new Set();
-  for(const e of [...room.rodentRaids||[],...room.worms||[]])if(ids.has(e.id)&&e.warningTurns!=null){
+  for(const e of [...room.rodentRaids||[],...room.worms||[]])if(eligible(e)&&e.warningTurns!=null){
    e.warningTurns--;
    if(e.warningTurns<=0){delete e.warningTurns;e.phaseAt=now;if(e.turnDriven){e.body=[{x:e.x,y:e.y}];batches.add(e.birthBatch||e.id);}}
   }
@@ -239,6 +243,7 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
    for(const w of room.worms.filter(w=>w.birthBatch===batch||w.id===batch))w.mealLimit=3*Math.min(3,room.wormAppearances);
   }
  }
+ for(const e of [...room.territoryEvents||[],...room.works||[],...room.bombs||[],...room.rodentRaids||[],...room.worms||[]])if(e.holdWarningTurn===previousTurn)delete e.holdWarningTurn;
  advanceHabitats(room,now,random,{completedTurn:true});
 }
 function positionRodents(room,raid,point,random){
