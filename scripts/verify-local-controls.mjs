@@ -15,6 +15,9 @@ export async function verifyLocalControls({context,load,output,results}){
  const target=(x,y)=>page.locator(`.area-anchor[data-x="${x}"][data-y="${y}"]`).tap();
  await select();assert.equal(await page.locator('[data-action="rotate-micro"],[data-action="suggest-micro"]').count(),0);
  await target(3,0);assert.equal((await saved()).terrain.length,9);
+ assert.equal(await page.locator('.micro-selected-preview').count(),1);
+ assert.equal(await page.locator('.micro-selected-preview').evaluate(el=>getComputedStyle(el).borderTopStyle),'dashed');
+ await page.screenshot({path:path.join(output,'micro-tap-preview-r41.png')});
  await page.locator('[data-action="cancel-tool-selection"]').tap();assert.equal((await saved()).players[0].inventory.cards['expand-2'],1);
  assert.ok(Math.abs((await widget.boundingBox()).x-after.x)<1);
  await select();await target(3,0);await target(3,1);
