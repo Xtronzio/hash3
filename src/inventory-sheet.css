@@ -129,3 +129,6 @@
 .inventory-description-use{min-height:44px;margin-top:8px;}
 .inventory-descriptions .inventory-immunity-bottom{grid-template-columns:repeat(4,minmax(0,1fr));}
 .inventory-descriptions .inventory-immunity-bottom .inventory-description-toggle{width:100%;min-width:0;height:58px;min-height:58px;display:grid;place-items:center;padding:5px;}
+.inventory-description-rules{margin-top:12px;font-size:12px;line-height:1.6;color:#b8c5d8;}
+.inventory-description-rules summary{cursor:pointer;min-height:44px;padding:10px 0;}
+.inventory-description-rules p{margin:6px 0;}
