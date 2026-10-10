@@ -1,5 +1,6 @@
 import {initializeWildcardUsage} from './wildcard-usage.js';
-import {microLength,microExpansionOptions} from './micro-expansion.js';
+import {microLength,microSelectionOptions} from './micro-expansion.js';
+import {inventoryEnabled} from './inventory-enabled.js';
 import {pendingInvasionBombs} from './pending-bombs.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
 import {migrateLegacyWalls} from './wall-migration.js';
@@ -21,8 +22,8 @@ export const practiceTools=[
   {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
   {id:'hint',group:'help',label:'Ayuda de movimiento',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'activate',label:'Ampliación +1 (1×1)',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
-  {id:'expand-2',label:'Ampliación +2 (2×1)',description:'Añade dos celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar dos celdas'},
-  {id:'expand-3',label:'Ampliación +3 (3×1)',description:'Añade tres celdas en línea junto al territorio. Puedes girarla y usarla aunque queden huecos.',button:'Situar tres celdas'},
+  {id:'expand-2',label:'Ampliación +2',description:'Toca dos casillas sin construir contiguas por un lado, empezando junto al territorio. La segunda pulsación coloca las dos. Cancelar no gasta la carta.',button:'Elegir dos casillas'},
+  {id:'expand-3',label:'Ampliación +3',description:'Toca tres casillas sin construir contiguas por un lado, empezando junto al territorio. Pueden formar una L. La tercera pulsación coloca las tres. Cancelar no gasta la carta.',button:'Elegir tres casillas'},
   {id:'destroy',label:'Destruir celda',description:'Elimina una celda vacía de tu territorio conectado. No elimina fichas ni resta puntos. Después coloca tu ficha. El hueco se recupera con Construir celda o una ampliación.',button:'Elegir celda vacía'},
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos; las figuras nuevas al aterrizar puntúan para X y O. Conserva símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
@@ -43,7 +44,8 @@ export function initializeInventory(game){
   if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
   game.inventoryVersion=2;initializeWildcardUsage(game);
   for(const player of game.players){
-    player.inventory||={cards:initialCards(),turns:0};
+    const ownDisabled=game.playerInventory===false&&(game.mode==='local'||player.id===(game.humanId||game.pairs?.[0]?.x));
+    player.inventory||={cards:ownDisabled?Object.fromEntries(practiceTools.map(t=>[t.id,0])):initialCards(),turns:0};
     player.inventory.received||={};
     for(const t of practiceTools){
       player.inventory.cards[t.id]??=0;
@@ -67,9 +69,9 @@ export function toolAllowance(game,playerId){
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
-export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[],orientation='horizontal'}={}){
+export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
   const p=game?.pairs?.[0];if(!p)return [];
-  if(['expand-2','expand-3'].includes(tool))return microExpansionOptions(game,microLength(tool),orientation);
+  if(['expand-2','expand-3'].includes(tool))return microSelectionOptions(game,microLength(tool),selected);
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
   if(tool==='border')return borderOptions(game,selected);
@@ -97,13 +99,13 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p)return false;
-  if(game.mode==='solo'&&playerId!==(game.humanId||p.x)&&game.machineInventory!==true)return false;
+  if(!inventoryEnabled(game,playerId))return false;
   if(tool==='immunity')return toolStock(game,playerId,tool)>0&&!isImmune(game,playerId,now)&&game.players.some(v=>v.id===playerId);
   if(p.pending){
     if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
     if(tool==='border')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&borderChains(game,1).length>0;
     if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierOptions(game,'north',playerId).length>0;
-    if(microLength(tool))return toolAllowance(game,playerId).remaining>0&&!practiceTurn(game,playerId).used.includes(tool)&&(toolCells(game,playerId,tool).length>0||microExpansionOptions(game,microLength(tool),'vertical').length>0);
+    if(microLength(tool))return toolAllowance(game,playerId).remaining>0&&!practiceTurn(game,playerId).used.includes(tool)&&toolCells(game,playerId,tool).length>0;
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
   if(tool==='hint-expand')return canRequestStrategicExpansion(game,playerId)&&(game.timeMode==='untimed'||Date.parse(p.deadline)>now);
@@ -125,7 +127,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(tool==='block'&&availableCells(game,p).length<2)return false;
   if(tool==='swap')return toolCells(game,playerId,tool).length>=2;
   if(tool==='border')return borderChains(game,1).length>0;
-  return toolCells(game,playerId,tool).length>0||['expand-2','expand-3'].includes(tool)&&microExpansionOptions(game,microLength(tool),'vertical').length>0;
+  return toolCells(game,playerId,tool).length>0;
 }
 export function spendCard(game,playerId,tool){
   initializeInventory(game);const player=game.players.find(p=>p.id===playerId);
@@ -147,7 +149,7 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
   game.inventoryEffects.blocks=game.inventoryEffects.blocks.filter(e=>e.remaining>0&&!game.cells.some(c=>c.x===e.x&&c.y===e.y));
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));
-  if(automatic||!placed)return;
+  if(automatic||!placed||!inventoryEnabled(game,playerId))return;
   const inv=game.players.find(p=>p.id===playerId).inventory;inv.turns=Math.min(REFILL_TURNS,inv.turns+1);
   const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
   const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));

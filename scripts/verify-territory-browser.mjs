@@ -5,6 +5,7 @@ import path from 'node:path';
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
 import {createLocal,localCommand} from '../src/local.js';
+import {verifyLocalControls} from './verify-local-controls.mjs';
 import {seedInvasions,advanceInvasions} from '../src/invasion-paths.js';
 import {initializeHabitats} from '../src/inhabitants.js';
 import {LOCAL_NATURAL_ROTATION,INVADER_EVENT_ROTATION} from '../src/territory-event-rules.js';
@@ -228,6 +229,8 @@ try{
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
   await page.locator('#local-goal-target').selectOption(mode==='solo'?'33':'540');
+  assert.equal(await page.locator('#player-inventory').isChecked(),true);
+  await page.locator('#player-inventory').uncheck();
   await page.locator('.ecology-choices').scrollIntoViewIfNeeded();
   const setupLayout=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,controls:[...document.querySelectorAll('.ecology-choice')].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right};})}));
   assert.ok(setupLayout.scrollWidth<=setupLayout.width);assert.ok(setupLayout.controls.every(r=>r.left>=0&&r.right<=setupLayout.width));
@@ -235,10 +238,11 @@ try{
   await page.locator('#local-goal-target').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(output,'setup-'+mode+'-total-time.png')});
   await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();await frame(page);
+  assert.equal(await page.locator('.inventory-dock-button,.board-inventory-status [data-tool],.floating-immunity').count(),0);
   await isolated.setOffline(true);
   await page.locator('.board .available').first().tap();
   await page.waitForFunction(minimum=>JSON.parse(localStorage.getItem('hash3_locals'))?.[0]?.cells.length>=minimum,mode==='solo'?2:1,{timeout:15000});
-  const local=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(local.mode,mode==='solo'?'solo':'local');assert.ok(local.cells.length>=(mode==='solo'?2:1));
+  const local=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(local.mode,mode==='solo'?'solo':'local');assert.equal(local.playerInventory,false);assert.equal(Object.values(local.players.find(p=>p.id===(local.humanId||'local-x')).inventory.cards).reduce((a,b)=>a+b,0),0);assert.ok(local.cells.length>=(mode==='solo'?2:1));
   assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
@@ -407,14 +411,7 @@ try{
  strategySaved=await strategy.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(strategySaved.territoryEvents.length,0);assert.ok(strategySaved.cells.some(c=>c.x===2&&c.y===1&&c.symbol==='*'));assert.equal(strategySaved.watchTargets.length,3);
  await strategy.locator('[data-action="pause"]').tap();assert.equal(await strategy.locator('[data-inspect-action="target"]').count(),3);await strategy.locator('[data-inspect-action="target"]').first().tap();
  assert.deepEqual(strategyErrors,[]);results.push({separateInventoryRows:true,appearanceVsImpactCounters:true,movableBomb:true,threeDianas:true,threeTurnWarning:true,passed:true});await strategy.close();
- const microRoom=createLocal('local','X','O',Date.now(),'normal','untimed');microRoom.faunaEnabled=false;microRoom.territoryEnabled=false;microRoom.players[0].inventory.cards['expand-2']=1;
- const {page:micro,errors:microErrors}=await load(context,microRoom);
- await micro.locator('.board-inventory-status [data-tool="expand-2"]').tap();await micro.locator('[data-action="rotate-micro"]').tap();await micro.locator('[data-action="suggest-micro"]').tap();
- assert.equal((await micro.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0])).terrain.length,9);
- await micro.locator('[data-action="cancel-tool-selection"]').tap();assert.equal((await micro.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0])).players[0].inventory.cards['expand-2'],1);
- await micro.locator('.board-inventory-status [data-tool="expand-2"]').tap();await micro.locator('[data-action="suggest-micro"]').tap();await micro.locator('[data-action="confirm-area-tool"]').tap();
- const microSaved=await micro.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(microSaved.terrain.length,11);assert.equal(microSaved.players[0].inventory.cards['expand-2'],0);assert.equal(microSaved.ecologyTurns,0);assert.equal(microSaved.pairs[0].turn,'X');
- await micro.screenshot({path:path.join(output,'micro-expansion-r39.png')});assert.deepEqual(microErrors,[]);results.push({microExpansionPreviewRotateCancelAndConfirm:true,passed:true});await micro.close();
+ await verifyLocalControls({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;

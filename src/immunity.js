@@ -1,3 +1,4 @@
+import {inventoryEnabled} from './inventory-enabled.js';
 export const IMMUNITY_MS=33000;
 export const IMMUNITY_POINTS=33;
 export const immunityGoals=[
@@ -58,6 +59,7 @@ export function immunityProgress(game,playerId){
 // Count a placement, never a turn or accumulated score. Doble's placements
 // qualify separately; points from a card or the rival's forced symbol do not.
 export function recordImmunityCombo(game,playerId,points,{automatic=false,scorer=playerId}={}){
+  if(!inventoryEnabled(game,playerId))return [];
   if(automatic||scorer!==playerId||!Number.isFinite(points)||points<IMMUNITY_POINTS||!['solo','local'].includes(game.mode))return [];
   const inv=immunityFor(game,playerId);inv.combos++;
   const earned=immunityGoals.filter(goal=>inv.combos%goal.combos===0);

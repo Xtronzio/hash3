@@ -1,5 +1,5 @@
 import {toggleWatchTarget} from './watch-targets.js';
-import {microLength,microExpansionOptions} from './micro-expansion.js';
+import {microLength,validMicroExpansion} from './micro-expansion.js';
 import {movePendingBomb} from './pending-bombs.js';
 import {removeDefeatedInvasions} from './invasion-paths.js';
 import {localLiving} from './living-balance.js';
@@ -29,7 +29,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:13,mode,level,timeMode,playerSymbol,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:13,mode,level,timeMode,playerSymbol,playerInventory:ecology.playerInventory!==false,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
@@ -111,8 +111,8 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
     if(['expand-2','expand-3'].includes(tool)){
-      const choice=microExpansionOptions(room,microLength(tool),payload.orientation||'horizontal').find(c=>c.x===payload.x&&c.y===payload.y);
-      if(!choice)throw new Error('La ampliación debe añadir todas sus celdas, tocar el territorio y respetar los bloqueos.');
+      if(!validMicroExpansion(room,microLength(tool),payload.cells))throw new Error('Toca las casillas contiguas, empezando junto al territorio y respetando los bloqueos.');
+      const choice={cells:payload.cells.map(({x,y})=>({x,y}))};
       room.terrain.push(...choice.cells.map(c=>({...c,owner:playerId})));recordTerritoryGrowth(room,choice.cells.length,now,random);spendCard(room,playerId,tool);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,cells:choice.cells};
     }else if(tool==='swap'){
