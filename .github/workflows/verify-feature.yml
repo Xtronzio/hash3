@@ -15,6 +15,7 @@ on:
       - release/local-layout-r40
       - release/local-controls-r41
       - release/local-targets-r42
+      - release/local-descriptions-r43
   workflow_dispatch:
 permissions:
   contents: write

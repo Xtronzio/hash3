@@ -115,3 +115,20 @@
 .dock-used-cell>.dock-used-card,.dock-used-cards .dock-card-choice{width:24px;min-width:24px;height:28px;padding:2px}
 .dock-used-cell>.dock-used-card:not(.dock-card-choice)>b{display:none}
 .game .game-bottom>button{min-width:30px;padding-inline:3px}
+.inventory-description-instruction{font-size:12px;line-height:1.5;color:var(--muted);margin:0 0 10px;}
+.inventory-description-strip{overflow-x:auto;touch-action:pan-x;padding-bottom:5px;}
+.inventory-descriptions .inventory-description-toggle{cursor:pointer;border:1px solid var(--line);position:relative;}
+.inventory-descriptions .inventory-description-toggle[aria-expanded="true"]{border-color:#00e5ff;background:rgba(62,211,235,.12);}
+.inventory-description-chevron{position:absolute;right:3px;top:0;font-size:15px;line-height:16px;color:var(--muted);}
+.inventory-description-toggle[aria-expanded="true"] .inventory-description-chevron{transform:rotate(180deg);}
+.inventory-description-panel{padding:12px;margin-top:10px;border:1px solid var(--line);border-radius:10px;background:#1a232e;}
+.inventory-description-panel[hidden]{display:none;}
+.inventory-description-panel h3{margin:0 0 6px;font-size:15px;}
+.inventory-description-panel p{font-size:13px;line-height:1.6;margin:6px 0;overflow-wrap:anywhere;}
+.inventory-description-panel .inventory-description-status{color:var(--muted);font-size:12px;}
+.inventory-description-use{min-height:44px;margin-top:8px;}
+.inventory-descriptions .inventory-immunity-bottom{grid-template-columns:repeat(4,minmax(0,1fr));}
+.inventory-descriptions .inventory-immunity-bottom .inventory-description-toggle{width:100%;min-width:0;height:58px;min-height:58px;display:grid;place-items:center;padding:5px;}
+.inventory-description-rules{margin-top:12px;font-size:12px;line-height:1.6;color:#b8c5d8;}
+.inventory-description-rules summary{cursor:pointer;min-height:44px;padding:10px 0;}
+.inventory-description-rules p{margin:6px 0;}
