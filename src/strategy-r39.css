@@ -54,7 +54,7 @@
 .game .board-inventory-status:empty{display:none}
 .ecology-choices{flex-wrap:wrap}
 .inventory-setting-label{font-size:11px;line-height:12px;color:var(--text,#fff);margin-top:-6px;margin-bottom:-6px}
-.target-jump-menu{position:relative;flex:none}
+.target-jump-menu{position:relative;flex:none;pointer-events:auto}
 .target-jump-menu summary{list-style:none;cursor:pointer;width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;background:#101216;color:#fff}
 .target-jump-menu summary::-webkit-details-marker{display:none}
 .target-jump-menu summary svg,.target-jump-options svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
