@@ -13,8 +13,8 @@ export async function verifyLocalEconomy({context,load,output,results}){
  assert.ok(refillBox.x>=shieldBox.x+shieldBox.width,'Separate floating controls overlap');
  const before=await saved();await trigger.tap();assert.deepEqual(await saved(),before);assert.equal(await page.locator('.refill-selector').count(),0);
  const touch=await context.newCDPSession(page);
- const hold=async(ms=3100)=>{const box=await trigger.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await page.waitForTimeout(ms);await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
- await hold(1200);assert.equal(await page.locator('.refill-selector').count(),0);assert.deepEqual(await saved(),before,'Short hold changed game');
+ const hold=async(ms=1100)=>{const box=await trigger.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await page.waitForTimeout(ms);await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
+ await hold(400);assert.equal(await page.locator('.refill-selector').count(),0);assert.deepEqual(await saved(),before,'Short hold changed game');
  await page.screenshot({path:path.join(output,'recarga-flotante-r45.png')});
  await hold();await page.locator('.refill-selector').waitFor();assert.deepEqual(await saved(),before,'Opening the selector changed the game');
  const buy=page.locator('.refill-selector [data-action="refill-buy"][data-tool="antidote"]');await buy.evaluate(el=>el.scrollIntoView());
@@ -52,11 +52,11 @@ export async function verifyLocalEconomy({context,load,output,results}){
  await picker.locator('[data-tool="double"]').tap();await picker.locator('[data-tool="antidote"]').evaluate(el=>el.scrollIntoView());await picker.locator('[data-tool="antidote"]').tap();assert.equal(await picker.locator('[aria-pressed="true"]').count(),3);
  await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();const created=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals')).find(g=>g.mode==='solo'));
  const human=created.players.find(p=>p.id===created.humanId),machine=created.players.find(p=>p.id!==created.humanId);assert.equal(human.inventory.cards.antidote,1);assert.equal(machine.inventory.cards.antidote,0);assert.equal(Object.values(human.inventory.cards).reduce((a,b)=>a+b,0),3);assert.equal(Object.values(machine.inventory.cards).reduce((a,b)=>a+b,0),3);
- assert.deepEqual(errors,[]);results.push({localRefillR45:true,shortTapNoOpen:true,threeSecondHoldSelector:true,oneTapSinglePurchase:true,threeUnitCap:true,independentHallHighlights:true,selectableThreeCards:true,passed:true});await page.close();
+ assert.deepEqual(errors,[]);results.push({localRefillR45:true,shortTapNoOpen:true,oneSecondHoldSelector:true,oneTapSinglePurchase:true,threeUnitCap:true,independentHallHighlights:true,selectableThreeCards:true,passed:true});await page.close();
  const botGame=createLocal('solo','Jorge','Máquina',Date.now(),'normal','untimed','medium','X',true,{faunaEnabled:false,territoryEnabled:false});
  botGame.pairs[0].turn='O';botGame.players[1].score=333;botGame.players[1].inventory.cards.double=0;
  const {page:botPage,errors:botErrors}=await load(context,botGame);
- await botPage.waitForTimeout(1800);let botSaved=await botPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(botSaved.players[1].tradeSpent||0,0,'Machine bought before the 3s wait');
+ await botPage.waitForTimeout(400);let botSaved=await botPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(botSaved.players[1].tradeSpent||0,0,'Machine bought before the 1s wait');
  await botPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[1].tradeSpent===33,{},{timeout:10000});
- botSaved=await botPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(botSaved.players[1].score,300);assert.deepEqual(botErrors,[]);await botPage.close();results.push({machinePurchaseWaitThreeSeconds:true,passed:true});
+ botSaved=await botPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(botSaved.players[1].score,300);assert.deepEqual(botErrors,[]);await botPage.close();results.push({machinePurchaseWaitOneSecond:true,passed:true});
 }

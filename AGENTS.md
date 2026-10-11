@@ -331,3 +331,9 @@ Inventario de pausa siempre visible sobre el mapa, fuera del desplegable de rank
 ## R0.21.49 · Capas del marcador pausado
 
 Jorge detecta que la Diana atraviesa el marcador abierto en pausa. Aislar el contexto de apilamiento del mapa: Diana conserva su prioridad sobre controles del mapa, pero todos quedan debajo del desplegable de puntos. Probar hit-testing real sobre el centro de la Diana al abrir el marcador, y conservar navegación/guardados. No cambiar reglas ni activar conexiones del servidor. El enlace de perfil existente recupera solo identidad online, no partidas locales; su ampliación a traslado o sincronización de guardados requiere cerrar ese alcance antes de implementar.
+
+## R0.21.50 · Inventario legible y recarga ágil
+
+Jorge señala que Borrar aplicada seguía blanca. Todos los mensajes de uso/recarga y sus incidencias llevan cian, fondo y borde resaltados, sin recolorear puntos ni avisos amarillos del territorio. Recarga ahora requiere mantener 1 segundo, con el mismo máximo de tres compras por apertura; la máquina espera ese mismo segundo. Soltar antes, arrastrar, ocultar o cancelar no compra. Mantener combos ≥33, precios y caps intactos.
+
+Contador normal guardado/18 en indicador propio, fuera de mochila y fuera del desplazamiento horizontal del catálogo, visible en partida/mapa/pausa; conservar badge de mochila y capacidad de bandeja. Inmunidad aparte, pendiente +1 y exceso histórico sin recortes. Unificar Muros y Fronteras colocados en una sola pila morada del territorio con cantidad total y navegación circular por objeto; tarjetas Muro/Frontera siguen separadas en inventario. No contar celdas como barreras ni alterar geometría antigua, dueños, puntos o guardados. Verificar especialmente el aviso Borrar con interacción táctil real emulada y los controles pausados en tres tamaños antes de publicar Pages. ruleVersion15, identidad instalada y modos locales intactos; no trabajo de servidor/online en esta entrega.

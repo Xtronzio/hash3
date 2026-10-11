@@ -22,6 +22,7 @@ on:
       - release/local-presentation-r47
       - release/local-feedback-r48
       - release/local-layering-r49
+      - release/local-inventory-r50
   workflow_dispatch:
 permissions:
   contents: write
