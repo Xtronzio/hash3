@@ -149,3 +149,5 @@
 .local-dialog:has(#player-inventory:not(:checked)) .starting-inventory{display:none;}
 
 .antidote-cell{position:absolute;right:3px;top:3px;z-index:3;color:var(--yellow);font-size:16px;line-height:1;border:1px solid currentColor;border-radius:50%;width:18px;height:18px;pointer-events:none;}
+
+.inventory-description-toggle{-webkit-tap-highlight-color:transparent;}

@@ -15,6 +15,7 @@ export async function verifyLocalEconomy({context,load,output,results}){
  const a=page.locator('.inventory-catalog [data-action="inventory-description"][data-tool="antidote"]'),b=page.locator('.inventory-catalog [data-action="inventory-description"][data-tool="ambush"]');
  for(const button of [a,b,a]){await button.evaluate(el=>el.scrollIntoView());await button.tap();}
  assert.equal(await a.getAttribute('aria-expanded'),'false');assert.equal(await b.getAttribute('aria-expanded'),'true');assert.equal(await a.evaluate(el=>el.classList.contains('is-open')),false);assert.equal(await b.evaluate(el=>el.classList.contains('is-open')),true);
+ assert.equal(await a.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await a.evaluate(el=>getComputedStyle(el).webkitTapHighlightColor),'rgba(0, 0, 0, 0)');
  assert.notEqual(await a.evaluate(el=>getComputedStyle(el).backgroundColor),await b.evaluate(el=>getComputedStyle(el).backgroundColor));await page.screenshot({path:path.join(output,'hall-independent-r44.png')});
  await page.locator('[data-action="setup-solo"]').tap();await page.locator('#local-name').fill('Jorge');await page.locator('#player-inventory').check();await page.locator('#machine-inventory').check();
  const picker=page.locator('[data-starter-player="0"].starting-inventory-picker');assert.equal(await picker.locator('[aria-pressed="true"]').count(),3);
