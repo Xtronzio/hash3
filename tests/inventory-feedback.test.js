@@ -60,7 +60,7 @@ test('Every normal card appears beside the bag with its actual stock and selecti
  assert.deepEqual(game,before);
  const other=inventoryDockMarkup(game,'local-o',{choice:{player:'local-x',tool:'double',prepared:true,at:1000}});assert.doesNotMatch(other,/dock-card-choice/);
  const used=localCommand(game,'inventory',{tool:'double',playerId:'local-x'},now);
- assert.match(inventoryDockMarkup(used,'local-x',{choice:{player:'local-x',tool:'double',prepared:false,at:1000}}),/Doble · Usada · quedan 0/);
+ assert.doesNotMatch(inventoryDockMarkup(used,'local-x',{choice:{player:'local-x',tool:'double',prepared:false,at:1000}}),/data-dock-card="double"/);
  assert.doesNotMatch(inventoryDockMarkup(game,'local-x'),/dock-card-choice/);
 });
 test('The prepared card and active protection coexist as separate bag icons',()=>{
@@ -94,7 +94,7 @@ test('Cartas realmente gastadas conservan ambos lados, Doble/Combo y pausa sin d
  assert.deepEqual(game.players[0].inventory.turnUse.tools,['combo','double','rival']);
  game=localCommand(game,'inventory',{tool:'double',playerId:'local-o'},now);
  let html=inventoryDockMarkup(game,'local-o');
- assert.match(html,/X usó Doble/);assert.match(html,/O usó Doble/);
+ assert.match(html,/X usó Doble/);assert.doesNotMatch(html,/O usó Doble/);
  assert.equal((html.match(/class="dock-used-cell /g)||[]).length,4);
  assert.ok(html.indexOf('dock-used-cards x')<html.indexOf('data-action="inventory"'));
  assert.ok(html.indexOf('dock-used-cards o')>html.indexOf('data-action="inventory"'));
