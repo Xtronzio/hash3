@@ -10,7 +10,8 @@ export async function verifyLocalEconomy({context,load,output,results}){
  const refillBox=await trigger.boundingBox(),shieldBox=await page.locator('.floating-immunity').first().boundingBox();
  assert.ok(refillBox.x>=shieldBox.x+shieldBox.width,'Separate floating controls overlap');
  const before=await saved();await trigger.tap();assert.deepEqual(await saved(),before);assert.equal(await page.locator('.refill-selector').count(),0);
- const hold=async(ms=3100)=>{const box=await trigger.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(ms);await page.mouse.up();};
+ const touch=await context.newCDPSession(page);
+ const hold=async(ms=3100)=>{const box=await trigger.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await page.waitForTimeout(ms);await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
  await hold(1200);assert.equal(await page.locator('.refill-selector').count(),0);assert.deepEqual(await saved(),before,'Short hold changed game');
  await page.screenshot({path:path.join(output,'recarga-flotante-r45.png')});
  await hold();await page.locator('.refill-selector').waitFor();assert.deepEqual(await saved(),before,'Opening the selector changed the game');
@@ -20,6 +21,13 @@ export async function verifyLocalEconomy({context,load,output,results}){
  for(let i=0;i<2;i++){await hold();await buy.evaluate(el=>el.scrollIntoView());await buy.tap();}
  next=await saved();assert.equal(next.players[0].inventory.cards.antidote,3);assert.equal(next.players[0].score,900);
  await hold();assert.equal(await buy.isDisabled(),true);await page.locator('[data-action="close-refill"]').tap();
+ // Opening from an already visible bag closes it; cancel never spends.
+ await page.locator('[data-action="inventory"]').tap();await hold();assert.equal(await page.locator('#inventory-panel').count(),0);await page.locator('[data-action="close-refill"]').tap();
+ const handle=page.locator('.refill-drag-handle'),original=await handle.boundingBox(),camera=await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop}));
+ await page.mouse.move(original.x+original.width/2,original.y+original.height/2);await page.mouse.down();await page.mouse.move(original.x+original.width/2+50,original.y+original.height/2+40,{steps:8});await page.mouse.up();
+ const moved=await trigger.boundingBox();assert.ok(moved.x>refillBox.x+35);assert.deepEqual(await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop})),camera);assert.equal(await page.locator('.refill-selector').count(),0);
+ await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').tap();assert.ok(Math.abs((await trigger.boundingBox()).x-moved.x)<1);
+ await touch.detach();
  await page.locator('[data-action="inventory"]').tap();assert.equal(await page.locator('#inventory-panel [data-action="trade-hold"],#inventory-panel [data-action="refill-buy"]').count(),0);
  await page.locator('#inventory-panel [data-action="close-inventory"]').tap();await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="go-hall"]').tap();await page.locator('[data-action="hall-inventory"]').tap();
  const a=page.locator('.inventory-catalog [data-action="inventory-description"][data-tool="antidote"]'),b=page.locator('.inventory-catalog [data-action="inventory-description"][data-tool="ambush"]');

@@ -699,7 +699,7 @@ async function run(operation) {
 }
 bindRefillHold(app,playerId=>{
  if(busy||!isLocal()||playerId!==uid||!canOpenRefill(room,playerId))return;
- refillPlayer=playerId;inventoryOpen=false;eventsOpen=false;renderRefill();
+ refillPlayer=playerId;inventoryOpen=false;eventsOpen=false;renderInventory();renderEvents();document.querySelector('[data-action="inventory"]')?.setAttribute('aria-expanded','false');renderRefill();
  document.querySelector('[data-action="close-refill"]')?.focus({preventScroll:true});
 });
 function renderRefill(){
