@@ -1,10 +1,12 @@
+import {verifyLocalEconomy} from './verify-local-economy-r44.mjs';
 // Real Chromium input/layout checks; device emulation is not physical-device QA.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium} from 'playwright';
 import {createServer} from 'vite';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {verifyLocalControls} from './verify-local-controls.mjs';
 import {verifyLocalTargets} from './verify-local-targets.mjs';
 import {verifyInventoryDescriptions} from './verify-inventory-descriptions.mjs';
@@ -418,6 +420,7 @@ try{
  await verifyLocalControls({context,load,output,results});
  await verifyLocalTargets({context,load,output,results});
  await verifyInventoryDescriptions({context,load,output,results});
+ await verifyLocalEconomy({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;

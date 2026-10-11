@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {boardCellLimit} from '../src/board-limits.js';
-import {createLocal,localCommand,reconcileLocalBoard} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,reconcileLocalBoard} from '../src/local.js';
 import {expansionOptions} from '../src/game.js';
 import {toolCells} from '../src/practice-tools.js';
 import {canRequestFreeExpansion} from '../src/free-expansion.js';

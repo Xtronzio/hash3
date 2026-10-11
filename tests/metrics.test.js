@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {localMetrics,summarizeMetrics,metricsMarkup} from '../src/metrics.js';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
 import {navigationPaths,navigationIcon} from '../src/navigation-icons.js';
 import {practiceTools,pendingTools,initializeInventory} from '../src/practice-tools.js';
 import {inventoryMarkup} from '../src/inventory.js';

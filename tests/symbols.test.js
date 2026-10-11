@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand,localHumanId,localMachineId,machineChoice} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,localHumanId,localMachineId,machineChoice} from '../src/local.js';
 import {canUsePracticeHint,usePracticeHint} from '../src/inventory.js';
 import {saveLocalGame,loadLocalGames} from '../src/sessions.js';
 const now=1700000000000;

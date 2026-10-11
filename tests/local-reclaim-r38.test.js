@@ -1,7 +1,8 @@
 import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {figureWindows,prepareFigureIndex,key,availableCells} from '../src/game.js';
 import {machineMoveScore,chooseMachineMove} from '../src/machine.js';
 import {placeNeutral,neutralFrequency} from '../src/neutral.js';
@@ -106,7 +107,7 @@ test('Reconquerers never erase X/O/# if a reserved invasive cell changes before 
 });
 test('Builders respect walls and the declared cell goal and stop at the actual cap',()=>{
  let r=board(32);r.cellTarget=33;r.works=[{id:'w',kind:'work',reconquer:true,destroy:[],build:[{x:-1,y:0},{x:-1,y:1}],done:0,nextAt:now}];
- completeEventTurns(r,now,()=>0,2);r=localCommand(r,'move',{x:1,y:0},now,()=>0);assert.equal(r.terrain.length,33);assert.equal(r.status,'finished');assert.equal(r.finalResult.ruleVersion,13);
+ completeEventTurns(r,now,()=>0,2);r=localCommand(r,'move',{x:1,y:0},now,()=>0);assert.equal(r.terrain.length,33);assert.equal(r.status,'finished');assert.equal(r.finalResult.ruleVersion,14);
  const blocked=board();blocked.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];blocked.works=[{id:'w',kind:'work',reconquer:true,destroy:[],build:[{x:-1,y:0}],done:0,nextAt:now}];completeEventTurns(blocked,now);assert.equal(blocked.terrain.length,99);
 });
 test('Migration of a paused R37 test save is atomic and idempotent, with pins and finished records preserved',()=>{

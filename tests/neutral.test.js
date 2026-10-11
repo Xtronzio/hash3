@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {placeNeutral} from '../src/neutral.js';
 import {availableCells,figureWindows} from '../src/game.js';
 import {toolCells} from '../src/practice-tools.js';

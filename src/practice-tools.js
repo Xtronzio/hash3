@@ -10,9 +10,9 @@ import {availableCells,playableTerrain,terrainOf,key,isBlockedCell} from './game
 import {immunityStock,spendImmunity,initializeImmunity,isImmune,protectedTerritoryKeys,completeImmunityRound} from './immunity.js';
 import {tornadoOptions,bombOptions,frontierOptions,borderOptions,borderChains} from './area-tools.js';
 import {expansionFrontierContext,edgeKey,frontierDirections} from './frontiers.js';
-export const REFILL_TURNS=1,MAX_PER_CARD=3;
+export const REFILL_TURNS=1,MAX_PER_CARD=3; // Legacy export; turns never grant cards.
 export const practiceTools=[
-  {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno para la recarga.',button:'Activar doble'},
+  {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cada colocación manual propia de ≥33 puntos puede ganar una recarga.',button:'Activar doble'},
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
   {id:'rival',label:'Ficha rival',description:'Obliga al rival a poner una ficha de tu color en su próxima colocación. Esa figura puntúa para tu símbolo.',button:'Activar ficha rival'},
   {id:'erase',label:'Borrar',description:'Borra una ficha rival y después juega. Tus propias fichas no se pueden borrar.',button:'Elegir ficha rival'},
@@ -31,18 +31,38 @@ export const practiceTools=[
   {id:'border',label:'Frontera',description:'Toca tres casillas vacías contiguas por un lado; pueden formar una L. Se convierten en tres muros y contienen el avance invasor. No borra fichas. Bomba puede romperla. Después coloca tu ficha.',button:'Situar frontera de tres celdas'},
   {id:'hint-expand',group:'help',label:'Ampliación inteligente',description:'Propone un 3×3 favorable al quedarte sin movimientos. Desde 333 figuras cobradas en la partida también permite ampliar por estrategia aunque queden huecos. Tú confirmas o eliges otra; la ampliación voluntaria gasta la carta al colocarla.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
+  {id:'ambush',label:'Emboscada',description:'Expulsa hasta tres invasores cercanos a la celda elegida. Conserva terreno y puntos; no afecta X, O ni comodines. Después coloca tu ficha.',button:'Elegir invasor'},
+  {id:'reconquest',label:'Reconquista',description:'Expulsa hasta 33 invasores cercanos a la celda elegida, sin perder terreno ni puntos. No afecta X, O ni comodines. Después coloca tu ficha.',button:'Elegir invasor'},
+  {id:'antidote',label:'Antídoto',description:'Protege una celda amenazada por un aviso concreto de Contagio o Pandemia antes del impacto. No cancela las demás conversiones ni cambia su plazo. Cuesta 33 puntos por unidad en el trueque. Después coloca tu ficha.',button:'Elegir celda amenazada'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
 export const MAX_CARDS=18,MAX_CARD_TYPES=12;
 export const pendingTools=[];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
-// Keep eight starting cards; the rest enter through the refill draw.
+// Historical eight-card starter only for legacy saves with no inventory record.
 const startingCards=new Set(['double','opposite','rival','erase','shift','block','shield','hint']);
-const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,startingCards.has(t.id)?1:0]));
+export const RECOMMENDED_CARDS=Object.freeze(['double','opposite','hint']);
+export function validateStartingCards(cards){
+ if(!Array.isArray(cards)||cards.length!==3||new Set(cards).size!==3||cards.some(id=>!practiceTools.some(t=>t.id===id)))throw new Error('Elige tres cartas distintas del catálogo.');
+ return [...cards];
+}
+const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,startingCards.has(t.id)?1:0])); // Missing legacy inventories retain the original starter.
+export function seedStartingInventory(game,selections={}){
+ for(const player of game.players){
+  const cards=validateStartingCards(selections[player.id]||RECOMMENDED_CARDS);
+  player.inventory={cards:Object.fromEntries(practiceTools.map(t=>[t.id,inventoryEnabled(game,player.id)&&cards.includes(t.id)?1:0])),turns:0,received:Object.fromEntries(practiceTools.map(t=>[t.id,inventoryEnabled(game,player.id)&&cards.includes(t.id)?1:0]))};
+ }
+ initializeInventory(game);
+}
 export function initializeInventory(game){
   if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
   game.inventoryVersion=2;initializeWildcardUsage(game);
+  if(['solo','local'].includes(game.mode)&&game.status!=='finished'&&game.inventoryEconomyVersion!==1){
+   // Keep all stocks/reserves. Old paid-turn counters buy no historical draws.
+   for(const p of game.players)if(p.inventory){p.inventory.turns=0;p.inventory.comboPending=0;}
+   game.inventoryEconomyVersion=1;
+  }
   for(const player of game.players){
     const ownDisabled=game.playerInventory===false&&(game.mode==='local'||player.id===(game.humanId||game.pairs?.[0]?.x));
     player.inventory||={cards:ownDisabled?Object.fromEntries(practiceTools.map(t=>[t.id,0])):initialCards(),turns:0};
@@ -72,6 +92,8 @@ export function canErasePracticeCell(game,playerId,cell){return !!(game?.players
 export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
   const p=game?.pairs?.[0];if(!p)return [];
   if(['expand-2','expand-3'].includes(tool))return microSelectionOptions(game,microLength(tool),selected);
+  if(['ambush','reconquest'].includes(tool))return game.cells.filter(c=>c.symbol==='*'&&!habitatBlocked(game,c.x,c.y));
+  if(tool==='antidote'){const seen=new Map(),occupied=new Set(game.cells.filter(c=>['X','O','*','#'].includes(c.symbol)).map(c=>key(c.x,c.y)));for(const event of game.territoryEvents||[])if(['contagion','pandemic'].includes(event.kind)&&(event.turnsRemaining>0||event.nextAt>game.clockNow))for(const c of event.region||[])if(!(event.antidotes||[]).some(p=>p.x===c.x&&p.y===c.y)&&occupied.has(key(c.x,c.y)))seen.set(key(c.x,c.y),{x:c.x,y:c.y});return [...seen.values()];}
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
   if(tool==='border')return borderOptions(game,selected);
@@ -137,6 +159,7 @@ export function spendCard(game,playerId,tool){
   const inv=player.inventory,turn=inv.completedTurns||0;
   if(inv.turnUse?.turn!==turn)inv.turnUse={turn,tools:[]};
   inv.turnUse.tools.push(tool);
+  drawComboCard(game,playerId);
   if(['frontier','border'].includes(tool)&&game.pairs[0].pending){game.pairs[0].frontierUsed=true;return;}
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
@@ -149,17 +172,24 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
   game.inventoryEffects.blocks=game.inventoryEffects.blocks.filter(e=>e.remaining>0&&!game.cells.some(c=>c.x===e.x&&c.y===e.y));
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));
-  if(automatic||!placed||!inventoryEnabled(game,playerId))return;
-  const inv=game.players.find(p=>p.id===playerId).inventory;inv.turns=Math.min(REFILL_TURNS,inv.turns+1);
+  // Completed turns only age effects and record usage. No time/turn refill.
+}
+export function drawComboCard(game,playerId,random=Math.random){
+  if(!inventoryEnabled(game,playerId))return false;
+  const inv=game.players.find(p=>p.id===playerId)?.inventory;if(!inv?.comboPending)return false;
   const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
   const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
-  if(inv.turns>=REFILL_TURNS&&Object.values(inv.cards).reduce((a,b)=>a+b,0)<MAX_CARDS&&heldTypes<=MAX_CARD_TYPES&&eligible.length){
-    // Tactical piece cards receive three tickets, the rest one. Still a draw:
-    // missing cards and quantities 0/1/2/3 coexist, without filling each type.
-    const tickets=eligible.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));
-    const draw=tickets[Math.min(tickets.length-1,Math.floor(Math.max(0,random())*tickets.length))];
-    inv.cards[draw.id]++;inv.received[draw.id]++;inv.turns=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;
-  }
+  if(Object.values(inv.cards).reduce((a,b)=>a+b,0)>=MAX_CARDS||heldTypes>MAX_CARD_TYPES||!eligible.length)return false;
+  const tickets=eligible.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));
+  const draw=tickets[Math.min(tickets.length-1,Math.floor(Math.max(0,random())*tickets.length))];
+  inv.cards[draw.id]++;inv.received[draw.id]++;inv.comboPending=0;inv.lastDraw=draw.id;inv.draws=(inv.draws||0)+1;return true;
+}
+export function recordInventoryCombo(game,playerId,points,{automatic=false,scorer=playerId,random=Math.random}={}){
+ initializeInventory(game);
+ if(points<33||!Number.isFinite(points)||automatic||scorer!==playerId||!inventoryEnabled(game,playerId))return false;
+ const inv=game.players.find(p=>p.id===playerId).inventory;
+ inv.qualifyingCombos=(inv.qualifyingCombos||0)+1;inv.comboPending=1;
+ return drawComboCard(game,playerId,random);
 }
 export const TACTICAL_CARDS=Object.freeze(['double','opposite','rival','erase','shift','swap','combo']);
 export const inventoryDrawWeight=tool=>TACTICAL_CARDS.includes(tool)?3:1;

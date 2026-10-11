@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {snapshotMemo} from '../src/snapshot-memo.js';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
 import {expansionOptions} from '../src/game.js';
 test('Expansion preview taps reuse choices; accepted changes invalidate the prepared options',()=>{
  const r=createLocal('local','A','B',1000,'normal','untimed');let preparations=0;

@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {advanceTerritory} from '../src/territory-tools.js';
 import {newTerritoryImpacts,territoryImpactText} from '../src/territory-impact.js';
 import {targetNavigation,lastNavigationMove,toggleWatchTarget} from '../src/watch-targets.js';

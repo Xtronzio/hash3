@@ -20,6 +20,7 @@ export function activeInventoryEffects(game,now=game?.clockNow??Date.now()){
  grouped('block',game.inventoryEffects?.blocks||[],'turnos rivales');
  grouped('shield',game.inventoryEffects?.shields||[],'turnos rivales');
  grouped('rival',game.inventoryEffects?.forced||[],'colocación rival');
+ for(const event of game.territoryEvents||[])grouped('antidote',(event.antidotes||[]).map(c=>({...c,remaining:event.turnsRemaining??1})),'turnos hasta impacto');
  if(game.practiceHint)add(game.practiceHint.action==='expand'?'hint-expand':'hint',game.practiceHint.player,1,null,'');
  grouped('frontier',(game.frontiers||[]).filter(f=>f.type!=='border'),'');
  grouped('border',(game.frontiers||[]).filter(f=>f.type==='border'),'');

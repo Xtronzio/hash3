@@ -1,6 +1,8 @@
+import {recordInventoryCombo} from '../src/practice-tools.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {canUsePracticeTool,completeInventoryTurn,initializeInventory,toolAllowance,practiceTools} from '../src/practice-tools.js';
 import {usePracticeHint,inventoryTotal,inventoryMarkup} from '../src/inventory.js';
 import {chooseMachineCard} from '../src/bot-inventory.js';
@@ -8,7 +10,7 @@ const now=1700000000000;
 const start=(mode='local',clock='untimed')=>createLocal(mode,'A','B',now,'normal',clock,'high','X',true);
 const card=(r,tool,playerId='local-x',point={},t=now)=>localCommand(r,'inventory',{tool,playerId,...point},t);
 const move=(r,x,y,t=now)=>localCommand(r,'move',{x,y},t,()=>0);
-const earnCombo=r=>{r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>.999});return r;};
+const earnCombo=r=>{r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)recordInventoryCombo(r,'local-x',33,{random:()=>.999});return r;};
 
 test('Combo entra en la recarga; mantiene ocho cartas iniciales y el contador suma la nueva carta',()=>{
  const r=start();assert.ok(practiceTools.some(t=>t.id==='combo'));assert.equal(inventoryTotal(r,'local-x'),8);

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {savedMapModel,thumbnailMarkup,inspectionCells,bindInspection} from '../src/saved-map.js';
 import {loadGamePins,toggleGamePin,saveLocalGame,loadLocalGames,deleteLocalGame,assertGameDeletionAllowed} from '../src/sessions.js';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {gamesMarkup} from '../src/session-ui.js';
 
 const memory=()=>{const values=new Map();return {getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};};

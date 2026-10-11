@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand,reconcileLocalBoard,machineChoice} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,reconcileLocalBoard,machineChoice} from '../src/local.js';
 import {availableCells,playableTerrain,connectedTerrain,expansionOptions} from '../src/game.js';
 import {toolCells,moveDestination} from '../src/practice-tools.js';
 import {frontierOptions,tornadoOptions,bombOptions} from '../src/area-tools.js';

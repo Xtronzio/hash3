@@ -1,7 +1,8 @@
 import test from 'node:test';
 import {key} from '../src/game.js';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {territoryRegion,advanceTerritory} from '../src/territory-tools.js';
 import {TERRITORY_EVENT_RULES,LOCAL_NATURAL_ROTATION,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount,pickEventKind,confirmEventKind,territoryAttemptInterval} from '../src/territory-event-rules.js';
 import {plannedEventRegion} from '../src/territory-event-actions.js';
@@ -33,7 +34,7 @@ for(const kind of [...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION]){
   r.territoryEvents=[{id:'event:'+kind,kind,region,...(plan.groups?{groups:plan.groups}:{}),nextAt:2000}];
   const effect=advanceTerritory(r,2000),expected=TERRITORY_EVENT_RULES[kind].effect;
   assert.ok(effect.length>0);
-  if(['shuffle','blackhole'].includes(expected)){assert.equal(r.players[0].score,oldScore+(r.landingEvent?.scores.find(s=>s.symbol==='X')?.points||0));}else assert.equal(r.players[0].score,oldScore);
+  if((['shuffle','blackhole'].includes(expected)||kind==='pandemic')){assert.equal(r.players[0].score,oldScore+(r.landingEvent?.scores.find(s=>s.symbol==='X')?.points||0));}else assert.equal(r.players[0].score,oldScore);
   assert.equal(r.territoryEvents.length,0);
   if(expected==='demolish'){
    assert.equal(r.terrain.length,oldTerrain-region.length);

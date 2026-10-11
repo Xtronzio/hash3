@@ -22,7 +22,8 @@ const center=points=>{
 // Cache the membership set with the snapshot; pan and clocks never scan it.
 export function territoryRenderRegion(room,event){
  const known=snapshotMemo(room,'terrain-keys',()=>new Set(terrainOf(room).map(c=>key(c.x,c.y))));
- return event.region.filter(c=>known.has(key(c.x,c.y)));
+ const protectedCells=new Set(['contagion','pandemic'].includes(event.kind)?(event.antidotes||[]).map(c=>key(c.x,c.y)):[]);
+ return event.region.filter(c=>known.has(key(c.x,c.y))&&!protectedCells.has(key(c.x,c.y)));
 }
 export function phenomenonTargets(room,kind){
  return (room.territoryEvents||[]).filter(e=>e.kind===kind).flatMap(e=>{

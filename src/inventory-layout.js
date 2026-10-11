@@ -1,5 +1,5 @@
 export const INVENTORY_ROWS=Object.freeze([
- ['double','opposite','rival','swap','shift','erase','bomb','tornado','combo','shield','block'],
+ ['double','opposite','rival','swap','shift','erase','bomb','tornado','combo','shield','block','antidote','ambush','reconquest'],
  ['target','frontier','border','activate','expand-2','expand-3','destroy','hint','hint-expand','super-hint']
 ]);
 export function inventoryRows(render){

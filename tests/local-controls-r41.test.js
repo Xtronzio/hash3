@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {microSelectionOptions,validMicroExpansion,microExpansionChains} from '../src/micro-expansion.js';
 import {canUsePracticeTool,completeInventoryTurn,initializeInventory} from '../src/practice-tools.js';
 import {recordImmunityCombo,immunityStock} from '../src/immunity.js';

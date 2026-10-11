@@ -16,6 +16,7 @@ on:
       - release/local-controls-r41
       - release/local-targets-r42
       - release/local-descriptions-r43
+      - release/local-economy-r44
   workflow_dispatch:
 permissions:
   contents: write

@@ -1,6 +1,8 @@
+import {recordInventoryCombo} from '../src/practice-tools.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {completeInventoryTurn,practiceTools,MAX_CARDS,MAX_PER_CARD} from '../src/practice-tools.js';
 import {inventoryTotal,inventoryRefill,inventoryDockMarkup,toolIcon} from '../src/inventory.js';
 const now=1700000000000;
@@ -18,7 +20,7 @@ test('El contador suma unidades, baja al gastar y muestra cero aunque sea el tur
 });
 test('Una recarga se detecta por el sorteo, incluso si el total coincide tras consumir',()=>{
  const previous=start(),next=localCommand(previous,'inventory',{tool:'rival',playerId:'local-x'},now);
- for(let i=0;i<1;i++)completeInventoryTurn(next,'local-x',{random:()=>0});
+ for(let i=0;i<1;i++)recordInventoryCombo(next,'local-x',33,{random:()=>0});
  assert.equal(inventoryTotal(previous,'local-x'),inventoryTotal(next,'local-x'));
  assert.deepEqual(inventoryRefill(previous,next,'local-x'),{player:'local-x',added:1,tool:'Doble',total:8});
  assert.equal(inventoryRefill(previous,next,'local-o'),null);
@@ -26,7 +28,7 @@ test('Una recarga se detecta por el sorteo, incluso si el total coincide tras co
 });
 test('Abrir otro guardado, pausar o reanudar no anuncia recargas antiguas',()=>{
  let game=start();game.players[0].inventory.cards.double=0;
- for(let i=0;i<1;i++)completeInventoryTurn(game,'local-x',{random:()=>0});
+ for(let i=0;i<1;i++)recordInventoryCombo(game,'local-x',33,{random:()=>0});
  assert.equal(inventoryRefill(null,game,'local-x'),null);
  assert.equal(inventoryRefill(start(),game,'local-x'),null);
  const paused=localCommand(game,'pause',{},now),resumed=localCommand(paused,'resume',{},now+1000);
@@ -41,9 +43,9 @@ test('La recarga del rival no resalta tu contador; el aviso describe la carta pr
 });
 test('Mochila llena y turnos automáticos no crean un aviso de recarga',()=>{
  const previous=start();for(const t of practiceTools){if(inventoryTotal(previous,'local-x')===MAX_CARDS)break;previous.players[0].inventory.cards[t.id]=MAX_PER_CARD;}const next=structuredClone(previous);
- for(let i=0;i<1;i++)completeInventoryTurn(next,'local-x',{random:()=>0});
+ for(let i=0;i<1;i++)recordInventoryCombo(next,'local-x',33,{random:()=>0});
  assert.equal(inventoryRefill(previous,next,'local-x'),null);
- assert.match(inventoryDockMarkup(next,'local-x'),/Recarga lista cuando haya hueco/);
+ assert.match(inventoryDockMarkup(next,'local-x'),/Recarga ganada pendiente de hueco/);
  next.players[0].inventory.cards.double=0;completeInventoryTurn(next,'local-x',{automatic:true});
  assert.equal(inventoryRefill(previous,next,'local-x'),null);
 });

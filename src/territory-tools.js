@@ -152,7 +152,7 @@ export function advanceTerritory(room,now=Date.now()){
   const {hit,actions:changes,demolish}=applyPlannedEvent(room,event,now);
   const removed=new Set([...hit].map(k=>before.get(k)?.id).filter(Boolean));
   const survivors=new Map(room.cells.map(c=>[c.id,c]));
-  const mixes=['shuffle','blackhole'].includes(eventRule(event.kind)?.effect);
+  const mixes=['shuffle','blackhole'].includes(eventRule(event.kind)?.effect)||localLiving(room)&&['contagion','pandemic'].includes(event.kind);
   if(mixes)pruneBrokenForms(room);
   else room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
   for(const p of room.players)if(p.lastMove){const moved=survivors.get(p.lastMove.id);if(moved&&moved.owner===p.id)p.lastMove={...moved};else delete p.lastMove;}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-inventory.js';
 import {practiceTools} from '../src/practice-tools.js';
 const ids=practiceTools.map(t=>t.id).concat('target','immunity','immunity-1','immunity-3','immunity-33');
 export async function verifyInventoryDescriptions({context,load,output,results}){

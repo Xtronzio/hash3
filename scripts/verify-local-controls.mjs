@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-inventory.js';
 export async function verifyLocalControls({context,load,output,results}){
  const fresh=()=>createLocal('local','X','O',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});
  const r=fresh();r.players[0].inventory.cards['expand-2']=1;r.players[0].inventory.immunity.cards['immunity-1']=1;

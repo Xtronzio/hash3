@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand,machineChoice} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,machineChoice} from '../src/local.js';
 import {machineMoveScore} from '../src/machine.js';
 import {availableCells,expansionOptions,terrainOf} from '../src/game.js';
 import {loadLocalGames,saveLocalGame} from '../src/sessions.js';

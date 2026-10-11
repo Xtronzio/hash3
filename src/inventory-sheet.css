@@ -132,3 +132,22 @@
 .inventory-description-rules{margin-top:12px;font-size:12px;line-height:1.6;color:#b8c5d8;}
 .inventory-description-rules summary{cursor:pointer;min-height:44px;padding:10px 0;}
 .inventory-description-rules p{margin:6px 0;}
+
+/* A closed description stays off even when touch leaves :hover behind. */
+.inventory-descriptions .inventory-description-toggle:not(.is-open),.inventory-descriptions .inventory-description-toggle:not(.is-open):hover{background:transparent;border-color:var(--line);color:var(--muted);}
+.inventory-descriptions .inventory-description-toggle.is-open{color:var(--mode-color,#00e5ff);border-color:currentColor;background:color-mix(in srgb,var(--mode-color,#00e5ff) 12%,transparent);}
+.inventory-trade{min-height:44px;margin:8px 0 0 8px;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
+.inventory-trade.is-holding{background:var(--mode-color,#00e5ff);color:#08090b;}
+.starting-inventory-picker{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:10px;min-width:0;}
+.starting-inventory-picker p{font-size:12px;line-height:1.5;margin:5px 0 10px;}
+.starter-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:180px;overflow-y:auto;}
+.starter-cards button{min-width:0;min-height:66px;padding:6px;display:grid;place-items:center;gap:3px;}
+.starter-cards svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.7;}
+.starter-cards span{font-size:10px;overflow-wrap:anywhere;}
+.starter-cards [aria-pressed="true"]{border-color:var(--mode-color,#00e5ff);color:var(--mode-color,#00e5ff);background:#00e5ff12;}
+.starting-inventory-picker output{display:inline-block;padding:8px;font-variant-numeric:tabular-nums;}
+.local-dialog:has(#player-inventory:not(:checked)) .starting-inventory{display:none;}
+
+.antidote-cell{position:absolute;right:3px;top:3px;z-index:3;color:var(--yellow);font-size:16px;line-height:1;border:1px solid currentColor;border-radius:50%;width:18px;height:18px;pointer-events:none;}
+
+.inventory-description-toggle{-webkit-tap-highlight-color:transparent;}

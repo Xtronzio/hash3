@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {scoreFeedback,scoreBreakdown} from '../src/feedback.js';
 const play=(r,x,y)=>localCommand(r,'move',{x,y},0);
 test('Resalta las tres celdas realmente cobradas y desglosa el bonus',()=>{

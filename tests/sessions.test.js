@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {loadLocalGames,saveLocalGame,selectExpansion,voteCounts} from '../src/sessions.js';
 import {expansionOptions,terrainOf} from '../src/game.js';
 const now=1700000000000;

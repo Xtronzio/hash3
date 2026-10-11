@@ -1,3 +1,5 @@
+import {buyCard} from './inventory-economy.js';
+import {applyTerritoryDefense} from './territory-defense.js';
 import {toggleWatchTarget} from './watch-targets.js';
 import {microLength,validMicroExpansion} from './micro-expansion.js';
 import {movePendingBomb} from './pending-bombs.js';
@@ -13,7 +15,7 @@ import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWin
 import {recordMax} from './max.js';
 import {recordCombo} from './records.js';
 import {initializeRodents,stepRodent} from './rodents.js';
-import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
+import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,seedStartingInventory,recordInventoryCombo,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,resumeImmunities} from './immunity.js';
 import {applyAreaTool} from './area-tools.js';
@@ -29,14 +31,14 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:13,mode,level,timeMode,playerSymbol,playerInventory:ecology.playerInventory!==false,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:14,mode,level,timeMode,playerSymbol,playerInventory:ecology.playerInventory!==false,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
   if(CELL_TARGETS.includes(ecology.cellTarget))room.cellTarget=ecology.cellTarget;
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
-  initializeInventory(room);initializeRodents(room,now);initializeFreeExpansions(room);return room;
+  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});initializeRodents(room,now);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {
   if(finishAtMatchGoal(room,now))return;
@@ -60,7 +62,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=13;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=14;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -105,12 +107,18 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     if(!p.optionalExpansion)throw new Error('No hay ampliación libre seleccionada.');
     delete p.optionalExpansion;delete p.strategicExpansion;delete room.practiceHint;p.pending=0;p.expander=null;room.version++;room.updatedAt=new Date(now).toISOString();return room;
   }
+  if(action==='trade'){
+    buyCard(room,payload.playerId,payload.tool,now);room.lastEvent={id:id(),kind:'trade',player:payload.playerId,tool:payload.tool};room.updatedAt=new Date(now).toISOString();room.version++;return room;
+  }
   if(action==='inventory'){
     const {tool,playerId}=payload;
     if(['hint','hint-expand','super-hint'].includes(tool))throw new Error('Activa Ayuda desde el inventario.');
     if(!canUsePracticeTool(room,playerId,tool,now))throw new Error('Herramienta no disponible: una por turno, o dos activando Combo primero; úsala antes de agotar el reloj.');
     const actor=room.players.find(v=>v.id===playerId);
-    if(['expand-2','expand-3'].includes(tool)){
+    if(['ambush','reconquest','antidote'].includes(tool)){
+      const result=applyTerritoryDefense(room,playerId,tool,payload);spendCard(room,playerId,tool);
+      room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,...result};
+    }else if(['expand-2','expand-3'].includes(tool)){
       if(!validMicroExpansion(room,microLength(tool),payload.cells))throw new Error('Toca las casillas contiguas, empezando junto al territorio y respetando los bloqueos.');
       const choice={cells:payload.cells.map(({x,y})=>({x,y}))};
       room.terrain.push(...choice.cells.map(c=>({...c,owner:playerId})));recordTerritoryGrowth(room,choice.cells.length,now,random);spendCard(room,playerId,tool);
@@ -203,6 +211,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const {points,bonus,figures,paidFigures}=scoreCell(room,cell,scorer);player.lastMove=cell;
     recordCombo(scorer,{points,figures,automatic,moveId:cell.id});
     recordImmunityCombo(room,player.id,points,{automatic,scorer:scorer.id});
+    recordInventoryCombo(room,player.id,points,{automatic,scorer:scorer.id,random});
     player.navigationLastMove={x:cell.x,y:cell.y,id:cell.id};
     recordMax(player,scorer===player?points-bonus:0,scorer===player?figures:0,automatic);
     let full=!availableCells(room,p,{ignoreBlocks:true}).length;

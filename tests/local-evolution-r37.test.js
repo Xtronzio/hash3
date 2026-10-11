@@ -1,7 +1,9 @@
+import {recordInventoryCombo} from '../src/practice-tools.js';
 import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {figureWindows,prepareFigureIndex,key,availableCells} from '../src/game.js';
 import {scoreLandings} from '../src/landing-score.js';
 import {plannedEventRegion,applyPlannedEvent} from '../src/territory-event-actions.js';
@@ -132,9 +134,9 @@ test('R36 saves retain the entire board, scores, bag and pins when worms migrate
 test('Tactical refill weights increase piece inventory while keeping all bag and type caps',()=>{
  assert.ok(TACTICAL_CARDS.every(t=>inventoryDrawWeight(t)===3));assert.ok(practiceTools.filter(t=>!TACTICAL_CARDS.includes(t.id)).every(t=>inventoryDrawWeight(t.id)===1));
  const rng=random(21);let tactical=0,total=0;
- for(let i=0;i<3000;i++){const r=board(9);for(const t of practiceTools)r.players[0].inventory.cards[t.id]=0;completeInventoryTurn(r,'local-x',{random:rng});tactical+=TACTICAL_CARDS.includes(r.players[0].inventory.lastDraw);total++;}
+ for(let i=0;i<3000;i++){const r=board(9);for(const t of practiceTools)r.players[0].inventory.cards[t.id]=0;recordInventoryCombo(r,'local-x',33,{random:rng});tactical+=TACTICAL_CARDS.includes(r.players[0].inventory.lastDraw);total++;}
  const expected=TACTICAL_CARDS.length*3/practiceTools.reduce((n,t)=>n+inventoryDrawWeight(t.id),0);assert.ok(Math.abs(tactical/total-expected)<.04);
- const r=board(9);for(let i=0;i<300;i++)completeInventoryTurn(r,'local-x',{random:rng});const counts=Object.values(r.players[0].inventory.cards);assert.ok(counts.reduce((a,b)=>a+b,0)<=MAX_CARDS);assert.ok(counts.every(n=>n<=MAX_PER_CARD));assert.ok(counts.filter(Boolean).length<=MAX_CARD_TYPES);
+ const r=board(9);for(let i=0;i<300;i++)recordInventoryCombo(r,'local-x',33,{random:rng});const counts=Object.values(r.players[0].inventory.cards);assert.ok(counts.reduce((a,b)=>a+b,0)<=MAX_CARDS);assert.ok(counts.every(n=>n<=MAX_PER_CARD));assert.ok(counts.filter(Boolean).length<=MAX_CARD_TYPES);
 });
 test('Borders require exactly three unique empty orthogonally contiguous choices; illegal selection preserves the bag',()=>{
  const r=board(99);r.players[0].inventory.cards.border=1;

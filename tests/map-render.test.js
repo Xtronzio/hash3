@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
 import {overviewModel} from '../src/map-overview.js';
 import {savedMapModel} from '../src/saved-map.js';
 import {prepareMapRendering,mapWindowMarkup} from '../src/map-render.js';

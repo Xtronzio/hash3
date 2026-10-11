@@ -1,6 +1,7 @@
 import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {needsLocalTick} from '../src/local-clock.js';
 import {machineTurnKey} from '../src/machine-turn.js';
 import {countHabitatPlacement,habitatMark,advanceHabitats,initializeHabitats} from '../src/inhabitants.js';

@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {boardCellLimit} from '../src/board-limits.js';
 import {needsLocalTick} from '../src/local-clock.js';
 import {saveLocalGame,deleteLocalGame,loadLocalGames} from '../src/sessions.js';
