@@ -21,6 +21,7 @@ on:
       - release/local-refill-r46
       - release/local-presentation-r47
       - release/local-feedback-r48
+      - release/local-layering-r49
   workflow_dispatch:
 permissions:
   contents: write
