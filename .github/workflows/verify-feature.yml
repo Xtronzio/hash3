@@ -19,6 +19,7 @@ on:
       - release/local-economy-r44
       - release/local-refill-r45
       - release/local-refill-r46
+      - release/local-presentation-r47
   workflow_dispatch:
 permissions:
   contents: write

@@ -1,3 +1,4 @@
+import {brandMark} from './brand.js';
 import {profileAccessMarkup} from './profile-access-ui.js';
 import {ONLINE_ENABLED,modeAvailable} from './online-availability.js';
 import {VERSION_LABEL} from './version.js';
@@ -66,8 +67,8 @@ function hallBoard(){
 }
 export function hallMarkup({name='',mode='world',modeSelected=true,lastCode='',hasLocal=false}={}){
   const selected=hallModes.find(m=>m.id===mode&&modeAvailable(m.id))||hallModes.find(m=>modeAvailable(m.id));
-  return `<section class="hall" aria-labelledby="hall-title"><header class="hall-header"><button class="hall-icon-button" data-action="hall-menu" aria-label="Abrir menú">${hallIcon('menu')}</button><span class="brand heading hall-brand">#3</span><button class="hall-profile" data-action="hall-profile" aria-label="Perfil y estadísticas">${hallIcon('profile')}<span>${escape(name||'Invitado')}</span></button></header>
-  <div class="hall-main"><h1 id="hall-title" class="sr-only">Elige cómo jugar a #3</h1>${hallBoard()}
+  return `<section class="hall" aria-labelledby="hall-title"><header class="hall-header"><button class="hall-icon-button" data-action="hall-menu" aria-label="Abrir menú">${hallIcon('menu')}</button><span class="brand heading hall-brand">${brandMark}</span><button class="hall-profile" data-action="hall-profile" aria-label="Perfil y estadísticas">${hallIcon('profile')}<span>${escape(name||'Invitado')}</span></button></header>
+  <div class="hall-main"><h1 id="hall-title" class="sr-only">Elige cómo jugar a #33</h1>${hallBoard()}
   <button class="hall-play heading mode-${modeSelected?selected.color:'white'}" data-action="hall-play" aria-label="Jugar: ${selected.label}">${hallIcon('play')}<span>Jugar</span><small>${modeSelected?selected.label:''}</small></button>
   <div class="hall-modes" role="radiogroup" aria-label="Modo de juego">${hallModes.map(m=>`<button class="hall-mode mode-${m.color} ${modeSelected&&selected.id===m.id?'is-selected':''}" role="radio" aria-checked="${modeSelected&&selected.id===m.id}" tabindex="${selected.id===m.id?'0':'-1'}" data-action="hall-mode" data-mode="${m.id}" ${modeAvailable(m.id)?'':'disabled aria-disabled="true" title="En construcción"'}>${hallIcon(m.icon)}<strong class="heading">${m.label}</strong><span>${modeAvailable(m.id)?m.description:'En construcción'}</span></button>`).join('')}</div>
   <div class="hall-more"><span>Más</span></div><nav class="hall-secondary" aria-label="Más opciones"><button data-action="hall-games">${hallIcon('games')}<strong class="heading">Mis partidas</strong><span>Abrir o retomar</span></button><button data-action="hall-ranking">${hallIcon('ranking')}<strong class="heading">Ranking</strong><span>Tus métricas y clasificación</span></button><button data-action="hall-inventory">${hallIcon('inventory')}<strong class="heading">Inventario</strong><span>Herramientas de prueba</span></button><button data-action="hall-achievements">${hallIcon('achievements')}<strong class="heading">Logros</strong><span>Partidas completadas</span></button></nav>
@@ -88,7 +89,7 @@ export function hallDialogMarkup(kind,{name='',mode='world',code='',friendInvite
     title='Perfil';body=profileAccessMarkup(name,{online:ONLINE_ENABLED});
 
   }else{
-    title='Menú';body=`<p class="menu-version">#3 · ${VERSION_LABEL}</p><div class="hall-dialog-options"><button data-action="hall-profile">${hallIcon('profile')}Perfil</button><button data-action="hall-games">${hallIcon('games')}Mis partidas</button><button data-action="hall-ranking">${hallIcon('ranking')}Ranking y métricas</button><button data-action="hall-inventory">${hallIcon('inventory')}Inventario de práctica</button><button data-action="hall-help">${hallIcon('help')}Cómo se juega</button></div>`;
+    title='Menú';body=`<p class="menu-version">#33 · ${VERSION_LABEL}</p><div class="hall-dialog-options"><button data-action="hall-profile">${hallIcon('profile')}Perfil</button><button data-action="hall-games">${hallIcon('games')}Mis partidas</button><button data-action="hall-ranking">${hallIcon('ranking')}Ranking y métricas</button><button data-action="hall-inventory">${hallIcon('inventory')}Inventario de práctica</button><button data-action="hall-help">${hallIcon('help')}Cómo se juega</button></div>`;
   }
   return `<div class="dialog-backdrop hall-dialog"><section class="dialog ${['online','offline'].includes(kind)?`game-mode-dialog ${hallModeClass(kind==='offline'?'offline':mode)}`:''}" role="dialog" aria-modal="true" aria-labelledby="hall-dialog-title"><div class="hall-dialog-heading"><h2 class="heading" id="hall-dialog-title">${title}</h2><button class="ghost small" data-action="hall-close" aria-label="Cerrar">×</button></div>${body}<div class="row hall-dialog-footer">${hallReturnButton(hasPrevious?'hall-close':'hall-home',{previous:hasPrevious})}</div></section></div>`;
 }

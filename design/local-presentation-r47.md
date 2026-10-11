@@ -1,0 +1,9 @@
+# #33 · R0.21.47
+
+La pausa dedica el espacio al mapa: puntos X/O arriba y detalles cerrados en un desplegable superpuesto. Diana abre abajo; ninguna consulta modifica el guardado. Recarga de 88 px (70 en horizontal corto), círculo propio separado del escudo y mismo trueque de tres compras por cada pulsación de tres segundos. Avisos por turnos ordenados por impacto; el último turno destaca sin adelantar ni prometer eventos.
+
+Artificieros se introduce con una regla limitada: 33 puntos y hasta tres bombas anunciadas de un solo Bombardeo. La celda elegida y las dos más cercanas desaparecen del anuncio y de sus caminos de invasión; no se cancela toda la invasión, no se reinicia su cuenta y no se recupera daño ya ocurrido. Compite con Desplazar y las otras herramientas por el uso del turno. Es una defensa parcial comparable en precio y alcance con Bomba/Emboscada; Reconquista conserva su precio exclusivo de 333 para recuperar hasta 33 invasores ya presentes. Este valor inicial admite ajuste posterior a observaciones de partidas reales: las pruebas comprueban reglas y simetría, no garantizan equilibrio humano.
+
+Guardados: añadir Artificieros agotada sin regalar cartas ni compras antiguas; conservar puntos, bolsas excedidas, protecciones y ampliaciones. Resultados históricos intactos, reglas nuevas identificadas por versión 15. Identidad #33 con nueva marca y assets versionados; instalación, ruta y claves del juego permanecen.
+
+Validación: compra tras anuncio, desactivación parcial, impacto restante, plazos, atomicidad del rechazo, simetría de máquina, migración idempotente; navegador táctil a 390×844, 320×740 y 740×320 para pausa/Diana, aro de recarga, marcos y compra real. Mantener checks anteriores de tablero grande, combos, inventario y cero peticiones online.
