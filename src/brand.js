@@ -1,2 +1,2 @@
-// Public identity only. Saved-game keys, installation id and URLs stay stable.
-export const brandMark='<svg class="brand-mark" viewBox="0 0 86 36" role="img" aria-label="#33"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m12 5-5 25m16-25-5 25M3 13h24M1 23h24M36 6h16l-9 11h4q10 0 10 7t-10 7h-12M64 6h16l-9 11h4q10 0 10 7t-10 7h-12"/></g><path d="M36 35h20" stroke="#ff4a58" stroke-width="2"/><path d="M64 35h20" stroke="#24d393" stroke-width="2"/></svg>';
+// Familiar heading typography; installation identity and saved-game keys stay stable.
+export const brandMark='#33';

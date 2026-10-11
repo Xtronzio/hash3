@@ -1,3 +1,4 @@
+import {verifyLocalFeedback} from './verify-local-feedback-r48.mjs';
 import {verifyLocalPresentation} from './verify-local-presentation-r47.mjs';
 import {verifyLocalEconomy} from './verify-local-economy-r44.mjs';
 // Real Chromium input/layout checks; device emulation is not physical-device QA.
@@ -423,6 +424,7 @@ try{
  await verifyInventoryDescriptions({context,load,output,results});
  await verifyLocalEconomy({context,load,output,results});
  await verifyLocalPresentation({context,load,output,results});
+ await verifyLocalFeedback({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;

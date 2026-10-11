@@ -55,6 +55,8 @@ import './mobile-viewport.css';
 import './strategy-r39.css';
 import './refill.css';
 import './local-presentation-r47.css';
+import './local-feedback-r48.css';
+import {scoreNoticeMarkup} from './score-notice.js';
 import {brandMark} from './brand.js';
 import {overviewMarkup,overviewModel} from './map-overview.js';
 import {prepareMapRendering,mapWindowMarkup,MAP_SYMBOL_SCALE} from './map-render.js';
@@ -70,7 +72,7 @@ import {client, ensurePlayer, command, profileAccess} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, playableTerrain, availableCells} from './game.js';
 
 import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
-import {scoreFeedback,scoreBreakdown} from './feedback.js';
+import {scoreFeedback} from './feedback.js';
 import {tornadoFeedback} from './tornado-feedback.js';
 import {needsLocalTick} from './local-clock.js';
 import {isImmune,immunitySeconds} from './immunity.js';
@@ -146,8 +148,8 @@ function pinSavedGame(row){
 }
 bindGestures(app,{setRankingOpen});
 const mark = symbol => symbol==='*'?`<svg class="invader-asterisk" viewBox="0 0 64 64" role="img" aria-label="Ocupación invasora *">${invaderIcon}</svg>`:symbol==='#'?`<svg viewBox="0 0 64 64" aria-hidden="true">${neutralIcon}</svg>`:symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
-function notify(message) {
-  const n=document.querySelector('#notice'); n.classList.remove('score-notice','landing-score-notice');n.textContent=message; n.classList.add('visible');
+function notify(message,{inventory=false}={}) {
+  const n=document.querySelector('#notice'); n.classList.remove('score-notice','landing-score-notice');n.classList.toggle('inventory-notice',inventory);n.textContent=message; n.classList.add('visible');
   clearTimeout(noticeTimer); noticeTimer=setTimeout(()=>n.classList.remove('visible'),5000);
 }
 function isLocal(){return !!room?.mode;}
@@ -659,9 +661,9 @@ function renderPaused(){
  const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${targetNavigation(room,{inspection:true,playerId:uid})}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
  const mapStatus=inventoryStatusMarkup(room,{paused:true,playerId:uid}),mapEcology=`<nav class="inspection-controls ecology-controls" aria-label="Fauna y fenómenos del territorio">${ecologyNavigationMarkup(room,uid,{inspection:true})}</nav>`;
  const canvas='<svg class="inspection-canvas" tabindex="0" role="img" aria-label="Tablero guardado: arrastra o pellizca para inspeccionar. Con teclado, flechas para moverte y más o menos para acercar."></svg>';
- const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${canvas}${mapEcology}</section>`:'';
+ const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${mapStatus}${canvas}${mapEcology}</section>`:'';
  disposeInspection?.();disposeInspection=null;
- app.innerHTML=`<section class="lobby paused-game"><header class="row spread lobby-header"><span class="brand heading">${brandMark}</span><span class="tag">${VERSION_LABEL} · ${mode}</span></header><div class="paused-heading"><h1 class="heading">Partida pausada</h1><nav class="paused-actions" aria-label="Acciones de partida pausada">${iconButton('resume','play',isLocal()?'Retomar partida':'Solicitar reanudación','class="primary"')}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid?iconButton('finish','finish','Finalizar partida','class="danger"'):''}${iconButton('go-hall','home','Volver al hall')}</nav></div>${voteMarkup(room.vote,uid)}${pausedScoreMarkup(room,{ranking,stock:mapStatus})}<div class="paused-details">${minimap}</div></section>`;
+ app.innerHTML=`<section class="lobby paused-game"><header class="row spread lobby-header"><span class="brand heading">${brandMark}</span><span class="tag">${VERSION_LABEL} · ${mode}</span></header><div class="paused-heading"><h1 class="heading">Partida pausada</h1><nav class="paused-actions" aria-label="Acciones de partida pausada">${iconButton('resume','play',isLocal()?'Retomar partida':'Solicitar reanudación','class="primary"')}${iconButton('go-games','games','Mis partidas')}${isLocal()||room.host===uid?iconButton('finish','finish','Finalizar partida','class="danger"'):''}${iconButton('go-hall','home','Volver al hall')}</nav></div>${voteMarkup(room.vote,uid)}${pausedScoreMarkup(room,{ranking})}<div class="paused-details">${minimap}</div></section>`;
  if(inspection){
    if(pauseMapOpen){document.querySelector('.paused-game').inert=true;app.insertAdjacentHTML('beforeend',`<div class="inspection-overlay"><section class="inspection-panel inspection-fullscreen" role="dialog" aria-modal="true" aria-label="Mapa de la partida pausada">${mapControls}${mapStatus}${canvas}${mapEcology}</section></div>`);}
    const panel=document.querySelector(pauseMapOpen?'.inspection-fullscreen':'.paused-minimap');
@@ -782,7 +784,7 @@ app.addEventListener('click',async e=>{
   if(action==='refill-buy'){
     const playerId=b.dataset.player;if(playerId!==refillPlayer||playerId!==uid||refillPurchases>=3||!canOpenRefill(room,playerId))return;
     const tool=b.dataset.tool;
-    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`Recarga · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`);});
+    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`Recarga · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`,{inventory:true});});
     (document.querySelector(`.refill-selector [data-tool="${tool}"]:not(:disabled)`)||document.querySelector('[data-action="close-refill"]')||document.querySelector('[data-action="refill-hold"]'))?.focus({preventScroll:true});return;
   }
   if(action==='remove-target'){if(!isLocal())return;await run(async()=>accept(localCommand(room,'remove-target',{id:b.dataset.id})));return;}
@@ -1254,14 +1256,18 @@ function startLandingEffect(feedback){
  landingFloatTimer=setTimeout(()=>{document.querySelectorAll('.landing-score-float').forEach(c=>c.remove());landingEffect=null;},1400);
 }
 function showLandingScore(feedback,manual=null){
- const n=document.querySelector('#notice');n.innerHTML=landingScoreMarkup(feedback.scores,manual);
+ const n=document.querySelector('#notice');n.classList.remove('inventory-notice');n.innerHTML=landingScoreMarkup(feedback.scores,manual);
  n.classList.add('visible','score-notice','landing-score-notice');clearTimeout(noticeTimer);
  noticeTimer=setTimeout(()=>n.classList.remove('visible'),4500);
 }
 function showScore(feedback,comboNotice=null) {
   const n=document.querySelector('#notice'),roomId=room.id;
-  n.classList.remove('landing-score-notice');
-  n.innerHTML=`<button class="score-notice-jump" aria-label="Ver jugada de ${escape(feedback.name)} · +${feedback.points} puntos"><strong class="score-notice-total ${feedback.symbol.toLowerCase()}">+${feedback.points}</strong><span class="score-notice-detail"><span>${escape(feedback.name)} · ${feedback.symbol}${feedback.automatic?' · jugada por tiempo':''}</span><b>${escape(scoreBreakdown(feedback)||'Figura completada')}</b>${comboNotice?`<span class="score-combo-progress" style="--combo-color:${getComputedStyle(document.querySelector('.game')).getPropertyValue('--mode-color')}">${escape(comboNotice.message)}</span>`:''}<span class="score-notice-hint">Toca para ver la jugada ↗</span></span></button>`;
+  n.classList.remove('landing-score-notice','inventory-notice');
+  n.innerHTML=scoreNoticeMarkup(feedback,comboNotice);
+  n.querySelector('.score-details').addEventListener('toggle',event=>{
+    clearTimeout(noticeTimer);
+    if(!event.currentTarget.open)noticeTimer=setTimeout(()=>n.classList.remove('visible'),4500);
+  });
   n.querySelector('button').addEventListener('click',()=>{
     if(room?.id!==roomId||room.status!=='playing')return;
     inventoryOpen=false;inventorySelection=null;worldMapOpen=false;zoom=Math.max(zoom,.8);

@@ -20,6 +20,7 @@ on:
       - release/local-refill-r45
       - release/local-refill-r46
       - release/local-presentation-r47
+      - release/local-feedback-r48
   workflow_dispatch:
 permissions:
   contents: write
