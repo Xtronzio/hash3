@@ -40,7 +40,7 @@ export const MAX_CARDS=18,MAX_CARD_TYPES=12;
 export const pendingTools=[];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
-// Keep eight starting cards; the rest enter through the refill draw.
+// Historical eight-card starter only for legacy saves with no inventory record.
 const startingCards=new Set(['double','opposite','rival','erase','shift','block','shield','hint']);
 export const RECOMMENDED_CARDS=Object.freeze(['double','opposite','hint']);
 export function validateStartingCards(cards){
@@ -93,7 +93,7 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=
   const p=game?.pairs?.[0];if(!p)return [];
   if(['expand-2','expand-3'].includes(tool))return microSelectionOptions(game,microLength(tool),selected);
   if(['ambush','reconquest'].includes(tool))return game.cells.filter(c=>c.symbol==='*'&&!habitatBlocked(game,c.x,c.y));
-  if(tool==='antidote'){const seen=new Map();for(const event of game.territoryEvents||[])if(['contagion','pandemic'].includes(event.kind)&&(event.turnsRemaining>0||event.nextAt>game.clockNow))for(const c of event.region||[])if(!(event.antidotes||[]).some(p=>p.x===c.x&&p.y===c.y)&&game.cells.some(p=>p.x===c.x&&p.y===c.y&&['X','O','*','#'].includes(p.symbol)))seen.set(key(c.x,c.y),{x:c.x,y:c.y});return [...seen.values()];}
+  if(tool==='antidote'){const seen=new Map(),occupied=new Set(game.cells.filter(c=>['X','O','*','#'].includes(c.symbol)).map(c=>key(c.x,c.y)));for(const event of game.territoryEvents||[])if(['contagion','pandemic'].includes(event.kind)&&(event.turnsRemaining>0||event.nextAt>game.clockNow))for(const c of event.region||[])if(!(event.antidotes||[]).some(p=>p.x===c.x&&p.y===c.y)&&occupied.has(key(c.x,c.y)))seen.set(key(c.x,c.y),{x:c.x,y:c.y});return [...seen.values()];}
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);
   if(tool==='border')return borderOptions(game,selected);
