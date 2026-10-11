@@ -43,3 +43,13 @@ test('An active card has one effect indicator; preparing another card and instan
  assert.match(inventoryDockMarkup(r,'local-x',{choice:{player:'local-x',tool:'erase',prepared:true,at:0}}),/data-dock-card="erase"/);
  r.players[0].inventory.turnUse.tools=['erase'];assert.match(inventoryDockMarkup(r,'local-x'),/X usó Borrar/);
 });
+test('Compact recharge shows every icon, stock and price without duplicating descriptions',()=>{
+ const r=fresh();r.players[0].score=999;
+ const html=refillSelectorMarkup(r,'local-x');
+ assert.doesNotMatch(html,/refill-card-name|refill-card-reason|refill-instruction|<footer>|puntos por unidad/);
+ assert.match(html,/aria-label="Antídoto · comprar una por 33 puntos · tienes 0"/);
+ assert.match(html,/refill-card-stock">×0/);assert.match(html,/refill-wallet/);
+ const next=localCommand(r,'trade',{tool:'antidote',playerId:'local-x'},now);
+ assert.match(refillSelectorMarkup(next,'local-x'),/aria-label="Antídoto · comprar una por 33 puntos · tienes 1"/);
+ assert.equal(r.players[0].score,999);assert.equal(next.players[0].score,966);
+});

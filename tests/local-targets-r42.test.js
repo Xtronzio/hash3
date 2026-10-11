@@ -3,7 +3,7 @@ import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
 import {localCommand} from '../src/local.js';
 import {advanceTerritory} from '../src/territory-tools.js';
 import {newTerritoryImpacts,territoryImpactText} from '../src/territory-impact.js';
-import {targetNavigation,lastNavigationMove,toggleWatchTarget} from '../src/watch-targets.js';
+import {targetNavigation,targetDestinations,lastNavigationMove,toggleWatchTarget} from '../src/watch-targets.js';
 import {inventoryMarkup,inventoryStatusMarkup} from '../src/inventory.js';
 import {mapFrameMarkup} from '../src/map-render.js';
 const now=Date.now(),fresh=()=>createLocal('local','X','O',now,'normal','untimed');
@@ -18,7 +18,13 @@ test('Jump menu has red, green, blue targets and white last-move, also in saved 
  r.players[0].navigationLastMove={x:2,y:2};
  for(const inspection of [false,true]){const html=targetNavigation(r,{inspection,playerId:'local-x'});for(const color of ['roja','verde','azul','blanca'])assert.match(html,new RegExp(`data-target-color="${color}"`));assert.match(html,/Mi último movimiento/);assert.doesNotMatch(html,/data-action="mark-target"/);}
  const map=mapFrameMarkup({watchTargets:r.watchTargets});for(const color of ['red','green','blue'])assert.match(map,new RegExp(`stroke="var\\(--${color}\\)"`));
- assert.match(targetNavigation(fresh()),/data-target-color="roja"[^>]*disabled/);
+ assert.match(targetNavigation(fresh()),/data-target-color="azul"[^>]*disabled/);
+});
+test('Diana separates X/O references, immediate superior and white last placement from numbered saved markers',()=>{
+ const r=fresh();r.players[0].lastMove={x:1,y:1};r.players[0].navigationLastMove={x:2,y:2};r.players[1].lastMove={x:8,y:8};r.players[1].score=33;r.players[1].bot=true;
+ const refs=targetDestinations(r,'local-x');assert.deepEqual(refs.map(p=>p.point),[{x:1,y:1},{x:8,y:8},{x:8,y:8},{x:2,y:2}]);
+ toggleWatchTarget(r,{x:0,y:0});const html=targetNavigation(r,{playerId:'local-x'});assert.match(html,/data-marker-number="1"/);assert.match(html,/data-destination="above"/);assert.doesNotMatch(html,/m7 7 10 10M17 7 7 17/);
+ assert.equal(targetDestinations(r,'local-o')[2].point,null,'Leader has no immediate superior');
 });
 test('White reference retains the last placed coordinates even after the piece is removed',()=>{
  let r=localCommand(fresh(),'move',{x:2,y:2},now);const reference=lastNavigationMove(r.players[0]);assert.deepEqual({x:reference.x,y:reference.y},{x:2,y:2});

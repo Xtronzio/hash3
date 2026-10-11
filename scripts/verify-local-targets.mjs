@@ -3,12 +3,14 @@ import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-inventor
 export async function verifyLocalTargets({context,load,output,results}){
  const r=createLocal('local','X','O',Date.now(),'normal','untimed');r.faunaEnabled=false;
  r.terrain=Array.from({length:999},(_,i)=>({x:i%32,y:Math.floor(i/32)}));
- r.players[0].navigationLastMove={x:20,y:20};r.watchTargets=[{id:'red',number:1,x:2,y:2},{id:'green',number:2,x:15,y:15},{id:'blue',number:3,x:28,y:28}];
+ r.players[0].navigationLastMove={x:20,y:20};r.players[1].lastMove={x:15,y:15};r.players[1].score=3;r.watchTargets=[{id:'red',number:1,x:2,y:2},{id:'green',number:2,x:15,y:15},{id:'blue',number:3,x:28,y:28}];
  const {page,errors}=await load(context,r);
  assert.equal(await page.locator('.board-inventory-status [data-tool="target"]').count(),1);
  const menu=page.locator('.map-jumps .target-jump-menu');await menu.locator('summary').tap();
  assert.equal(await menu.locator('[data-target-color]').count(),4);await page.screenshot({path:path.join(output,'target-menu-r42.png')});
  for(const color of ['roja','verde','azul','blanca']){if(!await menu.evaluate(el=>el.open))await menu.locator('summary').tap();await menu.locator(`[data-target-color="${color}"]`).tap();}
+ for(const n of [1,2,3]){await menu.locator('summary').tap();await menu.locator(`[data-marker-number="${n}"]`).tap();}
+ await menu.locator('summary').tap();await menu.locator('[data-target-color="blanca"]').tap();
  const at=page.locator('.board [data-x="20"][data-y="20"]').first();await at.waitFor();
  const geometry=await page.evaluate(()=>{const c=document.querySelector('.board [data-x="20"][data-y="20"]')?.getBoundingClientRect(),v=document.querySelector('.viewport').getBoundingClientRect();return {cell:c?{x:c.x+c.width/2,y:c.y+c.height/2}:null,view:{x:v.x+v.width/2,y:v.y+v.height/2}};});
  assert.ok(geometry.cell&&Math.abs(geometry.cell.x-geometry.view.x)<30&&Math.abs(geometry.cell.y-geometry.view.y)<30);

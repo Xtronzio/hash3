@@ -6,15 +6,16 @@ import {overviewCells,mapCellSymbols,mapFrameMarkup,prepareMapRendering,mapWindo
 import {overviewModel,overviewPoint} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {immediateAbove} from './game.js';
+import {targetDestinations} from './watch-targets.js';
 
 // A snapshot is only drawn; inspecting it never dispatches a game command.
 export function savedMapModel(room,own){
   if(!room||!Array.isArray(room.cells)||!Array.isArray(room.pairs)||!Array.isArray(room.terrain)&&!Array.isArray(room.blocks))return null;
   // Use the same ranking as the live board; the leader has no blue reference.
-  const target=own?immediateAbove((room.players||[]).filter(p=>!p.bot),own.id,!!room.commonWorld):null;
+  const target=own?immediateAbove((room.players||[]).filter(p=>['solo','local'].includes(room.mode)||!p.bot),own.id,!!room.commonWorld):null;
   const model=overviewModel(room,own,target);if(!model)return null;
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
-  return {...model,ecologyPins:ecologyPinTargets(room,own?.id),ecologyTargets:Object.fromEntries(['rodent','rodent-plague','worm','worm-plague','build','destroy','bomb',...new Set([...(room.territoryEvents||[]),...(room.invasions||[])].map(e=>e.kind)),'neutral','frontier','border'].map(kind=>[kind,ecologyTargets(room,kind,own?.id)])),frontierCells:frontierCells(room),terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?wildcardFill(c):c?.symbol==='*'?'var(--yellow)':'#343e4c'};})};
+  return {...model,destinations:targetDestinations(room,own?.id),ecologyPins:ecologyPinTargets(room,own?.id),ecologyTargets:Object.fromEntries(['rodent','rodent-plague','worm','worm-plague','build','destroy','bomb',...new Set([...(room.territoryEvents||[]),...(room.invasions||[])].map(e=>e.kind)),'neutral','frontier','border'].map(kind=>[kind,ecologyTargets(room,kind,own?.id)])),frontierCells:frontierCells(room),terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?wildcardFill(c):c?.symbol==='*'?'var(--yellow)':'#343e4c'};})};
 }
 export function thumbnailMarkup(room){
   const model=savedMapModel(room);if(!model)return '<span class="saved-map-pending" aria-label="Mapa no disponible">—</span>';
@@ -64,6 +65,7 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
   listen(panel,'click',e=>{
     const control=e.target.closest('[data-inspect-action]'),action=control?.dataset.inspectAction;if(!action)return;
     if(action==='target'){const p=model.watchTargets?.find(p=>p.id===control.dataset.id);control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
+    if(action==='destination'){const p=model.destinations?.find(p=>p.id===control.dataset.destination)?.point;control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
     if(action==='last-move'){const p=model.lastNavigationMove;control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
     if(action==='ecology'){const kind=control.dataset.ecologyKind,item=nextEcologyTarget(model.ecologyTargets?.[kind]||[],state[kind+'Id']);if(item){state[kind+'Id']=item.id;focus({x:item.x+.5,y:item.y+.5});}return;}
     if(action==='fit')setCamera({...fitted});

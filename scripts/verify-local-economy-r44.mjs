@@ -16,11 +16,21 @@ export async function verifyLocalEconomy({context,load,output,results}){
  await page.screenshot({path:path.join(output,'recarga-flotante-r45.png')});
  await hold();await page.locator('.refill-selector').waitFor();assert.deepEqual(await saved(),before,'Opening the selector changed the game');
  const buy=page.locator('.refill-selector [data-action="refill-buy"][data-tool="antidote"]');await buy.evaluate(el=>el.scrollIntoView());
- await page.screenshot({path:path.join(output,'recarga-selector-r45.png')});
- await buy.tap();let next=await saved();assert.equal(next.players[0].score,966);assert.equal(next.players[0].inventory.cards.antidote,1);assert.deepEqual(next.players[1],before.players[1]);assert.deepEqual(next.pairs,before.pairs);assert.equal(await page.locator('.refill-selector').count(),0);
- for(let i=0;i<2;i++){await hold();await buy.evaluate(el=>el.scrollIntoView());await buy.tap();}
+ const sheet=await page.locator('.refill-selector').boundingBox();assert.ok(sheet.height<=740*.46+1,'Refill tray covers too much of the board');
+ assert.equal(await page.locator('.refill-card-name,.refill-instruction,.refill-card-reason').count(),0);
+ for(const card of await page.locator('.refill-card').all()){const bounds=await card.boundingBox();assert.ok(bounds.width>=44&&bounds.height>=44,'Refill icons must retain touch targets');}
+ await page.screenshot({path:path.join(output,'recarga-selector-r46.png')});
+ await buy.tap();let next=await saved();assert.equal(next.players[0].score,966);assert.equal(next.players[0].inventory.cards.antidote,1);assert.deepEqual(next.players[1],before.players[1]);assert.deepEqual(next.pairs,before.pairs);assert.equal(await page.locator('.refill-selector').count(),1);
+ assert.equal(await buy.locator('.refill-card-stock').textContent(),'×1');
+ assert.match(await page.locator('.refill-wallet').textContent(),/966/);
+ for(let i=0;i<2;i++)await buy.tap();
  next=await saved();assert.equal(next.players[0].inventory.cards.antidote,3);assert.equal(next.players[0].score,900);
- await hold();assert.equal(await buy.isDisabled(),true);await page.locator('[data-action="close-refill"]').tap();
+ assert.equal(await page.locator('.refill-selector').count(),0,'Three buys exhaust the hold allowance');await hold();assert.equal(await buy.isDisabled(),true);await page.locator('[data-action="close-refill"]').tap();
+ // Compact in landscape too; scroll remains inside the tray.
+ await hold();await page.locator('.refill-selector').waitFor();await page.setViewportSize({width:740,height:320});
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.locator('.refill-selector').waitFor();
+ assert.ok((await page.locator('.refill-selector').boundingBox()).height<=320*.46+1);await page.screenshot({path:path.join(output,'recarga-horizontal-r46.png')});
+ await page.setViewportSize({width:320,height:740});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.locator('[data-action="close-refill"]').tap();
  // Opening from an already visible bag closes it; cancel never spends.
  await page.locator('[data-action="inventory"]').tap();await hold();assert.equal(await page.locator('#inventory-panel').count(),0);await page.locator('[data-action="close-refill"]').tap();
  const handle=page.locator('.refill-drag-handle'),original=await handle.boundingBox(),camera=await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop}));
