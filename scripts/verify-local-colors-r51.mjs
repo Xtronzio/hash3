@@ -24,6 +24,8 @@ export async function verifyLocalColors({context,load,output,results}){
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow');
   for(const kind of ['double','erase','frontier','border'])assert.equal(await color(page.locator('.board-inventory-status [data-tool="'+kind+'"] svg')),cyan);
   for(const kind of ['barriers','neutral'])assert.equal(await color(page.locator('.board-territory-status [data-ecology-kind="'+kind+'"]')),yellow);
+  await page.locator('.board-territory-status [data-ecology-kind="barriers"]').tap();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   assert.notEqual(await color(page.locator('.board-frontier-cell').first()),yellow,'Actual board wall remains purple');
   const control=await page.locator('.inventory-dock-button').boundingBox();assert.ok(control.x>=0&&control.x+control.width<=viewport.width);
   await page.screenshot({path:path.join(output,`mochila-cian-sin-franja-r51-${viewport.width}.png`)});
