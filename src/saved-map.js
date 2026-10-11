@@ -37,13 +37,14 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
   const listen=(node,type,fn,options)=>{node.addEventListener(type,fn,options);listeners.push(()=>node.removeEventListener(type,fn,options));};
   const targetMenu=panel.querySelector('.target-jump-menu');
   const fitTargetMenu=()=>{
-    if(!targetMenu?.open)return;
+    if(!targetMenu)return;
     const options=targetMenu.querySelector('.target-jump-options');
     // The toolbar is above the map. Keep the downward menu within the actual
     // viewport, including after rotation; scrolling retains every destination.
-    options.style.maxHeight=`${Math.max(0,window.innerHeight-options.getBoundingClientRect().top-8)}px`;
+    const top=targetMenu.querySelector('summary').getBoundingClientRect().bottom+5;
+    options.style.maxHeight=`${Math.max(0,window.innerHeight-top-8)}px`;
   };
-  if(targetMenu){listen(targetMenu,'toggle',fitTargetMenu);listen(window,'resize',fitTargetMenu);}
+  if(targetMenu){listen(targetMenu,'pointerdown',fitTargetMenu);listen(targetMenu,'toggle',fitTargetMenu);listen(window,'resize',fitTargetMenu);fitTargetMenu();}
   const draw=()=>{
     frame=0;if(disposed||!svg.isConnected)return;
     const rect=svg.getBoundingClientRect();if(!rect.width||!rect.height)return;

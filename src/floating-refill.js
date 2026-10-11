@@ -1,7 +1,7 @@
 import {CARD_PRICES,tradeAvailability} from './inventory-economy.js';
 import {inventoryEnabled} from './inventory-enabled.js';
-import {practiceTools} from './practice-tools.js';
-import {toolIcon} from './inventory.js';
+import {practiceTools,MAX_CARDS} from './practice-tools.js';
+import {toolIcon,inventoryCardTotal} from './inventory.js';
 import {bindHoldGesture} from './hold-gesture.js';
 export const REFILL_HOLD_MS=3000;
 export const refillIcon='<svg viewBox="0 0 40 40" aria-hidden="true"><path class="refill-orbit" d="M7 15a14 14 0 0 1 24-5m-1-6 2 7-7-1M33 25A14 14 0 0 1 9 30m1 6-2-7 7 1"/><rect x="13" y="12" width="13" height="17" rx="2"/><path d="M17 8h10a3 3 0 0 1 3 3v13M16 20h7m-3.5-3.5v7"/></svg>';
@@ -24,5 +24,5 @@ export function refillSelectorMarkup(game,playerId,{remaining=3}={}){
   const label=`${t.label} · comprar una por ${price} puntos · tienes ${stock}${state.allowed?'':' · '+state.reason}`;
   return `<button class="refill-card" data-action="refill-buy" data-tool="${t.id}" data-player="${playerId}" aria-label="${label}" title="${label}" ${state.allowed?'':'disabled'}><span class="refill-card-icon">${toolIcon(t.id)}</span><b class="refill-card-stock">×${stock}</b><span class="refill-card-price">${price.toLocaleString('es-ES')}</span></button>`;
  }).join('');
- return `<div class="refill-backdrop"><section class="refill-selector" role="dialog" aria-modal="true" aria-labelledby="refill-title"><header><span class="refill-heading-icon">${refillIcon}</span><h2 id="refill-title">Recarga</h2><span class="refill-remaining" aria-label="${remaining} compras restantes">${remaining}/3</span><span class="refill-wallet" aria-label="${player.score} puntos disponibles">${player.score.toLocaleString('es-ES')} <small>pts</small></span><button data-action="close-refill" aria-label="Cerrar recarga">×</button></header><div class="refill-catalog"><div class="refill-card-grid">${cards}</div></div></section></div>`;
+ return `<div class="refill-backdrop"><section class="refill-selector" role="dialog" aria-modal="true" aria-labelledby="refill-title"><header><span class="refill-heading-icon">${refillIcon}</span><h2 id="refill-title">Recarga<span class="refill-capacity" aria-label="${inventoryCardTotal(game,playerId)} de ${MAX_CARDS} cartas guardadas">${inventoryCardTotal(game,playerId)}/${MAX_CARDS}${player.inventory.comboPending?'<small title="Recarga por combo pendiente de hueco"> · +1</small>':''}</span></h2><span class="refill-remaining" aria-label="${remaining} compras restantes">${remaining}/3</span><span class="refill-wallet" aria-label="${player.score} puntos disponibles">${player.score.toLocaleString('es-ES')} <small>pts</small></span><button data-action="close-refill" aria-label="Cerrar recarga">×</button></header><div class="refill-catalog"><div class="refill-card-grid">${cards}</div></div></section></div>`;
 }

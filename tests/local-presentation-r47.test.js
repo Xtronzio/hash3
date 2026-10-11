@@ -52,3 +52,10 @@ test('Enlarged recharge stays separate when immunity is dragged across its saved
   assert.deepEqual(separateFloatingControl(point,size,limits,blockers),point);
  }
 });
+
+test('Capacity shows normal cards /18 after spending, buying and combo refills; protections stay separate and excess reserves stay real',async()=>{
+ const {inventoryDockMarkup,inventoryCardTotal,inventoryMarkup}=await import('../src/inventory.js');const {refillSelectorMarkup}=await import('../src/floating-refill.js');const {recordInventoryCombo}=await import('../src/practice-tools.js');
+ let r=fresh();r.players[0].inventory.immunity.cards['immunity-1']=333;assert.equal(inventoryCardTotal(r,'local-x'),3);assert.match(inventoryDockMarkup(r,'local-x'),/>3\/18</);assert.match(inventoryMarkup(r,'local-x'),/3\/18/);assert.match(refillSelectorMarkup(r,'local-x'),/>3\/18</);
+ r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now);assert.match(inventoryDockMarkup(r,'local-x'),/>2\/18</);r=localCommand(r,'trade',{tool:'sapper',playerId:'local-x'},now);assert.match(refillSelectorMarkup(r,'local-x'),/>3\/18</);recordInventoryCombo(r,'local-x',33,{random:()=>0});assert.match(inventoryDockMarkup(r,'local-x'),/>4\/18</);
+ r.players[0].inventory.cards.frontier=27;const total=inventoryCardTotal(r,'local-x');assert.ok(total>18);assert.match(inventoryDockMarkup(r,'local-x'),new RegExp('>'+total+'/18<'));r.players[0].inventory.comboPending=1;assert.match(inventoryDockMarkup(r,'local-x'),/inventory-pending/);assert.match(refillSelectorMarkup(r,'local-x'),/combo pendiente de hueco/);assert.equal(r.players[0].inventory.immunity.cards['immunity-1'],333);
+});
