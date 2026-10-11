@@ -320,3 +320,10 @@ Nueva Artificieros local: primera regla de equilibrio 33 puntos, hasta tres bomb
 Identidad pública #33 con logo y favicon/iconos versionados. Mantener ruta /hash3/, claves de almacenamiento, manifest id/scope/start_url y archivos antiguos de iconos para preservar accesos y partidas. Duelo/equipos/Mundo y derrota común siguen desactivados. Verificar motor, migración y entrada táctil en Chromium remoto; no presentar emulación como prueba física.
 
 Contador solicitado por Jorge durante esta revisión: cartas normales guardadas/18 junto a la mochila, dentro de ella y en selector de Recarga. Inmunidad queda aparte, sin ocupar el cupo de 18. Actualizar al gastar, comprar o recibir por combo; si hay recarga por combo esperando hueco, mostrar +1 pendiente. Mostrar reservas antiguas que exceden 18 sin recortarlas. El contador no concede ni consume premios.
+
+
+## R0.21.48 · Lectura de partida e inventarios visibles
+
+Jorge recupera la tipografía Barlow Condensed anterior en la cabecera #33, sin subrayado decorativo. Avisos de recarga manual y por combos en cian. Puntuaciones de colocación muestran solo puntos y salto a la jugada; botón de información aparte abre el desglose cobrado bajo demanda, sin caducar mientras se consulta. No cambiar puntuación, navegación ni recargas existentes.
+
+Inventario de pausa siempre visible sobre el mapa, fuera del desplegable de ranking/datos; mantener mapa protagonista y controles/diana dentro de pantalla también en horizontal. Muros y Fronteras del territorio aparecen como pilas separadas con cantidad de barreras colocadas, no número de celdas ni cartas guardadas. Navegar entre ubicaciones existentes, conservar geometría y dueños de barreras antiguas. Presentación solamente: ruleVersion15, claves de guardado, reservas, instalación y modos locales intactos. Validar con pruebas y Chromium táctil remoto antes de publicar; emulación no es prueba física.

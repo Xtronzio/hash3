@@ -22,7 +22,7 @@ export async function verifyLocalEconomy({context,load,output,results}){
  assert.equal(await page.locator('.refill-card-name,.refill-instruction,.refill-card-reason').count(),0);
  for(const card of await page.locator('.refill-card').all()){const bounds=await card.boundingBox();assert.ok(bounds.width>=44&&bounds.height>=44,'Refill icons must retain touch targets');}
  await page.screenshot({path:path.join(output,'recarga-selector-r46.png')});
- await buy.tap();let next=await saved();assert.equal(next.players[0].score,966);assert.equal(next.players[0].inventory.cards.antidote,1);assert.deepEqual(next.players[1],before.players[1]);assert.deepEqual(next.pairs,before.pairs);assert.equal(await page.locator('.refill-selector').count(),1);
+ await buy.tap();assert.equal(await page.locator('#notice').evaluate(el=>getComputedStyle(el).color),'rgb(0, 229, 255)');let next=await saved();assert.equal(next.players[0].score,966);assert.equal(next.players[0].inventory.cards.antidote,1);assert.deepEqual(next.players[1],before.players[1]);assert.deepEqual(next.pairs,before.pairs);assert.equal(await page.locator('.refill-selector').count(),1);
  assert.equal(await buy.locator('.refill-card-stock').textContent(),'×1');
  assert.match(await page.locator('.refill-wallet').textContent(),/966/);
  for(let i=0;i<2;i++)await buy.tap();

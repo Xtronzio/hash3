@@ -78,6 +78,7 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
    const missing=timed?Math.max(0,livingMinimum(room)-territoryFigures(room)):0;
    badge=next==null?'':`<span class="ecology-badge mono" aria-label="${missing?'Faltan '+missing+' figuras para habilitar la familia':'Próximo intento en '+next+' colocaciones'}">${missing||next}</span>`;
   }
+  if(['frontier','border'].includes(kind))badge=`<span class="ecology-badge mono" aria-label="${targets.length} ${ecologyNames[kind].toLowerCase()} ${kind==='border'?'colocadas':'colocados'}">×${targets.length}</span>`;
   // Anchor the brief announcement pulse to game time so snapshot redraws do
   // not restart it. Paused events keep their exact elapsed warning time.
   const elapsed=timed&&events.length&&!columns?Math.min(...events.map(e=>Math.max(0,EVENT_BALANCE.warningMs-(e.remainingMs??(e.nextAt-now))))):0;
