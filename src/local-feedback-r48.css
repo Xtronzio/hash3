@@ -9,7 +9,7 @@
 .score-details summary svg{width:21px;height:21px;fill:none;stroke:#aebcca;stroke-width:1.8;}
 .score-details summary:focus-visible{outline:2px solid var(--blue);outline-offset:-4px;}
 .score-details[open] summary{color:var(--blue);background:#ffffff0a;}
-.score-breakdown{position:absolute;bottom:calc(100% + 6px);right:0;width:min(320px,85vw);max-height:40dvh;overflow:auto;padding:12px;border:1px solid #455365;border-radius:9px;background:#111820;box-shadow:0 4px 18px #0009;line-height:1.5;}
+.score-breakdown{position:absolute;bottom:calc(100% + 6px);left:50%;right:auto;transform:translateX(-50%);width:min(320px,85vw);max-height:40dvh;overflow:auto;padding:12px;border:1px solid #455365;border-radius:9px;background:#111820;box-shadow:0 4px 18px #0009;line-height:1.5;}
 .score-breakdown>span{font-size:12px;color:#aebcca;}.score-breakdown p{font-size:13px;margin-top:5px;}
 /* Visible stock uses the same two rows as the live game, outside score details. */
 .paused-game .brand{font-size:30px;}
