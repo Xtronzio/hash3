@@ -1,5 +1,6 @@
 import {verifyLocalFeedback} from './verify-local-feedback-r48.mjs';
 import {verifyLocalInventory} from './verify-local-inventory-r50.mjs';
+import {verifyLocalColors} from './verify-local-colors-r51.mjs';
 import {verifyLocalPresentation} from './verify-local-presentation-r47.mjs';
 import {verifyLocalEconomy} from './verify-local-economy-r44.mjs';
 // Real Chromium input/layout checks; device emulation is not physical-device QA.
@@ -170,7 +171,7 @@ try{
   const xr=x.getBoundingClientRect(),br=bag.getBoundingClientRect(),or=o.getBoundingClientRect();
   return {x:x.getAttribute('aria-label'),o:o.getAttribute('aria-label'),red:getComputedStyle(x).color,green:getComputedStyle(o).color,ordered:xr.right<=br.left+1&&br.right<=or.left+1,width:document.documentElement.scrollWidth,viewport:innerWidth};
  });
- assert.ok(dock.x.includes('X')&&dock.o.includes('O'));assert.notEqual(dock.red,dock.green);assert.ok(dock.ordered);assert.ok(dock.width<=dock.viewport);
+ assert.ok(dock.x.includes('X')&&dock.o.includes('O'));assert.equal(dock.red,'rgb(0, 229, 255)');assert.equal(dock.green,'rgb(0, 229, 255)');assert.ok(dock.ordered);assert.ok(dock.width<=dock.viewport);
  await visual.waitForTimeout(1000);
  await visual.screenshot({path:path.join(output,'inventory-both-sides.png')});
  await visual.setViewportSize({width:320,height:640});await frame(visual);
@@ -427,6 +428,7 @@ try{
  await verifyLocalPresentation({context,load,output,results});
  await verifyLocalFeedback({context,load,output,results});
  await verifyLocalInventory({context,load,output,results});
+ await verifyLocalColors({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;

@@ -9,9 +9,9 @@ export async function verifyLocalInventory({context,load,output,results}){
  const {page,errors}=await load(context,r);await page.setViewportSize({width:390,height:844});
  await page.evaluate(()=>document.fonts.ready);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
  const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- const stock=page.locator('.board-inventory-status'),capacity=stock.locator('.inventory-capacity-value'),counter=stock.locator('.inventory-capacity-strip');
+ const stock=page.locator('.board-inventory-status'),capacity=page.locator('.inventory-badge'),counter=page.locator('.inventory-dock-counter');
  assert.equal(await capacity.innerText(),'4/18');
- const counterBox=await counter.boundingBox();assert.ok(counterBox.x>=0&&counterBox.x+counterBox.width<=390);assert.ok(counterBox.height>=26);
+ const counterBox=await counter.boundingBox();assert.ok(counterBox.x>=0&&counterBox.x+counterBox.width<=390);assert.ok(counterBox.height>=14);
  await stock.locator('.inventory-shortcuts').evaluate(el=>{el.scrollLeft=el.scrollWidth;});
  assert.deepEqual(await counter.boundingBox(),counterBox,'Capacity must remain fixed when the cards scroll');
  const barrier=page.locator('.board-territory-status [data-ecology-kind="barriers"]');

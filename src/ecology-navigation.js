@@ -14,7 +14,7 @@ import {ecologySeconds} from './ecology-clock.js';
 import {TERRITORY_EVENT_RULES,NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,EVENT_BALANCE,eventLabel,isTimedTerritoryKind,territoryAttemptInterval} from './territory-event-rules.js';
 export const ecologyNames={rodent:'Ratón',worm:'Gusano',build:'Ampliadores',destroy:'Soldados',bomb:'Bombas antiguas',neutral:'Comodín #',frontier:'Muros',border:'Fronteras',...Object.fromEntries(Object.keys(TERRITORY_EVENT_RULES).map(kind=>[kind,eventLabel(kind)])),'invader-colony':'Colonias invasoras','rodent-plague':'Plaga de ratones','worm-plague':'Plaga de gusanos',contagion:'Contagio',tornado:'Tornado'};
 ecologyNames.barriers='Muros y Fronteras';
-export const ecologyColors={build:'var(--yellow)',destroy:'var(--yellow)',frontier:'var(--frontier)',border:'var(--frontier)',barriers:'var(--frontier)',neutral:'#e3e5e9'};
+export const ecologyColors={build:'var(--yellow)',destroy:'var(--yellow)',frontier:'var(--yellow)',border:'var(--yellow)',barriers:'var(--yellow)',neutral:'var(--yellow)'};
 const center=points=>{
  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const p of points){left=Math.min(left,p.x);top=Math.min(top,p.y);right=Math.max(right,p.x);bottom=Math.max(bottom,p.y);}
  const middle={x:(left+right)/2,y:(top+bottom)/2};return points.reduce((best,p)=>Math.hypot(p.x-middle.x,p.y-middle.y)<Math.hypot(best.x-middle.x,best.y-middle.y)?p:best,points[0]);

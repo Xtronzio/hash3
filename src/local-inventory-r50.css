@@ -4,7 +4,7 @@ body:has(.game) #notice.inventory-notice{color:#00e5ff;border:2px solid #00e5ff;
 .inventory-capacity-strip{display:flex;align-items:center;gap:8px;min-height:26px;padding:1px 7px;border:1px solid #194a55;border-radius:6px;background:#09212a;color:#00e5ff;font-size:11px;flex:none;pointer-events:none;}
 .inventory-capacity-strip>span{letter-spacing:.02em;}.inventory-capacity-strip b{margin-left:3px;}
 .inventory-capacity-value{font-size:19px;line-height:22px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;}
-.inventory-capacity-value.is-full{color:#ffd34e;}.inventory-capacity-strip small{color:#ffd34e;font-size:10px;white-space:nowrap;}
+.inventory-capacity-value.is-full{color:#00e5ff;}.inventory-capacity-strip small{color:#00e5ff;font-size:10px;white-space:nowrap;}
 /* Capacity is outside the independently scrollable two-row card list. */
 @media(max-height:450px) and (orientation:landscape){
  .paused-game .paused-minimap{grid-template-rows:40px minmax(0,1fr) 92px;padding:4px;gap:2px 7px;}
@@ -13,3 +13,27 @@ body:has(.game) #notice.inventory-notice{color:#00e5ff;border:2px solid #00e5ff;
  .paused-minimap .player-inventory-rows{grid-template-rows:repeat(2,40px);gap:2px;}
  .paused-minimap .player-inventory-rows .inventory-effect{height:40px;min-height:40px;}
 }
+/* R51: inventory identity is cyan, independently of mode, owner or capacity. */
+.inventory-dock,.inventory-sheet,.inventory-catalog,.starting-inventory-picker,.refill-selector{--mode-color:#00e5ff;--inventory-color:#00e5ff;}
+.game .game-bottom .inventory-dock>.inventory-dock-button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:48px;min-width:48px;padding:2px 0;color:#00e5ff;}
+.game .game-bottom .inventory-dock:has(.dock-immunity-active)>.inventory-dock-button{width:62px;}
+.inventory-dock-counter{display:flex;align-items:center;justify-content:center;gap:1px;flex:none;min-height:14px;}
+.inventory-dock-counter .inventory-badge{position:static;min-width:0;max-width:none;height:14px;padding:0 3px;border:1px solid #00e5ff80;border-radius:5px;background:#09212a;color:#00e5ff;font-size:10px;line-height:12px;opacity:1;animation:none;}
+.inventory-dock-counter .inventory-badge.is-full{color:#00e5ff;background:#09212a;border-color:#00e5ff;box-shadow:0 0 5px #00e5ff30;}
+.inventory-dock-counter .inventory-pending{position:static;line-height:12px;font-size:9px;padding:0;color:#00e5ff;background:transparent;border:0;}
+.inventory-dock .inventory-dock-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;min-height:26px;}
+.game .game-bottom .inventory-dock-icon>svg{width:26px;height:26px;}
+.inventory-dock .dock-used-cards,.game .game-bottom .inventory-dock .dock-used-card,.game .game-bottom .inventory-dock .dock-card-choice,.game .game-bottom .inventory-dock .dock-immunity-active{color:#00e5ff;}
+.inventory-effects-bar .inventory-effect,.inventory-effects-bar .inventory-shortcut.has-stock,.inventory-effects-bar .inventory-shortcut.is-ready,.inventory-effects-bar .immunity-quick,.game .floating-immunity .immunity-quick{color:#00e5ff;}
+.inventory-shortcut.has-stock{border-color:#00e5ff65;}.inventory-shortcut.is-ready,.inventory-effect.is-active{border-color:#00e5ff;}
+.inventory-sheet .inventory-icon-card,.inventory-catalog .inventory-card,.inventory-count,.inventory-sheet .inventory-count,.inventory-catalog .inventory-count,.inventory-capacity,.inventory-capacity span,.immunity-compact-goal,.immunity-compact-goal>span,.immunity-compact-goal .immunity-missing{color:#00e5ff;}
+.inventory-sheet .inventory-sheet-heading,.inventory-sheet .inventory-description-panel h3,.inventory-description-use{color:#00e5ff;}
+.inventory-description-use.primary{background:#09212a;border:1px solid #00e5ff;}
+.inventory-description-use.primary:hover:not(:disabled){background:#123840;}
+.inventory-descriptions .inventory-description-toggle:not(.is-open),.inventory-descriptions .inventory-description-toggle:not(.is-open):hover{color:#00e5ff;opacity:.6;}
+.inventory-descriptions .inventory-description-toggle.is-open{color:#00e5ff;opacity:1;}
+.refill-selector,.refill-selector h2,.refill-wallet,.refill-heading-icon,.refill-remaining,.refill-selector header button,.refill-card,.refill-card-price,.refill-capacity,.refill-capacity small,.refill-trigger{color:#00e5ff;}
+.refill-progress-fill{stroke:#00e5ff;}
+#notice.inventory-notice{color:#00e5ff;border:2px solid #00e5ff;border-left-width:6px;background:#082c35;font-size:16px;font-weight:700;line-height:1.4;padding:12px 16px;}
+/* Territory controls are yellow; actual board symbols and purple walls retain identity. */
+.game .game-bottom>button[data-action="events"],.events-sheet,.events-sheet .inventory-sheet-heading,.event-outlook-body h3,.event-outlook-row,.event-outlook-icons{color:var(--yellow);}
