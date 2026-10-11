@@ -12,7 +12,7 @@ test('Territory stacks count placed barriers once per object, retaining old foot
  const before=structuredClone(r);
  for(const turnEcologyVersion of [undefined,1]){
   r.turnEcologyVersion=turnEcologyVersion;const html=ecologyNavigationMarkup(r,'local-x');
-  assert.match(html,/aria-label="3 barreras colocadas">×3/);assert.match(html,/2 Muros · 1 Fronteras/);
+  assert.match(html,/aria-label="3 barreras colocadas">×3/);assert.match(html,/Muros: 2 · Fronteras: 1/);
   assert.equal((html.match(/data-ecology-kind="barriers"/g)||[]).length,1);assert.doesNotMatch(html,/data-ecology-kind="(?:frontier|border)"/);
  }
  const targets=ecologyTargets(r,'frontier');assert.equal(targets.length,2);assert.equal(nextEcologyTarget(targets,targets[0].sourceId).sourceId,targets[1].sourceId);
