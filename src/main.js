@@ -56,6 +56,7 @@ import './strategy-r39.css';
 import './refill.css';
 import './local-presentation-r47.css';
 import './local-feedback-r48.css';
+import './local-inventory-r50.css';
 import {scoreNoticeMarkup} from './score-notice.js';
 import {brandMark} from './brand.js';
 import {overviewMarkup,overviewModel} from './map-overview.js';
@@ -152,6 +153,7 @@ function notify(message,{inventory=false}={}) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice','landing-score-notice');n.classList.toggle('inventory-notice',inventory);n.textContent=message; n.classList.add('visible');
   clearTimeout(noticeTimer); noticeTimer=setTimeout(()=>n.classList.remove('visible'),5000);
 }
+function notifyInventory(message){notify(message,{inventory:true});}
 function isLocal(){return !!room?.mode;}
 function localUid(){const p=room.pairs[0];return room.mode==='solo'?localHumanId(room):p.pending?p.expander:p.turn==='X'?p.x:p.o;}
 function ownPlayer(){return room?.players.find(p=>p.id===uid);}
@@ -276,7 +278,7 @@ function boardFrontierCell(cell,minX,minY,size,padding,preview=false,pivot=false
  return `<span class="board-frontier-cell ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${preview?(cell.borderCell?'Propuesta de frontera':'Propuesta de muro'):(cell.borderCell?'Frontera, solo se rompe con Bomba':'Muro, solo se rompe con Bomba')} · ${cell.x}, ${cell.y}">${frontierSlash}${controls}</span>`;
 }
 async function analyzeHelp(kind){
- const snapshot=structuredClone(room),player=uid,now=Date.now();notify(kind==='expand'?'Buscando una ampliación favorable…':'Analizando movimientos e inventario…');
+ const snapshot=structuredClone(room),player=uid,now=Date.now();notifyInventory(kind==='expand'?'Buscando una ampliación favorable…':'Analizando movimientos e inventario…');
  return new Promise((resolve,reject)=>{
   let worker,timer;const finish=(result,error)=>{clearTimeout(timer);worker?.terminate();if(error)reject(new Error(error));else if(room?.id!==snapshot.id||room.version!==snapshot.version||room.status!=='playing')reject(new Error('La partida ha cambiado; vuelve a pedir ayuda.'));else resolve(result);};
   try{
@@ -704,7 +706,7 @@ function renderLobby() {
 async function run(operation) {
   if(busy)return;busy=true;
   const buttons=[...app.querySelectorAll('button')].map(b=>[b,b.disabled]);buttons.forEach(([b])=>b.disabled=true);
-  try{await operation();connected=true;}catch(error){if(inventoryCardChoice&&!inventoryCardChoice.applied&&!inventorySelection&&!superHelpPlan&&!ownPair()?.strategicExpansion)inventoryCardChoice=null;notify(error.message||'No se ha podido conectar. Inténtalo de nuevo.');}
+  try{await operation();connected=true;}catch(error){const inventoryFeedback=!!(inventoryCardChoice||inventorySelection||refillPlayer||superHelpPlan);if(inventoryCardChoice&&!inventoryCardChoice.applied&&!inventorySelection&&!superHelpPlan&&!ownPair()?.strategicExpansion)inventoryCardChoice=null;notify(error.message||'No se ha podido conectar. Inténtalo de nuevo.',{inventory:inventoryFeedback});}
   finally{busy=false;if(room){render();scheduleMachine();}else buttons.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}
 }
 bindRefillHold(app,playerId=>{
@@ -814,17 +816,17 @@ app.addEventListener('click',async e=>{
   if(action==='close-inventory'){inventoryOpen=false;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(action==='practice-hint'){
     const kind=b.dataset.tool||b.dataset.useTool||'hint';
-    if(!canUsePracticeTool(room,uid,kind)){notify('Herramienta no disponible en este turno.');return;}
+    if(!canUsePracticeTool(room,uid,kind)){notifyInventory('Herramienta no disponible en este turno.');return;}
     inventoryCardChoice={player:uid,tool:kind,at:performance.now(),applied:false};inventorySelection=null;inventoryOpen=false;render();
-    if(kind==='hint-expand'){await run(async()=>{const id=room.id,version=room.version,point=await analyzeHelp('expand');if(room.id!==id||room.version!==version)throw new Error('La partida ha cambiado.');const next=useExpansionHint(room,uid,Date.now(),point);selectedExpansion={x:point.x,y:point.y};inventoryOpen=false;accept(next);center(point.x+1,point.y+1);notify('Ampliación sugerida. Puedes colocarla o elegir otra.');});return;}
+    if(kind==='hint-expand'){await run(async()=>{const id=room.id,version=room.version,point=await analyzeHelp('expand');if(room.id!==id||room.version!==version)throw new Error('La partida ha cambiado.');const next=useExpansionHint(room,uid,Date.now(),point);selectedExpansion={x:point.x,y:point.y};inventoryOpen=false;accept(next);center(point.x+1,point.y+1);notifyInventory('Ampliación sugerida. Puedes colocarla o elegir otra.');});return;}
     if(kind==='super-hint'){await run(async()=>{superHelpPlan=await analyzeHelp('super');inventoryOpen=false;render();});return;}
     await run(async()=>{const next=usePracticeHint(room,uid);inventoryOpen=false;accept(next);center(next.practiceHint.x,next.practiceHint.y);});return;
   }
   if(action==='cancel-super-help'){inventoryCardChoice=null;superHelpPlan=null;render();return;}
-  if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notify(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
+  if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notifyInventory(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
   if(action==='practice-tool'){
     const tool=b.dataset.tool||b.dataset.useTool,toolPlayer=b.dataset.player||uid;
-    if(!canUsePracticeTool(room,toolPlayer,tool)){notify('Herramienta no disponible en este turno.');return;}
+    if(!canUsePracticeTool(room,toolPlayer,tool)){notifyInventory('Herramienta no disponible en este turno.');return;}
     inventoryCardChoice={player:toolPlayer,tool,at:performance.now(),applied:false};inventorySelection=null;
     if(!['double','rival','combo','immunity'].includes(tool)){inventorySelection={player:uid,tool};inventoryOpen=false;render();return;}
     await run(async()=>{const next=localCommand(room,'inventory',{tool,playerId:toolPlayer});inventoryOpen=false;accept(next);});return;
@@ -859,7 +861,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='confirm-area-tool'){
     const selection=inventorySelection;if(!selection?.point)return;
-    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,cells:selection.cells,side:selection.side||'north'});inventorySelection=null;accept(next);if(!next.lastEvent.landing?.length)notify(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?(next.pairs[0].pending?'Muro colocado. Ahora sitúa tu ampliación 3×3.':'Muro colocado. Coloca tu ficha.'):`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
+    await run(async()=>{const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...selection.point,cells:selection.cells,side:selection.side||'north'});inventorySelection=null;accept(next);if(!next.lastEvent.landing?.length)notifyInventory(selection.tool==='tornado'?'Tornado: mezcla las fichas y los huecos del 3×3.':selection.tool==='frontier'?(next.pairs[0].pending?'Muro colocado. Ahora sitúa tu ampliación 3×3.':'Muro colocado. Coloca tu ficha.'):`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Coloca tu ficha.`);});return;
   }
   if(action==='inventory-target'){
     const selection=inventorySelection;
@@ -873,7 +875,7 @@ app.addEventListener('click',async e=>{
     await run(async()=>{
       const destination={x:Number(b.dataset.x),y:Number(b.dataset.y)},payload=selection.source?{x:selection.source.x,y:selection.source.y,toX:destination.x,toY:destination.y,bombId:selection.source.bombId}:destination;
       const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...payload});
-      inventorySelection=null;accept(next);if(!next.lastEvent.points&&!next.lastEvent.landing?.length)notify(selection.tool==='sapper'?`Artificieros · ${next.lastEvent.disarmed} ${next.lastEvent.disarmed===1?'bomba desactivada':'bombas desactivadas'}. Coloca tu ficha.`:`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Los puntos se conservan; coloca tu ficha.`);
+      inventorySelection=null;accept(next);if(!next.lastEvent.points&&!next.lastEvent.landing?.length)notifyInventory(selection.tool==='sapper'?`Artificieros · ${next.lastEvent.disarmed} ${next.lastEvent.disarmed===1?'bomba desactivada':'bombas desactivadas'}. Coloca tu ficha.`:`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Los puntos se conservan; coloca tu ficha.`);
     });return;
   }
   if(action==='hall-games'){await openMyGames();return;}

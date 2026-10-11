@@ -1,0 +1,15 @@
+/* Inventory has its own cyan feedback, regardless of game mode or player. */
+body:has(.game) #notice.inventory-notice{color:#00e5ff;border:2px solid #00e5ff;border-left-width:6px;background:#082c35;font-size:16px;font-weight:700;line-height:1.4;padding:12px 16px;box-shadow:0 0 0 3px #00e5ff15,0 8px 30px #000b;}
+.inventory-refill-toast{color:#00e5ff;border:2px solid #00e5ff;background:#082c35;font-size:13px;font-weight:700;padding:9px 13px;box-shadow:0 0 0 3px #00e5ff15,0 5px 18px #000b;}
+.inventory-capacity-strip{display:flex;align-items:center;gap:8px;min-height:26px;padding:1px 7px;border:1px solid #194a55;border-radius:6px;background:#09212a;color:#00e5ff;font-size:11px;flex:none;pointer-events:none;}
+.inventory-capacity-strip>span{letter-spacing:.02em;}.inventory-capacity-strip b{margin-left:3px;}
+.inventory-capacity-value{font-size:19px;line-height:22px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto;}
+.inventory-capacity-value.is-full{color:#ffd34e;}.inventory-capacity-strip small{color:#ffd34e;font-size:10px;white-space:nowrap;}
+/* Capacity is outside the independently scrollable two-row card list. */
+@media(max-height:450px) and (orientation:landscape){
+ .paused-game .paused-minimap{grid-template-rows:40px minmax(0,1fr) 92px;padding:4px;gap:2px 7px;}
+ .paused-minimap>.inventory-effects-bar{gap:2px;padding:0;}
+ .paused-minimap .inventory-capacity-strip{min-height:24px;}
+ .paused-minimap .player-inventory-rows{grid-template-rows:repeat(2,40px);gap:2px;}
+ .paused-minimap .player-inventory-rows .inventory-effect{height:40px;min-height:40px;}
+}

@@ -64,8 +64,8 @@ test('Old paid wildcard uses restore once without awarding points or changing fi
  const games=loadLocalGames(store,now),first=values.get('hash3_locals');loadLocalGames(store,now+99999);assert.equal(values.get('hash3_locals'),first);
  const restored=games.find(g=>g.id===r.id);assert.equal(restored.cells[0].wildcardSymbol,'X');assert.equal(restored.players[0].score,25912);assert.equal(restored.players[0].inventory.cards.swap,0);assert.deepEqual(games.find(g=>g.id==='finished'),finished);
 });
-test('Territory keeps two rows, adjacent / and ///, and # in a separate final slot with no card actions',()=>{
+test('Territory keeps two rows, one placed barrier pile, and # in a separate final slot with no card actions',()=>{
  const r=fresh();r.faunaEnabled=true;r.territoryEnabled=true;
  const html=ecologyNavigationMarkup(r,'local-x');assert.match(html,/territory-rows/);assert.equal((html.match(/class="inventory-icon-row"/g)||[]).length,2);assert.doesNotMatch(html,/data-tool=/);
- assert.match(html,/data-ecology-kind="frontier"[\s\S]*data-ecology-kind="border"[\s\S]*data-ecology-kind="neutral"/);
+ assert.match(html,/data-ecology-kind="barriers"[\s\S]*data-ecology-kind="neutral"/);
 });

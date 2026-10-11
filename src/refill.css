@@ -11,7 +11,7 @@
 .refill-trigger.o .refill-team{color:var(--green);}
 .refill-progress{position:absolute;inset:0;width:64px;height:64px;fill:none;stroke:#426879;stroke-width:2;transform:rotate(-90deg);pointer-events:none;}
 .refill-progress-fill{stroke:#bdf4ff;stroke-width:3;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;}
-.refill-trigger.is-holding .refill-progress-fill{animation:refill-hold var(--hold-duration,3000ms) linear forwards;}
+.refill-trigger.is-holding .refill-progress-fill{animation:refill-hold var(--hold-duration,1000ms) linear forwards;}
 .refill-trigger.is-holding{box-shadow:inset 0 0 0 1px #bdf4ff,0 0 0 3px #080c12,0 0 16px #83d9ff66;}
 @keyframes refill-hold{to{stroke-dashoffset:0;}}
 .refill-backdrop{position:fixed;inset:0;z-index:60;background:transparent;display:flex;align-items:flex-end;justify-content:center;padding:8px 6px calc(6px + env(safe-area-inset-bottom));}
