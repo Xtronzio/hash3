@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createLocal,localCommand} from '../src/local.js';
 import {practiceTools,validateStartingCards,recordInventoryCombo,completeInventoryTurn,drawComboCard,canUsePracticeTool} from '../src/practice-tools.js';
-import {CARD_PRICES,tradeAvailability,TRADE_HOLD_MS} from '../src/inventory-economy.js';
+import {CARD_PRICES,tradeAvailability} from '../src/inventory-economy.js';
 import {loadLocalGames,saveLocalGame} from '../src/sessions.js';
 import {plannedEventRegion,applyPlannedEvent} from '../src/territory-event-actions.js';
 import {advanceTerritory} from '../src/territory-tools.js';
@@ -66,7 +66,7 @@ test('Trueque buys exactly one at the listed price, with strict caps, turn, cloc
  for(const game of [{...r,status:'paused'},{...r,mode:'world'},{...r,playerInventory:false},{...r,timeMode:'timed',pairs:[{...r.pairs[0],deadline:new Date(now).toISOString()}]}])assert.equal(tradeAvailability(game,'local-x','hint',now).allowed,false);
  assert.equal(tradeAvailability(r,'local-o','hint',now).allowed,false);assert.equal(tradeAvailability(r,'local-x','invalid',now).allowed,false);
  const poor=fresh();assert.throws(()=>localCommand(poor,'trade',{tool:'hint',playerId:'local-x'},now));assert.equal(poor.players[0].score,0);
- assert.equal(TRADE_HOLD_MS,1000);assert.ok(practiceTools.every(t=>[3,33,333].includes(CARD_PRICES[t.id])));assert.equal(CARD_PRICES.antidote,33);
+ assert.ok(practiceTools.every(t=>[3,33,333].includes(CARD_PRICES[t.id])));assert.equal(CARD_PRICES.antidote,33);
 });
 
 test('Emboscada and Reconquista clear up to 3/33 stars, preserve land, all other symbols, points and stop defeated colonies',()=>{
@@ -101,8 +101,8 @@ test('Conversion payouts use final geometry, wildcards and bonuses for both sign
 test('Hall highlights independently and all new cards have icons, descriptions and listed trade costs; online stays disabled',()=>{
  const html=inventoryMarkup(null,null,{openTools:new Set(['ambush','antidote'])});assert.match(html,/inventory-description-toggle[^>]*is-open[^>]*data-tool="ambush"[^>]*aria-expanded="true"/);assert.match(html,/data-tool="reconquest"[^>]*aria-expanded="false"/);
  for(const t of ['ambush','reconquest','antidote'])assert.ok(toolIcon(t).includes('<path'));
- const r=fresh();r.players[0].score=999;assert.match(inventoryMarkup(r,'local-x'),/data-action="trade-hold" data-trade-tool="antidote"/);assert.deepEqual(ONLINE_MODES,{duel:false,world:false});
- assert.match(fs.readFileSync(new URL('../src/trade-hold.js',import.meta.url),'utf8'),/pointercancel/);
+ const r=fresh();r.players[0].score=999;assert.doesNotMatch(inventoryMarkup(r,'local-x'),/data-action="trade-hold"/);assert.deepEqual(ONLINE_MODES,{duel:false,world:false});
+ assert.match(fs.readFileSync(new URL('../src/hold-gesture.js',import.meta.url),'utf8'),/pointercancel/);
 });
 
 test('Machine buys from its own points with the same caps and limited budget, without exhausting its score or changing human stock',async()=>{

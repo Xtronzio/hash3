@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createLocal,localCommand} from '../src/local.js';
+import {inventoryDockMarkup,inventoryMarkup,inventoryStatusMarkup} from '../src/inventory.js';
+import {activeInventoryEffects} from '../src/inventory-status.js';
+import {canOpenRefill,floatingRefillMarkup,refillSelectorMarkup} from '../src/floating-refill.js';
+import {targetNavigation} from '../src/watch-targets.js';
+import {saveLocalGame,loadLocalGames} from '../src/sessions.js';
+const now=Date.now();
+const fresh=(timeMode='untimed')=>createLocal('local','Jorge','Rival',now,'normal',timeMode,'medium','X',false,{faunaEnabled:false,territoryEnabled:false});
+test('An explicit removal frees an off-terrain diana without placing a move or touching inventory, points, reserves or other targets',()=>{
+ let r=fresh();r.players[0].score=25912;r.players[0].freeExpansions=44;
+ for(const point of [{x:0,y:0},{x:1,y:0},{x:2,y:0}])r=localCommand(r,'watch-target',point,now);
+ r.terrain=r.terrain.filter(p=>p.x!==0||p.y!==0);const removed=r.watchTargets[0],before=structuredClone(r);
+ r=localCommand(r,'remove-target',{id:removed.id},now);
+ for(const key of ['players','pairs','terrain','cells','forms','inventoryEffects','ecologyTurns'])assert.deepEqual(r[key],before[key],key);
+ assert.deepEqual(r.watchTargets,before.watchTargets.slice(1));
+ r=localCommand(r,'remove-target',{id:removed.id},now);assert.equal(r.watchTargets.length,2,'A repeated stale removal must not recreate a target');
+ r=localCommand(r,'watch-target',{x:0,y:1},now);assert.equal(r.watchTargets[2].number,1);
+ r=localCommand(r,'pause',{},now);r=localCommand(r,'remove-target',{id:r.watchTargets[0].id},now);
+ const data=new Map(),storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
+ saveLocalGame(storage,r,now);assert.deepEqual(loadLocalGames(storage,now)[0].watchTargets,r.watchTargets);
+ assert.match(targetNavigation(r,{inspection:true}),/data-action="remove-target"/);
+});
+test('The refill selector follows player/turn/clock rules and opening it never charges or grants cards',()=>{
+ const r=fresh();r.players[0].score=999;const before=structuredClone(r);
+ assert.equal(canOpenRefill(r,'local-x',now),true);assert.equal(canOpenRefill(r,'local-o',now),false);
+ assert.match(floatingRefillMarkup(r,'local-x'),/refill-progress-fill/);
+ assert.match(refillSelectorMarkup(r,'local-x'),/data-action="refill-buy" data-tool="antidote"/);
+ assert.doesNotMatch(inventoryMarkup(r,'local-x'),/trade-hold|inventory-trade|refill-buy/);
+ assert.deepEqual(r,before);
+ for(const status of ['paused','finished'])assert.equal(canOpenRefill({...r,status},'local-x',now),false);
+ assert.equal(canOpenRefill({...r,playerInventory:false},'local-x',now),false);
+ const timed=fresh('timed');assert.equal(canOpenRefill(timed,'local-x',now+33000),false);
+ timed.pairs[0].pending=1;timed.pairs[0].expander='local-o';assert.equal(canOpenRefill(timed,'local-o',now),true);
+});
+test('An active card has one effect indicator; preparing another card and instant use feedback remain visible beside the bag',()=>{
+ let r=fresh();r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now);
+ assert.equal(activeInventoryEffects(r).find(e=>e.tool==='double').remaining,2);
+ const dock=inventoryDockMarkup(r,'local-x',{choice:{player:'local-x',tool:'double',prepared:false,at:0}});
+ assert.doesNotMatch(dock,/data-dock-card="double"|X usó Doble/);
+ assert.equal((inventoryStatusMarkup(r).match(/data-inventory-effect="double"/g)||[]).length,1);
+ assert.match(inventoryDockMarkup(r,'local-x',{choice:{player:'local-x',tool:'erase',prepared:true,at:0}}),/data-dock-card="erase"/);
+ r.players[0].inventory.turnUse.tools=['erase'];assert.match(inventoryDockMarkup(r,'local-x'),/X usó Borrar/);
+});

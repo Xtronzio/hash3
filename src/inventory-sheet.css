@@ -136,8 +136,6 @@
 /* A closed description stays off even when touch leaves :hover behind. */
 .inventory-descriptions .inventory-description-toggle:not(.is-open),.inventory-descriptions .inventory-description-toggle:not(.is-open):hover{background:transparent;border-color:var(--line);color:var(--muted);}
 .inventory-descriptions .inventory-description-toggle.is-open{color:var(--mode-color,#00e5ff);border-color:currentColor;background:color-mix(in srgb,var(--mode-color,#00e5ff) 12%,transparent);}
-.inventory-trade{min-height:44px;margin:8px 0 0 8px;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
-.inventory-trade.is-holding{background:var(--mode-color,#00e5ff);color:#08090b;}
 .starting-inventory-picker{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:10px;min-width:0;}
 .starting-inventory-picker p{font-size:12px;line-height:1.5;margin:5px 0 10px;}
 .starter-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:180px;overflow-y:auto;}

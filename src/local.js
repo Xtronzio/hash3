@@ -1,6 +1,6 @@
 import {buyCard} from './inventory-economy.js';
 import {applyTerritoryDefense} from './territory-defense.js';
-import {toggleWatchTarget} from './watch-targets.js';
+import {toggleWatchTarget,removeWatchTarget} from './watch-targets.js';
 import {microLength,validMicroExpansion} from './micro-expansion.js';
 import {movePendingBomb} from './pending-bombs.js';
 import {removeDefeatedInvasions} from './invasion-paths.js';
@@ -79,6 +79,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     delete room.pauseRemainingMs;delete room.pausedAt;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   if(action==='watch-target'){if(!['playing','paused'].includes(room.status))throw new Error('La partida no está disponible.');toggleWatchTarget(room,payload);room.updatedAt=new Date(now).toISOString();room.version++;return room;}
+  if(action==='remove-target'){if(!['playing','paused'].includes(room.status))throw new Error('La partida no está disponible.');removeWatchTarget(room,payload.id);room.updatedAt=new Date(now).toISOString();room.version++;return room;}
   if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   const grows=action==='expand'||action==='inventory'&&payload.tool==='activate'||action==='tick'&&p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;

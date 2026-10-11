@@ -12,8 +12,12 @@ export async function verifyLocalTargets({context,load,output,results}){
  const at=page.locator('.board [data-x="20"][data-y="20"]').first();await at.waitFor();
  const geometry=await page.evaluate(()=>{const c=document.querySelector('.board [data-x="20"][data-y="20"]')?.getBoundingClientRect(),v=document.querySelector('.viewport').getBoundingClientRect();return {cell:c?{x:c.x+c.width/2,y:c.y+c.height/2}:null,view:{x:v.x+v.width/2,y:v.y+v.height/2}};});
  assert.ok(geometry.cell&&Math.abs(geometry.cell.x-geometry.view.x)<30&&Math.abs(geometry.cell.y-geometry.view.y)<30);
- await page.locator('[data-action="pause"]').tap();await page.locator('.target-jump-menu summary').tap();assert.equal(await page.locator('[data-target-color]').count(),4);await page.locator('[data-target-color="blanca"]').tap();
- assert.deepEqual(errors,[]);results.push({dianaCardAndFourColorJumpMenu:true,whiteIsLastMoveNotActiveTerritory:true,pausedTargets:true,passed:true});await page.close();
+ const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ const before=await saved();if(!await menu.evaluate(el=>el.open))await menu.locator('summary').tap();
+ await menu.locator('[data-action="remove-target"][data-id="red"]').tap();
+ let after=await saved();assert.equal(after.watchTargets.length,2);assert.deepEqual(after.players,before.players);assert.deepEqual(after.pairs,before.pairs);assert.deepEqual(after.terrain,before.terrain);assert.deepEqual(after.cells,before.cells);
+ await page.locator('[data-action="pause"]').tap();await page.locator('.target-jump-menu summary').tap();assert.equal(await page.locator('[data-target-color]').count(),4);await page.locator('[data-target-color="blanca"]').tap();await page.locator('.target-jump-menu summary').tap();await page.locator('[data-action="remove-target"][data-id="green"]').tap();after=await saved();assert.equal(after.watchTargets.length,1);assert.equal(after.status,'paused');await page.screenshot({path:path.join(output,'dianas-quitar-r45.png')});
+ assert.deepEqual(errors,[]);results.push({dianaCardAndFourColorJumpMenu:true,whiteIsLastMoveNotActiveTerritory:true,pausedTargets:true,directTargetRemovalPreservesGame:true,passed:true});await page.close();
  const u=createLocal('local','X','O',Date.now(),'normal','untimed');u.faunaEnabled=false;
  u.cells=[0,1,2].map(x=>({id:'u'+x,x,y:0,symbol:'X',owner:'local-x'}));u.inventoryEffects.shields=[{cell:'u2',by:'local-x',remaining:2}];
  u.territoryEvents=[{id:'actual-ufo',kind:'ufo',turnsRemaining:1,region:[{x:0,y:0},{x:1,y:0},{x:2,y:0}]}];
