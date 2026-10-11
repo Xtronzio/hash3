@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {figureWindows} from '../src/game.js';
-import {createLocal,localCommand,machineChoice} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,machineChoice} from '../src/local.js';
 import {scoreFeedback,scoreBreakdown} from '../src/feedback.js';
 const marks=points=>points.map(([x,y])=>({x,y,symbol:'X'}));
 const forms=(points,x,y,level)=>figureWindows(marks(points),x,y,'X',level);

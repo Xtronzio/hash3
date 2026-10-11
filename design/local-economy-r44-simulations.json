@@ -1,0 +1,190 @@
+{
+  "version": "R0.21.44",
+  "conversionTrials": [
+    {
+      "size": 333,
+      "trials": 9,
+      "contagionPlans": 9,
+      "contagionPieces": 81,
+      "pandemicPieces": 135,
+      "newPoints": 3044,
+      "meanPandemicPieces": 15,
+      "meanNewPoints": 338.22222222222223
+    },
+    {
+      "size": 999,
+      "trials": 9,
+      "contagionPlans": 9,
+      "contagionPieces": 81,
+      "pandemicPieces": 411,
+      "newPoints": 9463,
+      "meanPandemicPieces": 45.666666666666664,
+      "meanNewPoints": 1051.4444444444443
+    },
+    {
+      "size": 3333,
+      "trials": 9,
+      "contagionPlans": 9,
+      "contagionPieces": 81,
+      "pandemicPieces": 1425,
+      "newPoints": 33723,
+      "meanPandemicPieces": 158.33333333333334,
+      "meanNewPoints": 3747
+    }
+  ],
+  "drawTrials": 10989,
+  "draws": {
+    "swap": 864,
+    "bomb": 283,
+    "hint": 321,
+    "expand-3": 292,
+    "shift": 859,
+    "super-hint": 292,
+    "combo": 883,
+    "shield": 307,
+    "opposite": 943,
+    "erase": 869,
+    "frontier": 304,
+    "rival": 877,
+    "reconquest": 274,
+    "double": 937,
+    "expand-2": 312,
+    "hint-expand": 291,
+    "block": 305,
+    "activate": 282,
+    "border": 328,
+    "tornado": 279,
+    "destroy": 302,
+    "ambush": 297,
+    "antidote": 288
+  },
+  "stocks": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "prices": {
+    "hint": 3,
+    "destroy": 3,
+    "frontier": 3,
+    "activate": 3,
+    "double": 33,
+    "opposite": 33,
+    "rival": 33,
+    "erase": 33,
+    "swap": 33,
+    "shift": 33,
+    "block": 33,
+    "shield": 33,
+    "expand-2": 33,
+    "expand-3": 33,
+    "border": 33,
+    "ambush": 33,
+    "antidote": 33,
+    "bomb": 333,
+    "tornado": 333,
+    "combo": 333,
+    "hint-expand": 333,
+    "super-hint": 333,
+    "reconquest": 333
+  },
+  "defenses": [
+    {
+      "card": "ambush",
+      "maximum": 3,
+      "price": 33,
+      "pointsPerRecoveredCell": 11
+    },
+    {
+      "card": "reconquest",
+      "maximum": 33,
+      "price": 333,
+      "pointsPerRecoveredCell": 10.090909090909092
+    }
+  ],
+  "commonDefeat": [
+    {
+      "size": 333,
+      "threshold": 0.333,
+      "invadedAtWarning": 111,
+      "oneReconquestShare": 0.0990990990990991,
+      "threeReconquestsShare": 0.2972972972972973,
+      "minimumInvadedAfterThreeReconquests": 0.036036036036036036,
+      "warningApproved": false
+    },
+    {
+      "size": 333,
+      "threshold": 0.666,
+      "invadedAtWarning": 222,
+      "oneReconquestShare": 0.0990990990990991,
+      "threeReconquestsShare": 0.2972972972972973,
+      "minimumInvadedAfterThreeReconquests": 0.36936936936936937,
+      "warningApproved": false
+    },
+    {
+      "size": 333,
+      "threshold": 0.9,
+      "invadedAtWarning": 300,
+      "oneReconquestShare": 0.0990990990990991,
+      "threeReconquestsShare": 0.2972972972972973,
+      "minimumInvadedAfterThreeReconquests": 0.6036036036036037,
+      "warningApproved": false
+    },
+    {
+      "size": 999,
+      "threshold": 0.333,
+      "invadedAtWarning": 333,
+      "oneReconquestShare": 0.03303303303303303,
+      "threeReconquestsShare": 0.0990990990990991,
+      "minimumInvadedAfterThreeReconquests": 0.23423423423423423,
+      "warningApproved": false
+    },
+    {
+      "size": 999,
+      "threshold": 0.666,
+      "invadedAtWarning": 666,
+      "oneReconquestShare": 0.03303303303303303,
+      "threeReconquestsShare": 0.0990990990990991,
+      "minimumInvadedAfterThreeReconquests": 0.5675675675675675,
+      "warningApproved": false
+    },
+    {
+      "size": 999,
+      "threshold": 0.9,
+      "invadedAtWarning": 900,
+      "oneReconquestShare": 0.03303303303303303,
+      "threeReconquestsShare": 0.0990990990990991,
+      "minimumInvadedAfterThreeReconquests": 0.8018018018018018,
+      "warningApproved": false
+    },
+    {
+      "size": 3333,
+      "threshold": 0.333,
+      "invadedAtWarning": 1110,
+      "oneReconquestShare": 0.009900990099009901,
+      "threeReconquestsShare": 0.0297029702970297,
+      "minimumInvadedAfterThreeReconquests": 0.3033303330333033,
+      "warningApproved": false
+    },
+    {
+      "size": 3333,
+      "threshold": 0.666,
+      "invadedAtWarning": 2220,
+      "oneReconquestShare": 0.009900990099009901,
+      "threeReconquestsShare": 0.0297029702970297,
+      "minimumInvadedAfterThreeReconquests": 0.6363636363636364,
+      "warningApproved": false
+    },
+    {
+      "size": 3333,
+      "threshold": 0.9,
+      "invadedAtWarning": 3000,
+      "oneReconquestShare": 0.009900990099009901,
+      "threeReconquestsShare": 0.0297029702970297,
+      "minimumInvadedAfterThreeReconquests": 0.8703870387038704,
+      "warningApproved": false
+    }
+  ],
+  "evaluation": "A fixed 33-cell response becomes weaker as territory grows. No defeat threshold/deadline enabled. Three shared turns give unequal 1/2 response turns; propose three own response opportunities each, still unapproved."
+}

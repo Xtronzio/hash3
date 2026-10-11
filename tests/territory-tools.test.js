@@ -1,7 +1,8 @@
 import {completeEventTurns} from './helpers/turn-ecology.js';
 import {NATURAL_EVENT_ROTATION,INVADER_EVENT_ROTATION,impactCount} from '../src/territory-event-rules.js';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {proportionalBudget,habitatZone,habitatInterval,HABITAT_FREQUENCIES} from '../src/habitat-budget.js';
 import {recordTerritoryGrowth,territoryRegion,advanceTerritory,initializeTerritory,recordTerritoryPlacement} from '../src/territory-tools.js';
 import {countHabitatPlacement} from '../src/inhabitants.js';

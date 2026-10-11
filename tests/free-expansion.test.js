@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {canRequestStrategicExpansion,earnFreeExpansion,initializeFreeExpansions} from '../src/free-expansion.js';
 import {useExpansionHint,suggestExpansion} from '../src/assistance.js';
 import {canUsePracticeTool} from '../src/practice-tools.js';

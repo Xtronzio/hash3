@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {eventOutlook,eventOutlookMarkup,ecologyWarningsMarkup} from '../src/event-outlook.js';
 const now=1700000000000;
 const fresh=()=>createLocal('local','A','B',now,'normal','untimed');

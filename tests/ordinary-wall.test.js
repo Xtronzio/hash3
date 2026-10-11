@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {canUsePracticeTool,toolAllowance,practiceTools} from '../src/practice-tools.js';
 import {compactInventoryMarkup,inventoryStatusMarkup} from '../src/inventory.js';
 const now=1700000000000;

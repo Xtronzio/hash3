@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {figureWindows,availableCells,isBlockedCell} from '../src/game.js';
 import {initializeInventory,canUsePracticeTool,completeInventoryTurn,toolAllowance,toolCells,practiceTools,MAX_PER_CARD} from '../src/practice-tools.js';
 import {immunityFor,immunityStock,immunityProgress,recordImmunityCombo,immunityRemaining} from '../src/immunity.js';

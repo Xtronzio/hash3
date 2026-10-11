@@ -1,7 +1,9 @@
+import {recordInventoryCombo} from '../src/practice-tools.js';
 import {completeEventTurns} from './helpers/turn-ecology.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {canUsePracticeTool,initializeInventory,completeInventoryTurn,toolCells,practiceTools,inventoryDrawWeight} from '../src/practice-tools.js';
 import {tornadoOptions,bombBlast,frontierOptions,frontierAnchors} from '../src/area-tools.js';
 import {frontierReachable,frontierEdges,frontierMarkup,frontierTiles,frontierCells,selectFrontier} from '../src/frontiers.js';
@@ -77,7 +79,7 @@ test('New cards enter refill at zero stock in old saves, preserve eight starting
  for(const t of ['tornado','bomb','frontier','hint-expand','super-hint']){assert.equal(r.players[0].inventory.cards[t],0);delete r.players[0].inventory.cards[t];}
  initializeInventory(r);assert.equal(r.players[0].inventory.cards['super-hint'],0);
  for(const t of practiceTools)r.players[0].inventory.received[t.id]=0;
- const tickets=practiceTools.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));const index=tickets.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)completeInventoryTurn(r,'local-x',{random:()=>index/tickets.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
+ const tickets=practiceTools.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));const index=tickets.findIndex(t=>t.id==='bomb');r.players[0].inventory.cards.hint=0;for(let i=0;i<1;i++)recordInventoryCombo(r,'local-x',33,{random:()=>index/tickets.length+.001});assert.equal(r.players[0].inventory.cards.bomb,1);
  const ready=fill(start());for(const t of ['tornado','bomb','frontier']){assert.equal(canUsePracticeTool(localCommand(ready,'pause',{},now),'local-x',t,now),false);assert.equal(canUsePracticeTool({...ready,timeMode:'timed',pairs:[{...ready.pairs[0],deadline:new Date(now).toISOString()}]},'local-x',t,now),false);}
 });
 

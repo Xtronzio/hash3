@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand,machineChoice} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,machineChoice} from '../src/local.js';
 import {availableCells,key} from '../src/game.js';
 import {initializeHabitats,countHabitatPlacement,advanceHabitats,visitWorms} from '../src/inhabitants.js';
 import {localLiving,livingFactor,livingInterval,livingClock,LIVING_FREQUENCIES} from '../src/living-balance.js';

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {key,figureWindows,connectedTerrain,availableCells,expansionOptions,immediateAbove,rankedPlayers} from '../src/game.js';
-import {createLocal,localCommand,machineChoice} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand,machineChoice} from '../src/local.js';
 const marks=(points,symbol='X')=>points.map(([x,y])=>({x,y,symbol}));
 test('Líneas largas suman sus celdas y atraviesan los antiguos bloques',()=>{
   const f=figureWindows(marks([[-1,0],[0,0],[1,0],[2,0]]),2,0,'X');

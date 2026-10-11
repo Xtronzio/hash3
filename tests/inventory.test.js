@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {canUsePracticeHint,usePracticeHint} from '../src/inventory.js';
 import {availableCells} from '../src/game.js';
 import {saveLocalGame,loadLocalGames,deleteLocalGame} from '../src/sessions.js';

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import path from 'node:path';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-inventory.js';
 export async function verifyLocalTargets({context,load,output,results}){
  const r=createLocal('local','X','O',Date.now(),'normal','untimed');r.faunaEnabled=false;
  r.terrain=Array.from({length:999},(_,i)=>({x:i%32,y:Math.floor(i/32)}));

@@ -67,7 +67,21 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
  }
  if(kind==='blackhole'||kind==='invader-colony')return wholeSquare(room,kind==='blackhole'?EVENT_BALANCE.blackholeSide:EVENT_BALANCE.invasionColonySide,random,now);
  if(kind==='invader-rain')return randomSubset(allowed(room,now),count,random);
- if(kind==='contagion')return localCluster(room,count,random,now).filter(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y));
+ if(kind==='contagion'){
+  // Three connected trios, separated by at least one cell. Skip if impossible.
+  const eligible=new Map(allowed(room,now).map(c=>[key(c.x,c.y),c]));
+  const pool=new Map(room.cells.filter(c=>['X','O','*','#'].includes(c.symbol)&&eligible.has(key(c.x,c.y))).map(c=>[key(c.x,c.y),{x:c.x,y:c.y}]));
+  const candidates=[];
+  for(const seed of randomSubset([...pool.values()],pool.size,random)){
+   const queue=[seed],seen=new Set([key(seed.x,seed.y)]),group=[];
+   for(let i=0;i<queue.length&&group.length<3;i++){const p=queue[i];group.push(p);for(const [dx,dy] of four){const k=key(p.x+dx,p.y+dy);if(pool.has(k)&&!seen.has(k)){seen.add(k);queue.push(pool.get(k));}}}
+   if(group.length===3)candidates.push(group);
+  }
+  const forbidden=new Set(),groups=[];
+  for(const group of candidates){if(group.some(c=>forbidden.has(key(c.x,c.y))))continue;groups.push(group);for(const c of group)for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)forbidden.add(key(c.x+dx,c.y+dy));if(groups.length===3)break;}
+  return groups.length===3?{region:groups.flat(),groups}:[];
+ }
+
  if(kind==='tornado')return wholeSquare(room,3,random,now);
  if(kind==='pandemic'){
   const protectedKeys=immutable(room,now),available=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
@@ -125,6 +139,7 @@ function shuffle(room,region,random,blocked){
 export function applyPlannedEvent(room,event,now=Date.now()){
  const rule=eventRule(event.kind);if(!rule)return {hit:new Set(),actions:[],demolish:false};
  const blocked=immutable(room,now),known=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
+ if(localLiving(room)&&['pandemic','contagion'].includes(event.kind))for(const c of event.antidotes||[])blocked.add(key(c.x,c.y));
  if(rule.family==='invaders')for(const k of defendedInvasionCells(room,event))blocked.add(k);
  if(rule.effect==='demolish')for(const p of room.pairs){const a=p.terrainAnchor||p.active;blocked.add(key(a.x,a.y));}
  let region=(event.region||[]).filter(c=>known.has(key(c.x,c.y))&&!blocked.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));

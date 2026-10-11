@@ -1,7 +1,8 @@
 import {completeEventTurns} from './helpers/turn-ecology.js';
 import {livingInterval} from '../src/living-balance.js';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {initializeHabitats,countHabitatPlacement,advanceHabitats,visitWorms,freezeHabitats,resumeHabitats,habitatLabel,clearHabitatCell} from '../src/inhabitants.js';
 import {availableCells,expansionOptions,key,figureWindows} from '../src/game.js';
 import {toolCells} from '../src/practice-tools.js';

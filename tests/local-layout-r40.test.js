@@ -1,6 +1,8 @@
+import {recordInventoryCombo} from '../src/practice-tools.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
+import {localCommand} from '../src/local.js';
 import {canUsePracticeTool,toolCells,practiceTools,completeInventoryTurn,inventoryDrawWeight} from '../src/practice-tools.js';
 import {inventoryMarkup,inventoryStatusMarkup,toolIcon} from '../src/inventory.js';
 import {INVENTORY_ROWS} from '../src/inventory-layout.js';
@@ -36,7 +38,7 @@ test('Permutar rejects missing, duplicate, shielded, immune, reserved and blocke
 });
 test('Swap is drawn by refills and is present once in every two-row player inventory, including the hall',()=>{
  const r=fresh();for(const t of practiceTools)r.players[0].inventory.cards[t.id]=0;
- completeInventoryTurn(r,'local-x',{random:()=>.21});assert.equal(inventoryDrawWeight('swap'),3);
+ recordInventoryCombo(r,'local-x',33,{random:()=>.21});assert.equal(inventoryDrawWeight('swap'),3);
  assert.deepEqual(new Set(INVENTORY_ROWS.flat()),new Set([...practiceTools.map(t=>t.id),'target']));
  assert.equal(INVENTORY_ROWS.flat().length,practiceTools.length+1);const row=INVENTORY_ROWS.find(r=>r.includes('frontier'));assert.equal(row.indexOf('border'),row.indexOf('frontier')+1);
  for(const html of [inventoryMarkup(null,null),inventoryMarkup(r,'local-x'),inventoryStatusMarkup(r,{playerId:'local-x'})]){
