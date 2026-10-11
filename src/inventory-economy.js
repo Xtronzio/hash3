@@ -4,7 +4,7 @@ import {inventoryEnabled} from './inventory-enabled.js';
 export const CARD_PRICES=Object.freeze({hint:3,destroy:3,frontier:3,activate:3,
  double:33,opposite:33,rival:33,erase:33,swap:33,shift:33,block:33,shield:33,
  'expand-2':33,'expand-3':33,border:33,ambush:33,antidote:33,
- bomb:333,tornado:333,combo:333,'hint-expand':333,'super-hint':333,reconquest:333});
+ bomb:33,tornado:33,combo:33,'hint-expand':33,'super-hint':33,reconquest:333});
 export function tradeAvailability(game,playerId,tool,now=Date.now()){
  const price=CARD_PRICES[tool],player=game?.players?.find(p=>p.id===playerId),pair=game?.pairs?.[0],inv=player?.inventory;
  if(!price||!practiceTools.some(t=>t.id===tool)||!inv)return {allowed:false,price,reason:'Carta no disponible'};

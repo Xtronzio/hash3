@@ -6,7 +6,7 @@ import {newTerritoryImpacts,territoryImpactText} from './territory-impact.js';
 import {microLength,microSelectionOptions} from './micro-expansion.js';
 import {floatingImmunityMarkup,bindFloatingImmunity} from './floating-immunity.js';
 import {pendingInvasionBombs,bombDestinations} from './pending-bombs.js';
-import {targetIcon,targetNavigation,watchedKeys,targetColors,lastNavigationMove} from './watch-targets.js';
+import {targetIcon,targetNavigation,targetDestinations,watchedKeys,targetColors,lastNavigationMove} from './watch-targets.js';
 import {turnWarnings} from './turn-event-ui.js';
 import {landingFeedback,landingScoreMarkup} from './landing-feedback.js';
 import {invasionGrowthCells} from './invasion-paths.js';
@@ -85,7 +85,7 @@ let pauseMapOpen=false,pauseMapState={},disposeInspection=null,disposeMap=null,t
 const onlinePreviews=new Map();
 const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snapshot)=>onlinePreviews.set(key,{room:snapshot,at:Date.now()}));
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
-let targetMarking=false,refillPlayer=null,impactNotices=[],impactNoticeTimer;
+let targetMarking=false,refillPlayer=null,refillPurchases=0,impactNotices=[],impactNoticeTimer;
 function impactNoticesMarkup(){return `<div class="territory-impact-announcements" role="status" aria-live="polite">${impactNotices.filter(e=>e.until>Date.now()).map(e=>`<p data-impact-id="${e.id}">${escape(territoryImpactText(e))}</p>`).join('')}</div>`;}
 function updateImpactNotices(previous,next){
  clearTimeout(impactNoticeTimer);if(previous?.id!==next.id)impactNotices=[];
@@ -124,7 +124,7 @@ const pairUrlCode=new URL(location.href).searchParams.get('pareja')||'';
 if(ONLINE_ENABLED&&(urlCode||pairUrlCode))hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
-const above=()=>immediateAbove(humans(),uid,!!room.commonWorld);
+const above=()=>immediateAbove(isLocal()?room.players:humans(),uid,!!room.commonWorld);
 const iconPaths={back:'<path d="m15 5-7 7 7 7"/>',expand:'<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',worm:habitatIcons.worm,bomb:habitatIcons.bomb,build:habitatIcons.build,frontier:'<rect x="3" y="3" width="18" height="18"/><path d="m12 6 6 6-6 6-6-6Z"/>',play:'<path d="m8 4 12 8-12 8V4Z"/>',home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3V10Z"/>',rodent:rodentIcon,activate:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8m-4-4h8"/>',fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
 const navIcon=kind=>`<svg viewBox="0 0 ${['rodent','worm','bomb','build'].includes(kind)?'32 32':'24 24'}" aria-hidden="true" focusable="false">${navigationPaths[kind]||iconPaths[kind]||''}</svg>`;
 const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
@@ -230,8 +230,7 @@ function render() {
   const ready=!expanding&&pair.turn===own.symbol;
   const totals={X:0,O:0};room.players.forEach(p=>totals[p.symbol]+=p.score);
   const scoreList=room.commonWorld?list:rankedPlayers(room.players);
-  const targetAvailable=!!(target&&(target.lastMove||room.pairs.find(p=>p.id===target.pair)));
-  const jumpButtons=`${targetNavigation(room,{playerId:uid})}${iconButton('locate','above','Rival superior',`class="blue" ${targetAvailable?'':'disabled'}`)}`;
+  const jumpButtons=targetNavigation(room,{playerId:uid});
   const habitatButtons=ecologyNavigationMarkup(room,uid),availabilityPhase=pair.deadline&&Date.parse(pair.deadline)<=Date.now()?'expired':'active',inventoryStatus=snapshotMemo(room,'inventory:'+uid+':'+availabilityPhase,()=>inventoryStatusMarkup(room,{playerId:uid}));
   const rankRows=players=>players.map(p=>{const index=scoreList.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}<small class="rank-combo">Combo máx. ${comboLabel(p)}</small><small class="rank-rodent">${escape(rodentLabel(room,p.id))}</small></span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
   const title=canExpand?'Estás ampliando':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
@@ -648,7 +647,7 @@ function renderPaused(){
  const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
  const inspection=savedMapModel(room,own);
  const inspectButton=(action,kind,label)=>`<button data-inspect-action="${action}" aria-label="${label}" title="${label}">${navIcon(kind)}</button>`;
- const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${inspection.target?inspectButton('rival','above','Rival superior'):''}${targetNavigation(room,{inspection:true,playerId:uid})}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
+ const mapControls=inspection?`<nav class="inspection-controls" aria-label="Controles del mapa guardado"><span>${inspection.terrain.length.toLocaleString('es-ES')} casillas <span class="map-dimensions">· ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span></span>${inspectButton('fit','fit','Ver mapa completo')}${targetNavigation(room,{inspection:true,playerId:uid})}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</nav>`:'';
  const mapStatus=inventoryStatusMarkup(room,{paused:true,playerId:uid}),mapEcology=`<nav class="inspection-controls ecology-controls" aria-label="Fauna y fenómenos del territorio">${ecologyNavigationMarkup(room,uid,{inspection:true})}</nav>`;
  const canvas='<svg class="inspection-canvas" tabindex="0" role="img" aria-label="Tablero guardado: arrastra o pellizca para inspeccionar. Con teclado, flechas para moverte y más o menos para acercar."></svg>';
  const minimap=inspection?`<section class="paused-minimap inspection-panel" aria-label="Mapa de la partida pausada">${mapControls}${mapStatus}${canvas}${mapEcology}</section>`:'';
@@ -699,12 +698,12 @@ async function run(operation) {
 }
 bindRefillHold(app,playerId=>{
  if(busy||!isLocal()||playerId!==uid||!canOpenRefill(room,playerId))return;
- refillPlayer=playerId;inventoryOpen=false;eventsOpen=false;renderInventory();renderEvents();document.querySelector('[data-action="inventory"]')?.setAttribute('aria-expanded','false');renderRefill();
+ refillPlayer=playerId;refillPurchases=0;inventoryOpen=false;eventsOpen=false;renderInventory();renderEvents();document.querySelector('[data-action="inventory"]')?.setAttribute('aria-expanded','false');renderRefill();
  document.querySelector('[data-action="close-refill"]')?.focus({preventScroll:true});
 });
 function renderRefill(){
  document.querySelector('.refill-backdrop')?.remove();
- if(refillPlayer&&canOpenRefill(room,refillPlayer))app.insertAdjacentHTML('beforeend',refillSelectorMarkup(room,refillPlayer));
+ if(refillPlayer&&canOpenRefill(room,refillPlayer))app.insertAdjacentHTML('beforeend',refillSelectorMarkup(room,refillPlayer,{remaining:3-refillPurchases}));
  else refillPlayer=null;
 }
 app.addEventListener('click',async e=>{
@@ -772,10 +771,10 @@ app.addEventListener('click',async e=>{
   }
   if(action==='close-refill'){refillPlayer=null;renderRefill();document.querySelector('[data-action="refill-hold"]')?.focus({preventScroll:true});return;}
   if(action==='refill-buy'){
-    const playerId=b.dataset.player;if(playerId!==refillPlayer||playerId!==uid||!canOpenRefill(room,playerId))return;
+    const playerId=b.dataset.player;if(playerId!==refillPlayer||playerId!==uid||refillPurchases>=3||!canOpenRefill(room,playerId))return;
     const tool=b.dataset.tool;
-    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId}),spent=before-next.players.find(p=>p.id===playerId).score;accept(next);notify(`Recarga · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`);});
-    (document.querySelector(`.refill-selector [data-tool="${tool}"]:not(:disabled)`)||document.querySelector('[data-action="close-refill"]'))?.focus({preventScroll:true});return;
+    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`Recarga · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`);});
+    (document.querySelector(`.refill-selector [data-tool="${tool}"]:not(:disabled)`)||document.querySelector('[data-action="close-refill"]')||document.querySelector('[data-action="refill-hold"]'))?.focus({preventScroll:true});return;
   }
   if(action==='remove-target'){if(!isLocal())return;await run(async()=>accept(localCommand(room,'remove-target',{id:b.dataset.id})));return;}
   if(action==='mark-target'){if(!targetMarking&&(room.playerInventory===false||room.status!=='playing'))return;targetMarking=!targetMarking;inventorySelection=null;inventoryOpen=false;render();return;}
@@ -785,6 +784,11 @@ app.addEventListener('click',async e=>{
     if(targetMarking){await run(async()=>accept(localCommand(room,'watch-target',p)));return;}
     b.closest('details')?.removeAttribute('open');const map=b.closest('.world-map');if(map){map.dispatchEvent(new CustomEvent('map-focus',{detail:{x:p.x+.5,y:p.y+.5}}));return;}
     targetMarking=false;zoom=1;render();center(p.x,p.y);return;
+  }
+  if(action==='locate-destination'){
+    const p=targetDestinations(room,uid).find(p=>p.id===b.dataset.destination)?.point;if(!p)return;
+    b.closest('details')?.removeAttribute('open');const map=b.closest('.world-map');if(map){map.dispatchEvent(new CustomEvent('map-focus',{detail:{x:p.x+.5,y:p.y+.5}}));return;}
+    targetMarking=false;rankOpen=false;worldMapOpen=false;zoom=1;render();center(p.x,p.y);return;
   }
   if(action==='open-event-warning'){eventsOpen=true;inventoryOpen=false;render();return;}
   if(action==='focus-event-warning'){

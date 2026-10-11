@@ -21,6 +21,7 @@
 .refill-selector h2{font-size:14px;margin:0;letter-spacing:.02em;}
 .refill-wallet{margin-left:auto;color:#bdf4ff;font-size:14px;font-weight:750;white-space:nowrap;}
 .refill-wallet small{font-size:10px;font-weight:400;}
+.refill-remaining{font-size:10px;color:#b3c7d2;white-space:nowrap;}
 .refill-selector header button{width:44px;height:44px;min-height:44px;font-size:24px;padding:0;border:0;border-radius:50%;background:transparent;color:#edf8ff;}
 .refill-catalog{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:0 6px 6px;}
 .refill-card-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;}
@@ -32,9 +33,13 @@
 .refill-card-price{font-size:10px;font-weight:750;line-height:12px;white-space:nowrap;color:#bdf4ff;}
 .refill-card-stock{position:absolute;right:2px;top:1px;font-size:9px;line-height:11px;background:#101923;padding:0 2px;border-radius:3px;}
 .target-jump-options{display:flex;flex-direction:column;}
+.target-destinations{display:grid;grid-template-columns:repeat(2,44px);gap:4px;}
+.target-markers{border-top:1px solid #41454f;padding-top:5px;display:flex;flex-direction:column;gap:4px;}
+.target-markers .watch-jump{position:relative;}
+.target-markers small{position:absolute;right:3px;bottom:1px;font-size:10px;background:#101216;}
 .target-jump-row{display:flex;gap:5px;}
 .target-jump-row button{color:inherit;}
-.target-jump-row .target-remove{background:#18191e;border-color:#41454f;}
+.target-jump-row .target-remove{background:#18191e;border-color:#41454f;color:#aaa;}
 .target-removal-list{display:flex;gap:6px;margin:10px 0;}
 .target-removal-list button{display:flex;align-items:center;gap:5px;min-height:44px;padding:7px;}
 .target-removal-list svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;}
