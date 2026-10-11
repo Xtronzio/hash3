@@ -15,7 +15,7 @@ const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 export function profileAccessMarkup(name='',{online=true}={}){
  const n=String(name||'').trim(),label=n||'Colono invitado';
  const html='<div class="profile-screen">'+
-  '<header class="profile-identity"><span class="profile-symbol" aria-hidden="true">'+colonoLogo+'</span><div><small>IDENTIDAD DEL COLONO</small><strong>'+esc(label)+'</strong><p>Tu identidad en #3.</p></div></header>'+
+  '<header class="profile-identity"><span class="profile-symbol" aria-hidden="true">'+colonoLogo+'</span><div><small>IDENTIDAD DEL COLONO</small><strong>'+esc(label)+'</strong><p>Tu identidad en #33.</p></div></header>'+
   '<section class="profile-section profile-alias" aria-labelledby="profile-alias-title"><div class="profile-section-title"><span class="profile-section-number">01</span><div><h3 id="profile-alias-title">Tu apodo</h3><p>El nombre que verán los demás colonos.</p></div></div>'+
   '<form id="profile-form" class="profile-alias-form"><label class="sr-only" for="profile-name">Tu apodo</label><input id="profile-name" name="name" value="'+esc(n)+'" placeholder="Elige tu apodo" minlength="2" maxlength="18" autocomplete="nickname" required><button type="submit">Guardar</button></form><p id="profile-name-status" class="profile-status" role="status" aria-live="polite"></p></section>'+
   '<section class="profile-section profile-transfer" aria-labelledby="profile-transfer-title"><div class="profile-section-title"><span class="profile-section-number">02</span><div><h3 id="profile-transfer-title">Lleva tu perfil contigo</h3><p>Abre tus partidas online en otro navegador o dispositivo.</p></div></div>'+
@@ -26,7 +26,7 @@ export function profileAccessMarkup(name='',{online=true}={}){
   '<p id="profile-copy-status" class="profile-status" role="status" aria-live="polite"></p>'+
   '<p class="profile-security">'+ico('shield')+' <span><strong>Acceso privado.</strong> Quien tenga el enlace podrá entrar en tu perfil. No lo compartas públicamente.</span></p></section>'+
   '<section class="profile-section profile-restore" aria-labelledby="profile-restore-title"><div class="profile-section-title"><span class="profile-section-number">03</span><div><h3 id="profile-restore-title">¿Estás en otro navegador?</h3><p>Pega aquí el enlace que creaste en tu dispositivo anterior.</p></div></div>'+
-  '<form id="profile-import" class="profile-import-form"><label class="sr-only" for="profile-link">Enlace de tu perfil</label><input id="profile-link" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega aquí tu enlace de #3" required><button type="submit">'+ico('download')+' Cargar mi perfil</button></form><p id="profile-restore-status" class="profile-status" role="status" aria-live="polite"></p></section>'+
+  '<form id="profile-import" class="profile-import-form"><label class="sr-only" for="profile-link">Enlace de tu perfil</label><input id="profile-link" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega aquí tu enlace de #33" required><button type="submit">'+ico('download')+' Cargar mi perfil</button></form><p id="profile-restore-status" class="profile-status" role="status" aria-live="polite"></p></section>'+
   '<p class="profile-footnote">Mundo, Duelo y tu clasificación están asociados a tu identidad online. Las partidas de VS máquina y Sin conexión permanecen en cada navegador.</p>'+
   '</div>';
  if(online)return html;

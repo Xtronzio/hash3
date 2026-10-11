@@ -1,4 +1,5 @@
 import {immunityActionsMarkup} from './inventory.js';
+import {separateFloatingControl} from './floating-layout.js';
 
 export function floatingImmunityMarkup(game){
  if(game.status!=='playing')return '';
@@ -7,14 +8,20 @@ export function floatingImmunityMarkup(game){
 export const clampRatio=value=>Number.isFinite(value)?Math.min(1,Math.max(0,value)):0;
 export function bindFloatingImmunity(surface,gameId){
  if(!surface)return ()=>{};
- const cleanups=[];
+ const cleanups=[];let repaintRefill=()=>{};
  for(const [index,node] of [...surface.querySelectorAll('.floating-immunity,.floating-refill')].entries()){
   const refill=node.classList.contains('floating-refill');
   const storageKey=`hash3_${refill?'refill':'immunity'}_position:${gameId}:${node.dataset.floatingPlayer}`;
   let position={x:refill?0.27:0,y:refill?0.18:index?0.45:0.18},gesture=null,moved=false;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(saved)position={x:clampRatio(saved.x),y:clampRatio(saved.y)};}catch{}
   const bounds=()=>({x:Math.max(0,surface.clientWidth-node.offsetWidth-12),y:Math.max(0,surface.clientHeight-node.offsetHeight-12)});
-  const paint=()=>{const b=bounds();node.style.left=`${6+position.x*b.x}px`;node.style.top=`${6+position.y*b.y}px`;};
+  const paint=()=>{
+   const b=bounds(),requested={x:6+position.x*b.x,y:6+position.y*b.y};
+   const point=refill?separateFloatingControl(requested,{width:node.offsetWidth,height:node.offsetHeight},{x:6+b.x,y:6+b.y},[...surface.querySelectorAll('.floating-immunity')].map(n=>({x:n.offsetLeft,y:n.offsetTop,width:n.offsetWidth,height:n.offsetHeight}))):requested;
+   node.style.left=`${point.x}px`;node.style.top=`${point.y}px`;
+   if(!refill)repaintRefill();
+  };
+  if(refill)repaintRefill=paint;
   paint();
   const down=e=>{if(e.button!==0||refill&&!e.target.closest('.refill-drag-handle'))return;gesture={id:e.pointerId,x:e.clientX,y:e.clientY,position:{...position}};moved=false;e.target.setPointerCapture?.(e.pointerId);e.stopPropagation();};
   const move=e=>{

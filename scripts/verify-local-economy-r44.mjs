@@ -4,6 +4,8 @@ import {createLocal} from '../src/local.js';
 export async function verifyLocalEconomy({context,load,output,results}){
  const r=createLocal('local','Jorge','Rival',Date.now(),'advanced','untimed','high','X',false,{faunaEnabled:false,territoryEnabled:false});r.players[0].score=999;
  const {page,errors}=await load(context,r);await page.setViewportSize({width:320,height:740});
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ await page.locator('.refill-trigger').waitFor({state:'visible'});
  const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
  const trigger=page.locator('.floating-refill [data-action="refill-hold"]');
  assert.equal(await trigger.count(),1);assert.equal(await page.locator('.floating-immunity').count(),2);

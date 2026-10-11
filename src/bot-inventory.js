@@ -17,10 +17,11 @@ export function chooseMachineCard(room,now=Date.now()){
   const inv=player.inventory,turn=inv.completedTurns||0;
   if(level!=='basic'&&inv.machineTradeTurn!==turn&&practiceTurn(room,actor).used.length===0){
    const stars=room.cells.filter(c=>c.symbol==='*').length;
-   const wanted=[...(toolCells(room,actor,'antidote').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['antidote']:[]),...(stars>=9?['reconquest']:stars?['ambush']:[]),'double'];
+   const wanted=[...(toolCells(room,actor,'sapper').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['sapper']:[]),...(toolCells(room,actor,'antidote').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['antidote']:[]),...(stars>=9?['reconquest']:stars?['ambush']:[]),'double'];
    for(const tool of wanted){const trade=tradeAvailability(room,actor,tool,now);if(inv.cards[tool]||!trade.allowed||player.score<3*trade.price)continue;const probe=structuredClone(room);probe.players.find(p=>p.id===actor).inventory.cards[tool]=1;if(canUsePracticeTool(probe,actor,tool,now))return {action:'trade',payload:{tool,playerId:actor}};}
   }
   const command=(tool,point,extra={})=>({action:'inventory',payload:{tool,playerId:actor,...point,...extra}});
+  if(usable('sapper')){const target=toolCells(room,actor,'sapper').find(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor));if(target)return command('sapper',target);}
   if(usable('antidote')){const target=toolCells(room,actor,'antidote').find(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor));if(target)return command('antidote',target);}
   for(const tool of ['reconquest','ambush'])if(usable(tool)){const target=toolCells(room,actor,tool)[0];if(target)return command(tool,target);}
   if(usable('immunity'))return command('immunity',{});

@@ -19,3 +19,18 @@ export function movePendingBomb(room,bombId,point,now){
  if(event.approaches)event.approaches[bomb.index]={...point,side:event.approaches[bomb.index]?.side||'north'};
  event.x=event.region[0].x;event.y=event.region[0].y;
 }
+export function disarmPendingBombs(room,point){
+ const bombs=pendingInvasionBombs(room),anchor=bombs.find(b=>b.x===point.x&&b.y===point.y);
+ if(!anchor)throw new Error('Elige una bomba de bombardeo todavía anunciada.');
+ // The selected announcement alone: never cancel another warning or its clock.
+ const event=room.territoryEvents.find(e=>e.id===anchor.eventId);
+ const targets=bombs.filter(b=>b.eventId===anchor.eventId).sort((a,b)=>Math.abs(a.x-point.x)+Math.abs(a.y-point.y)-Math.abs(b.x-point.x)-Math.abs(b.y-point.y)||a.index-b.index).slice(0,3);
+ const removed=new Set(targets.map(b=>key(b.x,b.y))),indices=new Set(targets.map(b=>b.index));
+ event.region=event.region.filter((_,index)=>!indices.has(index));
+ if(event.groups)event.groups=event.groups.map(g=>g.filter(p=>!removed.has(key(p.x,p.y)))).filter(g=>g.length);
+ if(event.paths)event.paths=event.paths.filter(p=>!removed.has(key(p.target.x,p.target.y)));
+ if(event.approaches)event.approaches=event.approaches.filter((_,index)=>!indices.has(index));
+ if(!event.region.length)room.territoryEvents=room.territoryEvents.filter(e=>e.id!==event.id);
+ else {event.x=event.region[0].x;event.y=event.region[0].y;}
+ return {disarmed:targets.length,eventId:event.id,cells:targets.map(({x,y})=>({x,y}))};
+}

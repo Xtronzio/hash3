@@ -35,6 +35,16 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
   let camera=state.box?clampCamera(state.box,bounds):{...bounds},fitted={...bounds},aspect=null,drag=null,pinch=null,frame=0,disposed=false;
   const pointers=new Map(),listeners=[];
   const listen=(node,type,fn,options)=>{node.addEventListener(type,fn,options);listeners.push(()=>node.removeEventListener(type,fn,options));};
+  const targetMenu=panel.querySelector('.target-jump-menu');
+  const fitTargetMenu=()=>{
+    if(!targetMenu)return;
+    const options=targetMenu.querySelector('.target-jump-options');
+    // The toolbar is above the map. Keep the downward menu within the actual
+    // viewport, including after rotation; scrolling retains every destination.
+    const top=targetMenu.querySelector('summary').getBoundingClientRect().bottom+5;
+    options.style.maxHeight=`${Math.max(0,window.innerHeight-top-8)}px`;
+  };
+  if(targetMenu){listen(targetMenu,'pointerdown',fitTargetMenu);listen(targetMenu,'toggle',fitTargetMenu);listen(window,'resize',fitTargetMenu);fitTargetMenu();}
   const draw=()=>{
     frame=0;if(disposed||!svg.isConnected)return;
     const rect=svg.getBoundingClientRect();if(!rect.width||!rect.height)return;

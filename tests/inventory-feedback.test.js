@@ -16,7 +16,7 @@ test('El contador suma unidades, baja al gastar y muestra cero aunque sea el tur
  for(const id in spent.players[0].inventory.cards)spent.players[0].inventory.cards[id]=0;
  spent.pairs[0].turn='O';
  const html=inventoryDockMarkup(spent,'local-x');
- assert.match(html,/Inventario · 0 cartas/);assert.match(html,/inventory-badge is-empty[^>]*>0</);
+ assert.match(html,/Inventario · 0 cartas/);assert.match(html,/inventory-badge is-empty[^>]*>0\/18</);
 });
 test('Una recarga se detecta por el sorteo, incluso si el total coincide tras consumir',()=>{
  const previous=start(),next=localCommand(previous,'inventory',{tool:'rival',playerId:'local-x'},now);

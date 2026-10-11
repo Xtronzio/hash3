@@ -23,7 +23,7 @@ const icons=kind=>kind==='work'?ecologyIcon('build')+ecologyIcon('destroy'):kind
 export function turnWarningsMarkup(game){
  const groups=new Map();
  for(const e of turnWarnings(game)){const prior=groups.get(e.kind);if(!prior||eventTurns(e)<eventTurns(prior))groups.set(e.kind,e);}
- return groups.size?`<nav class="ecology-warnings turn-warnings" aria-label="Avisos de eventos por turnos" aria-live="polite">${[...groups.values()].map(e=>`<button data-action="open-event-warning" data-kind="${e.kind}" class="ecology-warning-chip" aria-label="${label(e.kind)} en ${eventTurns(e)} turnos. Ver zona anunciada">${icons(e.kind)}<span>${label(e.kind)}</span><strong>${eventTurns(e)}↷</strong></button>`).join('')}</nav>`:'';
+ return groups.size?`<nav class="ecology-warnings turn-warnings" aria-label="Avisos de eventos por turnos" aria-live="polite">${[...groups.values()].sort((a,b)=>eventTurns(a)-eventTurns(b)).map(e=>`<button data-action="open-event-warning" data-kind="${e.kind}" class="ecology-warning-chip ${eventTurns(e)<=1?'is-imminent':''}" aria-label="${label(e.kind)} en ${eventTurns(e)} turnos. Ver zona anunciada">${icons(e.kind)}<span><small>${eventTurns(e)<=1?'IMPACTO INMINENTE':'AVISO DEL TERRITORIO'}</small>${label(e.kind)}</span><strong>${eventTurns(e)}<small>turnos</small></strong></button>`).join('')}</nav>`:'';
 }
 export function turnOutlookMarkup(game,playerId){
  const {rows,timed,recovery}=turnOutlook(game,playerId);

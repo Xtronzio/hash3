@@ -1,3 +1,4 @@
+import {verifyLocalPresentation} from './verify-local-presentation-r47.mjs';
 import {verifyLocalEconomy} from './verify-local-economy-r44.mjs';
 // Real Chromium input/layout checks; device emulation is not physical-device QA.
 import assert from 'node:assert/strict';
@@ -83,7 +84,7 @@ try{
   const png=await fs.readFile(path.join('docs',icon.href.slice('/hash3/'.length)));
   assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),icon.size);assert.equal(png.readUInt32BE(20),icon.size);
  }
- assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/apple-touch-icon-r08.png'));
+ assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/hash3-apple-touch-icon-r47.png'));
  results.push({pagesFaviconsAndAppleIconResolve:true,passed:true});
  for(const viewport of [{width:390,height:844},{width:1024,height:768}]){
   const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,serviceWorkers:'block'});
@@ -421,6 +422,7 @@ try{
  await verifyLocalTargets({context,load,output,results});
  await verifyInventoryDescriptions({context,load,output,results});
  await verifyLocalEconomy({context,load,output,results});
+ await verifyLocalPresentation({context,load,output,results});
  // R40 a full exchange pays both colors, then the hall exposes all new cards.
  const swapRoom=createLocal('local','X','O',Date.now(),'normal','untimed');swapRoom.faunaEnabled=false;swapRoom.territoryEnabled=false;
  swapRoom.players[0].inventory.cards.swap=1;
