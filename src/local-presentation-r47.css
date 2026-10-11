@@ -40,3 +40,4 @@
 @media(max-height:450px) and (orientation:landscape){.floating-refill{width:74px;}.refill-trigger,.refill-progress{width:70px;height:70px;min-height:70px;}.refill-emblem{width:39px;height:39px;}.refill-trigger small{bottom:5px;font-size:10px;}.lobby.paused-game{gap:4px;}.paused-game .paused-scores{min-height:44px;font-size:22px;padding:4px 30px 4px 12px;}.paused-game .lobby-header{min-height:22px;}.turn-warnings .ecology-warning-chip{min-height:48px;}}
 .brand .brand-mark{display:block;width:69px;height:29px;color:#f5f7fa;overflow:visible;}.hall-brand .brand-mark{width:86px;height:36px;}.paused-game .brand-mark{width:62px;height:26px;}
 #app>.lobby.paused-game{overflow:hidden;}.turn-warnings{justify-content:flex-start;}
+@media(max-height:450px) and (orientation:landscape){.paused-game .paused-minimap .target-jump-options,.inspection-fullscreen .target-jump-options{max-height:calc(100dvh - 220px);}}
