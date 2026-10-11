@@ -13,6 +13,8 @@
 .score-breakdown>span{font-size:12px;color:#aebcca;}.score-breakdown p{font-size:13px;margin-top:5px;}
 /* Visible stock uses the same two rows as the live game, outside score details. */
 .paused-game .brand{font-size:30px;}
+/* Keep Diana above its map controls, but below the expanded score panel. */
+.paused-game .paused-details{position:relative;isolation:isolate;z-index:0;}
 .paused-minimap>.inventory-effects-bar{padding:3px 0;border-bottom:1px solid #283241;}
 @media(max-height:450px) and (orientation:landscape){
  .lobby.paused-game{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:44px 40px minmax(0,1fr);gap:4px;}
