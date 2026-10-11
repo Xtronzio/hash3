@@ -27,7 +27,10 @@ export async function verifyLocalEconomy({context,load,output,results}){
  next=await saved();assert.equal(next.players[0].inventory.cards.antidote,3);assert.equal(next.players[0].score,900);
  assert.equal(await page.locator('.refill-selector').count(),0,'Three buys exhaust the hold allowance');await hold();assert.equal(await buy.isDisabled(),true);await page.locator('[data-action="close-refill"]').tap();
  // Compact in landscape too; scroll remains inside the tray.
- await hold();await page.setViewportSize({width:740,height:320});assert.ok((await page.locator('.refill-selector').boundingBox()).height<=320*.46+1);await page.screenshot({path:path.join(output,'recarga-horizontal-r46.png')});await page.setViewportSize({width:320,height:740});await page.locator('[data-action="close-refill"]').tap();
+ await hold();await page.locator('.refill-selector').waitFor();await page.setViewportSize({width:740,height:320});
+ await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.locator('.refill-selector').waitFor();
+ assert.ok((await page.locator('.refill-selector').boundingBox()).height<=320*.46+1);await page.screenshot({path:path.join(output,'recarga-horizontal-r46.png')});
+ await page.setViewportSize({width:320,height:740});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.locator('[data-action="close-refill"]').tap();
  // Opening from an already visible bag closes it; cancel never spends.
  await page.locator('[data-action="inventory"]').tap();await hold();assert.equal(await page.locator('#inventory-panel').count(),0);await page.locator('[data-action="close-refill"]').tap();
  const handle=page.locator('.refill-drag-handle'),original=await handle.boundingBox(),camera=await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop}));
