@@ -43,3 +43,12 @@ test('Paused disclosure defaults closed with points alone in summary; warning ur
  r.territoryEvents=[warning('late',3,3),{...warning('soon',3,1),kind:'pandemic'}];const warnings=turnWarningsMarkup(r);assert.ok(warnings.indexOf('Pandemia')<warnings.indexOf('Bombardeo'));assert.match(warnings,/is-imminent/);assert.match(warnings,/IMPACTO INMINENTE/);
  const manifest=JSON.parse(fs.readFileSync('public/manifest.webmanifest','utf8'));assert.equal(manifest.name,'#33');for(const k of ['id','scope','start_url'])assert.equal(manifest[k],'./');for(const icon of manifest.icons)assert.ok(fs.existsSync('public/'+icon.src));
 });
+
+test('Enlarged recharge stays separate when immunity is dragged across its saved position',async()=>{
+ const {separateFloatingControl}=await import('../src/floating-layout.js');const size={width:92,height:106},limits={x:292,y:500};
+ for(const blockers of [[{x:106,y:160,width:48,height:60}],[{x:6,y:90,width:48,height:60},{x:6,y:250,width:48,height:60}]]){
+  const point=separateFloatingControl({x:86,y:100},size,limits,blockers);assert.ok(point.x>=6&&point.y>=6&&point.x<=limits.x&&point.y<=limits.y);
+  for(const b of blockers)assert.ok(point.x>=b.x+b.width+8||point.x+size.width+8<=b.x||point.y>=b.y+b.height+8||point.y+size.height+8<=b.y);
+  assert.deepEqual(separateFloatingControl(point,size,limits,blockers),point);
+ }
+});

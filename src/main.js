@@ -650,9 +650,8 @@ async function refreshMetrics(){
 async function openHallRanking(){metricView='personal';openHallDialog('ranking','hall-ranking');await refreshMetrics();}
 function renderPaused(){
  inventorySelection=null;
- const own=ownPlayer(),totals={X:0,O:0};room.players.forEach(p=>{if(p.symbol)totals[p.symbol]+=p.score;});
+ const own=ownPlayer();
  const mode=isLocal()?(room.mode==='solo'?'VS máquina':'Sin conexión'):room.kind==='duel'?'Duelo':'Sala libre';
- const timer=room.pauseDuelMs==null?'':`${Math.floor(room.pauseDuelMs/60000)}:${String(Math.floor(room.pauseDuelMs/1000)%60).padStart(2,'0')} de duelo conservados`;
  const list=gameRank();
  const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
  const inspection=savedMapModel(room,own);
@@ -689,7 +688,7 @@ function renderLobby() {
   const scores={X:0,O:0};room.players.forEach(p=>{if(p.symbol)scores[p.symbol]+=p.score;});
   const teamResult=scores.X===scores.O?'Empate':scores.X>scores.O?(teams?'Gana el equipo X':'Gana X'):(teams?'Gana el equipo O':'Gana O');
   const count=players.length,canStart=duel?(teams?count>=4&&count%2===0:count===2):count>=1;
-  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">${brandMark}</span><span class="tag">${VERSION_LABEL} · PILOTO</span></header><div class="row spread"><h1 class="heading">${finished?'Resultado final':'La sala está abierta'}</h1>${host?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
+  app.innerHTML=`<section class="lobby"><header class="row spread lobby-header"><span class="brand heading">${brandMark}</span><span class="tag">${VERSION_LABEL}</span></header><div class="row spread"><h1 class="heading">${finished?'Resultado final':'La sala está abierta'}</h1>${host?'<span class="host">ERES ANFITRIÓN</span>':''}</div>
     ${finished?`<div class="finished"><h2 class="heading">${duel?teamResult:escape(winner?.name||'Sin jugadores')} · ${duel?`X ${scores.X} / O ${scores.O}`:winner?.score||0} puntos</h2><p>${duel?'Resultado por suma de puntos de X y O; incluye las sustituciones por máquina.':list.filter(p=>p.score===winner?.score).length>1?'Hay empate en la primera posición.':'Primero en el ranking individual.'}</p></div>`:`<div class="code-panel"><label>Código de la sala</label><div class="code mono">${escape(room.code)}</div><div class="row" style="margin-top:16px"><button class="small" data-action="copy-room-code">Copiar código</button><button class="small" data-action="share">Copiar enlace</button></div></div>`}
     <div class="row spread"><span>${count} jugador${count!==1?'es':''}</span><span class="muted">${finished?'Resultados individuales':duel?`${teams?'Equipos X/O':'1 contra 1'} · ${room.timeMode==='untimed'?'Sin reloj':room.durationSeconds/60+' min'}`:'Mundo continuo'}</span></div>
     ${!finished&&duel&&host?symbolSelector(room.hostSymbol||'X','lobby-symbol'):''}${!finished&&duel?`<p class="instructions">${room.hostSymbol?`El creador juega con <strong class="${room.hostSymbol.toLowerCase()}">${room.hostSymbol}</strong>. ${teams?'Los demás equipos y parejas se sortean.':`Su rival juega con <strong class="${room.hostSymbol==='X'?'o':'x'}">${room.hostSymbol==='X'?'O':'X'}</strong>.`}`:'El creador puede elegir X u O antes de empezar.'} X siempre empieza.</p>`:''}
@@ -872,7 +871,7 @@ app.addEventListener('click',async e=>{
     await run(async()=>{
       const destination={x:Number(b.dataset.x),y:Number(b.dataset.y)},payload=selection.source?{x:selection.source.x,y:selection.source.y,toX:destination.x,toY:destination.y,bombId:selection.source.bombId}:destination;
       const next=localCommand(room,'inventory',{tool:selection.tool,playerId:uid,...payload});
-      inventorySelection=null;accept(next);if(!next.lastEvent.points&&!next.lastEvent.landing?.length)notify(selection.tool==='sapper'?`Artificieros · ${next.lastEvent.disarmed} bombas desactivadas. Coloca tu ficha.`:`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Los puntos se conservan; coloca tu ficha.`);
+      inventorySelection=null;accept(next);if(!next.lastEvent.points&&!next.lastEvent.landing?.length)notify(selection.tool==='sapper'?`Artificieros · ${next.lastEvent.disarmed} ${next.lastEvent.disarmed===1?'bomba desactivada':'bombas desactivadas'}. Coloca tu ficha.`:`${practiceTools.find(t=>t.id===selection.tool).label} aplicada. Los puntos se conservan; coloca tu ficha.`);
     });return;
   }
   if(action==='hall-games'){await openMyGames();return;}
