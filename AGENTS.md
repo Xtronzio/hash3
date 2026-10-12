@@ -404,3 +404,8 @@ En Sin conexión conservar el acceso a la protección del otro colono dentro de 
 ## R0.21.59 · Checks alineados del selector
 
 Jorge pide alinear los checks de inventario propio/rival, fauna y fenómenos. Las etiquetas se estiran en la fila flex y justifican su contenido al final: los cuatro inputs comparten la misma base pese a distintas alturas de los iconos. Conservar agrupaciones, títulos, estados y configuración. Cambio CSS de presentación, sin modificar motor ni ruleVersion20.
+
+
+## R0.21.60 · Cuenta atrás, avisos compactos e iconos
+
+Jorge pide que las cifras de las cartas del territorio sean turnos para salir, avisos más compactos y revisar espadas de Soldados/Bomba atómica. En el motor por turnos, la barra muestra solo los turnos reales del aviso anunciado del tipo concreto (mínimo si hay varios); no sobrescribirlos con el siguiente sorteo de familia ni requisitos de figuras. Sin aviso no prometer aparición con número: previsiones de intento siguen en Próximos eventos y etiquetas accesibles con sus unidades reales. Obras filtran tareas pendientes del tipo, descartando las terminadas. Mantener ×N de barreras construidas. Avisos de44px y ancho acotado176, cuenta legible y superficie táctil44, conservar urgencia, orden, navegación y todos los eventos por scroll. Espadas vectoriales más sencillas y símbolo nuclear de tres sectores sin marco; mismos maestros en tablero, avisos, mapas, cartas y trueque. Presentación solamente, ruleVersion20, frecuencias, motor y guardados intactos.

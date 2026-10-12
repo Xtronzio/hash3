@@ -66,11 +66,11 @@ test('Three dianas follow positions across piece changes, terrain loss, pause an
  assert.deepEqual(loadLocalGames(storage,now)[0].watchTargets,r.watchTargets);
 });
 
-test('Player and territory inventories stay separate; appearance counters differ from announced turn countdowns',()=>{
+test('Player and territory inventories stay separate; territory cards agree with real warning turns while forecasts retain their actual units',()=>{
  const r=fresh();r.players[0].figures=33;r.territoryNextInvasion=27;r.territoryEvents=[{id:'warning',kind:'invader-rain',region:[{x:2,y:2}],turnsRemaining:2}];
  const player=inventoryStatusMarkup(r,{playerId:'local-x'}),territory=ecologyNavigationMarkup(r,'local-x'),warnings=ecologyWarningsMarkup(r);
  assert.doesNotMatch(player,/data-ecology-kind/);assert.doesNotMatch(territory,/data-tool/);
- assert.match(territory,/Próximo intento en 27 colocaciones/);assert.doesNotMatch(territory,/ecology-turn-badge|ecology-clock/);
+ assert.match(territory,/próximo intento de la familia en 27 colocaciones/);assert.match(territory,/data-ecology-countdown="invader-rain"[^>]*>2↷/);assert.doesNotMatch(territory,/ecology-clock/);
  assert.match(warnings,/Bombardeo invasor en 2 turnos/);assert.doesNotMatch(warnings,/segundos/);assert.equal(eventOutlook(r,'local-x').timed[0].turns,2);
 });
 
@@ -106,4 +106,15 @@ test('An appearance announced on the first Doble placement retains all three war
   r=move(r);assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,3);assert.equal(r.ecologyTurns,1);
   r=move(r);assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,2);
  }
+});
+
+test('Territory arrival badges use the pending task of each kind, freeze on pause and never promise an unannounced family draw',()=>{
+ const r=fresh();r.players[0].figures=33;r.faunaEnabled=true;r.habitatZones=[{placements:0,next:{work:58,rodent:58,worm:25}}];
+ r.works=[{id:'build',player:'local-x',build:[{x:3,y:0}],destroy:[],done:0,turnsRemaining:1},{id:'soldiers',player:'local-x',build:[],destroy:[{x:0,y:0}],done:0,turnsRemaining:2}];
+ r.territoryEvents=[{id:'warning',kind:'invader-rain',region:[{x:2,y:2}],turnsRemaining:3}];const before=structuredClone(r);
+ const card=(html,kind)=>html.match(new RegExp('<button[^>]*data-ecology-kind="'+kind+'"[^>]*>[^]*?<\\/button>'))[0];
+ let html=ecologyNavigationMarkup(r,'local-x');assert.match(card(html,'build'),/data-ecology-countdown="build"[^>]*>1↷/);assert.match(card(html,'destroy'),/data-ecology-countdown="destroy"[^>]*>2↷/);assert.match(card(html,'invader-rain'),/data-ecology-countdown="invader-rain"[^>]*>3↷/);
+ assert.doesNotMatch(card(html,'invader-colony'),/ecology-badge/);assert.doesNotMatch(card(html,'meteorites'),/ecology-badge/);assert.deepEqual(r,before);
+ r.status='paused';html=ecologyNavigationMarkup(r,'local-x',{inspection:true,now:now+999999});assert.match(card(html,'build'),/>1↷/);assert.match(card(html,'destroy'),/>2↷/);
+ r.works[0].done=1;html=ecologyNavigationMarkup(r,'local-x');assert.doesNotMatch(card(html,'build'),/ecology-badge/);assert.match(card(html,'destroy'),/>2↷/);
 });

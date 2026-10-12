@@ -6,7 +6,7 @@ import {pruneBrokenForms} from './landing-score.js';
 import {removeDefeatedInvasions} from './invasion-paths.js';
 
 export const NUCLEAR_MAX=33;
-export const nuclearIcon='<g data-icon="nuclear"><path d="M10 28H3v-7m26 0v7h-7M3 8V3h7m12 0h7v5"/><circle cx="16" cy="15" r="3"/><path d="M14 10 10 3a14 14 0 0 1 12 0l-4 7M11 16H3a14 14 0 0 0 6 11l4-7m6 0 4 7a14 14 0 0 0 6-11h-8"/></g>';
+export const nuclearIcon='<g data-icon="nuclear" data-symbol="radiation"><circle cx="16" cy="16" r="2"/><path d="m12.5 9.9-3-5.2a13 13 0 0 1 13 0l-3 5.2a7 7 0 0 0-7 0Z"/><path d="m12.5 9.9-3-5.2a13 13 0 0 1 13 0l-3 5.2a7 7 0 0 0-7 0Z" transform="rotate(120 16 16)"/><path d="m12.5 9.9-3-5.2a13 13 0 0 1 13 0l-3 5.2a7 7 0 0 0-7 0Z" transform="rotate(240 16 16)"/></g>';
 
 // Prepare once for the selection snapshot; never read territory on pointer pan.
 export function nuclearContext(room){
