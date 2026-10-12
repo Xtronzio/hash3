@@ -20,7 +20,7 @@ try{
    game.players[0].score=12730;const inv=game.players[0].inventory;
    for(const t of practiceTools)inv.cards[t.id]=0;
    for(const t of practiceTools.slice(0,12))inv.cards[t.id]=1;
-   inv.cards.hint=3;inv.cards.combo=3;inv.cards.bomb=1;inv.comboPending=1;
+   inv.cards.hint=3;inv.cards.combo=3;inv.cards.reconquest=1;inv.comboPending=1;
    game.players[0].freeExpansions=33;inv.immunity.cards['immunity-1']=333;
    const errors=[],requests=[];context.on('request',r=>{if(new URL(r.url()).hostname.endsWith('.supabase.co'))requests.push(r.url());});
    await context.route('**/*.supabase.co/**',r=>r.abort());await context.route('**/version.json*',r=>r.fulfill({status:404,body:''}));
@@ -38,15 +38,25 @@ try{
    await page.locator('.refill-selector').waitFor({timeout:5000});
    await page.locator('[data-action="refill-mode"][data-mode="exchange"]').click();await page.locator('[data-action="refill-replace"][data-tool="combo"]').click();
    for(const t of practiceTools){
-    const expected=t.id!=='combo'&&inv.cards[t.id]<3;
+    const expected=t.id!=='combo'&&inv.cards[t.id]<3&&CARD_PRICES[t.id]<=CARD_PRICES.combo;
     assert.equal(await page.locator(`[data-action="refill-buy"][data-tool="${t.id}"]`).isEnabled(),expected,`${name}: ${t.id}`);
    }
    await page.screenshot({path:path.join(output,`trueque-todos-los-tipos-r53-${name}.png`)});
-   await page.locator('[data-action="refill-buy"][data-tool="reconquest"]').click();
-   const after=await read();assert.equal(after.players[0].inventory.cards.reconquest,1);assert.equal(after.players[0].inventory.cards.combo,2);
-   assert.equal(after.players[0].score,12730-CARD_PRICES.reconquest);assert.equal(Object.values(after.players[0].inventory.cards).reduce((a,b)=>a+b),18);
+   assert.equal(await page.locator('.refill-value-cap').innerText(),'33 pts máx.');
+   await page.locator('[data-action="refill-buy"][data-tool="tornado"]').click();
+   await page.locator('[data-action="refill-replace"][data-tool="hint"]').click();
+   const stage=await read();
+   for(const t of practiceTools)assert.equal(await page.locator(`[data-action="refill-buy"][data-tool="${t.id}"]`).isEnabled(),t.id!=='hint'&&stage.players[0].inventory.cards[t.id]<3&&CARD_PRICES[t.id]<=3,`${name}: 3 → ${t.id}`);
+   await page.locator('[data-action="refill-buy"][data-tool="destroy"]').click();
+   await page.locator('[data-action="refill-replace"][data-tool="reconquest"]').click();
+   const higher=await read();
+   for(const t of practiceTools)assert.equal(await page.locator(`[data-action="refill-buy"][data-tool="${t.id}"]`).isEnabled(),t.id!=='reconquest'&&higher.players[0].inventory.cards[t.id]<3,`${name}: 333 → ${t.id}`);
+   await page.locator('[data-action="refill-buy"][data-tool="antidote"]').click();
+   const after=await read();assert.equal(after.players[0].inventory.cards.reconquest,0);assert.equal(after.players[0].inventory.cards.combo,2);assert.equal(after.players[0].inventory.cards.hint,2);assert.equal(after.players[0].inventory.cards.antidote,1);
+   assert.equal(after.players[0].score,12730-33-3-33);assert.equal(Object.values(after.players[0].inventory.cards).reduce((a,b)=>a+b),18);
+   assert.equal(await page.locator('.refill-selector').count(),0);
    assert.equal(after.players[0].inventory.comboPending,1);assert.equal(after.players[0].freeExpansions,33);assert.equal(after.players[0].inventory.immunity.cards['immunity-1'],333);
-   assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.pairs,before.pairs);assert.equal(after.ruleVersion,17);
+   assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.pairs,before.pairs);assert.equal(after.ruleVersion,18);
    await page.screenshot({path:path.join(output,`trueque-completado-r53-${name}.png`)});
    const identity=await page.evaluate(async()=>{
     const links=[...document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]')];
@@ -60,7 +70,7 @@ try{
    const header=await page.locator('.brand-mark').boundingBox();assert.ok(header.width>30&&header.height>10);
    await page.locator('.brand').screenshot({path:path.join(output,`cabecera-r53-${name}.png`)});
    const iconPage=await context.newPage();await iconPage.goto(origin+'/icons/hash3-icon-512-r53.png');await iconPage.screenshot({path:path.join(output,`icono-r53-${name}.png`)});
-   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allTargetsBelowThree:true,full18WithFourteenTypes:true,zeroStockReconquestSelected:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,noOverflow:true,noOnlineRequests:true,passed:true});
+   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,noOverflow:true,noOnlineRequests:true,passed:true});
    await context.close();
   }catch(error){
    for(const context of browser.contexts())for(const page of context.pages())await page.screenshot({path:path.join(output,`fallo-r53-${name}.png`)}).catch(()=>{});

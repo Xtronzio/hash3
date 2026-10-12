@@ -26,6 +26,7 @@ on:
       - release/local-colors-r51
       - release/local-transfer-r52
       - release/local-brand-trade-r53
+      - release/local-value-cap-r54
   workflow_dispatch:
 permissions:
   contents: write
