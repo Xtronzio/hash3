@@ -177,13 +177,13 @@ export function inventoryStatusMarkup(game,{paused=false,playerId,preferences}={
  if(!inventoryEnabled(game,actor))return paused?`<div class="inventory-effects-bar">${capacity}</div>`:'';
  const effects=activeInventoryEffects(game),inv=inventoryFor(game,actor),cards=inv.cards;
  // Prepared only when a game snapshot renders; never during pan, zoom or clock ticks.
- const shortcuts=inventoryRows(id=>inventoryShortcutMarkup(game,actor,id,{paused}),normalizeInventoryPreferences(preferences));
- const otherImmunity=game.mode==='local'?game.players.filter(p=>p.id!==actor&&inventoryEnabled(game,p.id)).map(p=>inventoryShortcutMarkup(game,p.id,'immunity',{paused})).join(''):'';
+ const prefs=normalizeInventoryPreferences(preferences),other=game.mode==='local'&&!paused?game.players.find(p=>p.id!==actor&&inventoryEnabled(game,p.id)):null;
+ const shortcuts=inventoryRows(id=>id==='other-immunity'?inventoryShortcutMarkup(game,other.id,'immunity',{paused}):inventoryShortcutMarkup(game,actor,id,{paused}),{...prefs,order:other?[...prefs.order,'other-immunity']:prefs.order});
  const pending=effects.filter(e=>!['frontier','border'].includes(e.tool)&&(e.tool!=='immunity'||game.mode==='solo'&&e.player!==actor)).map(e=>{
   const name=e.tool==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===e.tool).label;
   const detail=e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
   const label=`${name} · ${e.symbol} · ${detail}${paused?' · pausado':''}`;
   return `<span class="inventory-effect inventory-pending-effect is-active ${e.symbol.toLowerCase()}" data-inventory-effect="${e.tool}" data-effect-player="${e.player}" role="img" aria-label="${label}" title="${label}">${toolIcon(e.tool)}<small ${e.tool==='immunity'?`data-immunity-clock="${e.player}"`:''}>${e.remaining??'•'}</small></span>`;
  }).join('');
- return `<div class="inventory-effects-bar" role="group" aria-label="Accesos rápidos al inventario">${capacity}<div class="inventory-shortcuts" role="group" aria-label="Cartas de ${player.symbol}">${shortcuts}</div><div class="inventory-active-effects" role="group" aria-label="Efectos en curso e inmunidad del otro colono">${otherImmunity}${pending}</div></div>`;
+ return `<div class="inventory-effects-bar" role="group" aria-label="Accesos rápidos al inventario">${capacity}<div class="inventory-shortcuts" role="group" aria-label="Cartas de ${player.symbol}">${shortcuts}</div><div class="inventory-active-effects" role="group" aria-label="Efectos en curso">${pending}</div></div>`;
 }
