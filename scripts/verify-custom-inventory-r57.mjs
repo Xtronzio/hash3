@@ -45,7 +45,7 @@ try{
    const fullHeight=await page.locator('.viewport').evaluate(n=>n.clientHeight);assert.ok(fullHeight>=initialHeight+100,`${name}: folding did not enlarge territory (${initialHeight}→${fullHeight})`);
    assert.equal(await page.locator('.board-inventory-status .custom-band-content').isVisible(),false);assert.equal(await page.locator('.board-territory-status .custom-band-content').isVisible(),false);
    const savedPosition=(await read()).inventoryPreferences['local-x'].positions.double;
-   await page.reload();await page.locator('.game .viewport').waitFor();await frame(page);assert.equal(await page.locator('.board-inventory-status .custom-band-content').isVisible(),false);assert.deepEqual((await read()).inventoryPreferences['local-x'].positions.double,savedPosition);
+   await page.reload();await page.locator('.paused-game').waitFor();assert.equal((await read()).status,'paused');await tap(page.locator('[data-action="resume"]'));await page.locator('.game .viewport').waitFor();await frame(page);assert.equal(await page.locator('.board-inventory-status .custom-band-content').isVisible(),false);assert.deepEqual((await read()).inventoryPreferences['local-x'].positions.double,savedPosition);
    // Favorites are also reachable from the overview, where selecting a card
    // closes that overview before targeting the actual board.
    await tap(page.locator('[data-action="map"]'));await frame(page);assert.equal(await page.locator('.world-map > .floating-inventory-card').count(),3);
@@ -66,6 +66,11 @@ try{
    await tap(page.locator('[data-action="resume"]'));await frame(page);await tap(page.locator('.map-wrap > [data-floating-tool="nuclear"] button'));await tap(page.locator('.terrain-cell[data-x="4"][data-y="4"]'));const preImpact=await read();
    await tap(page.locator('[data-action="confirm-area-tool"]'));await frame(page);after=await read();assert.equal(after.lastEvent.demolished,33);assert.equal(after.terrain.length,48);assert.equal(after.players[0].inventory.cards.nuclear,0);assert.equal(after.players[0].score,12345);assert.deepEqual(after.players[1],preImpact.players[1]);assert.equal(after.pairs[0].turn,'X');assert.equal(after.players[0].placements,preImpact.players[0].placements);assert.equal(await page.locator('.map-wrap > [data-floating-tool="nuclear"] button').isEnabled(),false);
    const hit=new Set(expected.map(c=>`${c.x},${c.y}`));assert.ok(after.cells.every(c=>!hit.has(`${c.x},${c.y}`)));await page.screenshot({path:path.join(output,`nuclear-demolition-r57-${name}.png`)});
+   // A large wallet never upgrades a 3/33-card exchange into a 333 card.
+   const refill=page.locator('[data-action="refill-hold"]'),rbox=await refill.boundingBox();await page.mouse.move(rbox.x+rbox.width/2,rbox.y+rbox.height/2);await page.mouse.down();await page.waitForTimeout(1150);await page.mouse.up();await page.locator('.refill-selector').waitFor();
+   await tap(page.locator('[data-action="refill-mode"][data-mode="exchange"]'));await tap(page.locator('[data-action="refill-replace"][data-tool="double"]'));
+   for(const tool of ['nuclear','reconquest'])assert.equal(await page.locator(`[data-action="refill-buy"][data-tool="${tool}"]`).isEnabled(),false);
+   assert.match(await page.locator('.refill-value-cap').innerText(),/33/);await tap(page.locator('[data-action="close-refill"]'));assert.equal((await read()).players[0].score,12345);assert.equal((await read()).players[0].inventory.cards.double,1);
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,dragOrderAndFavoritePlacement:true,persistentIndependentPreferences:true,barFoldingGainsHeight:fullHeight-initialHeight,foldedStockAndPauseResume:true,nuclearPreviewCancelAnd33Demolition:true,conservesPointsTurnsAndOtherInventory:true,mobileAndLandscapeWithinViewport:true,noOnlineRequests:true,passed:true});await context.close();
   }catch(error){for(const c of browser.contexts())for(const p of c.pages())await p.screenshot({path:path.join(output,`fallo-r57-${name}.png`)}).catch(()=>{});throw error;}finally{await browser.close();}
  }

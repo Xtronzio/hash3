@@ -192,7 +192,7 @@ function accept(next) {
   const previousRoom=room,landing=landingFeedback(room,next),feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
   if(changed){for(const k of Object.keys(ecologyFocus))delete ecologyFocus[k];resetInventoryFeedback();startRodentEffect(null);}
-  if(changed){refillPlayer=null;targetMarking=false;eventsOpen=false;pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};previousTarget=null;activeKey=null;figureEffect=null;landingEffect=null;clearTimeout(landingGlowTimer);clearTimeout(landingFloatTimer);clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
+  if(changed){inventoryEditorOpen=false;inventoryEditorActor=null;disposeInventoryEditor?.();disposeInventoryEditor=null;refillPlayer=null;targetMarking=false;eventsOpen=false;pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};previousTarget=null;activeKey=null;figureEffect=null;landingEffect=null;clearTimeout(landingGlowTimer);clearTimeout(landingFloatTimer);clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
   room=next;if(isLocal()){uid=localUid();}else {save('hash3_room',room.code);const me=room.players.find(p=>p.id===uid);if(me)save('hash3_name',me.name);}
   if(superHelpPlan&&(room.id!==superHelpPlan.roomId||room.version!==superHelpPlan.version||room.status!=='playing'))superHelpPlan=null;

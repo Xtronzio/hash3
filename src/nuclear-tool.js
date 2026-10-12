@@ -17,7 +17,7 @@ export function nuclearContext(room){
  for(const c of room.cells)if(shields.has(c.id))blocked.add(key(c.x,c.y));
  // A normal bomb can break whole barriers. Nuclear uses the same convention,
  // except an immune barrier is excluded from both the blast and its footprint.
- for(const f of room.frontiers||[])if(isImmune(room,f.by))for(const c of frontierCells({frontiers:[f]}))blocked.add(key(c.x,c.y));
+ for(const f of room.frontiers||[])if(isImmune(room,f.by))for(const c of frontierCells({...room,frontiers:[f]}))blocked.add(key(c.x,c.y));
  const terrain=terrainOf(room).filter(c=>!blocked.has(key(c.x,c.y)));
  return {terrain:new Map(terrain.map(c=>[key(c.x,c.y),c])),blocked};
 }
