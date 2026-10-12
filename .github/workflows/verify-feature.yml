@@ -28,6 +28,7 @@ on:
       - release/local-brand-trade-r53
       - release/local-value-cap-r54
       - release/local-brand-size-r55
+      - release/local-bombs-r56
   workflow_dispatch:
 permissions:
   contents: write
@@ -52,6 +53,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-bombs-r56.mjs
       - run: npm run verify:brand-trade
       - run: npm run verify:browser
       - run: npm run verify:transfer

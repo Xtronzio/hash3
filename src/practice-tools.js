@@ -1,7 +1,7 @@
 import {initializeWildcardUsage} from './wildcard-usage.js';
 import {microLength,microSelectionOptions} from './micro-expansion.js';
 import {inventoryEnabled} from './inventory-enabled.js';
-import {pendingInvasionBombs} from './pending-bombs.js';
+import {pendingInvasionBombs,activeInvasionBombs} from './pending-bombs.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
 import {migrateLegacyWalls} from './wall-migration.js';
 import {boardCellLimit} from './board-limits.js';
@@ -34,7 +34,7 @@ export const practiceTools=[
   {id:'ambush',label:'Emboscada',description:'Expulsa hasta tres invasores cercanos a la celda elegida. Conserva terreno y puntos; no afecta X, O ni comodines. Después coloca tu ficha.',button:'Elegir invasor'},
   {id:'reconquest',label:'Reconquista',description:'Expulsa hasta 33 invasores cercanos a la celda elegida, sin perder terreno ni puntos. No afecta X, O ni comodines. Después coloca tu ficha.',button:'Elegir invasor'},
   {id:'antidote',label:'Antídoto',description:'Protege una celda amenazada por un aviso concreto de Contagio o Pandemia antes del impacto. No cancela las demás conversiones ni cambia su plazo. Cuesta 33 puntos por unidad en el trueque. Después coloca tu ficha.',button:'Elegir celda amenazada'},
-  {id:'sapper',label:'Artificieros',description:'Desactiva hasta tres bombas de un Bombardeo todavía anunciado: la seleccionada y las dos más cercanas del mismo aviso. Conserva terreno, fichas y puntos; las demás bombas mantienen su plazo. Cuesta 33 puntos por unidad. Después coloca tu ficha.',button:'Elegir bomba anunciada'},
+  {id:'sapper',label:'Artificieros',description:'Desactiva hasta tres bombas: la seleccionada y las dos más cercanas del mismo aviso o foco activo de Bombardeo. Conserva terreno y puntos; las restantes mantienen su plazo y crecimiento. Las ocupaciones estables se recuperan con Emboscada o Reconquista. Cuesta 33 puntos por unidad. Después coloca tu ficha.',button:'Elegir bomba'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
 // Variety has no separate cap: a normal 18-card hand can hold 18 distinct types.
@@ -95,7 +95,7 @@ export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=
   const p=game?.pairs?.[0];if(!p)return [];
   if(['expand-2','expand-3'].includes(tool))return microSelectionOptions(game,microLength(tool),selected);
   if(['ambush','reconquest'].includes(tool))return game.cells.filter(c=>c.symbol==='*'&&!habitatBlocked(game,c.x,c.y));
-  if(tool==='sapper')return pendingInvasionBombs(game);
+  if(tool==='sapper')return [...pendingInvasionBombs(game),...activeInvasionBombs(game)];
   if(tool==='antidote'){const seen=new Map(),occupied=new Set(game.cells.filter(c=>['X','O','*','#'].includes(c.symbol)).map(c=>key(c.x,c.y)));for(const event of game.territoryEvents||[])if(['contagion','pandemic'].includes(event.kind)&&(event.turnsRemaining>0||event.nextAt>game.clockNow))for(const c of event.region||[])if(!(event.antidotes||[]).some(p=>p.x===c.x&&p.y===c.y)&&occupied.has(key(c.x,c.y)))seen.set(key(c.x,c.y),{x:c.x,y:c.y});return [...seen.values()];}
   if(tool==='tornado')return tornadoOptions(game);
   if(tool==='bomb')return bombOptions(game);

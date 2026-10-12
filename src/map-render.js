@@ -1,5 +1,5 @@
 import {targetColors} from './watch-targets.js';
-import {invaderIcon} from './invader-mark.js';
+import {invaderIcon,invasionBombIcon} from './invader-mark.js';
 import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
 import {frontierMarkup} from './frontiers.js';
 import {wormTrailMarkup} from './worm-trails.js';
@@ -13,7 +13,7 @@ export function overviewCells(terrain){
  return [...paths.values()].map(p=>`<path fill="${p.frontier?'none':p.fill}" ${p.frontier?`stroke="${p.fill}" stroke-width=".14" stroke-linecap="round"`:''} d="${p.d}" ${p.eaten?'stroke="var(--yellow)" stroke-width=".08"':''}/>`).join('');
 }
 export function mapCellSymbols(terrain){
- return `<g class="map-cell-symbols inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${terrain.map(p=>p.symbol==='X'?`<path data-symbol="X" d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle data-symbol="O" cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:p.symbol==='*'?`<g data-symbol="*"><rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" fill="#161109" stroke="none"/><g transform="translate(${p.x} ${p.y}) scale(.015625)" stroke="var(--yellow)">${invaderIcon}</g></g>`:p.symbol==='#'?`<path data-symbol="#" d="M${p.x+.4} ${p.y+.2}l-.1 .6m.4-.6-.1 .6M${p.x+.2} ${p.y+.4}h.6m-.6 .2h.6"/>`:'').join('')}</g>`;
+ return `<g class="map-cell-symbols inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${terrain.map(p=>p.symbol==='X'?`<path data-symbol="X" d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle data-symbol="O" cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:p.symbol==='*'?`<g data-symbol="*" ${p.invasionBomb?'data-invasion-bomb="active"':''}><rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" fill="#161109" stroke="none"/><g transform="translate(${p.x} ${p.y}) scale(.015625)" stroke="var(--yellow)" color="var(--yellow)">${p.invasionBomb?invasionBombIcon:invaderIcon}</g></g>`:p.symbol==='#'?`<path data-symbol="#" d="M${p.x+.4} ${p.y+.2}l-.1 .6m.4-.6-.1 .6M${p.x+.2} ${p.y+.4}h.6m-.6 .2h.6"/>`:'').join('')}</g>`;
 }
 export function mapFrameMarkup(model){
  return (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="#e3e5e9" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
