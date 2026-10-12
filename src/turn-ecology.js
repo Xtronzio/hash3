@@ -12,6 +12,6 @@ export function initializeTurnEcology(room){
  if(room.ecologyRecovery){room.ecologyRecovery={moves:Math.min(3,room.ecologyRecovery.moves??3)};}
  for(const z of room.habitatZones||[]){z.livingInitialized=true;delete z.clockNext;delete z.clockRemaining;}
  for(const k of ['territoryNextNaturalAt','territoryNextInvaderAt']){delete room[k];delete room[k+'Remaining'];}
- room.turnEcologyVersion=1;room.ruleVersion=13;
+ room.turnEcologyVersion=1;room.ruleVersion=Math.max(13,room.ruleVersion||0);
 }
 export const ecologyTurnIds=room=>new Set([...(room.territoryEvents||[]),...(room.works||[]),...(room.bombs||[]),...(room.rodentRaids||[]),...(room.worms||[])].map(e=>e.id));

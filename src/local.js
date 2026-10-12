@@ -32,14 +32,14 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(!['X','O'].includes(playerSymbol))throw new Error('Elige X u O.');
   const x='local-x',o='local-o';
   const humanId=playerSymbol==='X'?x:o,rivalName=mode==='solo'?`Máquina · ${machineLevelLabel(difficulty)}`:secondName;
-  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:20,mode,level,timeMode,playerSymbol,playerInventory:ecology.playerInventory!==false,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
+  const room={id:id(),code:'LOCAL',host:humanId,status:'playing',clockNow:now,version:1,ruleVersion:21,mode,level,timeMode,playerSymbol,playerInventory:ecology.playerInventory!==false,...(mode==='solo'?{difficulty,humanId,machineInventory:machineInventory===true}:{}),createdAt:new Date(now).toISOString(),updatedAt:new Date(now).toISOString(),turnSeconds:timeMode==='untimed'?null:TURN_SECONDS,faunaEnabled:ecology.faunaEnabled!==false,territoryEnabled:ecology.territoryEnabled!==false,
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
   if(CELL_TARGETS.includes(ecology.cellTarget))room.cellTarget=ecology.cellTarget;
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
-  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});initializeRodents(room,now);initializeFreeExpansions(room);return room;
+  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {
   if(finishAtMatchGoal(room,now))return;
@@ -63,7 +63,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=20;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=21;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now,random);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -93,8 +93,9 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     const earned=figureWindows([...room.cells,candidate],candidate.x,candidate.y,symbol,room.level,null,localLiving(room)).filter(f=>!room.forms.includes(f.id)).length;
     if(earned)territoryPreview={...room,players:room.players.map(player=>player.symbol===symbol?{...player,figures:player.figures+earned}:player)};
   }
-  const mayAnnounce=places&&territoryPlacementDue(territoryPreview,now,1,{naturalOnly:true})||grows&&territoryPlacementDue(room,now,0,{naturalOnly:true});
-  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=immunityChanged||advanced||original.turnEcologyVersion!==room.turnEcologyVersion||original.inhabitantReclaimVersion!==room.inhabitantReclaimVersion||original.habitatVersion!==room.habitatVersion||original.wormLifecycleVersion!==room.wormLifecycleVersion||original.invasionVersion!==room.invasionVersion||original.worms?.some(w=>!w.turnDriven)&&['local','solo'].includes(room.mode);
+  const completes=!(room.practiceTurn?.remaining>1);
+  const mayAnnounce=places&&completes&&territoryPlacementDue(territoryPreview,now,1,{naturalOnly:true})||grows&&territoryPlacementDue(room,now,0,{naturalOnly:true});
+  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=original.territoryPlanVersion!==room.territoryPlanVersion||immunityChanged||advanced||original.turnEcologyVersion!==room.turnEcologyVersion||original.inhabitantReclaimVersion!==room.inhabitantReclaimVersion||original.habitatVersion!==room.habitatVersion||original.wormLifecycleVersion!==room.wormLifecycleVersion||original.invasionVersion!==room.invasionVersion||original.worms?.some(w=>!w.turnDriven)&&['local','solo'].includes(room.mode);
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='request-free-expansion'){
     throw new Error('La ampliación voluntaria se solicita con Ampliación inteligente desde 333 figuras.');

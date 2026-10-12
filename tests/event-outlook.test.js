@@ -13,8 +13,8 @@ test('El control descuenta colocaciones reales y respeta los siguientes umbrales
  assert.equal(rows.find(e=>e.kind==='neutral').remaining,8);
  game.habitatZones[0].next.worm=333;game.habitatZones[0].placements=305;
  assert.equal(eventOutlook(game,'local-x').rows.find(e=>e.kind==='worm').remaining,28);
- const territory=rows.find(e=>e.kind==='territory');assert.equal(territory.remaining,98);assert.equal(territory.warning,3);
- assert.equal(rows.find(e=>e.kind==='invaders').remaining,32);
+ const territory=rows.find(e=>e.kind==='territory');assert.equal(territory.remaining,32);assert.equal(territory.warning,3);
+ assert.equal(rows.find(e=>e.kind==='invaders').remaining,65);
 });
 test('Fenómenos y recuperación suspenden los intentos; fauna apagada y roedores no inventan reloj',()=>{
  const game=fresh();game.territoryEvents=[{id:'u',kind:'ufo',turnsRemaining:3}];
@@ -29,7 +29,7 @@ test('Pausa mantiene las cuentas de intervenciones y recuperación, sin leer fic
  const view=eventOutlook(game,'local-x',now+999999);assert.equal(view.timed[0].turns,2);assert.equal(view.recovery.seconds,0);
 });
 test('Los números explican lo que falta y los avisos expresan cuándo actúan',()=>{
- const game=fresh();let html=eventOutlookMarkup(game,'local-x');assert.match(html,/Faltan<\/small>33<small>colocaciones/);
+ const game=fresh();let html=eventOutlookMarkup(game,'local-x');assert.match(html,/Faltan<\/small>33<small>turnos/);
  game.territoryEvents=[{id:'event',kind:'ufo',turnsRemaining:2}];html=eventOutlookMarkup(game,'local-x');assert.match(html,/2<small>turnos/);assert.match(html,/Próximas apariciones/);
 });
 
@@ -42,9 +42,9 @@ test('Active rodents and announced worms report turns without scanning terrain o
 });
 
  test('The additional phenomenon cycle reports remaining shared placements without reading cells',()=>{
- const g=fresh();g.players[0].figures=99;g.terrain=Array(999);g.players[0].placements=12;g.players[1].placements=5;g.territoryNextPlacement=33;
+ const g=fresh();g.players[0].figures=99;g.terrain=Array(999);g.ecologyTurns=17;g.players[0].placements=12;g.players[1].placements=5;g.territoryNextPlacement=33;
  Object.defineProperty(g,'cells',{get(){throw Error('clock scanned cells');}});
- const row=eventOutlook(g,'local-x').rows.find(e=>e.kind==='territory');assert.equal(row.remaining,16);assert.equal(row.unit,'colocaciones entre ambos');assert.equal(row.requiresFigures,false);
+ const row=eventOutlook(g,'local-x').rows.find(e=>e.kind==='territory');assert.equal(row.remaining,16);assert.equal(row.unit,'turnos completos');assert.equal(row.requiresFigures,false);
  assert.match(eventOutlookMarkup(g,'local-x'),/Fenómenos locales y de gran escala/);
  });
 
@@ -57,7 +57,7 @@ test('Activity countdown shows figures before 33 and shared placements after the
 
 test('Invasion countdown is separate and its warning leaves fauna active',()=>{
  const g=fresh();g.players[0].figures=99;g.territoryNextPlacement=333;g.territoryNextInvasion=66;
- g.players[0].placements=33;g.territoryEvents=[{id:'i',kind:'invader-colony',nextAt:now+33000}];
+ g.ecologyTurns=33;g.players[0].placements=33;g.territoryEvents=[{id:'i',kind:'invader-colony',nextAt:now+33000}];
  const rows=eventOutlook(g,'local-x').rows;
  assert.equal(rows.find(r=>r.kind==='territory').remaining,300);assert.equal(rows.find(r=>r.kind==='invaders').remaining,33);
  assert.equal(rows.find(r=>r.kind==='worm').suspended,false);

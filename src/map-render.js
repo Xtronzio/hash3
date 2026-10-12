@@ -21,16 +21,22 @@ export function mapFrameMarkup(model){
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){
- return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[])};
+ return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[])};
 }
 export function mapWindowMarkup(model,index,box,scale){
  const detail=box.width*box.height<=MAP_DETAIL_LIMIT,cells=detail?index.detail.query(box):index.coarse.query(box);
  const walls=detail?frontierMarkup({frontiers:[{cells:index.barriers.query(box)}]}):frontierMarkup({frontiers:[{cells:index.coarseBarriers.query(box)}]});
  const worms=detail?`<g class="worm-map-trail" fill="none" stroke="var(--yellow)" stroke-width=".07" stroke-linecap="round">${wormTrailMarkup(index.worms.query(box))}</g>`:'';
  const growth=detail?invasionGrowthMarkup(index.growth.query(box)):'';
- return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+mapFrameMarkup(model);
+ const threats=threatMarkup(index.threats?.query(box)||[],{compact:!detail});
+ return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+threats+mapFrameMarkup(model);
 }
 
 export function invasionGrowthMarkup(points){
  return `<g class="map-invasion-growth" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08">${points.map(c=>`<rect x="${c.x+.07}" y="${c.y+.07}" width=".86" height=".86"><title>Invasión: esta casilla puede expandirse</title></rect>`).join('')}</g>`;
+}
+
+export function threatMarkup(points,{compact=false}={}){
+ if(compact)return `<g class="map-territory-threat" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08"><path d="${points.map(c=>`M${c.x+.04} ${c.y+.04}h.92v.92h-.92Z`).join('')}"/><title>Celdas amenazadas</title></g>`;
+ return `<g class="map-territory-threat" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08">${points.map(c=>`<rect x="${c.x+.04}" y="${c.y+.04}" width=".92" height=".92"><title>Celda amenazada</title></rect>`).join('')}</g>`;
 }

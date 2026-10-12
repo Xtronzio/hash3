@@ -1,3 +1,4 @@
+import {plannedEcology} from './living-balance.js';
 import {key} from './game.js';
 export const HABITAT_REFERENCE=333;
 export const HABITAT_FREQUENCIES={rodent:33,bomb:66,worm:33,work:66};
@@ -18,7 +19,7 @@ export function habitatZone(room,area,frequencies){
  if(!matching.length)zone.placements=room.players.filter(p=>{
   const pair=room.pairs.find(v=>v.x===p.id||v.o===p.id),anchor=pair?.terrainAnchor||pair?.active;
   return anchor&&coords.has(key(anchor.x,anchor.y));
- }).reduce((n,p)=>n+(p.placements||0),0);
+ }).reduce((n,p)=>n+(plannedEcology(room)?p.ecologyPlacements??p.placements??0:p.placements||0),0);
  for(const kind of Object.keys(frequencies)){
   zone.credit[kind]=matching.reduce((n,z)=>n+(z.credit[kind]||0),0)%1;
   const interval=habitatInterval(frequencies[kind],area.length);

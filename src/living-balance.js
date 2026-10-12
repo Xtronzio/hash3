@@ -6,7 +6,8 @@ export const livingFactor=size=>Math.max(1,Math.round(Math.sqrt(Math.max(0,size)
 export const livingInterval=(frequency,size)=>3*Math.ceil(frequency*Math.sqrt(livingFactor(size))/3);
 export const livingClock=(kind,size)=>33000*Math.ceil(LIVING_CLOCKS[kind]*Math.sqrt(livingFactor(size))/33000);
 export const livingMinimum=room=>localLiving(room)?33:99;
-export const livingAttempt=(room,family)=>localLiving(room)?family==='invaders'?33:99:null;
+export const plannedEcology=room=>localLiving(room)&&room.status!=='finished'&&(room.ruleVersion||0)>=21;
+export const livingAttempt=(room,family)=>localLiving(room)?plannedEcology(room)?family==='invaders'?66:33:family==='invaders'?33:99:null;
 export const livingEventClock=(room,family)=>family==='invaders'?99000:room.matchGoal?.type==='time'&&room.matchGoal.target===180?99000:198000;
 export const livingFirstClock=(room,family)=>family==='invaders'?66000:livingEventClock(room,family);
 export function livingImpact(room,kind,rule){
