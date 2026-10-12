@@ -30,7 +30,7 @@ export async function verifyLocalColors({context,load,output,results}){
   const control=await page.locator('.inventory-dock-button').boundingBox();assert.ok(control.x>=0&&control.x+control.width<=viewport.width);
   await page.screenshot({path:path.join(output,`mochila-cian-sin-franja-r51-${viewport.width}.png`)});
   assert.deepEqual(await saved(),before,'Reading full pending inventory must not refill or change a save');
-  await page.locator('[data-action="pause"]').tap();assert.equal(await page.locator('.paused-minimap .inventory-capacity-value').innerText(),'18/18');assert.equal(await color(page.locator('.paused-minimap .inventory-capacity-value')),cyan);
+  await page.locator('[data-action="pause"]').tap();const ownCounter=page.locator('.paused-minimap [data-paused-inventory="own"] .inventory-capacity-value');assert.equal(await ownCounter.innerText(),'18/18');assert.equal(await color(ownCounter),'rgb(255, 74, 88)');
   assert.equal(await color(page.locator('.paused-minimap [data-ecology-kind="barriers"]')),yellow);
   await page.screenshot({path:path.join(output,`pausa-colores-r51-${viewport.width}.png`)});
   assert.deepEqual(errors,[]);await page.close();

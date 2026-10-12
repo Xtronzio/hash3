@@ -59,18 +59,47 @@ try{
    assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.pairs,before.pairs);assert.equal(after.ruleVersion,18);
    await page.screenshot({path:path.join(output,`trueque-completado-r53-${name}.png`)});
    const identity=await page.evaluate(async()=>{
-    const links=[...document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]')];
+    const links=[...document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"],link[rel="apple-touch-icon-precomposed"]')];
     const icons=[];for(const link of links){const response=await fetch(link.href);const blob=await response.blob();const bitmap=await createImageBitmap(blob);icons.push({href:link.href,width:bitmap.width,height:bitmap.height,ok:response.ok});bitmap.close();}
     const manifest=await (await fetch(document.querySelector('link[rel="manifest"]').href)).json();
     return {icons,manifest,header:document.querySelector('.brand-mark').outerHTML,overflow:document.documentElement.scrollWidth-innerWidth};
    });
-   assert.equal(identity.icons.length,4);for(const icon of identity.icons){assert.equal(icon.ok,true);assert.match(icon.href,/-r53.png$/);assert.equal(icon.width,icon.height);}
+   assert.equal(identity.icons.length,6);for(const icon of identity.icons){assert.equal(icon.ok,true);assert.match(icon.href,/-r(?:53|55).png$/);assert.equal(icon.width,icon.height);}
+   assert.equal(await page.locator('link[rel="shortcut icon"]').getAttribute('href'),'/icons/hash3-favicon-r55.ico');
    assert.equal(identity.manifest.id,'./');assert.equal(identity.manifest.scope,'./');assert.equal(identity.manifest.start_url,'./');for(const icon of identity.manifest.icons)assert.match(icon.src,/-r53.png$/);
    assert.match(identity.header,/aria-label="#33"/);assert.doesNotMatch(identity.header,/#ff4a58|#24d393/);assert.ok(identity.overflow<=1);
-   const header=await page.locator('.brand-mark').boundingBox();assert.ok(header.width>30&&header.height>10);
-   await page.locator('.brand').screenshot({path:path.join(output,`cabecera-r53-${name}.png`)});
+   for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){
+    await page.setViewportSize(size);
+    await page.locator('.compact-turnbar .brand-mark').waitFor({state:'visible'});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const {header,bar,title}=await page.locator('.compact-turnbar').evaluate(el=>({header:el.querySelector('.brand-mark').getBoundingClientRect().toJSON(),bar:el.getBoundingClientRect().toJSON(),title:el.querySelector('.turn-state').getBoundingClientRect().toJSON()}));
+    assert.equal(Math.round(header.height),size.width>size.height?22:28);assert.ok(header.width>=41);assert.ok(header.x+header.width<=title.x);
+    assert.ok(bar.height<=(size.width>size.height?36:44));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    await page.screenshot({path:path.join(output,`logo-legible-r55-${name}-${size.width}.png`)});
+   }
+   await page.setViewportSize({width:390,height:844});
+   await page.locator('.compact-turnbar .brand-mark').waitFor({state:'visible'});
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   await page.screenshot({path:path.join(output,`cabecera-r53-${name}.png`),clip:{x:0,y:0,width:390,height:60}});
+   await page.locator('[data-action="pause"]').click();
+   for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){
+    await page.setViewportSize(size);
+    await page.locator('.paused-minimap [data-paused-inventory="own"]').waitFor({state:'visible'});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const ownCounter=page.locator('.paused-minimap [data-paused-inventory="own"]'),rivalCounter=page.locator('.paused-minimap [data-paused-inventory="rival"]');
+    assert.equal(await ownCounter.locator('.inventory-capacity-value').innerText(),'18/18');assert.equal(await rivalCounter.locator('.inventory-capacity-value').innerText(),'3/18');
+    assert.equal(await ownCounter.locator('.inventory-capacity-value').evaluate(el=>getComputedStyle(el).color),'rgb(255, 74, 88)');assert.equal(await rivalCounter.locator('.inventory-capacity-value').evaluate(el=>getComputedStyle(el).color),'rgb(36, 211, 147)');
+    const ownBox=await ownCounter.boundingBox(),rivalBox=await rivalCounter.boundingBox();assert.ok(ownBox.x+ownBox.width<rivalBox.x);
+    assert.deepEqual(await page.locator('.paused-minimap .inventory-shortcuts .inventory-icon-row').evaluateAll(rows=>rows.map(row=>row.children.length)),[13,12]);
+    assert.equal(await page.locator('.paused-minimap .inventory-capacity-strip').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    assert.equal(await page.locator('.paused-score-body .inventory-capacity-value').count(),0);
+    await page.screenshot({path:path.join(output,`pausa-equilibrada-r55-${name}-${size.width}.png`)});
+   }
+   const ownStored=await read();assert.equal(ownStored.players[0].inventory.comboPending,1);assert.equal(ownStored.players[0].freeExpansions,33);assert.deepEqual(ownStored.players[1],before.players[1]);
+   await page.setViewportSize({width:390,height:844});
    const iconPage=await context.newPage();await iconPage.goto(origin+'/icons/hash3-icon-512-r53.png');await iconPage.screenshot({path:path.join(output,`icono-r53-${name}.png`)});
-   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,noOverflow:true,noOnlineRequests:true,passed:true});
+   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,boardLogo28pxPortrait22pxLandscape:true,pausedCountersOwnLeftRivalRight:true,pausedCountersRedAndGreen:true,balancedRows13and12:true,nativeSafariBookmarkDialogTested:false,noOverflow:true,noOnlineRequests:true,passed:true});
    await context.close();
   }catch(error){
    for(const context of browser.contexts())for(const page of context.pages())await page.screenshot({path:path.join(output,`fallo-r53-${name}.png`)}).catch(()=>{});

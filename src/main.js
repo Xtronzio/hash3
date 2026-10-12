@@ -62,6 +62,7 @@ import './local-inventory-r50.css';
 import {scoreNoticeMarkup} from './score-notice.js';
 import {brandMark} from './brand.js';
 import './brand.css';
+import './paused-inventory.css';
 import {overviewMarkup,overviewModel} from './map-overview.js';
 import {prepareMapRendering,mapWindowMarkup,MAP_SYMBOL_SCALE} from './map-render.js';
 import {extensionView,clampBoardZoom} from './map-camera.js';
