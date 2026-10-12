@@ -1073,10 +1073,16 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
 window.addEventListener('online',poll);
 window.addEventListener('resize',()=>{if(room?.status==='playing'){blinkId=null;if(mapInteracting)mapDeferred=true;else render();}});
 setInterval(poll,1800);
+function openIncomingTransfer(input){
+ if(!new URLSearchParams(new URL(input).hash.slice(1)).has('traslado'))return false;
+ if(isLocal())persistLocal(room.status==='playing'?localCommand(room,'pause'):room);
+ clearGameView();incomingTransfer=input;hallDialog='profile';hallHistory=[];renderHome();return true;
+}
+window.addEventListener('hashchange',()=>{
+ try{openIncomingTransfer(location.href);}catch(error){notify(error.message||'No se pudo abrir la copia. Tu partida se conserva.');}
+});
 async function init(){
- if(new URLSearchParams(location.hash.slice(1)).has('traslado')){
-  incomingTransfer=location.href;hallDialog='profile';renderHome();return;
- }
+ if(openIncomingTransfer(location.href))return;
  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
  renderHome();
  if(ONLINE_ENABLED&&incoming){
