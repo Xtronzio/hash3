@@ -1,1 +1,4 @@
 .brand-mark{display:block;height:.7em;width:auto;max-width:100%;overflow:visible}
+.game .compact-turnbar .brand-mark{height:32px}
+@media(max-width:600px){.game .compact-turnbar .brand-mark{height:28px}}
+@media(max-height:450px) and (orientation:landscape){.game .compact-turnbar .brand-mark{height:22px}}

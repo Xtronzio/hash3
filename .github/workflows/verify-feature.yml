@@ -27,6 +27,7 @@ on:
       - release/local-transfer-r52
       - release/local-brand-trade-r53
       - release/local-value-cap-r54
+      - release/local-brand-size-r55
   workflow_dispatch:
 permissions:
   contents: write

@@ -80,14 +80,16 @@ async function pinch(page){
 try{
  // Every production icon declaration resolves within the Pages /hash3/ scope.
  const productionHtml=await fs.readFile('docs/index.html','utf8');
- const iconLinks=[...productionHtml.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map(match=>({href:match[0].match(/href="([^"]+)"/)[1],size:Number(match[0].match(/sizes="(\d+)x\d+"/)[1])}));
- assert.equal(iconLinks.length,4);
+ const iconLinks=[...productionHtml.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon|apple-touch-icon-precomposed)"[^>]*>/g)].map(match=>({href:match[0].match(/href="([^"]+)"/)[1],size:Number(match[0].match(/sizes="(\d+)x\d+"/)[1])}));
+ assert.equal(iconLinks.length,6);
  for(const icon of iconLinks){
   assert.ok(icon.href.startsWith('/hash3/icons/hash3-'),'Explicit #3 icon must stay inside the app scope');
   const png=await fs.readFile(path.join('docs',icon.href.slice('/hash3/'.length)));
   assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),icon.size);assert.equal(png.readUInt32BE(20),icon.size);
  }
  assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/hash3-apple-touch-icon-r53.png'));
+ const icoLink=productionHtml.match(/<link\b[^>]*rel="shortcut icon"[^>]*>/)[0].match(/href="([^"]+)"/)[1];
+ assert.equal(icoLink,'/hash3/icons/hash3-favicon-r55.ico');assert.deepEqual(await fs.readFile('docs/icons/hash3-favicon-r55.ico'),await fs.readFile('public/favicon.ico'));
  results.push({pagesFaviconsAndAppleIconResolve:true,passed:true});
  for(const viewport of [{width:390,height:844},{width:1024,height:768}]){
   const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,serviceWorkers:'block'});

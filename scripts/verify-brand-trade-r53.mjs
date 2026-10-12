@@ -59,15 +59,23 @@ try{
    assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.pairs,before.pairs);assert.equal(after.ruleVersion,18);
    await page.screenshot({path:path.join(output,`trueque-completado-r53-${name}.png`)});
    const identity=await page.evaluate(async()=>{
-    const links=[...document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]')];
+    const links=[...document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"],link[rel="apple-touch-icon-precomposed"]')];
     const icons=[];for(const link of links){const response=await fetch(link.href);const blob=await response.blob();const bitmap=await createImageBitmap(blob);icons.push({href:link.href,width:bitmap.width,height:bitmap.height,ok:response.ok});bitmap.close();}
     const manifest=await (await fetch(document.querySelector('link[rel="manifest"]').href)).json();
     return {icons,manifest,header:document.querySelector('.brand-mark').outerHTML,overflow:document.documentElement.scrollWidth-innerWidth};
    });
-   assert.equal(identity.icons.length,4);for(const icon of identity.icons){assert.equal(icon.ok,true);assert.match(icon.href,/-r53.png$/);assert.equal(icon.width,icon.height);}
+   assert.equal(identity.icons.length,6);for(const icon of identity.icons){assert.equal(icon.ok,true);assert.match(icon.href,/-r(?:53|55).png$/);assert.equal(icon.width,icon.height);}
+   assert.equal(await page.locator('link[rel="shortcut icon"]').getAttribute('href'),'/icons/hash3-favicon-r55.ico');
    assert.equal(identity.manifest.id,'./');assert.equal(identity.manifest.scope,'./');assert.equal(identity.manifest.start_url,'./');for(const icon of identity.manifest.icons)assert.match(icon.src,/-r53.png$/);
    assert.match(identity.header,/aria-label="#33"/);assert.doesNotMatch(identity.header,/#ff4a58|#24d393/);assert.ok(identity.overflow<=1);
-   const header=await page.locator('.brand-mark').boundingBox();assert.ok(header.width>30&&header.height>10);
+   for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){
+    await page.setViewportSize(size);
+    const header=await page.locator('.brand-mark').boundingBox(),bar=await page.locator('.compact-turnbar').boundingBox(),title=await page.locator('.turn-state').boundingBox();
+    assert.equal(Math.round(header.height),size.width>size.height?22:28);assert.ok(header.width>=41);assert.ok(header.x+header.width<=title.x);
+    assert.ok(bar.height<=(size.width>size.height?36:44));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    await page.screenshot({path:path.join(output,`logo-legible-r55-${name}-${size.width}.png`)});
+   }
+   await page.setViewportSize({width:390,height:844});
    await page.locator('.brand').screenshot({path:path.join(output,`cabecera-r53-${name}.png`)});
    const iconPage=await context.newPage();await iconPage.goto(origin+'/icons/hash3-icon-512-r53.png');await iconPage.screenshot({path:path.join(output,`icono-r53-${name}.png`)});
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,noOverflow:true,noOnlineRequests:true,passed:true});
