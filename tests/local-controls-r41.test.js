@@ -48,7 +48,7 @@ test('Immunity floats only when the colonist chooses it, with finite clamped pos
  const r=fresh(),defaults=normalizeInventoryPreferences(),chosen=normalizeInventoryPreferences({floating:['immunity']});
  assert.equal(floatingInventoryMarkup(r,'local-x',defaults),'');assert.match(inventoryStatusMarkup(r),/data-tool="immunity"/);
  assert.match(floatingInventoryMarkup(r,'local-x',chosen),/data-floating-tool="immunity"/);assert.match(floatingInventoryMarkup(r,'local-x',chosen),/favorite-drag-handle/);
- assert.doesNotMatch(inventoryStatusMarkup(r,{preferences:chosen}),/data-tool="immunity"/);
+ assert.doesNotMatch(inventoryStatusMarkup(r,{preferences:chosen}),/data-tool="immunity" data-player="local-x"/);
  for(const [value,expected] of [[-1,0],[2,1],[.5,.5],[NaN,0],[Infinity,0]])assert.equal(clampRatio(value),expected);
  r.status='paused';assert.match(floatingInventoryMarkup(r,'local-x',chosen),/data-tool="immunity"[^>]*disabled/);
 });

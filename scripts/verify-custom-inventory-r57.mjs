@@ -24,7 +24,7 @@ try{
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.locator('.game .viewport').waitFor();await frame(page);
    const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
    const tap=async node=>name==='firefox'?node.click():node.tap();
-   const before=await read();assert.equal(await page.locator('.floating-immunity').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"]').count(),1);assert.equal(await page.locator('[data-action="plus"],[data-action="minus"]').count(),0);assert.equal(await page.locator('[data-action="fit-board"]').count(),1);
+   const before=await read();assert.equal(await page.locator('.floating-immunity').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),1);assert.equal(await page.locator('[data-action="plus"],[data-action="minus"]').count(),0);assert.equal(await page.locator('[data-action="fit-board"]').count(),1);
    const initialHeight=await page.locator('.viewport').evaluate(n=>n.clientHeight);
    await tap(page.locator('.board-inventory-status [data-action="edit-inventory-layout"]'));
    const source=page.locator('[data-edit-tool="nuclear"] .inventory-order-handle'),destination=page.locator('[data-edit-tool="double"]');
@@ -77,11 +77,11 @@ try{
    // Inmunidad stays in the bar until explicitly chosen; returning it keeps the active clock and stock.
    await tap(page.locator('.board-inventory-status [data-action="edit-inventory-layout"]'));
    await tap(page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]'));await tap(page.locator('[data-action="inventory-float-toggle"]'));await tap(page.locator('[data-action="close-inventory-layout"]'));await frame(page);
-   assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"]').count(),0);assert.equal(await page.locator('.map-wrap > [data-floating-tool="immunity"]').count(),1);
+   assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),0);assert.equal(await page.locator('.map-wrap > [data-floating-tool="immunity"]').count(),1);
    const protections=(await read()).players[0].inventory.immunity.cards['immunity-1'];assert.equal(protections,2);
    await tap(page.locator('.map-wrap > [data-floating-tool="immunity"] button'));await frame(page);assert.equal((await read()).players[0].inventory.immunity.cards['immunity-1'],1);assert.ok(await page.locator('.map-wrap > [data-floating-tool="immunity"] [data-immunity-clock]').count());
    await tap(page.locator('.board-inventory-status [data-action="edit-inventory-layout"]'));await tap(page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]'));await tap(page.locator('[data-action="inventory-float-toggle"]'));await tap(page.locator('[data-action="close-inventory-layout"]'));await frame(page);
-   assert.equal(await page.locator('.map-wrap > [data-floating-tool="immunity"]').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"]').count(),1);assert.equal((await read()).players[0].inventory.immunity.cards['immunity-1'],1);assert.ok(await page.locator('.board-inventory-status [data-tool="immunity"] [data-immunity-clock]').count());
+   assert.equal(await page.locator('.map-wrap > [data-floating-tool="immunity"]').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),1);assert.equal((await read()).players[0].inventory.immunity.cards['immunity-1'],1);assert.ok(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"] [data-immunity-clock]').count());
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,dragOrderAndFavoritePlacement:true,persistentIndependentPreferences:true,barFoldingGainsHeight:fullHeight-initialHeight,foldedStockAndPauseResume:true,nuclearPreviewCancelAnd33Demolition:true,conservesPointsTurnsAndOtherInventory:true,mobileAndLandscapeWithinViewport:true,noOnlineRequests:true,passed:true});await context.close();
   }catch(error){for(const c of browser.contexts())for(const p of c.pages())await p.screenshot({path:path.join(output,`fallo-r57-${name}.png`)}).catch(()=>{});throw error;}finally{await browser.close();}
  }

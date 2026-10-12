@@ -162,7 +162,7 @@ export function inventoryShortcutMarkup(game,actor,id,{paused=false}={}){
   const player=game.players.find(p=>p.id===actor);if(!player)return '';
   const stock=immunityStock(game,actor),seconds=immunitySeconds(game,actor),enabled=!paused&&!seconds&&canUsePracticeTool(game,actor,id);
   const label=`Inmunidad ${player.symbol} · ${stock} protecciones guardadas${seconds?' · '+seconds+' segundos restantes':paused?' · pausado':enabled?' · activar 33 segundos':' · sin protecciones disponibles'}`;
-  return `<button class="inventory-effect inventory-shortcut immunity-reserve ${stock?'has-stock':'is-inactive'} ${seconds?'is-active':''} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="practice-tool" data-tool="immunity" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(id)}<small>×${stock}</small>${seconds?`<b class="immunity-active-indicator" data-immunity-clock="${actor}">${seconds}</b>`:''}</button>`;
+  return `<button class="inventory-effect inventory-shortcut immunity-reserve ${stock?'has-stock':'is-inactive'} ${seconds?'is-active':''} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="practice-tool" data-tool="immunity" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(id)}${game.mode==='local'?`<span class="immunity-owner">${player.symbol}</span>`:''}<small>×${stock}</small>${seconds?`<b class="immunity-active-indicator" data-immunity-clock="${actor}">${seconds}</b>`:''}</button>`;
  }
  const player=game.players.find(p=>p.id===actor),t=practiceTools.find(t=>t.id===id);if(!t||!player)return '';
  const stock=inventoryFor(game,actor).cards[t.id]||0,enabled=!paused&&stock>0&&canUsePracticeTool(game,actor,t.id);
@@ -178,11 +178,12 @@ export function inventoryStatusMarkup(game,{paused=false,playerId,preferences}={
  const effects=activeInventoryEffects(game),inv=inventoryFor(game,actor),cards=inv.cards;
  // Prepared only when a game snapshot renders; never during pan, zoom or clock ticks.
  const shortcuts=inventoryRows(id=>inventoryShortcutMarkup(game,actor,id,{paused}),normalizeInventoryPreferences(preferences));
- const pending=effects.filter(e=>!['frontier','border'].includes(e.tool)&&(e.tool!=='immunity'||paused||game.mode==='solo'&&e.player!==actor)).map(e=>{
+ const otherImmunity=game.mode==='local'?game.players.filter(p=>p.id!==actor&&inventoryEnabled(game,p.id)).map(p=>inventoryShortcutMarkup(game,p.id,'immunity',{paused})).join(''):'';
+ const pending=effects.filter(e=>!['frontier','border'].includes(e.tool)&&(e.tool!=='immunity'||game.mode==='solo'&&e.player!==actor)).map(e=>{
   const name=e.tool==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===e.tool).label;
   const detail=e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
   const label=`${name} · ${e.symbol} · ${detail}${paused?' · pausado':''}`;
   return `<span class="inventory-effect inventory-pending-effect is-active ${e.symbol.toLowerCase()}" data-inventory-effect="${e.tool}" data-effect-player="${e.player}" role="img" aria-label="${label}" title="${label}">${toolIcon(e.tool)}<small ${e.tool==='immunity'?`data-immunity-clock="${e.player}"`:''}>${e.remaining??'•'}</small></span>`;
  }).join('');
- return `<div class="inventory-effects-bar" role="group" aria-label="Accesos rápidos al inventario">${capacity}<div class="inventory-shortcuts" role="group" aria-label="Cartas de ${player.symbol}">${shortcuts}</div><div class="inventory-active-effects" role="group" aria-label="Efectos en curso">${pending}</div></div>`;
+ return `<div class="inventory-effects-bar" role="group" aria-label="Accesos rápidos al inventario">${capacity}<div class="inventory-shortcuts" role="group" aria-label="Cartas de ${player.symbol}">${shortcuts}</div><div class="inventory-active-effects" role="group" aria-label="Efectos en curso e inmunidad del otro colono">${otherImmunity}${pending}</div></div>`;
 }
