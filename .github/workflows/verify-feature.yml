@@ -50,9 +50,9 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: npm run verify:brand-trade
       - run: npm run verify:browser
       - run: npm run verify:transfer
-      - run: npm run verify:brand-trade
       - uses: actions/upload-artifact@v4
         if: always()
         with:
