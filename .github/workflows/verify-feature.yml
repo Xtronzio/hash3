@@ -31,6 +31,7 @@ on:
       - release/local-bombs-r56
       - release/local-custom-inventory-r57
       - release/local-immunity-choice-r58
+      - release/local-checks-r59
   workflow_dispatch:
 permissions:
   contents: write

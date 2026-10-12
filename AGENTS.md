@@ -399,3 +399,8 @@ En pausa horizontal baja, catálogos a un lado del mapa en pistas independientes
 Jorge pide devolver Inmunidad a la barra y decidir personalmente si la saca como flotante. Añadir immunity al orden personalizable; preferencias anteriores la reciben en la barra, sin alterar otros flotantes, orden, plegado ni posiciones. Retirar flotantes obligatorios. Inmunidad usa el mismo editor, tirador, persistencia, mapa y pausa que las demás cartas. Mantener stock independiente sin cupo18/3, activación fuera de turno, contador33s y pausa sin consumo. No cambiar economía, motor ni ruleVersion20. Publicar por CI/Pages tras comprobar preferencia explícita y conservación del guardado.
 
 En Sin conexión conservar el acceso a la protección del otro colono dentro de la barra, identificado X/O, para permitir activación fuera de turno sin imponer flotantes. En VS máquina mostrar solo la protección humana como acción.
+
+
+## R0.21.59 · Checks alineados del selector
+
+Jorge pide alinear los checks de inventario propio/rival, fauna y fenómenos. Las etiquetas se estiran en la fila flex y justifican su contenido al final: los cuatro inputs comparten la misma base pese a distintas alturas de los iconos. Conservar agrupaciones, títulos, estados y configuración. Cambio CSS de presentación, sin modificar motor ni ruleVersion20.
