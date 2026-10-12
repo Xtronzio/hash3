@@ -385,7 +385,7 @@ export function habitatLabel(room,playerId){
 
 }
 export const workerHelmet='<path data-worker="helmet" d="M4 14h24M6 14v-3a10 10 0 0 1 20 0v3M12 3v11m8-11v11"/>';
-export const habitatIcons={rodent:rodentIcon,worm:'<path d="M3 25c1-7 7-9 12-5 4 3 7 2 7-2v-6c-3-2-2-7 2-8s7 3 4 7l-1 2v5c0 8-7 11-13 8l-5-3c-2-1-4 0-6 2Z"/><path d="m9 18-2 4m8-2-2 5m7-3 1 5m1-8 5 2m-5-6h5"/><circle cx="25.5" cy="7.5" r="1" fill="currentColor" stroke="none"/>',build:'<path data-worker-sign="plus" d="M5 16h22M16 5v22"/>',destroy:'<path data-worker="soldier" d="m5 3 8 5 14 17-3 3L7 11 5 3Zm22 0-8 5L5 25l3 3L25 11l2-8ZM3 20l9 9m8-9 9 9M4 28l3-3m18 0 3 3"/>',bomb:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>'};
+export const habitatIcons={rodent:rodentIcon,worm:'<path d="M3 25c1-7 7-9 12-5 4 3 7 2 7-2v-6c-3-2-2-7 2-8s7 3 4 7l-1 2v5c0 8-7 11-13 8l-5-3c-2-1-4 0-6 2Z"/><path d="m9 18-2 4m8-2-2 5m7-3 1 5m1-8 5 2m-5-6h5"/><circle cx="25.5" cy="7.5" r="1" fill="currentColor" stroke="none"/>',build:'<path data-worker-sign="plus" d="M5 16h22M16 5v22"/>',destroy:'<g data-worker="soldier"><path d="m9 20 15-15 5-2-2 5-15 15-3-3ZM5 18l10 10m-5-5-5 5m-2-2 4 4"/><path d="M23 20 8 5 3 3l2 5 15 15 3-3Zm4-2L17 28m5-5 5 5m2-2-4 4"/></g>',bomb:'<circle cx="15" cy="19" r="10"/><path d="m19 10 3-4 4 1m-2-5 2 1m4 0-2 2M9 16l3-3"/>'};
 export function habitatAnimationDelay(event,kind,now=Date.now()){
  const duration=kind==='rodent'?(event?.phase==='eating'?450:1600):kind==='worm'?1300:800;
  const current=event?.frozen?(event?.clockNow??now):now;

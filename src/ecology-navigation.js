@@ -67,7 +67,7 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
  const columns=room.turnEcologyVersion===1;
  const visible=ordered.filter((kind,i,a)=>a.indexOf(kind)===i).filter(kind=>!['build','destroy','rodent','rodent-plague','worm','worm-plague'].includes(kind)||room.faunaEnabled!==false).filter(kind=>!isTimedTerritoryKind(kind)||room.territoryEnabled!==false);
  const renderButton=kind=>{
-  const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
+  const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind).filter(e=>!columns||!['build','destroy'].includes(kind)||(e[kind]?.slice(e.done||0).length||0)>0),color=ecologyColors[kind]||'var(--yellow)',frozen=events.some(e=>e.remainingMs!=null);
   const birthKind=['build','destroy'].includes(kind)?'work':kind==='rodent-plague'?'rodent':kind==='worm-plague'?'worm':kind,frequency=['rodent','worm','work'].includes(birthKind)?(localLiving(room)?LIVING_FREQUENCIES:HABITAT_FREQUENCIES)[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
   const colonies=targets.filter(e=>e.invasion);
   const turnEvents=events.filter(e=>e.warningTurns!=null||e.turnsRemaining!=null);
@@ -76,16 +76,17 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
   const upcoming=kind==='neutral'&&neutralNext!=null?` · siguiente intento en ${neutralNext} colocaciones propias`:'';
   const timed=isTimedTerritoryKind(kind),active=targets.length>0,family=TERRITORY_EVENT_RULES[kind]?.family==='invaders'?'invaders':'natural';
   if(columns){
-   const next=kind==='neutral'?neutralNext:birth!=null?birth:timed?Math.max(0,(room[family==='invaders'?'territoryNextInvasion':'territoryNextPlacement']??territoryPlacements(room)+livingAttempt(room,family))-territoryPlacements(room)):null;
-   const missing=timed?Math.max(0,livingMinimum(room)-territoryFigures(room)):0;
-   badge=next==null?'':`<span class="ecology-badge mono" aria-label="${missing?'Faltan '+missing+' figuras para habilitar la familia':'Próximo intento en '+next+' colocaciones'}">${missing||next}</span>`;
+   // A family forecast is not an announced arrival. Show only the real,
+   // per-kind warning here; keep attempt/figure forecasts in the outlook.
+   const turns=turnEvents.length?Math.min(...turnEvents.map(e=>e.warningTurns??e.turnsRemaining)):null;
+   badge=turns==null?'':`<span class="ecology-badge ecology-turn-badge mono" data-ecology-countdown="${kind}" aria-label="${turns} turnos hasta la intervención anunciada">${turns}↷</span>`;
   }
   if(kind==='barriers')badge=`<span class="ecology-badge mono" aria-label="${targets.length} barreras colocadas">×${targets.length}</span>`;
   // Anchor the brief announcement pulse to game time so snapshot redraws do
   // not restart it. Paused events keep their exact elapsed warning time.
   const elapsed=timed&&events.length&&!columns?Math.min(...events.map(e=>Math.max(0,EVENT_BALANCE.warningMs-(e.remainingMs??(e.nextAt-now))))):0;
   const label=`${ecologyNames[kind]}${kind==='barriers'?` · Muros: ${targets.filter(t=>t.type!=='border').length} · Fronteras: ${targets.filter(t=>t.type==='border').length}`:''} · ${active?'activo':'inactivo'} · ${targets.length} ubicaciones${events.length?' · próxima intervención en '+Math.min(...events.map(e=>ecologySeconds(e,now)))+(columns?' turnos':' segundos'):['rodent','worm'].includes(kind)&&targets.length?' · actúa por turnos, sin cuenta atrás temporal':colonies.length?' · crece una casilla por turno hasta nueve':''}${frozen?' · cuenta atrás congelada':''}${upcoming}${timed&&!active?forecasts.get(family):''}${birth!=null?` · siguiente intento en ${birth} colocaciones de la zona`:''}`;
-  return `<button ${inspection?'data-inspect-action="ecology"':'data-action="locate-ecology"'} data-ecology-kind="${kind}" ${timed?'data-ecology-attempt="'+family+'"':''} class="ecology-jump ${active?'is-active':'is-inactive'} ${timed&&events.length?'is-announced':''} ${frozen?'is-frozen':''}" style="--ecology-color:${color};--ecology-activation-delay:-${elapsed}ms" aria-label="${label}" title="${label}" ${targets.length?'':'disabled'}>${ecologyIcon(kind)}${badge}</button>`;
+  return `<button ${inspection?'data-inspect-action="ecology"':'data-action="locate-ecology"'} data-ecology-kind="${kind}" ${timed?'data-ecology-attempt="'+family+'"':''} class="ecology-jump ${active?'is-active':'is-inactive'} ${(columns?turnEvents.length:timed&&events.length)?'is-announced':''} ${frozen?'is-frozen':''}" style="--ecology-color:${color};--ecology-activation-delay:-${elapsed}ms" aria-label="${label}" title="${label}" ${targets.length?'':'disabled'}>${ecologyIcon(kind)}${badge}</button>`;
  };
  const firstRow=new Set(['rodent','rodent-plague','worm','worm-plague','build','destroy','meteorites','earthquake']);
  return columns?`<div class="territory-rows" role="group" aria-label="Eventos del territorio en dos filas">${[visible.filter(k=>firstRow.has(k)),visible.filter(k=>!firstRow.has(k))].map(row=>`<div class="inventory-icon-row">${row.map(renderButton).join('')}</div>`).join('')}</div>`:visible.map(renderButton).join('');

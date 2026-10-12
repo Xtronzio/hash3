@@ -23,13 +23,13 @@
 /* Progress ring must remain visible around an adult finger. */
 .floating-refill{width:92px;}.refill-trigger{width:88px;height:88px;min-height:88px;}.refill-progress{width:88px;height:88px;}.refill-emblem{width:49px;height:49px;transform:translateY(-4px);}.refill-trigger small{font-size:12px;bottom:8px;}.refill-team{width:22px;height:22px;font-size:12px;line-height:20px;}.refill-drag-handle{height:18px;}
 /* Warnings lead with real consequence and remaining turns. */
-.turn-warnings{padding:5px 0;gap:8px;}
-.turn-warnings .ecology-warning-chip{min-height:60px;min-width:min(100%,250px);max-width:100%;border:1px solid #b38d29;border-left:5px solid #ffd34e;padding:7px 10px;background:linear-gradient(110deg,#3b2d0a,#201a0b);box-shadow:0 2px 12px #e9b82918;gap:9px;}
-.turn-warnings .ecology-warning-chip>svg{width:32px;height:32px;flex:none;}
-.turn-warnings .ecology-warning-chip>span{text-align:left;flex:1;min-width:0;font-size:14px;font-weight:700;line-height:17px;}
-.turn-warnings .ecology-warning-chip small{display:block;font-size:8px;letter-spacing:.07em;line-height:12px;font-weight:600;}
-.turn-warnings .ecology-warning-chip strong{font-size:30px;line-height:28px;}
-.turn-warnings .ecology-warning-chip strong small{font-size:9px;line-height:11px;letter-spacing:0;font-weight:400;}
+.turn-warnings{padding:3px 0;gap:5px;}
+.turn-warnings .ecology-warning-chip{min-height:44px;min-width:0;max-width:176px;border:1px solid #b38d29;border-left:3px solid #ffd34e;padding:4px 7px;background:linear-gradient(110deg,#3b2d0a,#201a0b);box-shadow:0 2px 12px #e9b82918;gap:6px;}
+.turn-warnings .ecology-warning-chip>svg{width:24px;height:24px;flex:none;}
+.turn-warnings .ecology-warning-chip>span{text-align:left;flex:1;min-width:0;font-size:12px;font-weight:700;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.turn-warnings .ecology-warning-chip small{display:block;font-size:7px;letter-spacing:0;line-height:9px;font-weight:600;}
+.turn-warnings .ecology-warning-chip strong{font-size:24px;line-height:24px;min-width:22px;flex:none;}
+.turn-warnings .ecology-warning-chip strong small{font-size:8px;line-height:9px;letter-spacing:0;font-weight:400;}
 .turn-warnings .ecology-warning-chip.is-imminent{border-color:#ffd34e;background:#49360c;box-shadow:inset 0 0 0 1px #ffd34e;}
 .territory-impact-announcements p{font-size:15px;font-weight:650;padding:9px 12px;border-left:4px solid #ffd34e;background:#30270e;}
 .territory-rows .ecology-jump.is-announced{border:2px solid #ffd34e;background:#352a0d;opacity:1;}
@@ -37,7 +37,7 @@
 .pending-invasion-bomb.tool-target,.pending-invasion-bomb.tool-source{outline:3px solid #ffd34e;outline-offset:-4px;border:2px solid #ffd34e!important;background:#342911ef;box-shadow:0 0 10px #ffd34e55;}
 .pending-invasion-bomb.tool-source{outline-color:#a2e6ff;border-color:#a2e6ff!important;pointer-events:none;}
 @media(max-width:360px){.paused-game .paused-heading h1{font-size:17px;}.paused-game .tag{font-size:9px;}}
-@media(max-height:450px) and (orientation:landscape){.floating-refill{width:74px;}.refill-trigger,.refill-progress{width:70px;height:70px;min-height:70px;}.refill-emblem{width:39px;height:39px;}.refill-trigger small{bottom:5px;font-size:10px;}.lobby.paused-game{gap:4px;}.paused-game .paused-scores{min-height:44px;font-size:22px;padding:4px 30px 4px 12px;}.paused-game .lobby-header{min-height:22px;}.turn-warnings .ecology-warning-chip{min-height:48px;}}
+@media(max-height:450px) and (orientation:landscape){.floating-refill{width:74px;}.refill-trigger,.refill-progress{width:70px;height:70px;min-height:70px;}.refill-emblem{width:39px;height:39px;}.refill-trigger small{bottom:5px;font-size:10px;}.lobby.paused-game{gap:4px;}.paused-game .paused-scores{min-height:44px;font-size:22px;padding:4px 30px 4px 12px;}.paused-game .lobby-header{min-height:22px;}.turn-warnings .ecology-warning-chip{min-height:44px;}}
 #app>.lobby.paused-game{overflow:hidden;}.turn-warnings{justify-content:flex-start;}
 @media(max-height:450px) and (orientation:landscape){.paused-game .paused-minimap .target-jump-options,.inspection-fullscreen .target-jump-options{max-height:calc(100dvh - 220px);}}
 .inventory-dock-icon .inventory-badge{left:-8px;right:auto;min-width:40px;height:19px;top:-11px;font-size:10px;padding:0 4px;white-space:nowrap;}.inventory-dock-icon.is-protected .inventory-badge{left:21px;}.inventory-badge.is-full{background:#ffd34e;color:#1c1607;opacity:1;}.inventory-pending{position:absolute;right:-7px;bottom:-7px;font-size:9px;line-height:12px;color:#ffd34e;background:#101216;border:1px solid #655226;border-radius:4px;padding:0 2px;}.refill-capacity{display:block;color:#d5f6ff;font-size:11px;line-height:13px;white-space:nowrap;}.refill-capacity small{color:#ffd34e;font-size:10px;}.inventory-capacity{font-size:18px;font-weight:750;color:#d5f6ff;margin:0 0 8px;}.inventory-capacity span{font-size:11px;font-weight:400;color:#b4c0d0;}
