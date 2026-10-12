@@ -1,6 +1,6 @@
 import {normalizeInventoryPreferences,reorderInventory} from './inventory-layout.js';
 import {toolIcon,inventoryShortcutMarkup} from './inventory.js';
-import {practiceTools} from './practice-tools.js';
+import {practiceTools,immunityTools} from './practice-tools.js';
 import {inventoryEnabled} from './inventory-enabled.js';
 import {targetIcon} from './watch-targets.js';
 import {separateFloatingControl} from './floating-layout.js';
@@ -8,7 +8,7 @@ import {separateFloatingControl} from './floating-layout.js';
 const chevron='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 const editIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18"/><circle cx="8" cy="5" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="19" r="2"/></svg>';
 const floatIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M12 3h9v9m0-9L10 14"/></svg>';
-const name=id=>id==='target'?'Diana':practiceTools.find(t=>t.id===id)?.label||'';
+const name=id=>id==='target'?'Diana':[...practiceTools,...immunityTools].find(t=>t.id===id)?.label||'';
 const icon=id=>id==='target'?`<svg viewBox="0 0 24 24" aria-hidden="true">${targetIcon}</svg>`:toolIcon(id);
 const preferenceKey=(game,actor)=>`hash3_inventory_preferences:${game.mode}:${game.mode==='solo'?'colono':actor}`;
 export function inventoryPreferences(game,actor,storage){

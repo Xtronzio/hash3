@@ -1,10 +1,5 @@
-import {immunityActionsMarkup} from './inventory.js';
 import {separateFloatingControl} from './floating-layout.js';
 
-export function floatingImmunityMarkup(game){
- if(game.status!=='playing')return '';
- return immunityActionsMarkup(game).replace(/(<button[^>]*data-player="([^"]+)"[^>]*>[\s\S]*?<\/button>)/g,(_,button,player)=>`<div class="floating-immunity" data-floating-player="${player}"><span class="immunity-drag-handle" aria-label="Arrastrar Inmunidad" title="Arrastra para mover Inmunidad">⠿</span>${button}</div>`);
-}
 export const clampRatio=value=>Number.isFinite(value)?Math.min(1,Math.max(0,value)):0;
 export function bindFloatingImmunity(surface,gameId){
  if(!surface)return ()=>{};

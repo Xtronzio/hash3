@@ -2,7 +2,7 @@ import {invasionBombIcon,bombDisarmCross} from './invader-mark.js';
 import {nuclearIcon} from './nuclear-tool.js';
 import {dianaCardMarkup,targetIcon,targetRemovalMarkup} from './watch-targets.js';
 import {inventoryEnabled} from './inventory-enabled.js';
-import {inventoryRows} from './inventory-layout.js';
+import {inventoryRows,normalizeInventoryPreferences} from './inventory-layout.js';
 import {pausedInventorySummaryMarkup} from './paused-inventory.js';
 import {immunityTools} from './practice-tools.js';
 import {immunityGoals} from './immunity.js';
@@ -156,15 +156,14 @@ export function inventoryMarkup(game,playerId,{showShortcuts=true,openTools=new 
  return `<p class="inventory-status">${local?`${game.mode==='solo'?`Máquina ${game.machineInventory?'con':'sin'} inventario · `:''}${total}/${MAX_CARDS} cartas de recarga · ${inv.comboPending?'Recarga ganada pendiente de hueco':'Recarga con una colocación manual de ≥33 puntos'}`:'Catálogo de pruebas · VS máquina y Sin conexión'}${last?` · Última: ${last}`:''}</p><div class="inventory-cards inventory-catalog-rows">${cards}${pendingTools.map(t=>`<button class="inventory-card inventory-pending" disabled aria-label="${t.label}, pendiente"><span class="inventory-card-top"><span class="inventory-icon">${toolIcon(t.id)}</span></span><strong>${t.label}</strong><small>${t.description}</small><span class="inventory-card-action">Pendiente</span></button>`).join('')}</div>${immunityMarkup()}<p class="inventory-rules">Una herramienta por turno, además de tu ficha. Inmunidad se activa aparte en cualquier momento y dura 33 segundos. Activa Combo primero para usar otras dos herramientas distintas. Súper Ayuda gasta su propia carta y utiliza las herramientas permitidas; muestra los recursos antes de ejecutarlos. Ampliación inteligente también permite ampliar por estrategia desde 333 figuras cobradas entre ambos; en ese caso, la carta se gasta al colocar el 3×3. Muro se coloca durante tu turno, sin necesidad de ampliar; cuenta como herramienta y luego colocas tu ficha. Si te corresponde una ampliación pendiente, también puedes poner un muro antes del 3×3, una vez en esa fase. Cada recarga sortea una carta entre los tipos permitidos, también pudiendo repetir. Doble, Ficha contraria, Ficha rival, Borrar, Desplazar y Combo tienen triple peso en el sorteo para ofrecer más opciones de ataque. En partidas nuevas eliges tres cartas distintas. Cada colocación manual propia de ≥33 puntos recarga una carta: máximo 18 cartas normales y tres unidades por tipo, sin límite adicional de tipos. No hay recargas por tiempo ni por turnos. Puedes tener tipos agotados y otros con una, dos o tres unidades; no se completa todo el catálogo. Las protecciones no tienen límite ni ocupan la mochila. Las reservas antiguas que superen los límites se conservan, pero no reciben recargas hasta dejar hueco. Si la bolsa está llena, gasta una carta para dejar hueco. ${game?.timeMode==='untimed'?'Sin límite de tiempo.':'Las cartas no reinician el reloj.'} Solo el trueque gasta puntos voluntariamente. Permutar intercambia dos fichas y puntúa las figuras nuevas de ambos símbolos al aterrizar. Tornado puntúa las figuras nuevas de X y O en la posición final, incluidos los bonus; una figura ya presente antes de la mezcla no se vuelve a pagar. Bomba no suma puntos. Las figuras rotas pueden reconstruirse y cobrarse con una colocación posterior.</p>${local?'':game?'<p class="muted">El inventario online todavía está en preparación.</p>':showShortcuts?`<nav class="inventory-start" aria-label="Accesos a partidas">${inventoryShortcutsMarkup()}</nav>`:''}`;
 }
 
-export function immunityActionsMarkup(game){
- if(!['solo','local'].includes(game.mode))return '';
- const players=(game.mode==='solo'?game.players.filter(p=>p.id===localHumanId(game)):game.players).filter(p=>inventoryEnabled(game,p.id));
- return players.map(p=>{const seconds=immunitySeconds(game,p.id),stock=immunityStock(game,p.id),label=`Inmunidad ${p.symbol} · ${seconds?seconds+' segundos restantes':stock+' guardadas · activar 33 segundos'}`;
- return `<button class="immunity-quick ${p.symbol.toLowerCase()} ${seconds?'is-active':''}" data-action="practice-tool" data-tool="immunity" data-player="${p.id}" aria-label="${label}" title="${label}" ${canUsePracticeTool(game,p.id,'immunity')?'':'disabled'}>${toolIcon('immunity')}<small ${seconds?`data-immunity-clock="${p.id}"`:''}>${seconds||'×'+stock}</small></button>`;}).join('');
-}
-
 export function inventoryShortcutMarkup(game,actor,id,{paused=false}={}){
  if(id==='target')return dianaCardMarkup(game,actor,{paused,shortcut:true});
+ if(id==='immunity'){
+  const player=game.players.find(p=>p.id===actor);if(!player)return '';
+  const stock=immunityStock(game,actor),seconds=immunitySeconds(game,actor),enabled=!paused&&!seconds&&canUsePracticeTool(game,actor,id);
+  const label=`Inmunidad ${player.symbol} · ${stock} protecciones guardadas${seconds?' · '+seconds+' segundos restantes':paused?' · pausado':enabled?' · activar 33 segundos':' · sin protecciones disponibles'}`;
+  return `<button class="inventory-effect inventory-shortcut immunity-reserve ${stock?'has-stock':'is-inactive'} ${seconds?'is-active':''} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="practice-tool" data-tool="immunity" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(id)}<small>×${stock}</small>${seconds?`<b class="immunity-active-indicator" data-immunity-clock="${actor}">${seconds}</b>`:''}</button>`;
+ }
  const player=game.players.find(p=>p.id===actor),t=practiceTools.find(t=>t.id===id);if(!t||!player)return '';
  const stock=inventoryFor(game,actor).cards[t.id]||0,enabled=!paused&&stock>0&&canUsePracticeTool(game,actor,t.id);
  const label=`${t.label} · ${stock} carta${stock===1?'':'s'}${paused?' · pausado':enabled?' · usar ahora':t.id==='hint-expand'?' · al ampliar o desde 333 figuras':' · no disponible en este turno'}`;
@@ -178,7 +177,7 @@ export function inventoryStatusMarkup(game,{paused=false,playerId,preferences}={
  if(!inventoryEnabled(game,actor))return paused?`<div class="inventory-effects-bar">${capacity}</div>`:'';
  const effects=activeInventoryEffects(game),inv=inventoryFor(game,actor),cards=inv.cards;
  // Prepared only when a game snapshot renders; never during pan, zoom or clock ticks.
- const shortcuts=inventoryRows(id=>inventoryShortcutMarkup(game,actor,id,{paused}),preferences);
+ const shortcuts=inventoryRows(id=>inventoryShortcutMarkup(game,actor,id,{paused}),normalizeInventoryPreferences(preferences));
  const pending=effects.filter(e=>!['frontier','border'].includes(e.tool)&&(e.tool!=='immunity'||paused||game.mode==='solo'&&e.player!==actor)).map(e=>{
   const name=e.tool==='immunity'?'Inmunidad':practiceTools.find(t=>t.id===e.tool).label;
   const detail=e.remaining!=null?`${e.remaining} ${e.unit}`:'sugerencia pendiente';
