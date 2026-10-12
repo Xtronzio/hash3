@@ -10,7 +10,7 @@ const output=path.resolve(process.env.HASH3_QA_OUTPUT||'browser-results');await 
 const server=await createServer({server:{host:'127.0.0.1',port:0}});await server.listen();const origin=`http://127.0.0.1:${server.httpServer.address().port}`;
 const results=[],requests=[],activeBrowsers=[];
 function fixture(mode='local',size=9){
- const now=Date.now(),r=createLocal(mode,'Jorge','Rival',now,'normal','untimed','basic','O',true,{faunaEnabled:false,territoryEnabled:false});
+ const now=Date.now(),r=createLocal(mode,'Jorge','Rival',now,'normal','untimed','basic','O',true,{faunaEnabled:size>9,territoryEnabled:size>9});
  r.pairs[0].turn='O';r.terrain=Array.from({length:size},(_,i)=>({x:i%183,y:Math.floor(i/183)}));
  r.cells=r.terrain.filter((_,i)=>i%3===0).map((p,i)=>({...p,id:crypto.randomUUID(),symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));
  r.players[0].score=31457;r.players[1].score=27603;r.players[0].inventory.cards.frontier=96;r.players[0].inventory.comboPending=1;r.players[0].inventory.immunity.cards['immunity-1']=333;r.players[0].freeExpansions=17;r.pairs[0].credits=18;

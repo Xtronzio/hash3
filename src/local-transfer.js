@@ -105,7 +105,7 @@ export function transferToken(input,base){
  try{
   if(typeof input!=='string'||input.length>MAX_TRANSFER_URL)return null;
   const url=new URL(input.trim()),site=new URL(base),params=new URLSearchParams(url.hash.slice(1));
-  if(url.origin!==site.origin||path(url.pathname)!==path(site.pathname)||url.username||url.password||url.search||params.size!==1)return null;
+  if(url.origin!==site.origin||path(url.pathname)!==path(site.pathname)||url.username||url.password||url.search||[...params].length!==1)return null;
   const token=params.get('traslado');return token?.startsWith(PREFIX+'.')?token:null;
  }catch{return null;}
 }
