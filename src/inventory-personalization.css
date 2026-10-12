@@ -51,3 +51,19 @@
 @media(min-width:620px){.inventory-editor-grid{grid-template-columns:repeat(5,minmax(0,1fr));}}
 @media(max-height:450px) and (orientation:landscape){.inventory-editor{max-height:92dvh;}.inventory-editor-grid{grid-template-columns:repeat(6,minmax(0,1fr));}.inventory-edit-card button{min-height:65px;}.inventory-editor>p{margin:3px 0;}.custom-inventory-band.is-collapsed,.custom-territory-band.is-collapsed{height:28px;}.custom-inventory-band.is-collapsed .band-actions button,.custom-territory-band.is-collapsed>.band-fold{height:28px;min-height:28px;}}
 @media(prefers-reduced-motion:reduce){.board-action-nuclear{animation:none;}}
+/* In a short paused screen, the two catalogues share the side of the map.
+   Their rows remain intact; collapsing either catalogue widens the map. */
+@media(max-height:450px) and (orientation:landscape){
+ .inspection-panel:has(>.custom-inventory-band){display:grid!important;grid-template-columns:minmax(0,1fr) var(--paused-inventory-column,minmax(220px,.65fr)) var(--paused-territory-column,minmax(140px,.4fr))!important;grid-template-rows:auto minmax(0,1fr)!important;gap:4px!important;min-height:0;overflow:hidden;}
+ .inspection-panel:has(>.custom-inventory-band.is-collapsed){--paused-inventory-column:60px;}
+ .inspection-panel:has(>.custom-territory-band.is-collapsed){--paused-territory-column:56px;}
+ .inspection-panel:has(>.custom-inventory-band)>.inspection-controls:not(.ecology-controls){grid-column:1!important;grid-row:1!important;min-width:0;}
+ .inspection-panel:has(>.custom-inventory-band)>.inspection-canvas{grid-column:1!important;grid-row:2!important;width:100%!important;height:100%!important;min-height:0!important;}
+ .inspection-panel:has(>.custom-inventory-band)>.custom-inventory-band{grid-column:2!important;grid-row:1 / 3!important;}
+ .inspection-panel:has(>.custom-inventory-band)>.custom-territory-band{grid-column:3!important;grid-row:1 / 3!important;}
+ .inspection-panel:has(>.custom-inventory-band)>.custom-inventory-band,.inspection-panel:has(>.custom-inventory-band)>.custom-territory-band{height:100%!important;min-height:0;overflow:hidden;align-self:stretch;}
+ .inspection-panel:has(>.custom-inventory-band) .custom-band-content{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;}
+ .inspection-panel .custom-inventory-band.is-collapsed .band-actions{flex-direction:column;}
+ .inspection-panel .custom-inventory-band.is-collapsed,.inspection-panel .custom-territory-band.is-collapsed{align-items:flex-start;}
+ .inspection-panel .custom-band-content .inventory-shortcuts,.inspection-panel .custom-band-content .ecology-controls{overflow-x:auto;overflow-y:hidden;}
+}

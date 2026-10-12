@@ -390,3 +390,5 @@ Bomba atómica id nuclear:333 puntos, carta normal con máximo3 y capacidad18, e
 Reconquista continúa quitando hasta33 invasores y conserva terreno. Diana: propuesta de clasificar sus tres marcas como expansión/ataque/defensa pendiente de valoración; no implementar nuevas funciones ni costes por inferencia. Frecuencias vigentes y modos online desactivados intactos. Validar conservación y cancelación con motor, móviles y horizontal con Chromium/WebKit/Firefox emulados, tablero33333 y traslado, publicar por CI/Pages; no afirmar ensayo físico.
 
 Jorge reitera durante R57: una carta de3/33 no se cambia por Bomba atómica o Reconquista333, aunque haya saldo suficiente. Mantener bloqueo de valor en árbitro, selector y máquina; compra directa con puntos es operación distinta. Comprobar ambas cartas333 con un origen33 en el navegador.
+
+En pausa horizontal baja, catálogos a un lado del mapa en pistas independientes, sin salir de pantalla ni ocultar contadores. Plegar reduce su pista y ensancha el mapa; nunca modifica preferencias al girar. Mantener dos filas, scroll propio, diana bajo marcador y mapa navegable, también a pantalla completa.
