@@ -7,7 +7,7 @@ export async function verifyLocalFeedback({context,load,output,results}){
  r.cells=r.terrain.filter(c=>c.x<5&&(c.x!==2||c.y!==2)).map((c,i)=>({...c,id:'piece'+i,symbol:'X',owner:'local-x'}));
  r.frontiers=[{id:'wall1',cells:[{x:-1,y:0}]},{id:'wall2',cells:[{x:-1,y:1}]},{id:'border',type:'border',cells:[{x:6,y:0},{x:6,y:1},{x:6,y:2}]}];
  const {page,errors}=await load(context,r);await page.setViewportSize({width:390,height:844});
- assert.equal(await page.locator('.compact-turnbar .brand').innerText(),'#33');assert.equal(await page.locator('.brand svg').count(),0);
+ assert.equal(await page.locator('.compact-turnbar .brand .brand-mark').getAttribute('aria-label'),'#33');assert.equal(await page.locator('.brand svg').count(),1);
  assert.match(await page.locator('.compact-turnbar .brand').evaluate(el=>getComputedStyle(el).fontFamily),/Barlow Condensed/);
  assert.equal(await page.locator('.board-territory-status [data-ecology-kind="barriers"] .ecology-badge').innerText(),'×3');
  assert.equal(await page.locator('.board-territory-status [data-ecology-kind="frontier"],.board-territory-status [data-ecology-kind="border"]').count(),0);
