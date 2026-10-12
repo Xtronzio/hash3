@@ -11,10 +11,10 @@ import {habitatBlocked,habitatReservations} from '../src/habitat-tools.js';
 import {recordCombo} from '../src/records.js';
 function fixture(size=333){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,60).map(c=>({...c,id:`food-${c.x},${c.y}`,symbol:'X',owner:'local-x'}));return r;}
 function animal(kind='rodent',point={x:0,y:0}){return {id:kind,player:'local-x',kind,...point,eaten:0,phase:0,nextAt:34000,...(kind==='worm'?{body:[point]}:{})};}
-function birth(r,count){r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
+function birth(r,count){r.players[0].ecologyPlacements=r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
 test('Plagas de roedores scale 3/6/9 after a three-turn warning; three meals occupy nine completed turns with separate locations',()=>{
  for(const [size,group] of [[333,3],[999,6],[3333,9]]){
-  const r=fixture(size);r.territoryEnabled=false;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.habitatZones[0].birthScale={rodent:1};r.habitatZones[0].next.rodent=r.habitatZones[0].placements+1;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.worms=[];r.habitatZones[0].next.worm=1000000;completeEventTurns(r,1000,()=>0,4);
+  const r=fixture(size);r.territoryEnabled=false;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.habitatZones[0].birthScale={rodent:1};r.habitatZones[0].next.rodent=r.habitatZones[0].placements+1;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:true});r.worms=[];r.habitatZones[0].next.worm=1000000;completeEventTurns(r,1000,()=>0,3);
   assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].members.length,group);assert.equal(r.cells.length,60);
   const visits=[];let oldId;
   for(let turn=1;turn<=9;turn++){
@@ -28,7 +28,7 @@ test('Plagas de roedores scale 3/6/9 after a three-turn warning; three meals occ
  const r=fixture();birth(r,198);assert.equal(r.bombs.length,0);assert.equal(r.worms.length,1);assert.equal(r.works.length,3);assert.equal(habitatReservations(r).length,9);
 });
 test('Loading historic saves preserves placements and never replays overdue milestones',()=>{
- const r=fixture();delete r.habitatVersion;r.players[0].placements=400;initializeHabitats(r,1000);assert.equal(r.players[0].habitatNext.rodent,429);assert.equal(r.rodents.length,0);const before=structuredClone(r);initializeHabitats(r,2000);assert.deepEqual(r,before);
+ const r=fixture();delete r.habitatVersion;r.players[0].ecologyPlacements=r.players[0].placements=400;initializeHabitats(r,1000);assert.equal(r.players[0].habitatNext.rodent,429);assert.equal(r.rodents.length,0);const before=structuredClone(r);initializeHabitats(r,2000);assert.deepEqual(r,before);
 });
 test('Rodents ignore time; move visits preserve score and never eat the newly placed ficha',()=>{
  const r=fixture();birth(r,livingInterval(66,r.terrain.length));r.worms=[];r.works=[];r.players[0].score=70;const before=structuredClone(r);
@@ -37,7 +37,7 @@ test('Rodents ignore time; move visits preserve score and never eat the newly pl
  r.habitatZones[0].next.rodent=2000000;completeEventTurns(r,1000000);countHabitatPlacement(r,'local-o',fresh,1000001,()=>0);assert.ok(r.cells.some(c=>c.id==='fresh'));assert.equal(r.players[0].score,70);assert.equal(r.rodentRaids[0].turn,1);
 });
 test('Doble advances one completed turn; clocks and cards never advance the visible cycle',()=>{
- let r=createLocal('local','A','B',1000,'normal','untimed');r.players[0].placements=32;r.rodentRaids=[{id:'existing',player:'local-x',x:0,y:0,count:1,remaining:3,visited:[]}];r.cells=[{id:'a',x:2,y:0,symbol:'O',owner:'local-o'},{id:'b',x:2,y:1,symbol:'O',owner:'local-o'},{id:'c',x:2,y:2,symbol:'O',owner:'local-o'}];
+ let r=createLocal('local','A','B',1000,'normal','untimed');r.players[0].ecologyPlacements=r.players[0].placements=32;r.rodentRaids=[{id:'existing',player:'local-x',x:0,y:0,count:1,remaining:3,visited:[]}];r.cells=[{id:'a',x:2,y:0,symbol:'O',owner:'local-o'},{id:'b',x:2,y:1,symbol:'O',owner:'local-o'},{id:'c',x:2,y:2,symbol:'O',owner:'local-o'}];
  r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},1100);r=localCommand(r,'move',{x:0,y:0},1200);assert.equal(r.rodentRaids[0].turn??0,0);
  const nextPoint=availableCells(r,r.pairs[0])[0];r=localCommand(r,'move',nextPoint,1300);assert.equal(r.rodentRaids[0].turn,1);assert.equal(r.players[0].placements,34);
  const before=structuredClone(r.rodentRaids);r=localCommand(r,'tick',{},34000,()=>0);assert.deepEqual(r.rodentRaids,before);

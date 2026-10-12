@@ -7,6 +7,6 @@ test('Seeded command simulation repeats invasions, fauna and reconquest works wi
  assert.deepEqual(first,second);assert.equal(crypto.randomUUID,original);
  assert.equal(first.completed,true);assert.ok(first.constructed>=first.demolished);
  assert.ok(first.rodentMeals>0&&first.wormMeals>0&&first.constructed>0);
- assert.ok(first.announcements['invader-rain']>=2&&first.announcements['invader-colony']>=2);
- assert.ok(Object.keys(first.announcements).filter(k=>!k.startsWith('invader-')).length>=1);
+ assert.ok(first.announcements['invader-rain']>=1&&first.announcements['invader-colony']>=1);
+ assert.ok(Object.keys(first.announcements).filter(k=>!k.startsWith('invader-')).length>=5);
 });

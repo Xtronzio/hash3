@@ -1,3 +1,4 @@
+import {territoryThreatCells} from './territory-threats.js';
 import {inventoryPreferences,storeInventoryPreferences,inventoryBandMarkup,territoryBandMarkup,floatingInventoryMarkup,inventoryEditorMarkup,bindInventoryEditor,bindFloatingInventory,reorderInventory} from './inventory-personalization.js';
 import {nuclearBlast,nuclearContext,nuclearIcon} from './nuclear-tool.js';
 import './inventory-personalization.css';
@@ -25,7 +26,7 @@ import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profil
 import {bindLocalTransfer} from './local-transfer-ui.js';
 import './local-transfer.css';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
-import {ecologyNames,ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
+import {ecologyNames,ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents} from './ecology-navigation.js';
 import {ecologySeconds} from './ecology-clock.js';
 import {matchGoalsMarkup} from './match-goals-ui.js';
 import {loadTerritoryResults,achievementsMarkup,achievementSelection} from './achievements.js';
@@ -322,7 +323,7 @@ function drawBoard(canExpand,ready,target) {
   const barriers=snapshotMemo(room,'board-barriers',()=>frontierCells(room)),reservations=snapshotMemo(room,'board-reservations',()=>habitatReservations(room));
   const barrierKeys=new Set(barriers.filter(c=>!c.borderSide).map(c=>key(c.x,c.y)));
   const {minX,minY,maxX,maxY}=snapshotMemo(room,'board-bounds:'+uid+':'+canExpand+':'+selection?.tool+':'+selection?.point?.x+','+selection?.point?.y+':'+JSON.stringify(selection?.cells||[]),()=>{
-    const all=[...terrain,...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,cells:selection.cells,side:selection.side||'north'}):[]),...reservations,...(room.watchTargets||[]),...(lastNavigationMove(ownPlayer())?[lastNavigationMove(ownPlayer())]:[]),...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...(selection?.cells||[]),...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
+    const all=[...terrain,...territoryThreatCells(room),...barriers,...(selection?.tool==='frontier'&&selection.point?frontierTiles({...selection.point,cells:selection.cells,side:selection.side||'north'}):[]),...reservations,...(room.watchTargets||[]),...(lastNavigationMove(ownPlayer())?[lastNavigationMove(ownPlayer())]:[]),...choices,...choices.map(c=>({x:c.x+2,y:c.y+2})),...activationTargets,...(selection?.cells||[]),...areaOptions,...areaOptions.map(c=>({x:c.x+2,y:c.y+2}))];
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(const c of all){minX=Math.min(minX,c.x);minY=Math.min(minY,c.y);maxX=Math.max(maxX,c.x);maxY=Math.max(maxY,c.y);}
     return {minX,minY,maxX,maxY};
@@ -349,7 +350,7 @@ function drawBoard(canExpand,ready,target) {
   const liveHabitatIndex=snapshotMemo(room,'board-inhabitants',()=>cellIndex(habitatLocations(room)));
   const phenomenonIndex=snapshotMemo(room,'board-phenomena:'+uid,()=>cellIndex(ecologyPinTargets(room,uid).filter(e=>!!territoryIcons[e.kind]&&!e.invasion)));
   const antidoteKeys=snapshotMemo(room,'antidote-keys',()=>new Set((room.territoryEvents||[]).flatMap(e=>(e.antidotes||[]).map(c=>key(c.x,c.y)))));
-  const territoryIndex=snapshotMemo(room,'board-warnings',()=>cellIndex((room.territoryEvents||[]).flatMap(e=>territoryRenderRegion(room,e).map(c=>({...c,kind:e.kind,eventId:e.id})))));
+  const territoryIndex=snapshotMemo(room,'board-warnings',()=>cellIndex(territoryThreatCells(room)));
   const wormTrailIndex=snapshotMemo(room,'board-worm-trails',()=>cellIndex(wormTrailParts(room)));
   const frontierIndex=snapshotMemo(room,'board-walls',()=>cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id})))));
   const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));

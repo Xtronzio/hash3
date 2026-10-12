@@ -38,7 +38,7 @@ test('An idle legacy save persists its upgrade once without permanent polling wo
  const next=localCommand(room,'tick',{},2000);assert.equal(next.habitatVersion,3);assert.notEqual(next,room);assert.equal(localCommand(next,'tick',{},3000),next);
 });
 test('No-food visits expire after three moves and never build an overdue backlog',()=>{
- const room=createLocal('local','A','B',1000,'normal','untimed');room.players[0].placements=35;
+ const room=createLocal('local','A','B',1000,'normal','untimed');room.players[0].ecologyPlacements=room.players[0].placements=35;
  for(let i=0;i<3;i++)countHabitatPlacement(room,'local-x',{x:0,y:0},1000+i,()=>0);
  assert.equal(room.rodentRaids.length,0);assert.equal(room.rodentVisit,undefined);assert.equal(room.cells.filter(c=>c.symbol==='#').length,1);
 });

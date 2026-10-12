@@ -65,7 +65,7 @@
 @keyframes ufo-abduction{0%{opacity:0;transform:translateY(20%) scale(.8)}25%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1;transform:translateY(-20%) scale(.7)}100%{opacity:0;transform:translateY(-60%) scale(.2)}}
 .board-action-cataclysm{color:var(--yellow);background:#ffce3330;animation:cataclysm-demolition .9s both}
 @keyframes cataclysm-demolition{0%{opacity:0}20%,45%,70%{opacity:1;transform:translateX(-3%)}30%,55%{transform:translateX(3%)}100%{opacity:0;transform:scale(.3)}}
-.territory-warning{pointer-events:none;z-index:8;box-shadow:inset 0 0 0 1px #f4c65d99;background:#f4c65d0a}
+.territory-warning{pointer-events:none;z-index:10;border:2px dashed var(--yellow);border-radius:3px;background:#f4c65d0a;box-sizing:border-box}
 .territory-notice{margin:0;padding:5px 12px;color:var(--yellow);font-size:11px;border-bottom:1px solid #655226}
 @media(prefers-reduced-motion:reduce){.board-action-neutral,.board-action-ufo,.board-action-cataclysm{animation:none}}
 

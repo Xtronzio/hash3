@@ -11,7 +11,7 @@ const rng=seed=>()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296)
 const choose=(items,random)=>items[Math.floor(random()*items.length)];
 function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,territoryEnabled=true,durationSeconds=null,openingFigures=99}={}){
  const random=rng(seed);let now=1000;
- let room=createLocal('local','X','O',now,'normal','untimed','medium','X',false,{matchGoal:durationSeconds?{type:'time',target:durationSeconds}:undefined});
+ let room=createLocal('local','X','O',now,'normal','untimed','medium','X',false,{random,matchGoal:durationSeconds?{type:'time',target:durationSeconds}:undefined});
  room.territoryEnabled=territoryEnabled;
  room.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
  room.cells=room.terrain.filter(()=>random()<density).map((p,i)=>({...p,id:'initial:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));

@@ -90,8 +90,8 @@ test('Adopting historic active or paused counters cannot produce retrospective b
  for(const status of ['playing','paused']){
   const r=board();r.status=status;r.players[0].placements=3000;
   r.habitatZones=[{id:'old',x:0,y:0,placements:3000,next:{rodent:33,worm:33,work:66},credit:{}}];
-  delete r.livingTerritoryVersion;delete r.livingHabitatVersion;initializeHabitats(r,1000);
-  assert.equal(r.territoryNextPlacement,3099);assert.equal(r.territoryNextInvasion,3033);
+  delete r.livingTerritoryVersion;delete r.territoryPlanVersion;delete r.livingHabitatVersion;initializeHabitats(r,1000);
+  assert.equal(r.territoryNextPlacement,33);assert.equal(r.territoryNextInvasion,66);
   assert.equal(r.habitatZones[0].next.rodent,3066);assert.equal(r.rodentRaids.length,0);assert.equal(r.territoryEvents.length,0);
   const saved=structuredClone(r);initializeHabitats(r,999999);assert.deepEqual(r,saved);
  }

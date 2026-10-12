@@ -10,7 +10,7 @@ import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {placeNeutral,neutralFrequency} from './neutral.js';
 import {habitatZone,habitatInterval,proportionalBudget,HABITAT_REFERENCE,HABITAT_WEIGHTS,HABITAT_FREQUENCIES} from './habitat-budget.js';
 import {initializeTerritory,advanceTerritory,recordTerritoryPlacement} from './territory-tools.js';
-import {localLiving,LIVING_FREQUENCIES,livingFactor,livingInterval,livingClock,livingBirthBudget,freezeLiving,resumeLiving} from './living-balance.js';
+import {localLiving,plannedEcology,LIVING_FREQUENCIES,livingFactor,livingInterval,livingClock,livingBirthBudget,freezeLiving,resumeLiving} from './living-balance.js';
 import {initializeTurnWorms,isTurnWorm,WORM_TAIL_LIMIT} from './worm-turns.js';
 import {advanceInvasions,removeDefeatedInvasions} from './invasion-paths.js';
 export const HABITAT_INTERVAL=33000;
@@ -19,8 +19,8 @@ const same=(a,b)=>a.x===b.x&&a.y===b.y;
 const fourNeighbors=p=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:p.x+dx,y:p.y+dy}));
 const choose=(all,random)=>all.length?all[Math.min(all.length-1,Math.floor(Math.max(0,random())*all.length))]:null;
 const uuid=()=>crypto.randomUUID();
-export function initializeHabitats(room,now=Date.now()){
- initializeTerritory(room);room.habitatZones||=[];
+export function initializeHabitats(room,now=Date.now(),random=Math.random){
+ initializeTerritory(room,random);room.habitatZones||=[];
  room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
  initializeTurnWorms(room);
  if(localLiving(room)&&room.status!=='finished'&&room.inhabitantReclaimVersion!==1){
@@ -178,13 +178,16 @@ function project(room,point,player,random,now){
  return true;
 }
 export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=Math.random,{completed=true}={}){
- initializeHabitats(room,now);const turnIds=ecologyTurnIds(room);const p=room.players.find(p=>p.id===playerId);if(!p)return;
+ initializeHabitats(room,now,random);const turnIds=ecologyTurnIds(room);const p=room.players.find(p=>p.id===playerId);if(!p)return;
  const frequencies=localLiving(room)?LIVING_FREQUENCIES:HABITAT_FREQUENCIES;
  const area=areaAt(room,point),zone=habitatZone(room,area,frequencies),areaSet=new Set(area.map(c=>key(c.x,c.y)));
  if(localLiving(room)&&!(turnEcology(room)?zone.livingInitialized:zone.clockNext)){zone.next=Object.fromEntries(Object.entries(frequencies).map(([kind,n])=>[kind,(Math.floor(zone.placements/livingInterval(n,area.length))+1)*livingInterval(n,area.length)]));zone.clockNext=Object.fromEntries(['rodent','worm','work'].map(kind=>[kind,now+livingClock(kind,area.length)]));}
  if(turnEcology(room)){zone.livingInitialized=true;delete zone.clockNext;delete zone.clockRemaining;}
  const previouslySuspended=faunaSuspended(room,now);if(room.ecologyRecovery?.moves>0&&(!turnEcology(room)||completed))room.ecologyRecovery.moves--;
- p.placements++;zone.placements++;recordTerritoryPlacement(room,now,random);
+ p.placements++;
+ if(!plannedEcology(room)||completed)zone.placements++;
+ if(plannedEcology(room)){if(completed){p.ecologyPlacements=(p.ecologyPlacements||0)+1;recordTerritoryPlacement(room,now,random,{increment:1});}}
+ else recordTerritoryPlacement(room,now,random);
  const suspended=previouslySuspended||faunaSuspended(room,now);room.eatenCells=room.eatenCells.filter(c=>!same(c,point));
  if(completed){
   const actions=advanceInvasions(room,now,random,room.cells.find(c=>same(c,point))?.id);
@@ -194,7 +197,7 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
  if(faunaEnabled(room)&&!suspended&&completed)visitWorms(room,point,now,random);
  for(const [kind,frequency]of Object.entries(frequencies)){
   p.habitatNext[kind]=(Math.floor(p.placements/frequency)+1)*frequency;
-  if(!faunaEnabled(room)||suspended)continue;
+  if(!faunaEnabled(room)||suspended||plannedEcology(room)&&!completed)continue;
   if(kind==='bomb')continue; // Automatic rain is now a territory card, not repeated small blasts.
   if(zone.placements<zone.next[kind]&&(turnEcology(room)||!localLiving(room)||now<zone.clockNext[kind]))continue;
   zone.next[kind]=zone.placements+(localLiving(room)?livingInterval(frequency,area.length):habitatInterval(frequency,area.length));
@@ -218,7 +221,7 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
   if(bornWorms&&turnEcology(room))zone.birthScale.worm=(zone.birthScale.worm||0)+1;
   else if(bornWorms&&localLiving(room))room.wormAppearances=(room.wormAppearances||0)+1;
  }
- if(territoryEnabled(room)&&!suspended&&p.placements%neutralFrequency(room)===0)placeNeutral(room,areaAt(room,point),now,random,point);
+ if(territoryEnabled(room)&&!suspended&&(!plannedEcology(room)||completed)&&(plannedEcology(room)?p.ecologyPlacements:p.placements)%neutralFrequency(room)===0)placeNeutral(room,areaAt(room,point),now,random,point);
  p.rodentNextSpawn=p.habitatNext.rodent;
  if(turnEcology(room)){
   if(completed)advanceEcologyTurn(room,now,random,turnIds);
@@ -317,7 +320,7 @@ export function resumeHabitats(room,now=Date.now()){
  if(room.ecologyRecovery?.remainingMs!=null){room.ecologyRecovery.until=now+room.ecologyRecovery.remainingMs;delete room.ecologyRecovery.remainingMs;}for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...room.bombs,...room.territoryEvents]){e.nextAt=now+(e.remainingMs??HABITAT_INTERVAL);delete e.remainingMs;}room.habitatLastCheck=now;
 }
 export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppressFauna=false,completedTurn=false}={}){
- initializeHabitats(room,now);if(room.status!=='playing'||turnEcology(room)&&!completedTurn)return false;room.clockNow=now;
+ initializeHabitats(room,now,random);if(room.status!=='playing'||turnEcology(room)&&!completedTurn)return false;room.clockNow=now;
  const eventCount=room.territoryEvents.length,actions=advanceTerritory(room,now);let changed=actions.length>0||eventCount!==room.territoryEvents.length;
  if(actions.length||suppressFauna||!faunaEnabled(room)||faunaSuspended(room,now)){if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions};return changed;}
  if(room.ecologyRecovery){delete room.ecologyRecovery;changed=true;}

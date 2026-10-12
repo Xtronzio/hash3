@@ -92,9 +92,9 @@ test('Pandemic respects immunity, shields, work reservations and worm trails; le
  const online=board();online.mode='world';online.cells=[piece('*',1,0),piece('#',2,0)];applyPlannedEvent(online,{id:'p',kind:'pandemic',region:[{x:1,y:0},{x:2,y:0}]},now);assert.equal(online.cells.length,0);
 });
 test('Habitants can fully reconquer nine occupied cells while builders add nine playable cells',()=>{
- const r=board(333);seedInvasions(r,[{x:1,y:0}],'invader-colony');const cid=r.invasions[0].id;r.cells.push(...Array.from({length:8},(_,i)=>({...piece('*',i+2,0),invasionId:cid})));
+ const r=board(333);seedInvasions(r,[{x:1,y:0}],'invader-colony');const cid=r.invasions[0].id;r.invasions[0].grown=9;r.cells.push(...Array.from({length:8},(_,i)=>({...piece('*',i+2,0),invasionId:cid})));
  countHabitatPlacement(r,'local-x',{x:10,y:5},now,()=>0,{completed:false});const z=r.habitatZones[0];z.next.work=z.placements+1;z.next.rodent=z.next.worm=9999;
- countHabitatPlacement(r,'local-x',{x:10,y:5},now+1,()=>0,{completed:false});assert.equal(r.works.length,3);assert.equal(r.works.flatMap(w=>w.destroy).length,9);const recovered=r.cells.map(c=>key(c.x,c.y));completeEventTurns(r,now+1,()=>0,1);assert.equal(r.works[0].turnsRemaining,3);
+ countHabitatPlacement(r,'local-x',{x:10,y:5},now+1,()=>0,{completed:true});assert.equal(r.works.length,3);assert.equal(r.works.flatMap(w=>w.destroy).length,9);const recovered=r.cells.map(c=>key(c.x,c.y));assert.equal(r.works[0].turnsRemaining,3);
  for(let i=1;i<=3;i++)completeEventTurns(r,now+1+i*33000);
  assert.equal(r.cells.filter(c=>c.symbol==='*').length,0);assert.equal(r.terrain.length,342);assert.equal(r.works.length,0);assert.equal(r.invasions.length,0);
  assert.ok(recovered.every(k=>r.terrain.some(c=>key(c.x,c.y)===k)));assert.ok(recovered.every(k=>availableCells(r,r.pairs[0]).some(c=>key(c.x,c.y)===k)));
@@ -107,7 +107,7 @@ test('Reconquerers never erase X/O/# if a reserved invasive cell changes before 
 });
 test('Builders respect walls and the declared cell goal and stop at the actual cap',()=>{
  let r=board(32);r.cellTarget=33;r.works=[{id:'w',kind:'work',reconquer:true,destroy:[],build:[{x:-1,y:0},{x:-1,y:1}],done:0,nextAt:now}];
- completeEventTurns(r,now,()=>0,2);r=localCommand(r,'move',{x:1,y:0},now,()=>0);assert.equal(r.terrain.length,33);assert.equal(r.status,'finished');assert.equal(r.finalResult.ruleVersion,20);
+ completeEventTurns(r,now,()=>0,2);r=localCommand(r,'move',{x:1,y:0},now,()=>0);assert.equal(r.terrain.length,33);assert.equal(r.status,'finished');assert.equal(r.finalResult.ruleVersion,21);
  const blocked=board();blocked.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];blocked.works=[{id:'w',kind:'work',reconquer:true,destroy:[],build:[{x:-1,y:0}],done:0,nextAt:now}];completeEventTurns(blocked,now);assert.equal(blocked.terrain.length,99);
 });
 test('Migration of a paused R37 test save is atomic and idempotent, with pins and finished records preserved',()=>{
