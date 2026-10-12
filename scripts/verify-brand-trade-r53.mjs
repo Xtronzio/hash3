@@ -78,7 +78,9 @@ try{
     await page.screenshot({path:path.join(output,`logo-legible-r55-${name}-${size.width}.png`)});
    }
    await page.setViewportSize({width:390,height:844});
-   await page.locator('.brand').screenshot({path:path.join(output,`cabecera-r53-${name}.png`)});
+   await page.locator('.compact-turnbar .brand-mark').waitFor({state:'visible'});
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   await page.screenshot({path:path.join(output,`cabecera-r53-${name}.png`),clip:{x:0,y:0,width:390,height:60}});
    await page.locator('[data-action="pause"]').click();
    for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){
     await page.setViewportSize(size);
