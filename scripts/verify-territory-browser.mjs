@@ -128,7 +128,7 @@ try{
  for(const kind of [...LOCAL_NATURAL_ROTATION,...INVADER_EVENT_ROTATION]){
   const {page,errors}=await load(context,fixture(999,kind));
   const active=page.locator(`.board-territory-status button[data-ecology-kind="${kind}"]`);
-  assert.equal(await page.locator('.board-territory-status .is-announced').count(),1);
+  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-announced').count(),1);
   assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),9);
   assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
