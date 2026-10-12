@@ -5,7 +5,9 @@ export async function verifyLocalControls({context,load,output,results}){
  const fresh=()=>createLocal('local','X','O',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});
  const r=fresh();r.players[0].inventory.cards['expand-2']=1;r.players[0].inventory.immunity.cards['immunity-1']=1;
  const {page,errors}=await load(context,r),saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- const widget=page.locator('.floating-immunity[data-floating-player="local-x"]'),before=await widget.boundingBox();
+ assert.equal(await page.locator('.floating-immunity').count(),0);
+ await page.locator('.board-inventory-status [data-action="edit-inventory-layout"]').tap();await page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]').tap();await page.locator('[data-action="inventory-float-toggle"]').tap();await page.locator('[data-action="close-inventory-layout"]').tap();
+ const widget=page.locator('.map-wrap > .floating-inventory-card[data-floating-tool="immunity"][data-floating-player="local-x"]'),before=await widget.boundingBox();
  const view=await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop}));
  await page.mouse.move(before.x+24,before.y+7);await page.mouse.down();await page.mouse.move(before.x+124,before.y+67,{steps:12});await page.mouse.up();
  const after=await widget.boundingBox();assert.ok(after.x>before.x+70);assert.ok(after.y>before.y+35);
