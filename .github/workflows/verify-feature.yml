@@ -43,7 +43,12 @@ jobs:
       - run: npm run simulate:turns -- --quick > /dev/null
       - run: npm run simulate:ecology -- --quick > /dev/null
       - run: npm run build:github
-      - run: npx playwright install --with-deps chromium webkit firefox
+      - run: npx playwright install --with-deps chromium
+        timeout-minutes: 3
+      - run: npx playwright install firefox
+        timeout-minutes: 3
+      - run: npx playwright install --with-deps webkit
+        timeout-minutes: 4
       - run: npm run verify:browser
       - run: npm run verify:transfer
       - uses: actions/upload-artifact@v4
