@@ -12,6 +12,7 @@ export function tradeAvailability(game,playerId,tool,now=Date.now(),{replace=nul
  if((pair.pending?pair.expander:pair[pair.turn.toLowerCase()])!==playerId||game.timeMode!=='untimed'&&!(Date.parse(pair.deadline)>now))return {allowed:false,price,reason:'Espera tu turno'};
  if(replace&&(!practiceTools.some(t=>t.id===replace)||!(inv.cards[replace]>0)))return {allowed:false,price,reason:'Elige una carta guardada para entregar'};
  if(replace===tool)return {allowed:false,price,reason:'Elige una carta diferente'};
+ if(replace&&price>CARD_PRICES[replace])return {allowed:false,price,reason:'Solo puedes cambiar por valor igual o inferior'};
  if((inv.cards[tool]||0)>=MAX_PER_CARD)return {allowed:false,price,reason:'Máximo tres unidades'};
  if(!replace&&Object.values(inv.cards).reduce((a,b)=>a+b,0)>=MAX_CARDS)return {allowed:false,price,reason:'Mochila llena'};
  if(!Number.isFinite(player.score)||player.score<price)return {allowed:false,price,reason:'Puntos insuficientes'};
