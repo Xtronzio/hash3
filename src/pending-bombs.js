@@ -1,6 +1,24 @@
 import {terrainOf,key} from './game.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {protectedTerritoryKeys} from './immunity.js';
+import {invasionGrowthCells,removeDefeatedInvasions} from './invasion-paths.js';
+import {pruneBrokenForms} from './landing-score.js';
+export function activeInvasionBombs(room,growthCells=invasionGrowthCells(room)){
+ if(room.status==='finished')return [];
+ const ids=new Set((room.invasions||[]).filter(c=>c.kind==='invader-rain'&&c.grown<9&&c.failed<3).map(c=>c.id)),fronts=new Set(growthCells.map(c=>key(c.x,c.y)));
+ return room.cells.filter(c=>c.symbol==='*'&&ids.has(c.invasionId)&&fronts.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)).map(c=>({...c,phase:'active',kind:'invader-rain'}));
+}
+export function disarmInvasionBombs(room,point){
+ if(pendingInvasionBombs(room).some(b=>b.x===point.x&&b.y===point.y))return disarmPendingBombs(room,point);
+ const bombs=activeInvasionBombs(room),anchor=bombs.find(b=>b.x===point.x&&b.y===point.y);
+ if(!anchor)throw new Error('Elige una bomba anunciada o un frente activo de Bombardeo.');
+ const targets=bombs.filter(b=>b.invasionId===anchor.invasionId).sort((a,b)=>Math.abs(a.x-point.x)+Math.abs(a.y-point.y)-Math.abs(b.x-point.x)-Math.abs(b.y-point.y)||a.y-b.y||a.x-b.x).slice(0,3),removed=new Set(targets.map(c=>c.id));
+ room.cells=room.cells.filter(c=>!removed.has(c.id));
+ for(const p of room.players)if(removed.has(p.lastMove?.id))delete p.lastMove;
+ if(room.inventoryEffects?.shields)room.inventoryEffects.shields=room.inventoryEffects.shields.filter(e=>!removed.has(e.cell));
+ removeDefeatedInvasions(room);pruneBrokenForms(room);
+ return {disarmed:targets.length,invasionId:anchor.invasionId,phase:'active',cells:targets.map(({x,y})=>({x,y}))};
+}
 export function pendingInvasionBombs(room){
  return (room.territoryEvents||[]).filter(e=>e.kind==='invader-rain'&&e.turnsRemaining>0).flatMap(e=>e.region.map((p,index)=>({...p,id:e.id+':'+index,eventId:e.id,index,turnsRemaining:e.turnsRemaining,kind:'invader-rain'})));
 }

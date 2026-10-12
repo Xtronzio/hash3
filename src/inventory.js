@@ -1,3 +1,4 @@
+import {invasionBombIcon,bombDisarmCross} from './invader-mark.js';
 import {dianaCardMarkup,targetIcon,targetRemovalMarkup} from './watch-targets.js';
 import {inventoryEnabled} from './inventory-enabled.js';
 import {inventoryRows} from './inventory-layout.js';
@@ -20,13 +21,14 @@ Object.assign(toolIcons,{
  ambush:'<g data-icon="ambush"><path d="m5 3 7 8-4 4-5-7 2-5Zm3 12 5 5m-3 1 4-4M3 25c0-4 3-6 7-6"/><rect x="17" y="3" width="11" height="7" rx="1"/><rect x="17" y="14" width="11" height="7" rx="1"/><rect x="17" y="25" width="11" height="5" rx="1"/><path d="m22 5 3 3m0-3-3 3m0 8 3 3m0-3-3 3M7 26h8m-3-3 3 3-3 3"/></g>',
  reconquest:'<g data-icon="reconquest"><path d="M8 15H3v14h26V15h-5M3 22h26m-18-7v14m10-14v14M16 16V2m0 1h11l-3 4 3 4H16"/><path d="M9 4A12 12 0 0 0 3 12m0-5v5h5"/></g>',
  antidote:'<g data-icon="antidote"><rect x="10" y="2" width="12" height="5" rx="1"/><path d="M12 7v4l-5 5v11a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V16l-5-5V7M7 17h18"/><path d="M16 20v7m-3.5-3.5h7M27 3c-2 3-2 4-2 5a2 2 0 0 0 4 0c0-1 0-2-2-5Z"/></g>',
- sapper:'<g data-icon="sapper"><circle cx="10" cy="22" r="7"/><path d="m13 15 3-4 4 2M17 8l1-3m4 4h4M6 20l2 2 4-4M21 2l-4 5 4 5 4-5-4-5Zm0 10-4 17m4-17 7 16M18 5h6"/></g>',
+ sapper:`<g data-icon="sapper" transform="scale(.5)">${invasionBombIcon}${bombDisarmCross}</g>`,
  border:borderIcon,
  frontier:wallIcon,
  'hint-expand':'<rect x="3" y="12" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M3 18h18M3 24h18M9 12v18M15 12v18M19 3h10v10m-10 0L29 3"/>',
  'super-hint':'<path d="M9 20c0-3-4-4-4-9a9 9 0 0 1 18 0c0 5-4 6-4 9M9 24h10m-9 4h8M26 15l2 4 3 1-3 2-2 4-1-4-4-2 4-1 1-4Z"/>'
 });
 for(const length of [1,2,3])toolIcons[length===1?'activate':'expand-'+length]=`<rect x="3" y="9" width="26" height="14" rx="1" stroke-dasharray="2 2"/>${Array.from({length:length-1},(_,i)=>`<path d="M${3+26*(i+1)/length} 9v14"/>`).join('')}<path d="M8 16h6m-3-3v6"/><text x="22" y="20" text-anchor="middle" fill="currentColor" stroke="none" font-size="12" font-weight="800">${length}</text>`;
+toolIcons.bomb=`<g transform="scale(.5)">${invasionBombIcon}</g>`;
 export const toolIcon=kind=>kind==='hint'?hintIcon:`<svg viewBox="0 0 32 32" aria-hidden="true">${toolIcons[kind]||''}</svg>`;
 
 export function inventoryCardTotal(game,playerId){
