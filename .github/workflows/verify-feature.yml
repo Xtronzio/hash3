@@ -24,6 +24,7 @@ on:
       - release/local-layering-r49
       - release/local-inventory-r50
       - release/local-colors-r51
+      - release/local-transfer-r52
   workflow_dispatch:
 permissions:
   contents: write
@@ -42,8 +43,9 @@ jobs:
       - run: npm run simulate:turns -- --quick > /dev/null
       - run: npm run simulate:ecology -- --quick > /dev/null
       - run: npm run build:github
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit firefox
       - run: npm run verify:browser
+      - run: npm run verify:transfer
       - uses: actions/upload-artifact@v4
         if: always()
         with:
