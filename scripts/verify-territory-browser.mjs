@@ -158,7 +158,7 @@ try{
  assert.equal(await visual.locator('.inspection-terrain').innerHTML(),liveMap);
  await visual.screenshot({path:path.join(output,'shared-paused-map.png')});
  await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
- for(let i=0;i<5;i++)await visual.locator('[data-action="minus"]').tap();await frame(visual);
+ const zoomSurface=await visual.locator('.viewport').boundingBox();await visual.mouse.move(zoomSurface.x+zoomSurface.width/2,zoomSurface.y+zoomSurface.height/2);await visual.keyboard.down('Control');await visual.mouse.wheel(0,370);await visual.keyboard.up('Control');await visual.waitForTimeout(180);await frame(visual);
  assert.equal(await visual.locator('.board-overview-map').count(),1);
  for(const symbol of ['X','O','#','*'])assert.ok(await visual.locator(`.board-overview-map [data-symbol="${symbol}"]`).count()>0);
  await visual.screenshot({path:path.join(output,'shared-board-zoom-out.png')});
