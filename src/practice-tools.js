@@ -37,7 +37,8 @@ export const practiceTools=[
   {id:'sapper',label:'Artificieros',description:'Desactiva hasta tres bombas de un Bombardeo todavía anunciado: la seleccionada y las dos más cercanas del mismo aviso. Conserva terreno, fichas y puntos; las demás bombas mantienen su plazo. Cuesta 33 puntos por unidad. Después coloca tu ficha.',button:'Elegir bomba anunciada'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
-export const MAX_CARDS=18,MAX_CARD_TYPES=12;
+// Variety has no separate cap: a normal 18-card hand can hold 18 distinct types.
+export const MAX_CARDS=18,MAX_CARD_TYPES=MAX_CARDS;
 export const pendingTools=[];
 export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];

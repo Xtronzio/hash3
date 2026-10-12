@@ -87,7 +87,7 @@ try{
   const png=await fs.readFile(path.join('docs',icon.href.slice('/hash3/'.length)));
   assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),icon.size);assert.equal(png.readUInt32BE(20),icon.size);
  }
- assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/hash3-apple-touch-icon-r47.png'));
+ assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/hash3-apple-touch-icon-r53.png'));
  results.push({pagesFaviconsAndAppleIconResolve:true,passed:true});
  for(const viewport of [{width:390,height:844},{width:1024,height:768}]){
   const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,serviceWorkers:'block'});

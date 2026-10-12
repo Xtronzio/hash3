@@ -17,10 +17,32 @@ test('Replacement is voluntary and rejects absent, same, protected, capped, poor
  const paused={...r,status:'paused'};assert.equal(tradeAvailability(paused,'local-x','bomb',now,{replace:'frontier'}).allowed,false);
  assert.equal(tradeAvailability(r,'local-x','bomb',now).allowed,false);assert.equal(CARD_PRICES.reconquest,333);
 });
-test('Last copy can free a type slot, but swapping one of two cannot introduce a thirteenth type',()=>{
- const r=full(),inv=r.players[0].inventory;for(const t of practiceTools)inv.cards[t.id]=0;for(const t of practiceTools.slice(0,12))inv.cards[t.id]=1;
- assert.equal(tradeAvailability(r,'local-x','bomb',now,{replace:'hint'}).allowed,true);
- inv.cards.hint=2;assert.equal(tradeAvailability(r,'local-x','bomb',now,{replace:'hint'}).allowed,false);
+test('A full varied hand permits every different target below three, including zero-stock cards when the source has three',()=>{
+ const r=full(),inv=r.players[0].inventory;r.players[0].score=12730;
+ for(const t of practiceTools)inv.cards[t.id]=0;
+ for(const t of practiceTools.slice(0,12))inv.cards[t.id]=1;
+ inv.cards.hint=3;inv.cards.combo=3;inv.cards.bomb=1;
+ assert.equal(total(r),18);assert.equal(practiceTools.filter(t=>inv.cards[t.id]>0).length,14);
+ const before=structuredClone(r);
+ for(const t of practiceTools){
+  const expected=t.id!=='combo'&&inv.cards[t.id]<3;
+  assert.equal(tradeAvailability(r,'local-x',t.id,now,{replace:'combo'}).allowed,expected,t.id);
+  if(!expected)continue;
+  const next=localCommand(r,'trade',{playerId:'local-x',tool:t.id,replace:'combo'},now);
+  assert.equal(total(next),18);assert.equal(next.players[0].inventory.cards[t.id],inv.cards[t.id]+1);assert.equal(next.players[0].inventory.cards.combo,2);
+  assert.equal(next.players[0].score,12730-CARD_PRICES[t.id]);assert.equal(next.players[0].inventory.comboPending,1);
+  assert.deepEqual(next.players[1],before.players[1]);assert.deepEqual(next.pairs,before.pairs);
+ }
+ assert.deepEqual(r,before);
+});
+test('Exchanging repeated cards can grow variety to eighteen without increasing the total',()=>{
+ let r=full();r.players[0].score=12730;
+ for(const target of practiceTools.filter(t=>!['double','opposite','rival','erase','frontier','border'].includes(t.id)).slice(0,12)){
+  const replace=practiceTools.find(t=>r.players[0].inventory.cards[t.id]>1).id;
+  r=localCommand(r,'trade',{playerId:'local-x',tool:target.id,replace},now);
+ }
+ assert.equal(total(r),18);assert.equal(practiceTools.filter(t=>r.players[0].inventory.cards[t.id]>0).length,18);
+ assert.equal(r.players[0].inventory.comboPending,1);
 });
 test('Historical excess remains unchanged in size during replacement; protections and reserves are untouched',()=>{
  const r=full();r.players[0].inventory.cards.frontier=27;r.players[0].inventory.immunity.cards['immunity-1']=333;r.players[0].freeExpansions=33;

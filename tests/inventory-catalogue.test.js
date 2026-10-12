@@ -120,7 +120,7 @@ test('Fair refill survives saves, never exceeds stock caps and cannot draw a fou
  delete inv.received;initializeInventory(r);assert.ok(practiceTools.every(t=>Number.isInteger(inv.received[t.id])));assert.equal(inv.cards.double,MAX_PER_CARD);
 });
 
-test('Mochila de 18 y hasta 12 tipos permite ceros; protecciones aparte y sin recargas históricas',()=>{
+test('Mochila de 18 permite ceros; protecciones aparte y sin recargas históricas',()=>{
  let r=start(),inv=r.players[0].inventory;inv.immunity.cards['immunity-1']=333;
  const before=structuredClone(inv.cards);initializeInventory(r);assert.deepEqual(inv.cards,before);
  for(let turn=0;turn<100;turn++)recordInventoryCombo(r,'local-x',33,{random:()=>0});
@@ -128,11 +128,11 @@ test('Mochila de 18 y hasta 12 tipos permite ceros; protecciones aparte y sin re
  assert.ok(practiceTools.every(t=>inv.cards[t.id]<=3));assert.equal(inv.draws,10);assert.equal(inv.immunity.cards['immunity-1'],333);
  r=JSON.parse(JSON.stringify(r));initializeInventory(r);assert.deepEqual(r.players[0].inventory,inv);
 });
-test('No entra un tipo 13; agotar una carta abre sitio para otro tipo sin reponerla a la fuerza',()=>{
+test('Dieciocho tipos llenan la mochila; agotar una carta abre sitio para cualquier otro tipo',()=>{
  const r=start(),inv=r.players[0].inventory;
  for(const t of practiceTools)inv.cards[t.id]=0;
  for(const t of practiceTools.slice(0,MAX_CARD_TYPES))inv.cards[t.id]=1;
- recordInventoryCombo(r,'local-x',33,{random:()=>.999});assert.equal(inv.lastDraw,practiceTools[MAX_CARD_TYPES-1].id);assert.equal(inv.cards.frontier,0);
+ recordInventoryCombo(r,'local-x',33,{random:()=>.999});assert.equal(inv.draws,undefined);assert.equal(inv.cards.combo,0);assert.equal(inv.comboPending,1);
  inv.cards.double=0;recordInventoryCombo(r,'local-x',33,{random:()=>.999});assert.equal(inv.lastDraw,'combo');assert.equal(inv.cards.combo,1);assert.equal(inv.cards.double,0);
  assert.equal(practiceTools.filter(t=>inv.cards[t.id]>0).length,MAX_CARD_TYPES);
 });
@@ -141,9 +141,10 @@ test('Reservas anteriores excesivas se conservan y no recargan hasta cumplir amb
  for(const t of practiceTools)inv.cards[t.id]=3;
  const before=structuredClone(inv.cards);
  for(let turn=0;turn<20;turn++)recordInventoryCombo(r,'local-x',33,{random:()=>0});assert.deepEqual(inv.cards,before);assert.equal(inv.draws,undefined);
- for(const t of practiceTools)inv.cards[t.id]=1; // 16 tipos: todavía no hay hueco de variedad.
+ for(const t of practiceTools)inv.cards[t.id]=1; // All 24 types still exceed the total capacity.
  recordInventoryCombo(r,'local-x',33,{random:()=>0});assert.equal(inv.draws,undefined);
  for(const t of practiceTools.slice(MAX_CARD_TYPES))inv.cards[t.id]=0;
+ inv.cards.double=0; // Seventeen cards: refill can now use any eligible type.
  recordInventoryCombo(r,'local-x',33,{random:()=>0});assert.equal(inv.draws,1);
 });
 test('Sorteo sostenido rota todo el catálogo y mantiene stocks 0/1/2/3 sin llenar un arsenal',()=>{
@@ -154,7 +155,7 @@ test('Sorteo sostenido rota todo el catálogo y mantiene stocks 0/1/2/3 sin llen
    if(held.length&&random()<.85)inv.cards[held[Math.floor(random()*held.length)].id]--;
    recordInventoryCombo(r,'local-x',33,{random});seen.add(inv.lastDraw);
    const counts=practiceTools.map(t=>inv.cards[t.id]);counts.forEach(n=>stocks.add(n));
-   assert.ok(counts.reduce((a,b)=>a+b)<=18);assert.ok(counts.filter(n=>n>0).length<=12);assert.ok(counts.every(n=>n<=3));assert.ok(counts.some(n=>n===0));
+   assert.ok(counts.reduce((a,b)=>a+b)<=18);assert.ok(counts.filter(n=>n>0).length<=MAX_CARD_TYPES);assert.ok(counts.every(n=>n<=3));assert.ok(counts.some(n=>n===0));
  }
  assert.equal(seen.size,practiceTools.length);assert.deepEqual([...stocks].sort(),[0,1,2,3]);
 });
