@@ -451,3 +451,14 @@ Accesos de inventario blancos con stock y cian cuando utilizables o activos, en 
 Una ampliación libre por grupo de tres figuras cobradas; tres ampliaciones en nueve figuras. Se conservan reservas y se migra al siguiente múltiplo sin premios históricos. Las fronteras antiguas de tres casillas/segmentos se retiran de guardados locales y devuelven una carta Muro por barrera a su propietario, incluso por encima de los topes habituales. Conversión idempotente al cargar, también en pausa; los muros nuevos de una casilla se conservan.
 
 Fauna por colocaciones de zona: roedores 33, gusanos 66 y obras 99, con los mismos presupuestos y cupos proporcionales. La capacidad teórica conjunta de comer fichas pasa de 30,30 % a 31,82 % desde 333 celdas. Contadores guardados se acortan proporcionalmente sin reactivar nacimientos pasados. Fenómenos continúan ligados a nuevos hitos de 333 celdas, separados de fauna y con aviso de 33 segundos. Navegación limitada a pantalla visible más dos celdas.
+
+
+## R0.21.57 · Tu inventario y Bomba atómica
+
+Abre el icono de ajustes junto a la barra de inventario para ordenar las cartas con su tirador o con las flechas. El botón de sacar al tablero convierte la seleccionada en acceso flotante y la retira de la barra. Su tirador permite moverla sin jugar ni gastar cartas. La misma opción la devuelve a la barra. El orden, los flotantes y sus posiciones se conservan por colono y acompañan a la copia trasladada. En pausa se pueden consultar, sin usar cartas.
+
+Cada barra tiene su propio botón de plegar/desplegar: inventario arriba y territorio abajo. Plegarlas aumenta el área de juego; los avisos siguen visibles. La navegación conserva el pellizco y Zoom extensión; se retiran los botones +/-.
+
+Bomba atómica (333 puntos): previsualiza y demuele hasta33 celdas contiguas alrededor del centro, junto con todas sus fichas, conservando los puntos ya cobrados. Respeta Escudo, Inmunidad, habitantes y anclajes. Si la zona elegible es menor, afecta las disponibles. Consume una carta y herramienta; después se juega o amplía normalmente. Reconquista sigue limpiando hasta33 invasores sin perder terreno. La bomba común y Artificieros comparten un contorno grueso sin relleno, con X roja pequeña para desactivación.
+
+Pruebas: `npm test`, `npm run build:github` y `node scripts/verify-custom-inventory-r57.mjs` en el pipeline, con tres motores emulados. Duelo/Mundo siguen desactivados. La ampliación de funciones de Diana se mantiene como propuesta.

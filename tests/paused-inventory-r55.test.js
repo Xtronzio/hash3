@@ -7,7 +7,7 @@ import {practiceTools} from '../src/practice-tools.js';
 import {pausedInventorySummaryMarkup} from '../src/paused-inventory.js';
 
 test('Both card rows stay balanced with the whole catalogue and one Diana',()=>{
- assert.deepEqual(INVENTORY_ROWS.map(row=>row.length),[13,12]);
+ assert.deepEqual(INVENTORY_ROWS.map(row=>row.length),[13,13]);
  assert.equal(new Set(INVENTORY_ROWS.flat()).size,practiceTools.length+1);
  assert.deepEqual(new Set(INVENTORY_ROWS.flat()),new Set([...practiceTools.map(t=>t.id),'target']));
 });
