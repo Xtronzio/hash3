@@ -27,7 +27,8 @@ export async function verifyLocalControls({context,load,output,results}){
  await widget.locator('[data-tool="immunity"]').tap();assert.equal((await saved()).players[0].inventory.immunity.cards['immunity-1'],0);
  await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').tap();
  assert.ok(Math.abs((await widget.boundingBox()).x-after.x)<1);
- await page.screenshot({path:path.join(output,'micro-floating-r41.png')});assert.deepEqual(errors,[]);results.push({microExpansionTapCancelAndPlace:true,floatingImmunityDragNoSpendTapActivateAndResume:true,passed:true});await page.close();
+ await page.screenshot({path:path.join(output,'micro-floating-r41.png')});assert.deepEqual(errors,[]);results.push({microExpansionTapCancelAndPlace:true,floatingImmunityDragNoSpendTapActivateAndResume:true,passed:true});
+ await page.locator('.board-inventory-status [data-action="edit-inventory-layout"]').tap();await page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]').tap();await page.locator('[data-action="inventory-float-toggle"]').tap();await page.locator('[data-action="close-inventory-layout"]').tap();assert.equal(await widget.count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),1);await page.close();
  const l=fresh();l.players[0].inventory.cards['expand-3']=1;
  const {page:lPage,errors:lErrors}=await load(context,l);await lPage.locator('.board-inventory-status [data-tool="expand-3"]').tap();
  for(const [x,y]of [[3,0],[4,0],[4,1]])await lPage.locator(`.area-anchor[data-x="${x}"][data-y="${y}"]`).tap();
