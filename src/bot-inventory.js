@@ -1,4 +1,5 @@
 import {tradeAvailability} from './inventory-economy.js';
+import {nuclearContext,nuclearOptions,nuclearBlast} from './nuclear-tool.js';
 import {scoreLandings} from './landing-score.js';
 import {localLiving} from './living-balance.js';
 import {borderChains} from './area-tools.js';
@@ -77,6 +78,11 @@ export function chooseMachineCard(room,now=Date.now()){
   if(usable('bomb')){
     const target=toolCells(room,actor,'bomb').find(c=>c.symbol!==player.symbol&&neighbors(c,player.symbol)>=1);
     if(target)return command('bomb',target);
+  }
+  if((level==='high'||level==='pro')&&usable('nuclear')){
+    const context=nuclearContext(room),pieces=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
+    const targets=nuclearOptions(room,context).filter(c=>pieces.has(key(c.x,c.y))&&pieces.get(key(c.x,c.y)).owner!==actor).slice(0,48);
+    for(const target of targets){const hit=nuclearBlast(room,target,context),occupied=hit.map(c=>pieces.get(key(c.x,c.y))).filter(Boolean),own=occupied.filter(c=>c.owner===actor).length,enemy=occupied.filter(c=>c.owner!==actor&&c.symbol!=='#').length;if(hit.length>=24&&enemy>=18&&enemy>=3*Math.max(1,own))return command('nuclear',target);}
   }
   if(level==='high'||level==='pro'){
     if(usable('tornado')){

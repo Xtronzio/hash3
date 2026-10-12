@@ -6,6 +6,7 @@ export function rodentVisitFeedback(previous,next){
 export function boardActionFeedback(previous,next){
  if(!previous||previous.id!==next.id||next.status!=='playing')return null;
  const visits=[...(rodentVisitFeedback(previous,next)?.visits||[])];
+ if(next.lastEvent?.id!==previous.lastEvent?.id&&next.lastEvent?.tool==='nuclear')visits.push(...(next.lastEvent.affected||[]).map(p=>({...p,kind:'nuclear'})));
  const habitat=next.habitatEvent,neutral=next.neutralEvent;
  if(habitat&&habitat.id!==previous.habitatEvent?.id)visits.push(...(habitat.actions||[]));
  if(neutral&&neutral.id!==previous.neutralEvent?.id)visits.push({x:neutral.x,y:neutral.y,kind:'neutral'});

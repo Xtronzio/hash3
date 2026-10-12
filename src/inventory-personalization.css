@@ -1,0 +1,53 @@
+.custom-inventory-band,.custom-territory-band{display:flex;align-items:flex-start;gap:4px;min-width:0;color:#00e5ff;}
+.custom-territory-band{color:var(--yellow);}
+.custom-band-content{flex:1;min-width:0;overflow:hidden;}
+.custom-band-content[hidden]{display:none!important;}
+.band-actions{flex:none;display:flex;flex-direction:column;gap:4px;}
+.custom-inventory-band .band-actions button,.custom-territory-band>.band-fold{display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:10px;border:1px solid currentColor;background:#101216;color:inherit;border-radius:7px;touch-action:manipulation;}
+.band-actions svg,.band-fold svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.band-fold[aria-expanded=true] svg{transform:rotate(180deg);}
+.custom-territory-band .custom-band-content{overflow-x:auto;overflow-y:hidden;touch-action:pan-x;}
+.custom-inventory-band.is-collapsed,.custom-territory-band.is-collapsed{justify-content:center;align-items:center;height:32px;}
+.custom-inventory-band.is-collapsed .band-actions{flex-direction:row;gap:4px;}
+.custom-inventory-band.is-collapsed .band-actions button,.custom-territory-band.is-collapsed>.band-fold{height:32px;min-height:32px;width:56px;padding:4px;border-color:#00e5ff65;border-radius:7px;}
+.custom-territory-band.is-collapsed>.band-fold{border-color:#ffce3365;}
+.custom-inventory-band.is-collapsed .band-fold svg{transform:none;}
+.custom-territory-band.is-collapsed>.band-fold svg{transform:rotate(180deg);}
+.game .board-territory-status:has(.custom-territory-band){overflow:hidden;}
+.floating-inventory-card{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;width:50px;background:#101216e8;border:1px solid #00e5ff80;border-radius:9px;color:#00e5ff;box-shadow:0 3px 12px #0008;user-select:none;}
+.favorite-drag-handle{width:100%;height:20px;line-height:18px;text-align:center;font-size:21px;color:#a5c7ce;cursor:grab;touch-action:none;}
+.floating-inventory-card .inventory-shortcut,.floating-inventory-card .diana-card{width:46px;height:46px;min-height:46px;padding:8px;margin:0;border:0;border-radius:7px;position:relative;display:grid;place-items:center;color:#00e5ff;}
+.floating-inventory-card svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.floating-inventory-card small{position:absolute;right:2px;bottom:1px;font-size:11px;color:#00e5ff;background:#101216;}
+.floating-inventory-card .is-inactive{opacity:.35;}
+.inventory-editor-backdrop{position:fixed;inset:0;z-index:60;background:#0008;display:flex;justify-content:center;align-items:flex-end;padding:env(safe-area-inset-top) 6px env(safe-area-inset-bottom);}
+.inventory-editor{width:min(100%,640px);max-height:min(78dvh,750px);display:flex;flex-direction:column;min-height:0;background:#10171d;border:1px solid #00e5ff;border-radius:14px 14px 0 0;padding:10px;color:#00e5ff;box-shadow:0 -6px 30px #000b;}
+.inventory-editor header{display:flex;align-items:center;justify-content:space-between;flex:none;gap:10px;}
+.inventory-editor h2{font-size:20px;margin:0;}.inventory-editor header button{width:44px;min-height:44px;padding:4px;color:#00e5ff;}
+.inventory-editor>p{font-size:12px;color:#b4c4cb;margin:8px 0;line-height:1.4;}
+.inventory-editor-actions{display:flex;align-items:center;gap:4px;flex:none;padding:5px 0;border-block:1px solid #25434b;}
+.inventory-editor-actions>span{flex:1;min-width:0;display:flex;align-items:center;gap:5px;font-size:12px;line-height:1.1;}
+.inventory-editor-actions button{width:44px;height:44px;min-height:44px;padding:8px;color:#00e5ff;font-size:23px;}
+.inventory-editor svg{width:27px;height:27px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.inventory-editor-actions button[aria-pressed=true]{background:#164451;border-color:#00e5ff;}
+.inventory-editor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;overflow:auto;overscroll-behavior:contain;min-height:0;padding:8px 0;}
+.inventory-edit-card{display:flex;position:relative;border:1px solid #31434e;border-radius:7px;background:#151e26;min-width:0;}
+.inventory-edit-card.is-selected{border-color:#00e5ff;background:#12333d;}.inventory-edit-card.is-floating{border-style:dashed;}
+.inventory-order-handle{width:22px;flex:none;display:grid;place-items:center;cursor:grab;touch-action:none;color:#9fb7c1;font-size:20px;}
+.inventory-edit-card button{flex:1;min-width:0;min-height:80px;padding:6px 1px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;background:transparent;border:0;color:#00e5ff;}
+.inventory-edit-card small{font-size:10px;line-height:1.1;text-align:center;white-space:normal;}
+.inventory-float-badge{position:absolute;right:3px;top:1px;font-size:15px;pointer-events:none;}
+.inventory-edit-card.is-dragging{opacity:.4;}.inventory-edit-card.is-drop-target{box-shadow:inset 0 0 0 2px #00e5ff;}
+.inventory-editor footer{display:flex;gap:8px;align-items:center;flex:none;font-size:10px;color:#afc2cb;padding-top:6px;}
+.inventory-editor footer>span{flex:1;}.inventory-editor footer button{min-height:44px;padding:6px;font-size:11px;color:#00e5ff;}
+.cell.nuclear-preview{outline:3px solid #00e5ff;outline-offset:-5px;background:#00e5ff30!important;box-shadow:inset 0 0 0 1px #00e5ff;}
+.board-action-nuclear{color:#00e5ff;border:2px solid #00e5ff;background:#00e5ff40;pointer-events:none;animation:nuclear-flash .85s both;}
+@keyframes nuclear-flash{0%{opacity:1;transform:scale(.8)}35%{opacity:1;transform:scale(1.03)}100%{opacity:0;transform:scale(1.12)}}
+.custom-inventory-band .inventory-active-effects{flex:none;}
+.inspection-panel>.custom-inventory-band,.inspection-panel>.custom-territory-band{flex:none;min-width:0;}
+.paused-minimap:has(>.custom-inventory-band){display:flex!important;flex-direction:column!important;}
+.paused-minimap>.custom-inventory-band .inventory-effects-bar{padding:0;}
+.paused-minimap>.custom-inventory-band{order:1;}.paused-minimap>.inspection-controls:not(.ecology-controls){order:0;}.paused-minimap>.inspection-canvas{order:2;}.paused-minimap>.custom-territory-band{order:3;}
+@media(min-width:620px){.inventory-editor-grid{grid-template-columns:repeat(5,minmax(0,1fr));}}
+@media(max-height:450px) and (orientation:landscape){.inventory-editor{max-height:92dvh;}.inventory-editor-grid{grid-template-columns:repeat(6,minmax(0,1fr));}.inventory-edit-card button{min-height:65px;}.inventory-editor>p{margin:3px 0;}.custom-inventory-band.is-collapsed,.custom-territory-band.is-collapsed{height:28px;}.custom-inventory-band.is-collapsed .band-actions button,.custom-territory-band.is-collapsed>.band-fold{height:28px;min-height:28px;}}
+@media(prefers-reduced-motion:reduce){.board-action-nuclear{animation:none;}}

@@ -37,7 +37,7 @@ test('A full varied hand permits every different target below three, including z
 });
 test('Exchanging repeated cards can grow variety to eighteen without increasing the total',()=>{
  let r=full();r.players[0].score=12730;
- for(const target of practiceTools.filter(t=>!['double','opposite','rival','erase','frontier','border'].includes(t.id)).slice(0,12).sort((a,b)=>CARD_PRICES[b.id]-CARD_PRICES[a.id])){
+ for(const target of practiceTools.filter(t=>CARD_PRICES[t.id]<=33&&!['double','opposite','rival','erase','frontier','border'].includes(t.id)).slice(0,12).sort((a,b)=>CARD_PRICES[b.id]-CARD_PRICES[a.id])){
   const replace=practiceTools.find(t=>r.players[0].inventory.cards[t.id]>1&&CARD_PRICES[t.id]>=CARD_PRICES[target.id]).id;
   r=localCommand(r,'trade',{playerId:'local-x',tool:target.id,replace},now);
  }
