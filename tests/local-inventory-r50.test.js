@@ -18,12 +18,12 @@ test('Capacity stays visible in pause without a duplicate strip in live play',()
   const html=inventoryStatusMarkup(r,{paused,playerId:'local-x'});
   if(!paused){assert.doesNotMatch(html,/inventory-capacity-strip|inventory-capacity-value/);continue;}
   assert.match(html,/inventory-capacity-value ">3\/18/);assert.ok(html.indexOf('inventory-capacity-strip')<html.indexOf('inventory-shortcuts'));
-  assert.match(html,/Inventario X: 3 de 18 cartas guardadas/);
+  assert.match(html,/Mi inventario X: 3 de 18 cartas guardadas/);assert.match(html,/Inventario del rival O: 3 de 18 cartas guardadas/);
  }
  assert.deepEqual(r,before);
  r.players[0].inventory.cards.double=24;r.players[0].inventory.comboPending=true;
  assert.match(inventoryStatusMarkup(r,{paused:true,playerId:'local-x'}),/is-full">26\/18/);
- assert.match(inventoryStatusMarkup(r,{paused:true,playerId:'local-x'}),/\+1 pendiente/);
+ assert.match(inventoryStatusMarkup(r,{paused:true,playerId:'local-x'}),/class="paused-inventory-pending"/);
  assert.match(inventoryStatusMarkup(r,{paused:true,playerId:'local-o'}),/">3\/18/);
  r.playerInventory=false;assert.equal(inventoryStatusMarkup(r,{playerId:'local-x'}),'');
 });

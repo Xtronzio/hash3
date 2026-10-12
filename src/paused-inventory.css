@@ -1,0 +1,8 @@
+.paused-inventory-summary.inventory-capacity-strip{justify-content:space-between;gap:8px;min-height:30px;padding:0;border:0;border-radius:0;background:transparent;pointer-events:auto}
+.paused-inventory-player{display:inline-flex;align-items:center;gap:5px;min-width:0;font-variant-numeric:tabular-nums}
+.paused-inventory-bag{display:block;width:26px;height:29px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.paused-inventory-summary .inventory-capacity-value{margin-left:0;font-size:17px;line-height:22px}
+.paused-inventory-summary .paused-inventory-player.x,.paused-inventory-summary .x .inventory-capacity-value,.paused-inventory-summary .x small{color:var(--red)}
+.paused-inventory-summary .paused-inventory-player.o,.paused-inventory-summary .o .inventory-capacity-value,.paused-inventory-summary .o small{color:var(--green)}
+.paused-inventory-summary .paused-inventory-pending{font-size:10px;line-height:12px}
+@media(max-height:450px) and (orientation:landscape){.paused-inventory-summary.inventory-capacity-strip{min-height:26px;gap:5px}.paused-inventory-bag{width:22px;height:25px}.paused-inventory-summary .inventory-capacity-value{font-size:15px}.paused-inventory-player{gap:3px}}
