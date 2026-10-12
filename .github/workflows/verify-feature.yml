@@ -25,6 +25,7 @@ on:
       - release/local-inventory-r50
       - release/local-colors-r51
       - release/local-transfer-r52
+      - release/local-brand-trade-r53
   workflow_dispatch:
 permissions:
   contents: write
@@ -51,6 +52,7 @@ jobs:
         timeout-minutes: 4
       - run: npm run verify:browser
       - run: npm run verify:transfer
+      - run: npm run verify:brand-trade
       - uses: actions/upload-artifact@v4
         if: always()
         with:

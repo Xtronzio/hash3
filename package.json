@@ -1,6 +1,6 @@
 {
   "name": "hash3",
-  "version": "0.21.52",
+  "version": "0.21.53",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,6 +14,7 @@
     "verify:sql": "node scripts/generate-ecology-sql.mjs --check && node scripts/verify-ecology-sql.mjs",
     "verify:browser": "node scripts/verify-territory-browser.mjs",
     "verify:transfer": "node scripts/verify-local-transfer-r52.mjs",
+    "verify:brand-trade": "node scripts/verify-brand-trade-r53.mjs",
     "simulate:living": "node scripts/simulate-living-r35.mjs"
   },
   "dependencies": {

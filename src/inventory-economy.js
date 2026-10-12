@@ -1,4 +1,4 @@
-import {practiceTools,MAX_CARDS,MAX_CARD_TYPES,MAX_PER_CARD} from './practice-tools.js';
+import {practiceTools,MAX_CARDS,MAX_PER_CARD} from './practice-tools.js';
 import {inventoryEnabled} from './inventory-enabled.js';
 // 3333 is reserved for a future power: current cards do not justify that tier.
 export const CARD_PRICES=Object.freeze({hint:3,destroy:3,frontier:3,activate:3,
@@ -12,10 +12,8 @@ export function tradeAvailability(game,playerId,tool,now=Date.now(),{replace=nul
  if((pair.pending?pair.expander:pair[pair.turn.toLowerCase()])!==playerId||game.timeMode!=='untimed'&&!(Date.parse(pair.deadline)>now))return {allowed:false,price,reason:'Espera tu turno'};
  if(replace&&(!practiceTools.some(t=>t.id===replace)||!(inv.cards[replace]>0)))return {allowed:false,price,reason:'Elige una carta guardada para entregar'};
  if(replace===tool)return {allowed:false,price,reason:'Elige una carta diferente'};
- const counts=Object.values(inv.cards),held=practiceTools.filter(t=>inv.cards[t.id]>0).length;
  if((inv.cards[tool]||0)>=MAX_PER_CARD)return {allowed:false,price,reason:'Máximo tres unidades'};
- const nextTypes=held+(inv.cards[tool]>0?0:1)-(replace&&inv.cards[replace]===1?1:0);
- if(!replace&&counts.reduce((a,b)=>a+b,0)>=MAX_CARDS||nextTypes>MAX_CARD_TYPES&&(!replace||nextTypes>held))return {allowed:false,price,reason:'Mochila llena'};
+ if(!replace&&Object.values(inv.cards).reduce((a,b)=>a+b,0)>=MAX_CARDS)return {allowed:false,price,reason:'Mochila llena'};
  if(!Number.isFinite(player.score)||player.score<price)return {allowed:false,price,reason:'Puntos insuficientes'};
  return {allowed:true,price,reason:replace?'Cambiar una unidad':'Comprar una unidad'};
 }
