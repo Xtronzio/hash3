@@ -39,7 +39,9 @@ export function bindLocalTransfer(root,{storage,base,incoming=null,onImported=()
    const preview=transferPreview(storage,decoded);pending=decoded;const box=find('#transfer-preview');
    box.innerHTML=`<h4>${esc(decoded.data.name||'Tu copia')}</h4><p><strong>${preview.games}</strong> partidas · <strong>${preview.results}</strong> logros<br>Preparada el ${esc(new Date(decoded.data.createdAt).toLocaleString('es-ES'))}</p><p>${preview.already?'Esta copia ya se añadió. No se duplicará.':`Se conservan las ${preview.existing} partidas de este navegador.${preview.collisions?' '+preview.collisions+' coincidencias se añadirán como copias independientes.':''} Las partidas activas llegan pausadas.`}</p>${preview.already?'':`<button type="button" class="primary" data-transfer-action="apply">${icon('check')}<span>Añadir mis partidas</span></button>`}<button type="button" data-transfer-action="cancel">Cancelar</button>`;
    box.hidden=false;status('transfer-import-status',preview.already?'Copia ya recuperada. Tus avances actuales se conservan.':'Copia verificada. Puedes añadirla sin sustituir tus partidas.','ok');
-   box.scrollIntoView({block:'nearest'});box.querySelector('button')?.focus({preventScroll:true});
+   const action=box.querySelector('button');action?.focus({preventScroll:true});
+   const reveal=()=>{if(root.isConnected&&!box.hidden&&document.activeElement===action)action?.scrollIntoView({block:'center',behavior:'auto'});};
+   requestAnimationFrame(reveal);document.fonts?.ready.then(reveal);
    if(new URLSearchParams(location.hash.slice(1)).has('traslado'))history.replaceState(null,'',location.pathname+location.search);
   }catch(error){status('transfer-import-status',error.message,'error');}finally{if(root.isConnected)busy(false);}
  }
