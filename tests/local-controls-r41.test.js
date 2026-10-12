@@ -6,7 +6,9 @@ import {microSelectionOptions,validMicroExpansion,microExpansionChains} from '..
 import {canUsePracticeTool,completeInventoryTurn,initializeInventory} from '../src/practice-tools.js';
 import {recordImmunityCombo,immunityStock} from '../src/immunity.js';
 import {inventoryStatusMarkup,inventoryDockMarkup} from '../src/inventory.js';
-import {floatingImmunityMarkup,clampRatio} from '../src/floating-immunity.js';
+import {clampRatio} from '../src/floating-immunity.js';
+import {floatingInventoryMarkup} from '../src/inventory-personalization.js';
+import {normalizeInventoryPreferences} from '../src/inventory-layout.js';
 import {territoryComparisonKey} from '../src/achievements.js';
 const now=Date.now(),fresh=()=>createLocal('local','X','O',now,'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});
 test('+3 uses three contiguous taps, including an L; prefixes never spend or change the board',()=>{
@@ -32,7 +34,7 @@ test('Own inventory can be off with either human symbol while machine stock rema
   human.inventory.cards.double=1;assert.equal(canUsePracticeTool(r,human.id,'double',now),false);assert.throws(()=>localCommand(r,'inventory',{tool:'double',playerId:human.id},now));
   completeInventoryTurn(r,human.id);assert.equal(human.inventory.draws||0,0);
   for(let i=0;i<3;i++)recordImmunityCombo(r,human.id,33);assert.equal(immunityStock(r,human.id),0);
-  assert.equal(inventoryStatusMarkup(r,{playerId:human.id}), '');assert.equal(inventoryDockMarkup(r,human.id),'');assert.equal(floatingImmunityMarkup(r),'');
+  assert.equal(inventoryStatusMarkup(r,{playerId:human.id}), '');assert.equal(inventoryDockMarkup(r,human.id),'');assert.equal(floatingInventoryMarkup(r,r.humanId,normalizeInventoryPreferences({floating:['immunity']})),'');
   r.pairs[0].turn=bot.symbol;assert.equal(canUsePracticeTool(r,bot.id,'double',now),true);
  }
 });
@@ -42,10 +44,13 @@ test('Local two-human inventory switch affects both, persists through pause/resu
  r=localCommand(r,'pause',{},now+1000);r=localCommand(r,'resume',{},now+2000);assert.equal(r.playerInventory,false);
  const old=fresh();delete old.playerInventory;const cards=structuredClone(old.players[0].inventory.cards);initializeInventory(old);assert.deepEqual(old.players[0].inventory.cards,cards);assert.equal(canUsePracticeTool(old,'local-x','double',now),true);
 });
-test('Floating immunity has a movable handle per human, outside the inventory strip, and finite clamped positions',()=>{
- const r=fresh();assert.equal((floatingImmunityMarkup(r).match(/data-floating-player/g)||[]).length,2);assert.match(floatingImmunityMarkup(r),/immunity-drag-handle/);assert.doesNotMatch(inventoryStatusMarkup(r),/immunity-quick/);
+test('Immunity floats only when the colonist chooses it, with finite clamped positions',()=>{
+ const r=fresh(),defaults=normalizeInventoryPreferences(),chosen=normalizeInventoryPreferences({floating:['immunity']});
+ assert.equal(floatingInventoryMarkup(r,'local-x',defaults),'');assert.match(inventoryStatusMarkup(r),/data-tool="immunity"/);
+ assert.match(floatingInventoryMarkup(r,'local-x',chosen),/data-floating-tool="immunity"/);assert.match(floatingInventoryMarkup(r,'local-x',chosen),/favorite-drag-handle/);
+ assert.doesNotMatch(inventoryStatusMarkup(r,{preferences:chosen}),/data-tool="immunity" data-player="local-x"/);
  for(const [value,expected] of [[-1,0],[2,1],[.5,.5],[NaN,0],[Infinity,0]])assert.equal(clampRatio(value),expected);
- r.status='paused';assert.equal(floatingImmunityMarkup(r),'');
+ r.status='paused';assert.match(floatingInventoryMarkup(r,'local-x',chosen),/data-tool="immunity"[^>]*disabled/);
 });
 test('Results distinguish own inventory on/off without splitting legacy enabled records',()=>{
  const result={mode:'solo',machineInventory:true};assert.equal(territoryComparisonKey(result),territoryComparisonKey({...result,playerInventory:true}));assert.notEqual(territoryComparisonKey(result),territoryComparisonKey({...result,playerInventory:false}));

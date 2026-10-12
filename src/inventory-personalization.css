@@ -67,3 +67,8 @@
  .inspection-panel .custom-inventory-band.is-collapsed,.inspection-panel .custom-territory-band.is-collapsed{align-items:flex-start;}
  .inspection-panel .custom-band-content .inventory-shortcuts,.inspection-panel .custom-band-content .ecology-controls{overflow-x:auto;overflow-y:hidden;}
 }
+
+.inventory-shortcut.immunity-reserve .immunity-active-indicator{top:1px;left:1px;right:auto;background:#00e5ff;color:#071116;}
+.inventory-shortcut.immunity-reserve.is-active{opacity:1;color:#00e5ff;}
+
+.inventory-shortcut .immunity-owner{position:absolute;top:1px;right:2px;font-size:9px;line-height:11px;color:#00e5ff;}

@@ -2,7 +2,7 @@ export const INVENTORY_ROWS=Object.freeze([
  ['double','opposite','rival','swap','shift','erase','bomb','nuclear','tornado','combo','shield','block','ambush'],
  ['reconquest','target','frontier','border','activate','expand-2','expand-3','destroy','hint','hint-expand','super-hint','antidote','sapper']
 ]);
-export const INVENTORY_ORDER=Object.freeze(INVENTORY_ROWS.flat());
+export const INVENTORY_ORDER=Object.freeze([...INVENTORY_ROWS.flat(),'immunity']);
 export function normalizeInventoryPreferences(value={}){
  const order=[...new Set((Array.isArray(value?.order)?value.order:[]).filter(id=>INVENTORY_ORDER.includes(id)))];
  order.push(...INVENTORY_ORDER.filter(id=>!order.includes(id)));
@@ -14,7 +14,7 @@ export function reorderInventory(order,from,to){
  const next=[...order],i=next.indexOf(from),j=next.indexOf(to);if(i<0||j<0||i===j)return next;
  next.splice(i,1);next.splice(j,0,from);return next;
 }
-export function inventoryRows(render,{order=INVENTORY_ORDER,floating=[]}={}){
+export function inventoryRows(render,{order=INVENTORY_ROWS.flat(),floating=[]}={}){
  const visible=order.filter(id=>!floating.includes(id)),split=Math.ceil(visible.length/2),rows=[visible.slice(0,split),visible.slice(split)];
  return `<div class="player-inventory-rows" role="group" aria-label="Herramientas del jugador en dos filas">${rows.map(row=>`<div class="inventory-icon-row">${row.map(render).join('')}</div>`).join('')}</div>`;
 }

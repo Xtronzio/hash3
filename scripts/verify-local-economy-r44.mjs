@@ -8,9 +8,8 @@ export async function verifyLocalEconomy({context,load,output,results}){
  await page.locator('.refill-trigger').waitFor({state:'visible'});
  const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
  const trigger=page.locator('.floating-refill [data-action="refill-hold"]');
- assert.equal(await trigger.count(),1);assert.equal(await page.locator('.floating-immunity').count(),2);
- const refillBox=await trigger.boundingBox(),shieldBox=await page.locator('.floating-immunity').first().boundingBox();
- assert.ok(refillBox.x>=shieldBox.x+shieldBox.width,'Separate floating controls overlap');
+ assert.equal(await trigger.count(),1);assert.equal(await page.locator('.floating-immunity').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"]').count(),2);
+ const refillBox=await trigger.boundingBox();
  const before=await saved();await trigger.tap();assert.deepEqual(await saved(),before);assert.equal(await page.locator('.refill-selector').count(),0);
  const touch=await context.newCDPSession(page);
  const hold=async(ms=1100)=>{const box=await trigger.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await page.waitForTimeout(ms);await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};

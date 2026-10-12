@@ -90,7 +90,7 @@ try{
     assert.equal(await ownCounter.locator('.inventory-capacity-value').innerText(),'18/18');assert.equal(await rivalCounter.locator('.inventory-capacity-value').innerText(),'3/18');
     assert.equal(await ownCounter.locator('.inventory-capacity-value').evaluate(el=>getComputedStyle(el).color),'rgb(255, 74, 88)');assert.equal(await rivalCounter.locator('.inventory-capacity-value').evaluate(el=>getComputedStyle(el).color),'rgb(36, 211, 147)');
     const ownBox=await ownCounter.boundingBox(),rivalBox=await rivalCounter.boundingBox();assert.ok(ownBox.x+ownBox.width<rivalBox.x);
-    assert.deepEqual(await page.locator('.paused-minimap .inventory-shortcuts .inventory-icon-row').evaluateAll(rows=>rows.map(row=>row.children.length)),[13,13]);
+    assert.deepEqual(await page.locator('.paused-minimap .inventory-shortcuts .inventory-icon-row').evaluateAll(rows=>rows.map(row=>row.children.length)),[14,13]);
     assert.equal(await page.locator('.paused-minimap .inventory-capacity-strip').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     assert.equal(await page.locator('.paused-score-body .inventory-capacity-value').count(),0);
@@ -99,7 +99,7 @@ try{
    const ownStored=await read();assert.equal(ownStored.players[0].inventory.comboPending,1);assert.equal(ownStored.players[0].freeExpansions,33);assert.deepEqual(ownStored.players[1],before.players[1]);
    await page.setViewportSize({width:390,height:844});
    const iconPage=await context.newPage();await iconPage.goto(origin+'/icons/hash3-icon-512-r53.png');await iconPage.screenshot({path:path.join(output,`icono-r53-${name}.png`)});
-   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,boardLogo28pxPortrait22pxLandscape:true,pausedCountersOwnLeftRivalRight:true,pausedCountersRedAndGreen:true,balancedRows13and13:true,nativeSafariBookmarkDialogTested:false,noOverflow:true,noOnlineRequests:true,passed:true});
+   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,boardLogo28pxPortrait22pxLandscape:true,pausedCountersOwnLeftRivalRight:true,pausedCountersRedAndGreen:true,balancedRows14and13IncludingImmunity:true,nativeSafariBookmarkDialogTested:false,noOverflow:true,noOnlineRequests:true,passed:true});
    await context.close();
   }catch(error){
    for(const context of browser.contexts())for(const page of context.pages())await page.screenshot({path:path.join(output,`fallo-r53-${name}.png`)}).catch(()=>{});

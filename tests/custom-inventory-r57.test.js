@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal} from '../src/local.js';
-import {inventoryPreferences,storeInventoryPreferences,floatingInventoryMarkup,inventoryBandMarkup,territoryBandMarkup} from '../src/inventory-personalization.js';
+import {createLocal,localCommand} from '../src/local.js';
+import {inventoryPreferences,storeInventoryPreferences,floatingInventoryMarkup,inventoryEditorMarkup,inventoryBandMarkup,territoryBandMarkup} from '../src/inventory-personalization.js';
 import {INVENTORY_ORDER,normalizeInventoryPreferences,reorderInventory,inventoryRows} from '../src/inventory-layout.js';
 import {inventoryStatusMarkup} from '../src/inventory.js';
 import {saveLocalGame,loadLocalGames} from '../src/sessions.js';
@@ -13,7 +13,7 @@ test('Preferences normalize a complete unique catalogue and balance visible rows
  assert.equal(preferences.order.length,INVENTORY_ORDER.length);assert.deepEqual(preferences.order.slice(0,2),['bomb','hint']);assert.equal(new Set(preferences.order).size,INVENTORY_ORDER.length);
  assert.deepEqual(preferences.floating,['bomb','hint']);assert.deepEqual(preferences.positions,{bomb:{x:1,y:0}});
  const html=inventoryRows(id=>`<i data-tool="${id}"></i>`,preferences),rows=[...html.matchAll(/class="inventory-icon-row">([\s\S]*?)<\/div>/g)].map(m=>(m[1].match(/data-tool/g)||[]).length);
- assert.deepEqual(rows,[12,12]);assert.doesNotMatch(html,/data-tool="bomb"|data-tool="hint"/);
+ assert.deepEqual(rows,[13,12]);assert.doesNotMatch(html,/data-tool="bomb"|data-tool="hint"/);
  const reordered=reorderInventory(preferences.order,'sapper','bomb');assert.equal(reordered[0],'sapper');assert.deepEqual(new Set(reordered),new Set(INVENTORY_ORDER));assert.equal(preferences.order[0],'bomb');
 });
 test('Customization and fold state persist per colonist, preserve gameplay exactly and ride with transfers',()=>{
@@ -33,4 +33,23 @@ test('Floating cards keep real stock and the shared referee; moving/ordering nev
  assert.doesNotMatch(bar,/data-tool="double"|data-tool="sapper"|data-action="mark-target"/);assert.deepEqual(r,before);
  r.status='paused';assert.match(floatingInventoryMarkup(r,'local-x',preferences),/data-tool="double"[^>]*disabled/);r.status='playing';r.pairs[0].turn='O';assert.match(floatingInventoryMarkup(r,'local-x',preferences),/data-tool="double"[^>]*disabled/);
  const folded=inventoryBandMarkup(bar,r,'local-x',preferences);assert.match(folded,/aria-expanded="false"/);assert.match(folded,/custom-band-content" hidden/);assert.match(territoryBandMarkup('<i>territory</i>',{territoryCollapsed:true}),/custom-band-content" hidden/);
+});
+
+test('Legacy preferences receive immunity in the bar and opt-in floating preserves reserves and out-of-turn activation',()=>{
+ let r=fresh();r.players[0].inventory.immunity.cards['immunity-1']=3;r.pairs[0].turn='O';
+ const legacy={order:INVENTORY_ORDER.filter(id=>id!=='immunity'),floating:['hint'],positions:{hint:{x:.2,y:.5}},inventoryCollapsed:false,territoryCollapsed:true};
+ const preferences=normalizeInventoryPreferences(legacy),before=structuredClone(r);
+ assert.equal(preferences.order.at(-1),'immunity');assert.deepEqual(preferences.floating,['hint']);assert.deepEqual(preferences.positions,legacy.positions);
+ assert.match(inventoryStatusMarkup(r,{playerId:'local-x',preferences}),/data-tool="immunity"[^>]*>[^]*?<small>×3<\/small>/);
+ assert.doesNotMatch(inventoryStatusMarkup(r,{playerId:'local-x',preferences}).match(/<button[^>]*data-tool="immunity"[^>]*>/)[0],/disabled/);
+ assert.match(inventoryEditorMarkup(preferences,'immunity'),/Sacar Inmunidad como flotante/);
+ const floated=normalizeInventoryPreferences({...preferences,floating:[...preferences.floating,'immunity']});
+ const updated=storeInventoryPreferences(r,'local-x',floated,storage());delete updated.inventoryPreferences;assert.deepEqual(updated,before);
+ assert.doesNotMatch(inventoryStatusMarkup(r,{playerId:'local-x',preferences:floated}),/data-tool="immunity" data-player="local-x"/);
+ assert.match(floatingInventoryMarkup(r,'local-x',floated),/data-floating-tool="immunity"/);assert.match(floatingInventoryMarkup(r,'local-x',floated),/×3/);
+ r=localCommand(r,'inventory',{tool:'immunity',playerId:'local-x'},now);
+ assert.equal(r.players[0].inventory.immunity.cards['immunity-1'],2);assert.equal(r.pairs[0].turn,'O');assert.match(inventoryStatusMarkup(r,{playerId:'local-o'}),/data-tool="immunity" data-player="local-x"/);assert.deepEqual(r.players[0].inventory.cards,before.players[0].inventory.cards);
+ assert.match(floatingInventoryMarkup(r,'local-x',floated),/data-immunity-clock="local-x">33/);
+ assert.match(inventoryStatusMarkup(r,{playerId:'local-x',preferences}),/data-immunity-clock="local-x">33/);
+ r=localCommand(r,'pause',{},now+1000);const html=floatingInventoryMarkup(r,'local-x',floated);assert.match(html,/data-tool="immunity"[^>]*disabled/);assert.match(html,/data-immunity-clock="local-x">32/);
 });

@@ -19,12 +19,12 @@ try{
    game.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));game.pairs[0].active={x:3,y:3};game.pairs[0].terrainAnchor={x:0,y:0};
    game.cells=game.terrain.filter(c=>(c.x+c.y)%3!==0).map((c,i)=>({...c,id:`qa:${c.x}:${c.y}`,symbol:['X','O','*','#'][i%4],owner:i%4===0?'local-x':i%4===1?'local-o':null}));
    for(const p of game.players)for(const t of Object.keys(p.inventory.cards))p.inventory.cards[t]=0;
-   Object.assign(game.players[0].inventory.cards,{double:1,hint:1,nuclear:1,sapper:1});game.players[0].score=12345;
+   Object.assign(game.players[0].inventory.cards,{double:1,hint:1,nuclear:1,sapper:1});game.players[0].score=12345;game.players[0].inventory.immunity.cards['immunity-1']=2;
    await context.addInitScript(game=>{if(!localStorage.getItem('hash3_locals')){localStorage.setItem('hash3_locals',JSON.stringify([game]));localStorage.setItem('hash3_local',JSON.stringify({id:game.id}));}sessionStorage.setItem('hash3_restore_local','1');},game);
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.locator('.game .viewport').waitFor();await frame(page);
    const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
    const tap=async node=>name==='firefox'?node.click():node.tap();
-   const before=await read();assert.equal(await page.locator('[data-action="plus"],[data-action="minus"]').count(),0);assert.equal(await page.locator('[data-action="fit-board"]').count(),1);
+   const before=await read();assert.equal(await page.locator('.floating-immunity').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),1);assert.equal(await page.locator('[data-action="plus"],[data-action="minus"]').count(),0);assert.equal(await page.locator('[data-action="fit-board"]').count(),1);
    const initialHeight=await page.locator('.viewport').evaluate(n=>n.clientHeight);
    await tap(page.locator('.board-inventory-status [data-action="edit-inventory-layout"]'));
    const source=page.locator('[data-edit-tool="nuclear"] .inventory-order-handle'),destination=page.locator('[data-edit-tool="double"]');
@@ -74,6 +74,14 @@ try{
    await tap(page.locator('[data-action="refill-mode"][data-mode="exchange"]'));await tap(page.locator('[data-action="refill-replace"][data-tool="double"]'));
    for(const tool of ['nuclear','reconquest'])assert.equal(await page.locator(`[data-action="refill-buy"][data-tool="${tool}"]`).isEnabled(),false);
    assert.match(await page.locator('.refill-value-cap').innerText(),/33/);await tap(page.locator('[data-action="close-refill"]'));assert.equal((await read()).players[0].score,12345);assert.equal((await read()).players[0].inventory.cards.double,1);
+   // Inmunidad stays in the bar until explicitly chosen; returning it keeps the active clock and stock.
+   await tap(page.locator('.board-inventory-status [data-action="edit-inventory-layout"]'));
+   await tap(page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]'));await tap(page.locator('[data-action="inventory-float-toggle"]'));await tap(page.locator('[data-action="close-inventory-layout"]'));await frame(page);
+   assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),0);assert.equal(await page.locator('.map-wrap > [data-floating-tool="immunity"]').count(),1);
+   const protections=(await read()).players[0].inventory.immunity.cards['immunity-1'];assert.equal(protections,2);
+   await tap(page.locator('.map-wrap > [data-floating-tool="immunity"] button'));await frame(page);assert.equal((await read()).players[0].inventory.immunity.cards['immunity-1'],1);assert.ok(await page.locator('.map-wrap > [data-floating-tool="immunity"] [data-immunity-clock]').count());
+   await tap(page.locator('.board-inventory-status [data-action="edit-inventory-layout"]'));await tap(page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]'));await tap(page.locator('[data-action="inventory-float-toggle"]'));await tap(page.locator('[data-action="close-inventory-layout"]'));await frame(page);
+   assert.equal(await page.locator('.map-wrap > [data-floating-tool="immunity"]').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),1);assert.equal((await read()).players[0].inventory.immunity.cards['immunity-1'],1);assert.ok(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"] [data-immunity-clock]').count());
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,dragOrderAndFavoritePlacement:true,persistentIndependentPreferences:true,barFoldingGainsHeight:fullHeight-initialHeight,foldedStockAndPauseResume:true,nuclearPreviewCancelAnd33Demolition:true,conservesPointsTurnsAndOtherInventory:true,mobileAndLandscapeWithinViewport:true,noOnlineRequests:true,passed:true});await context.close();
   }catch(error){for(const c of browser.contexts())for(const p of c.pages())await p.screenshot({path:path.join(output,`fallo-r57-${name}.png`)}).catch(()=>{});throw error;}finally{await browser.close();}
  }

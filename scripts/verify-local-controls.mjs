@@ -5,7 +5,9 @@ export async function verifyLocalControls({context,load,output,results}){
  const fresh=()=>createLocal('local','X','O',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});
  const r=fresh();r.players[0].inventory.cards['expand-2']=1;r.players[0].inventory.immunity.cards['immunity-1']=1;
  const {page,errors}=await load(context,r),saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- const widget=page.locator('.floating-immunity[data-floating-player="local-x"]'),before=await widget.boundingBox();
+ assert.equal(await page.locator('.floating-immunity').count(),0);
+ await page.locator('.board-inventory-status [data-action="edit-inventory-layout"]').tap();await page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]').tap();await page.locator('[data-action="inventory-float-toggle"]').tap();await page.locator('[data-action="close-inventory-layout"]').tap();
+ const widget=page.locator('.map-wrap > .floating-inventory-card[data-floating-tool="immunity"][data-floating-player="local-x"]'),before=await widget.boundingBox();
  const view=await page.locator('.viewport').evaluate(el=>({x:el.scrollLeft,y:el.scrollTop}));
  await page.mouse.move(before.x+24,before.y+7);await page.mouse.down();await page.mouse.move(before.x+124,before.y+67,{steps:12});await page.mouse.up();
  const after=await widget.boundingBox();assert.ok(after.x>before.x+70);assert.ok(after.y>before.y+35);
@@ -25,7 +27,8 @@ export async function verifyLocalControls({context,load,output,results}){
  await widget.locator('[data-tool="immunity"]').tap();assert.equal((await saved()).players[0].inventory.immunity.cards['immunity-1'],0);
  await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').tap();
  assert.ok(Math.abs((await widget.boundingBox()).x-after.x)<1);
- await page.screenshot({path:path.join(output,'micro-floating-r41.png')});assert.deepEqual(errors,[]);results.push({microExpansionTapCancelAndPlace:true,floatingImmunityDragNoSpendTapActivateAndResume:true,passed:true});await page.close();
+ await page.screenshot({path:path.join(output,'micro-floating-r41.png')});assert.deepEqual(errors,[]);results.push({microExpansionTapCancelAndPlace:true,floatingImmunityDragNoSpendTapActivateAndResume:true,passed:true});
+ await page.locator('.board-inventory-status [data-action="edit-inventory-layout"]').tap();await page.locator('[data-edit-tool="immunity"] [data-action="inventory-edit-select"]').tap();await page.locator('[data-action="inventory-float-toggle"]').tap();await page.locator('[data-action="close-inventory-layout"]').tap();assert.equal(await widget.count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="immunity"][data-player="local-x"]').count(),1);await page.close();
  const l=fresh();l.players[0].inventory.cards['expand-3']=1;
  const {page:lPage,errors:lErrors}=await load(context,l);await lPage.locator('.board-inventory-status [data-tool="expand-3"]').tap();
  for(const [x,y]of [[3,0],[4,0],[4,1]])await lPage.locator(`.area-anchor[data-x="${x}"][data-y="${y}"]`).tap();

@@ -392,3 +392,10 @@ Reconquista continúa quitando hasta33 invasores y conserva terreno. Diana: prop
 Jorge reitera durante R57: una carta de3/33 no se cambia por Bomba atómica o Reconquista333, aunque haya saldo suficiente. Mantener bloqueo de valor en árbitro, selector y máquina; compra directa con puntos es operación distinta. Comprobar ambas cartas333 con un origen33 en el navegador.
 
 En pausa horizontal baja, catálogos a un lado del mapa en pistas independientes, sin salir de pantalla ni ocultar contadores. Plegar reduce su pista y ensancha el mapa; nunca modifica preferencias al girar. Mantener dos filas, scroll propio, diana bajo marcador y mapa navegable, también a pantalla completa.
+
+
+## R0.21.58 · Inmunidad elegida por el colono
+
+Jorge pide devolver Inmunidad a la barra y decidir personalmente si la saca como flotante. Añadir immunity al orden personalizable; preferencias anteriores la reciben en la barra, sin alterar otros flotantes, orden, plegado ni posiciones. Retirar flotantes obligatorios. Inmunidad usa el mismo editor, tirador, persistencia, mapa y pausa que las demás cartas. Mantener stock independiente sin cupo18/3, activación fuera de turno, contador33s y pausa sin consumo. No cambiar economía, motor ni ruleVersion20. Publicar por CI/Pages tras comprobar preferencia explícita y conservación del guardado.
+
+En Sin conexión conservar el acceso a la protección del otro colono dentro de la barra, identificado X/O, para permitir activación fuera de turno sin imponer flotantes. En VS máquina mostrar solo la protección humana como acción.
