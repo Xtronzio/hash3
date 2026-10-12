@@ -24,6 +24,7 @@
 .refill-remaining{font-size:10px;color:#b3c7d2;white-space:nowrap;}
 .refill-selector header button{width:44px;height:44px;min-height:44px;font-size:24px;padding:0;border:0;border-radius:50%;background:transparent;color:#edf8ff;}
 .refill-catalog{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:0 6px 6px;}
+.refill-modes{display:flex;align-items:center;gap:4px;padding:0 6px 4px;flex:none;color:#00e5ff;}.refill-modes button{min-height:44px;padding:4px 10px;background:transparent;border:1px solid #385866;color:#00e5ff;font-size:12px;}.refill-modes button[aria-pressed="true"]{border-color:#00e5ff;background:#0d3540;}.refill-exchange-stage{display:flex;align-items:center;gap:5px;margin-left:auto;font-size:11px;}.refill-exchange-stage svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;}
 .refill-card-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;}
 .refill-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:56px;border:1px solid #466475;border-radius:8px;padding:8px 1px 3px;background:linear-gradient(#192a36,#101923);color:#edf8ff;touch-action:pan-y;}
 .refill-card:not(:disabled):active{background:#294654;border-color:#bdf4ff;}

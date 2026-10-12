@@ -19,6 +19,8 @@ import {ONLINE_ENABLED,ONLINE_NOTICE,modeAvailable} from './online-availability.
 import {machineTurnKey} from './machine-turn.js';
 import {copyText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
+import {bindLocalTransfer} from './local-transfer-ui.js';
+import './local-transfer.css';
 import {eventOutlookMarkup,ecologyWarningsMarkup} from './event-outlook.js';
 import {ecologyNames,ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget,ecologyIcon,ecologyPinTargets,ecologyClockEvents,territoryRenderRegion} from './ecology-navigation.js';
 import {ecologySeconds} from './ecology-clock.js';
@@ -88,10 +90,11 @@ let pairLobby=null,mapInteracting=false,mapDeferred=false,worldMapOpen=false;
 let worldMapState={},refreshBoard=()=>{},boardFrame=0;
 function scheduleBoard(immediate=false){if(immediate){cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard();}else if(!boardFrame)boardFrame=requestAnimationFrame(()=>{boardFrame=0;refreshBoard();});}
 let pauseMapOpen=false,pauseMapState={},disposeInspection=null,disposeMap=null,thumbnailObserver=null;
+let incomingTransfer=null;
 const onlinePreviews=new Map();
 const previewRequests=createSnapshotQueue(code=>command('get',{code}),(key,snapshot)=>onlinePreviews.set(key,{room:snapshot,at:Date.now()}));
 let room = null, uid = null, busy = false, polling = false, rankOpen = false, zoom = 1;
-let targetMarking=false,refillPlayer=null,refillPurchases=0,impactNotices=[],impactNoticeTimer;
+let targetMarking=false,refillPlayer=null,refillPurchases=0,refillExchange=false,refillReplace=null,impactNotices=[],impactNoticeTimer;
 function impactNoticesMarkup(){return `<div class="territory-impact-announcements" role="status" aria-live="polite">${impactNotices.filter(e=>e.until>Date.now()).map(e=>`<p data-impact-id="${e.id}">${escape(territoryImpactText(e))}</p>`).join('')}</div>`;}
 function updateImpactNotices(previous,next){
  clearTimeout(impactNoticeTimer);if(previous?.id!==next.id)impactNotices=[];
@@ -481,7 +484,10 @@ function renderHallDialog() {
   }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local,hasPrevious:hallHistory.length>0});
   app.insertAdjacentHTML('beforeend',markup);
-  if(hallDialog==='profile')hydrateProfileAccess();
+  if(hallDialog==='profile'){
+   hydrateProfileAccess();
+   if(!ONLINE_ENABLED)bindLocalTransfer(document.querySelector('.profile-screen'),{storage:localStorage,base:location.href,incoming:incomingTransfer,onCancelled:()=>{incomingTransfer=null;},onImported:()=>{incomingTransfer=null;notify('Copia recuperada. Tus partidas están en Mis partidas.');void openMyGames();}});
+  }
   if(hallDialog==='games')bindOnlineThumbnails();
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
@@ -711,12 +717,15 @@ async function run(operation) {
 }
 bindRefillHold(app,playerId=>{
  if(busy||!isLocal()||playerId!==uid||!canOpenRefill(room,playerId))return;
- refillPlayer=playerId;refillPurchases=0;inventoryOpen=false;eventsOpen=false;renderInventory();renderEvents();document.querySelector('[data-action="inventory"]')?.setAttribute('aria-expanded','false');renderRefill();
+ refillPlayer=playerId;refillPurchases=0;refillExchange=false;refillReplace=null;inventoryOpen=false;eventsOpen=false;renderInventory();renderEvents();document.querySelector('[data-action="inventory"]')?.setAttribute('aria-expanded','false');renderRefill();
  document.querySelector('[data-action="close-refill"]')?.focus({preventScroll:true});
 });
 function renderRefill(){
  document.querySelector('.refill-backdrop')?.remove();
- if(refillPlayer&&canOpenRefill(room,refillPlayer))app.insertAdjacentHTML('beforeend',refillSelectorMarkup(room,refillPlayer,{remaining:3-refillPurchases}));
+ if(refillPlayer&&canOpenRefill(room,refillPlayer)){
+  if(refillReplace&&!(room.players.find(p=>p.id===refillPlayer)?.inventory.cards[refillReplace]>0))refillReplace=null;
+  app.insertAdjacentHTML('beforeend',refillSelectorMarkup(room,refillPlayer,{remaining:3-refillPurchases,exchange:refillExchange,replace:refillReplace}));
+ }
  else refillPlayer=null;
 }
 app.addEventListener('click',async e=>{
@@ -783,10 +792,17 @@ app.addEventListener('click',async e=>{
    return;
   }
   if(action==='close-refill'){refillPlayer=null;renderRefill();document.querySelector('[data-action="refill-hold"]')?.focus({preventScroll:true});return;}
+  if(action==='refill-mode'){
+   if(!refillPlayer||!canOpenRefill(room,refillPlayer))return;refillExchange=b.dataset.mode==='exchange';refillReplace=null;renderRefill();return;
+  }
+  if(action==='refill-replace'||action==='refill-replace-clear'){
+   if(!refillExchange||!refillPlayer||!canOpenRefill(room,refillPlayer))return;
+   refillReplace=action==='refill-replace-clear'?null:b.dataset.tool;renderRefill();return;
+  }
   if(action==='refill-buy'){
     const playerId=b.dataset.player;if(playerId!==refillPlayer||playerId!==uid||refillPurchases>=3||!canOpenRefill(room,playerId))return;
-    const tool=b.dataset.tool;
-    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`Recarga · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`,{inventory:true});});
+    const tool=b.dataset.tool,replace=refillExchange?refillReplace:null;if(refillExchange&&!replace)return;
+    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId,replace}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;refillReplace=null;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`${replace?'Cambio · −1 '+practiceTools.find(t=>t.id===replace).label:'Recarga'} · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`,{inventory:true});});
     (document.querySelector(`.refill-selector [data-tool="${tool}"]:not(:disabled)`)||document.querySelector('[data-action="close-refill"]')||document.querySelector('[data-action="refill-hold"]'))?.focus({preventScroll:true});return;
   }
   if(action==='remove-target'){if(!isLocal())return;await run(async()=>accept(localCommand(room,'remove-target',{id:b.dataset.id})));return;}
@@ -1057,7 +1073,16 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
 window.addEventListener('online',poll);
 window.addEventListener('resize',()=>{if(room?.status==='playing'){blinkId=null;if(mapInteracting)mapDeferred=true;else render();}});
 setInterval(poll,1800);
+function openIncomingTransfer(input){
+ if(!new URLSearchParams(new URL(input).hash.slice(1)).has('traslado'))return false;
+ if(isLocal())persistLocal(room.status==='playing'?localCommand(room,'pause'):room);
+ clearGameView();incomingTransfer=input;hallDialog='profile';hallHistory=[];renderHome();return true;
+}
+window.addEventListener('hashchange',()=>{
+ try{openIncomingTransfer(location.href);}catch(error){notify(error.message||'No se pudo abrir la copia. Tu partida se conserva.');}
+});
 async function init(){
+ if(openIncomingTransfer(location.href))return;
  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
  renderHome();
  if(ONLINE_ENABLED&&incoming){

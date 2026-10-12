@@ -1,3 +1,4 @@
+import {localTransferSectionsMarkup} from './local-transfer-ui.js';
 // Pantalla de acceso compartido: enlaces privados y acciones separados.
 // Nunca se incrusta el token en HTML; el navegador lo añade solo tras cargar.
 const icons={
@@ -30,7 +31,9 @@ export function profileAccessMarkup(name='',{online=true}={}){
   '<p class="profile-footnote">Mundo, Duelo y tu clasificación están asociados a tu identidad online. Las partidas de VS máquina y Sin conexión permanecen en cada navegador.</p>'+
   '</div>';
  if(online)return html;
- return html.replace(/(<button\b[^>]*data-action="profile-(?:generate|renew|renew-confirm)"[^>]*)(>)/g,'$1 disabled title="En construcción"$2')
+ const onlineHtml=html.replace(/(<button\b[^>]*data-action="profile-(?:generate|renew|renew-confirm)"[^>]*)(>)/g,'$1 disabled title="En construcción"$2')
   .replace('<input id="profile-link"','<input disabled id="profile-link"')
   .replace('<button type="submit">'+ico('download'),'<button type="submit" disabled title="En construcción">'+ico('download'));
+ const start=onlineHtml.indexOf('<section class="profile-section profile-transfer"');
+ return onlineHtml.slice(0,start)+localTransferSectionsMarkup()+'<details class="profile-online-access"><summary>Acceso online · En construcción</summary>'+onlineHtml.slice(start,-6)+'</details></div>';
 }

@@ -18,7 +18,14 @@ export function chooseMachineCard(room,now=Date.now()){
   if(level!=='basic'&&inv.machineTradeTurn!==turn&&practiceTurn(room,actor).used.length===0){
    const stars=room.cells.filter(c=>c.symbol==='*').length;
    const wanted=[...(toolCells(room,actor,'sapper').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['sapper']:[]),...(toolCells(room,actor,'antidote').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['antidote']:[]),...(stars>=9?['reconquest']:stars?['ambush']:[]),'double'];
-   for(const tool of wanted){const trade=tradeAvailability(room,actor,tool,now);if(inv.cards[tool]||!trade.allowed||player.score<3*trade.price)continue;const probe=structuredClone(room);probe.players.find(p=>p.id===actor).inventory.cards[tool]=1;if(canUsePracticeTool(probe,actor,tool,now))return {action:'trade',payload:{tool,playerId:actor}};}
+   for(const tool of wanted){
+    if(inv.cards[tool])continue;let trade=tradeAvailability(room,actor,tool,now),replace=null;
+    if(!trade.allowed&&trade.reason==='Mochila llena'){
+     replace=['destroy','hint-expand','sapper','antidote','ambush','reconquest','shield','frontier'].find(id=>id!==tool&&inv.cards[id]>0&&!usable(id)&&tradeAvailability(room,actor,tool,now,{replace:id}).allowed)||null;
+     if(replace)trade=tradeAvailability(room,actor,tool,now,{replace});
+    }
+    if(!trade.allowed||player.score<3*trade.price)continue;const probe=structuredClone(room);probe.players.find(p=>p.id===actor).inventory.cards[tool]=1;if(canUsePracticeTool(probe,actor,tool,now))return {action:'trade',payload:{tool,playerId:actor,...(replace?{replace}:{})}};
+   }
   }
   const command=(tool,point,extra={})=>({action:'inventory',payload:{tool,playerId:actor,...point,...extra}});
   if(usable('sapper')){const target=toolCells(room,actor,'sapper').find(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor));if(target)return command('sapper',target);}

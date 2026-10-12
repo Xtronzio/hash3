@@ -1,6 +1,6 @@
 {
   "name": "hash3",
-  "version": "0.21.51",
+  "version": "0.21.52",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,10 +13,12 @@
     "simulate:turns": "node scripts/simulate-ecology-turns.mjs",
     "verify:sql": "node scripts/generate-ecology-sql.mjs --check && node scripts/verify-ecology-sql.mjs",
     "verify:browser": "node scripts/verify-territory-browser.mjs",
+    "verify:transfer": "node scripts/verify-local-transfer-r52.mjs",
     "simulate:living": "node scripts/simulate-living-r35.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.2"
+    "@supabase/supabase-js": "2.117.2",
+    "fflate": "0.8.3"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
