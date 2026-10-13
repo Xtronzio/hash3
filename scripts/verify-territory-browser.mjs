@@ -39,7 +39,7 @@ function fixture(size,kind='invader-colony'){
  r.rodentRaids=[{id:'raid',x:6,y:6,count:1,turn:0,mealsLeft:3,phase:'arriving',members:[{id:'rat',x:6,y:6}],visited:[]}];
  r.works=[{id:'work',x:9,y:9,done:0,turnsRemaining:3,destroy:Array.from({length:9},(_,i)=>({x:9+i%3,y:9+Math.floor(i/3)})),build:Array.from({length:9},(_,i)=>({x:-3+i%3,y:9+Math.floor(i/3)}))}];
  r.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];
- const region=Array.from({length:9},(_,i)=>({x:12+i%3,y:12+Math.floor(i/3)}));
+ const region=Array.from({length:kind==='death'?1:9},(_,i)=>({x:12+i%3,y:12+Math.floor(i/3)}));
  r.territoryEvents=[{id:'event',kind,region,groups:[region],turnsRemaining:3}];
  return r;
 }
@@ -125,11 +125,11 @@ try{
  }
  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:'block'});
  track(context);
- for(const kind of [...LOCAL_NATURAL_ROTATION,...INVADER_EVENT_ROTATION]){
+ for(const kind of [...LOCAL_NATURAL_ROTATION,...INVADER_EVENT_ROTATION,'death']){
   const {page,errors}=await load(context,fixture(999,kind));
   const active=page.locator(`.board-territory-status button[data-ecology-kind="${kind}"]`);
   assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-announced').count(),1);
-  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),9);
+  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),10);
   assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
   await page.locator(`.board-territory-status [data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
