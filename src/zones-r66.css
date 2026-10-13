@@ -17,7 +17,7 @@
 .custom-inventory-band>.band-actions .inventory-dock-button{width:44px;min-width:44px;max-width:44px;height:80px;padding:3px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;background:transparent;color:#00e5ff;border:1px solid currentColor}
 .custom-inventory-band .inventory-badge{position:static;min-width:0;height:auto;border:0;background:transparent;color:#00e5ff;font-size:10px;padding:0}
 .custom-inventory-band .inventory-dock-icon{padding-left:0!important}.custom-inventory-band .inventory-dock-icon>svg{width:28px;height:28px}
-.custom-inventory-band .dock-immunity-active{position:absolute;left:auto;right:-3px;top:auto;bottom:-6px;transform:none;width:14px;height:14px;box-shadow:none}.custom-inventory-band .dock-immunity-active svg{width:12px;height:12px}.custom-inventory-band .dock-immunity-active b{font-size:8px}
+.custom-inventory-band .dock-immunity-active{position:absolute;left:auto;right:-3px;top:auto;bottom:-6px;transform:none;width:14px;height:14px;box-shadow:none;color:#00e5ff}.custom-inventory-band .dock-immunity-active svg{width:12px;height:12px}.custom-inventory-band .dock-immunity-active b{font-size:8px}
 .custom-inventory-band .inventory-pending{font-size:9px}.custom-inventory-band .inventory-refill-toast{position:fixed;bottom:108px;z-index:20}
 .custom-territory-band>.band-actions>button,.custom-inventory-band>.band-actions>button{width:40px;height:40px;min-height:40px;padding:8px;color:inherit;border:1px solid currentColor;background:#101216;display:grid;place-items:center;border-radius:7px}
 .custom-territory-band>.band-actions>.territory-bag{height:84px;width:44px}

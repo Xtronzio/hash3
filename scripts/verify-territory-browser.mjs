@@ -417,8 +417,8 @@ try{
   await strategy.setViewportSize({width,height:844});await frame(strategy);
   assert.ok(await strategy.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   for(const selector of ['.player-inventory-rows','.territory-rows'])assert.equal(await strategy.locator(selector).first().evaluate(el=>getComputedStyle(el).gridTemplateRows.split(' ').length),2);
-  const arrangement=await strategy.evaluate(()=>{const board=document.querySelector('.viewport').getBoundingClientRect(),player=document.querySelector('.board-inventory-status').getBoundingClientRect(),territory=document.querySelector('.board-territory-status').getBoundingClientRect(),warning=document.querySelector('.turn-warnings').getBoundingClientRect();return {clear:player.bottom<=board.top+1&&territory.top>=board.bottom-1,warningAbove:warning.bottom<=player.top+1,height:board.height};});
-  assert.ok(arrangement.clear&&arrangement.warningAbove);assert.ok(arrangement.height>=200);
+  const arrangement=await strategy.evaluate(()=>{const board=document.querySelector('.viewport').getBoundingClientRect(),player=document.querySelector('.board-inventory-status').getBoundingClientRect(),territory=document.querySelector('.board-territory-status').getBoundingClientRect(),warning=document.querySelector('.territory-zone > .turn-warnings').getBoundingClientRect();return {clear:player.bottom<=board.top+1&&territory.top>=board.bottom-1,warningBelow:warning.top>=board.bottom-1&&warning.bottom<=territory.top+1,height:board.height};});
+  assert.ok(arrangement.clear&&arrangement.warningBelow);assert.ok(arrangement.height>=200);
   assert.equal(await strategy.locator('.inventory-column-category').count(),0);
   assert.equal(await strategy.locator('.board-inventory-status [data-ecology-kind]').count(),0);
   assert.equal(await strategy.locator('.board-territory-status [data-tool]').count(),0);
