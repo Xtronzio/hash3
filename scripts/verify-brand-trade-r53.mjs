@@ -64,10 +64,17 @@ try{
     const manifest=await (await fetch(document.querySelector('link[rel="manifest"]').href)).json();
     return {icons,manifest,header:document.querySelector('.brand-mark').outerHTML,overflow:document.documentElement.scrollWidth-innerWidth};
    });
-   assert.equal(identity.icons.length,6);for(const icon of identity.icons){assert.equal(icon.ok,true);assert.match(icon.href,/-r(?:53|55).png$/);assert.equal(icon.width,icon.height);}
-   assert.equal(await page.locator('link[rel="shortcut icon"]').getAttribute('href'),'/icons/hash3-favicon-r55.ico');
-   assert.equal(identity.manifest.id,'./');assert.equal(identity.manifest.scope,'./');assert.equal(identity.manifest.start_url,'./');for(const icon of identity.manifest.icons)assert.match(icon.src,/-r53.png$/);
+   assert.equal(identity.icons.length,6);for(const icon of identity.icons){assert.equal(icon.ok,true);assert.match(icon.href,/-c1.png$/);assert.equal(icon.width,icon.height);}
+   assert.equal(await page.locator('link[rel="shortcut icon"]').getAttribute('href'),'/icons/hash3-favicon-c1.ico');
+   assert.equal(identity.manifest.id,'./');assert.equal(identity.manifest.scope,'./');assert.equal(identity.manifest.start_url,'./');for(const icon of identity.manifest.icons)assert.match(icon.src,/-c1.png$/);
    assert.match(identity.header,/aria-label="#33"/);assert.doesNotMatch(identity.header,/#ff4a58|#24d393/);assert.ok(identity.overflow<=1);
+   const vectorRaster=await page.evaluate(async()=>{
+    const pixels=async url=>{const img=new Image();img.src=url;await img.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,512,512);return ctx.getImageData(0,0,512,512).data;};
+    const [svg,png]=await Promise.all([pixels('/icons/hash3-logo-c1.svg'),pixels('/icons/hash3-icon-512-c1.png')]);let different=0;
+    for(let i=0;i<svg.length;i+=4)if(Math.max(Math.abs(svg[i]-png[i]),Math.abs(svg[i+1]-png[i+1]),Math.abs(svg[i+2]-png[i+2]))>40)different++;
+    return {differentRatio:different/(512*512),brand:document.querySelector('.brand-mark').dataset.brand};
+   });
+   assert.equal(vectorRaster.brand,'c-unframed');assert.ok(vectorRaster.differentRatio<.025,`${name}: SVG/PNG differ beyond antialiasing: ${vectorRaster.differentRatio}`);
    for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){
     await page.setViewportSize(size);
     await page.locator('.compact-turnbar .brand-mark').waitFor({state:'visible'});
@@ -98,7 +105,7 @@ try{
    }
    const ownStored=await read();assert.equal(ownStored.players[0].inventory.comboPending,1);assert.equal(ownStored.players[0].freeExpansions,33);assert.deepEqual(ownStored.players[1],before.players[1]);
    await page.setViewportSize({width:390,height:844});
-   const iconPage=await context.newPage();await iconPage.goto(origin+'/icons/hash3-icon-512-r53.png');await iconPage.screenshot({path:path.join(output,`icono-r53-${name}.png`)});
+   const iconPage=await context.newPage();await iconPage.goto(origin+'/icons/hash3-icon-512-c1.png');await iconPage.screenshot({path:path.join(output,`icono-r53-${name}.png`)});
    assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);results.push({browser:name,allEligibleTargetsBelowThree:true,full18WithFourteenTypes:true,source3Blocks33And333:true,source33Blocks333:true,source333AllowsLowerValues:true,threeOperationsPerOpening:true,reservesPendingOpponentAndTurnPreserved:true,unifiedHeaderFaviconsAndInstallIcons:true,boardLogo28pxPortrait22pxLandscape:true,pausedCountersOwnLeftRivalRight:true,pausedCountersRedAndGreen:true,balancedRows14and13IncludingImmunity:true,nativeSafariBookmarkDialogTested:false,noOverflow:true,noOnlineRequests:true,passed:true});
    await context.close();
   }catch(error){
