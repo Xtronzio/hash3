@@ -31,3 +31,16 @@
 #app>.events-sheet{position:fixed;bottom:6px;left:6px;right:6px}
 @media(max-height:450px) and (orientation:landscape){.game .turn-used-cards{min-height:30px;padding:1px 0}.turn-used-cards .dock-used-card,.turn-used-cards .dock-card-choice{height:28px}.territory-impact-announcements>button{min-height:36px;font-size:11px}}
 @media(prefers-reduced-motion:reduce){.impact-footprint{animation:none}}
+/* Low landscape keeps 44px controls. Both catalogue rows remain scrollable;
+   orientation never changes the saved fold or ordering preferences. */
+@media(max-height:450px) and (orientation:landscape){
+ #app>.game .board-inventory-status,#app>.game .board-territory-status{padding:1px 0}
+ #app>.game .custom-inventory-band>.band-actions,#app>.game .custom-territory-band>.band-actions{display:flex;flex-direction:row;align-items:center;gap:4px}
+ #app>.game .custom-inventory-band>.band-actions>button,#app>.game .custom-territory-band>.band-actions>button{width:44px;height:44px;min-height:44px}
+ #app>.game .custom-inventory-band>.band-actions .inventory-dock-button{height:44px;padding:1px;gap:1px}
+ #app>.game .custom-inventory-band .inventory-badge{font-size:9px;line-height:10px}
+ #app>.game .custom-inventory-band .inventory-pending{font-size:8px;line-height:10px}
+ #app>.game .custom-inventory-band .inventory-dock-counter{display:flex;gap:2px;align-items:center}
+ #app>.game .custom-band-content{max-height:48px;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y}
+ #app>.game .territory-zone>.turn-warnings{padding:1px 0}
+}
