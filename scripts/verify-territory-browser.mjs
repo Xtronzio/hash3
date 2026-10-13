@@ -284,7 +284,7 @@ try{
  const borderRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  borderRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));
  borderRoom.players[0].inventory.cards.border=1;
- const invasion=plannedEventRegion(borderRoom,'invader-colony',()=>0,Date.now());
+ const invasion={region:[{x:0,y:0}],groups:[[{x:0,y:0}]],paths:[{target:{x:0,y:0},path:[{x:0,y:-1},{x:0,y:0}]}],approaches:[{x:0,y:0,side:'north'}],seeded:true};
  borderRoom.territoryEvents=[{id:'border-warning',kind:'invader-colony',...invasion,turnsRemaining:3}];
  const {page:borderPage,errors:borderErrors}=await load(context,borderRoom);
  const selectBorder=()=>borderPage.locator('[data-action="practice-tool"][data-tool="border"]').first().tap();
@@ -304,8 +304,9 @@ try{
  assert.equal(placedBorder.territoryEvents[0].id,'border-warning');
  assert.deepEqual(placedBorder.territoryEvents[0].region,borderRoom.territoryEvents[0].region);
  await borderPage.waitForFunction(()=>document.querySelectorAll('.board .board-frontier-cell:not(.glyph-covered)').length===3);
- assert.ok(await borderPage.locator('.board .territory-warning.territory-invader-colony').count()>0);
- assert.equal(await borderPage.locator('.board [data-cell-glyph="invader-colony"][data-glyph-x="1"][data-glyph-y="1"]').count(),0);
+ // This announced cell is now protected by the frontier: no threat frame.
+ assert.equal(await borderPage.locator('.board .territory-warning.territory-invader-colony').count(),0);
+ assert.equal(await borderPage.locator('.board [data-cell-glyph="invader-colony"][data-glyph-x="0"][data-glyph-y="0"]').count(),0);
  await borderPage.screenshot({path:path.join(output,'border-warning.png')});
  await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
  await borderPage.locator('[data-action="close-map"]').tap();await borderPage.locator('[data-action="pause"]').tap();
