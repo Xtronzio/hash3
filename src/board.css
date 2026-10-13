@@ -115,3 +115,12 @@ button.territory-notice{display:flex;align-items:center;justify-content:center;g
 .ecology-jump.is-frozen{animation:none}
 @keyframes ecologyActivate{0%,100%{filter:none}50%{filter:brightness(1.65);box-shadow:0 0 12px #f4c65d88,inset 0 0 8px #f4c65d55}}
 @media(prefers-reduced-motion:reduce){.ecology-jump.is-announced{animation:none}}
+
+.dead-cell{background:#111214!important;border:2px solid #737b89!important;color:#aab0ba!important;pointer-events:none;z-index:2}.dead-cell svg{width:80%;height:80%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}.board-frontier-cell.is-beaver{color:var(--yellow);border-color:var(--yellow);background:#211d0f}.beaver-barrier-sign{stroke:var(--yellow)!important}.beaver-barrier-turns{position:absolute;right:2px;bottom:1px;color:var(--yellow);font-size:11px}.ecology-jump[data-ecology-kind="death"] svg{stroke-width:1.8}
+
+@media(max-width:420px){
+ .ecology-choices{flex-wrap:nowrap;gap:6px;padding:10px 8px}
+ .ecology-choice{min-width:0;flex:1}
+ .ecology-choice-icons{grid-template-columns:repeat(2,24px);gap:3px}
+ .ecology-choice-icons svg{width:24px;height:24px}
+}

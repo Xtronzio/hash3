@@ -67,7 +67,7 @@ test('Trueque buys exactly one at the listed price, with strict caps, turn, cloc
  assert.equal(tradeAvailability(r,'local-o','hint',now).allowed,false);assert.equal(tradeAvailability(r,'local-x','invalid',now).allowed,false);
  const poor=fresh();assert.throws(()=>localCommand(poor,'trade',{tool:'hint',playerId:'local-x'},now));assert.equal(poor.players[0].score,0);
  assert.ok(practiceTools.every(t=>[3,33,333].includes(CARD_PRICES[t.id])));assert.equal(CARD_PRICES.antidote,33);
- assert.deepEqual(Object.keys(CARD_PRICES).filter(id=>CARD_PRICES[id]===333),['reconquest','nuclear']);assert.equal(CARD_PRICES.bomb,33);assert.equal(CARD_PRICES.tornado,33);
+ assert.deepEqual(Object.keys(CARD_PRICES).filter(id=>CARD_PRICES[id]===333),['immunity','reconquest','nuclear']);assert.equal(CARD_PRICES.bomb,33);assert.equal(CARD_PRICES.tornado,33);
 });
 
 test('Emboscada and Reconquista clear up to 3/33 stars, preserve land, all other symbols, points and stop defeated colonies',()=>{

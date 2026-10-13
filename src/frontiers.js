@@ -1,3 +1,4 @@
+import {isDeadCell} from './dead-cells.js';
 const key=(x,y)=>`${x},${y}`;
 export const frontierDirections=['north','east','south','west'];
 // New walls occupy one unbuilt cell. Saved cell arrays and edge barriers retain
@@ -7,7 +8,7 @@ export function frontierTiles({x,y,side='north'}){
  return [{x,y}];
 }
 export function frontierFootprint(frontier,room){
- if(frontier.cells)return frontier.type==='border'?frontier.cells.map(c=>({...c,borderCell:true})):frontier.cells;
+ if(frontier.cells)return frontier.cells.map(c=>({...c,...(frontier.type==='border'?{borderCell:true}:frontier.type==='beaver'?{beaver:true,turnsRemaining:frontier.turnsRemaining}:{})}));
  if(frontier.type==='border')return (frontier.edges||[]).map(({a,b})=>({...a,borderSide:b.x>a.x?'east':b.x<a.x?'west':b.y>a.y?'south':'north'}));
  // Display saved edge barriers as three wall marks without losing their old blocking rules.
  const known=new Set((room.terrain||[]).map(c=>key(c.x,c.y)));
@@ -44,7 +45,7 @@ export function nearbyFrontierCells(room,terrain){
  return frontierGroups(room).filter(f=>f.cells.some(c=>linked.has(key(c.x,c.y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>linked.has(key(c.x+dx,c.y+dy))))).flatMap(f=>f.cells);
 }
 export function frontierReachable(terrain,start,room){
- const known=new Map(terrain.map(c=>[key(c.x,c.y),c])),blocked=new Set(frontierSegments(room).map(edgeKey)),seen=new Set(),queue=[start];
+ const known=new Map(terrain.filter(c=>!isDeadCell(room,c.x,c.y)).map(c=>[key(c.x,c.y),c])),blocked=new Set(frontierSegments(room).map(edgeKey)),seen=new Set(),queue=[start];
  for(let i=0;i<queue.length;i++){
   const a=queue[i],k=key(a.x,a.y);if(seen.has(k)||!known.has(k))continue;seen.add(k);
   for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const b={x:a.x+dx,y:a.y+dy};if(!blocked.has(edgeKey({a,b})))queue.push(b);}
@@ -69,7 +70,7 @@ export function frontierLine({a,b}){
  return a.x===b.x?{x1:a.x,y1:Math.max(a.y,b.y),x2:a.x+1,y2:Math.max(a.y,b.y)}:{x1:Math.max(a.x,b.x),y1:a.y,x2:Math.max(a.x,b.x),y2:a.y+1};
 }
 export function frontierMarkup(room){
- return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>c.borderSide?`<path d="${borderPath(c)}" fill="none" vector-effect="non-scaling-stroke"><title>Frontera · contiene invasiones</title></path>`:`<g><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/><path d="M${c.x+.2} ${c.y+.8}l.6-.6" fill="none" stroke-width=".14" stroke-linecap="round"/><title>${c.borderCell?'Frontera':'Muro'} · solo se rompe con Bomba</title></g>`).join('')}</g>`;
+ return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>c.borderSide?`<path d="${borderPath(c)}" fill="none" vector-effect="non-scaling-stroke"><title>Frontera · contiene invasiones</title></path>`:`<g ${c.beaver?'class="beaver-barrier" stroke="var(--yellow)"':''}><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/><path d="M${c.x+.2} ${c.y+.8}l.6-.6${c.beaver?`M${c.x+.4} ${c.y+.8}l.5-.6`:''}" fill="none" stroke-width=".14" stroke-linecap="round"/><title>${c.beaver?'Barrera de castor // · '+c.turnsRemaining+' turnos':c.borderCell?'Frontera · solo se rompe con Bomba':'Muro · solo se rompe con Bomba'}</title></g>`).join('')}</g>`;
 }
 export function borderPath(c){const horizontal=['north','south'].includes(c.borderSide),x=c.x+(c.borderSide==='east'?1:0),y=c.y+(c.borderSide==='south'?1:0);return `M${x} ${y}${horizontal?'h1':'v1'}`;}
 export const borderIcon='<path d="M3 16 11 8M12 16 20 8M21 16 29 8" stroke-width="3.5" stroke-linecap="round"/>';

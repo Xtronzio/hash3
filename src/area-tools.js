@@ -1,3 +1,4 @@
+import {isDeadCell} from './dead-cells.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {terrainOf,playableTerrain,key,expansionOptions} from './game.js';
 import {isImmune,protectedTerritoryKeys} from './immunity.js';
@@ -25,15 +26,15 @@ function bombContext(room){
 }
 export function bombTargets(room,context=bombContext(room)){
  const {terrain,cells,barriers}=context;
- return [...terrain.values()].filter(c=>!protectedCell(room,cells.get(key(c.x,c.y)))&&(cells.has(key(c.x,c.y))||barriers.has(key(c.x,c.y))));
+ return [...terrain.values()].filter(c=>!isDeadCell(room,c.x,c.y)&&!protectedCell(room,cells.get(key(c.x,c.y)))&&(cells.has(key(c.x,c.y))||barriers.has(key(c.x,c.y))));
 }
 export function bombOptions(room){const context=bombContext(room);return bombTargets(room,context).filter(c=>bombBlast(room,c,()=>0,context).length===3);}
 export function bombBlast(room,point,random=Math.random,context=bombContext(room)){
  const {terrain,cells,barriers}=context,barrierTarget=barriers.has(key(point.x,point.y));
- if(!terrain.has(key(point.x,point.y))||protectedCell(room,cells.get(key(point.x,point.y))))return [];
+ if(isDeadCell(room,point.x,point.y)||!terrain.has(key(point.x,point.y))||protectedCell(room,cells.get(key(point.x,point.y))))return [];
  const blast=[{x:point.x,y:point.y}],used=new Set([key(point.x,point.y)]);
  while(blast.length<3){
-  const candidates=new Map();for(const c of blast)for(const [dx,dy]of directions){const p={x:c.x+dx,y:c.y+dy},k=key(p.x,p.y);if(terrain.has(k)&&!used.has(k)&&!protectedCell(room,cells.get(k)))candidates.set(k,p);}
+  const candidates=new Map();for(const c of blast)for(const [dx,dy]of directions){const p={x:c.x+dx,y:c.y+dy},k=key(p.x,p.y);if(terrain.has(k)&&!isDeadCell(room,p.x,p.y)&&!used.has(k)&&!protectedCell(room,cells.get(k)))candidates.set(k,p);}
   if(!candidates.size)break;
   const all=[...candidates.values()],filled=all.filter(c=>cells.has(key(c.x,c.y))),pool=filled.length?filled:barrierTarget?all:[];
   if(!pool.length)break;

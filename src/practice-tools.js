@@ -20,7 +20,7 @@ export const practiceTools=[
   {id:'swap',label:'Permutar fichas',description:'Intercambia las posiciones de dos fichas del tablero. Conserva símbolos y propietarios; puntúa las figuras nuevas de X y O al aterrizar. Respeta Escudo, Inmunidad y habitantes. Después coloca tu ficha.',button:'Elegir dos fichas'},
   {id:'shift',label:'Desplazar',description:'Mueve una ficha rival a una celda vacía o una bomba de bombardeo pendiente a otra casilla válida sin reiniciar el preaviso. Conserva su símbolo y dueño; las figuras nuevas puntúan para ese símbolo.',button:'Mover ficha rival'},
   {id:'block',label:'Bloqueo',description:'Reserva una celda vacía y coloca tu ficha en otra. Puedes ocupar la reserva en tu próxima tirada; si no, bloquea dos turnos rivales.',button:'Elegir celda vacía'},
-  {id:'shield',label:'Escudo',description:'Protege una celda concreta con una ficha tuya contra borrar, convertir y desplazar durante dos turnos rivales.',button:'Proteger celda'},
+  {id:'shield',label:'Escudo',description:'Inmunidad de una celda durante tres turnos completos. Protege tu ficha y su celda de fauna, conversiones, bombas y desplazamientos. Se compra por 33 puntos.',button:'Proteger celda'},
   {id:'hint',group:'help',label:'Ayuda de movimiento',description:'Resalta una celda para puntuar o frenar al rival. Tú decides dónde colocar tu ficha.',button:'Sugerir jugada'},
   {id:'activate',label:'Ampliación +1 (1×1)',description:'Construye una celda en un hueco que toca tu territorio conectado, sin añadir un 3×3. Después coloca allí tu ficha como jugada normal.',button:'Elegir hueco'},
   {id:'expand-2',label:'Ampliación +2',description:'Toca dos casillas sin construir contiguas por un lado, empezando junto al territorio. La segunda pulsación coloca las dos. Cancelar no gasta la carta.',button:'Elegir dos casillas'},
@@ -42,7 +42,7 @@ export const practiceTools=[
 // Variety has no separate cap: a normal 18-card hand can hold 18 distinct types.
 export const MAX_CARDS=18,MAX_CARD_TYPES=MAX_CARDS;
 export const pendingTools=[];
-export const immunityTools=[{id:'immunity',label:'Inmunidad',description:'Protege tus fichas, las celdas que las contienen, tus celdas vacías construidas y tus muros durante 33 segundos de partida activa. Actívala en cualquier momento, sin consumir turno ni herramienta. Fauna y fenómenos siguen su curso sobre las zonas sin protección. Cada 3, 33 y 333 combos de ≥33 puntos ganas 1, 3 y 33 protecciones.',button:'Activar 33 segundos'}];
+export const immunityTools=[{id:'immunity',label:'Inmunidad total',description:'Protege tus fichas, sus celdas, tus celdas vacías construidas y tus barreras durante tres turnos completos. Se compra por 333 puntos; los combos no recargan esta protección. Actívala en cualquier momento, sin consumir turno ni herramienta. Pausar conserva la duración y las reservas antiguas.',button:'Activar tres turnos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
 // Historical eight-card starter only for legacy saves with no inventory record.
 const startingCards=new Set(['double','opposite','rival','erase','shift','block','shield','hint']);
@@ -176,7 +176,7 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   const usage=game.players.find(p=>p.id===playerId).inventory;
   if(usage.turnUse?.turn!==(usage.completedTurns||0))usage.turnUse={turn:usage.completedTurns||0,tools:[]};
   usage.completedTurns=(usage.completedTurns||0)+1;
-  for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
+  for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.turnsRemaining!=null)continue;else if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
   game.inventoryEffects.blocks=game.inventoryEffects.blocks.filter(e=>e.remaining>0&&!game.cells.some(c=>c.x===e.x&&c.y===e.y));
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));
   // Completed turns only age effects and record usage. No time/turn refill.
@@ -185,7 +185,7 @@ export function drawComboCard(game,playerId,random=Math.random){
   if(!inventoryEnabled(game,playerId))return false;
   const inv=game.players.find(p=>p.id===playerId)?.inventory;if(!inv?.comboPending)return false;
   const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
-  const eligible=practiceTools.filter(t=>inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
+  const eligible=practiceTools.filter(t=>!((game.ruleVersion||0)>=22&&t.id==='shield')&&inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
   if(Object.values(inv.cards).reduce((a,b)=>a+b,0)>=MAX_CARDS||heldTypes>MAX_CARD_TYPES||!eligible.length)return false;
   const tickets=eligible.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));
   const draw=tickets[Math.min(tickets.length-1,Math.floor(Math.max(0,random())*tickets.length))];

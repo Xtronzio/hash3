@@ -157,5 +157,5 @@ test('Sorteo sostenido rota todo el catálogo y mantiene stocks 0/1/2/3 sin llen
    const counts=practiceTools.map(t=>inv.cards[t.id]);counts.forEach(n=>stocks.add(n));
    assert.ok(counts.reduce((a,b)=>a+b)<=18);assert.ok(counts.filter(n=>n>0).length<=MAX_CARD_TYPES);assert.ok(counts.every(n=>n<=3));assert.ok(counts.some(n=>n===0));
  }
- assert.equal(seen.size,practiceTools.length);assert.deepEqual([...stocks].sort(),[0,1,2,3]);
+ assert.deepEqual([...seen].sort(),practiceTools.filter(t=>t.id!=='shield').map(t=>t.id).sort());assert.equal(inv.cards.shield,0);assert.deepEqual([...stocks].sort(),[0,1,2,3]);
 });

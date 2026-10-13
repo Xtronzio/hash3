@@ -1,3 +1,5 @@
+import {applyBombWave} from './bomb-wave.js';
+import {clearBriefCells} from './brief-ecology.js';
 // #3_11: geometría y efectos de eventos. Ninguna de estas funciones se
 // ejecuta durante pan, zoom ni pintado de la ventana visible.
 import {terrainOf,key} from './game.js';
@@ -137,6 +139,7 @@ function shuffle(room,region,random,blocked){
 // Mutates pieces only, not terrain. Demolition/removal of works/walls is still
 // handled by the calling territory engine, keeping its historical protections.
 export function applyPlannedEvent(room,event,now=Date.now()){
+ if(event.bombPhase)return applyBombWave(room,event,now);
  const rule=eventRule(event.kind);if(!rule)return {hit:new Set(),actions:[],demolish:false};
  const blocked=immutable(room,now),known=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
  if(localLiving(room)&&['pandemic','contagion'].includes(event.kind))for(const c of event.antidotes||[])blocked.add(key(c.x,c.y));
@@ -151,7 +154,10 @@ export function applyPlannedEvent(room,event,now=Date.now()){
  }
  const actions=[],hit=new Set(region.map(c=>key(c.x,c.y)));
  const random=randomGenerator(event.id);
- if(localLiving(room)&&['pandemic','contagion'].includes(event.kind)){
+ if(event.kind==='death'){
+  clearBriefCells(room,region);room.deadCells||=[];for(const c of region)if(!room.deadCells.some(p=>p.x===c.x&&p.y===c.y))room.deadCells.push({x:c.x,y:c.y});
+  actions.push(...region.map(c=>({...c,kind:'death'})));
+ }else if(localLiving(room)&&['pandemic','contagion'].includes(event.kind)){
   const flip={X:'O',O:'X','*':'#','#':'*'};
   room.cells=room.cells.map(c=>{
    if(!hit.has(key(c.x,c.y))||!flip[c.symbol])return c;

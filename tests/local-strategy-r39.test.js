@@ -90,11 +90,12 @@ test('Local small/large event catalogue draws every version; authoritative onlin
 });
 
 
-test('Announcement panel distinguishes soldiers, builders, remaining worm meals and invasion growth from upcoming births',()=>{
+test('Announcement panel distinguishes workers and historical worm meals while new invasions remain static',()=>{
  const r=fresh();r.works=[{id:'work',done:1,turnsRemaining:2,build:[{x:3,y:0},{x:3,y:1}],destroy:[{x:1,y:0},{x:1,y:1}]}];
  r.worms=[{id:'worm',turnDriven:true,mealLimit:9,eaten:3,turnsSinceMeal:1}];r.invasions=[{id:'colony',kind:'invader-colony',grown:4}];
- const html=eventOutlookMarkup(r,'local-x');assert.match(html,/Soldados/);assert.match(html,/Ampliadores/);assert.match(html,/6 comidas restantes/);assert.match(html,/5<small>casillas hasta el límite/);assert.match(html,/2<small>turnos hasta comer/);
+ const html=eventOutlookMarkup(r,'local-x');assert.match(html,/Soldados/);assert.match(html,/Ampliadores/);assert.match(html,/6 comidas restantes/);assert.doesNotMatch(html,/casillas hasta el límite/);assert.match(html,/permanecen estáticos/);assert.match(html,/2<small>turnos hasta comer/);
  assert.doesNotMatch(html,/segundos|ecology-clock/);
+ r.ruleVersion=21;assert.match(eventOutlookMarkup(r,'local-x'),/5<small>casillas hasta el límite/);
 });
 
 

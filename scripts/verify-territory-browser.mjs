@@ -39,7 +39,7 @@ function fixture(size,kind='invader-colony'){
  r.rodentRaids=[{id:'raid',x:6,y:6,count:1,turn:0,mealsLeft:3,phase:'arriving',members:[{id:'rat',x:6,y:6}],visited:[]}];
  r.works=[{id:'work',x:9,y:9,done:0,turnsRemaining:3,destroy:Array.from({length:9},(_,i)=>({x:9+i%3,y:9+Math.floor(i/3)})),build:Array.from({length:9},(_,i)=>({x:-3+i%3,y:9+Math.floor(i/3)}))}];
  r.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];
- const region=Array.from({length:9},(_,i)=>({x:12+i%3,y:12+Math.floor(i/3)}));
+ const region=Array.from({length:kind==='death'?1:9},(_,i)=>({x:12+i%3,y:12+Math.floor(i/3)}));
  r.territoryEvents=[{id:'event',kind,region,groups:[region],turnsRemaining:3}];
  return r;
 }
@@ -125,11 +125,13 @@ try{
  }
  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:'block'});
  track(context);
- for(const kind of [...LOCAL_NATURAL_ROTATION,...INVADER_EVENT_ROTATION]){
+ for(const kind of [...LOCAL_NATURAL_ROTATION,...INVADER_EVENT_ROTATION,'death']){
   const {page,errors}=await load(context,fixture(999,kind));
   const active=page.locator(`.board-territory-status button[data-ecology-kind="${kind}"]`);
   assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-announced').count(),1);
-  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),9);
+  // The occupied * keeps the static-invasion card navigable as well as this warning.
+  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),kind==='invader-colony'?10:9,kind);
+  assert.equal(await page.locator('.board-territory-status [data-ecology-kind="invader-colony"]').isEnabled(),true);
   assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
   await page.locator(`.board-territory-status [data-action="locate-ecology"][data-ecology-kind="${kind}"]`).first().tap();
@@ -148,7 +150,8 @@ try{
  })());
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),10);
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt] .ecology-clock').count(),0);
- assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt]').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:not(.has-forecast)').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].has-forecast').first().evaluate(el=>getComputedStyle(el).opacity),'0.85');
  await visual.locator('[data-action="map"]').tap();await frame(visual);
  const liveMap=await visual.locator('.map-terrain').innerHTML();
  await visual.screenshot({path:path.join(output,'shared-live-map.png')});
@@ -236,7 +239,7 @@ try{
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
   await page.locator('#local-goal-type').selectOption('time');
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
-  assert.equal(await page.locator('.ecology-choice-icons svg').count(),13);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),16);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
@@ -246,6 +249,12 @@ try{
   await page.locator('.ecology-choices').scrollIntoViewIfNeeded();
   const setupLayout=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,controls:[...document.querySelectorAll('.ecology-choice')].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right};})}));
   assert.ok(setupLayout.scrollWidth<=setupLayout.width);assert.ok(setupLayout.controls.every(r=>r.left>=0&&r.right<=setupLayout.width));
+  for(const width of [320,390]){
+   await page.setViewportSize({width,height:844});await frame(page);
+   const checks=await page.locator('.ecology-choice input').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().bottom));
+   assert.equal(checks.length,4);assert.ok(Math.max(...checks)-Math.min(...checks)<=1,'Setup checkboxes must share a baseline at '+width);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  }
   await page.screenshot({path:path.join(output,'setup-'+mode+'-duration-icons.png')});
   await page.locator('#local-goal-target').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(output,'setup-'+mode+'-total-time.png')});
@@ -258,7 +267,7 @@ try{
   assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
-  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:13,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:16,setupChecksAligned:true,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
  }
  // Exercise the real Worker: the former winning target is a worm body.
  for(const difficulty of ['basic','medium','high','pro']){
@@ -321,20 +330,20 @@ try{
  await turnPage.locator('[data-action="events"][aria-label="Próximos eventos"]').tap();assert.doesNotMatch(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
  await turnPage.screenshot({path:path.join(output,'worm-turns-r38.png')});
  assert.deepEqual(turnErrors,[]);results.push({wormNineMealsWithoutCounters:true,passed:true});await turnPage.close();
- // A live invasion remains active without a fictitious seconds clock.
+ // New-rule invaders remain static and navigable, without a growth frame or clock.
  const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');for(let i=0;i<3;i++)advanceInvasions(growthRoom,Date.now(),()=>0);
  const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
  await growthPage.locator('.board-territory-status [data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
  assert.doesNotMatch(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
  assert.equal(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
- assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.ok(await growthPage.locator('.board .invasion-growth').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth').first().evaluate(el=>getComputedStyle(el,'::after').borderTopStyle),'dashed');assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
+ assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.equal(await growthPage.locator('.board .invasion-growth').count(),0);assert.ok(await growthPage.locator('.board .invader').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
  await growthPage.screenshot({path:path.join(output,'invasion-growing-r38.png')});
  await growthPage.locator('[data-action="map"]').tap();
  await growthPage.locator('.world-map [data-action="locate-ecology"][data-ecology-kind="invader-colony"]').tap();await frame(growthPage);
- assert.ok(await growthPage.locator('.world-map .map-invasion-growth rect').count()>0);
+ assert.equal(await growthPage.locator('.world-map .map-invasion-growth rect').count(),0);
  await growthPage.locator('[data-action="close-map"]').tap();await growthPage.locator('[data-action="pause"]').tap();
- assert.ok(await growthPage.locator('.inspection-canvas .map-invasion-growth rect').count()>0);
- assert.deepEqual(growthErrors,[]);results.push({invasionGrowingDashedFrames:true,passed:true});await growthPage.close();
+ assert.equal(await growthPage.locator('.inspection-canvas .map-invasion-growth rect').count(),0);
+ assert.deepEqual(growthErrors,[]);results.push({invasionStaticAndNavigable:true,passed:true});await growthPage.close();
  // Shared wildcards score each participant through actual touch placements.
  const wildRoom=createLocal('local','X','O',Date.now(),'normal','untimed');wildRoom.faunaEnabled=false;
  wildRoom.cells=[{id:'wild',symbol:'#',x:1,y:1,owner:null},{id:'x',symbol:'X',x:0,y:1,owner:'local-x'},{id:'o',symbol:'O',x:1,y:0,owner:'local-o'}];

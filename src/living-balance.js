@@ -12,6 +12,7 @@ export const livingEventClock=(room,family)=>family==='invaders'?99000:room.matc
 export const livingFirstClock=(room,family)=>family==='invaders'?66000:livingEventClock(room,family);
 export function livingImpact(room,kind,rule){
  const n=room.terrain?.length||0,f=livingFactor(n);
+ if(kind==='death')return 1;
  if(kind==='invader-rain')return 3*f;
  if(kind==='invader-colony')return f;
  if(kind==='blackhole')return 9*f;

@@ -8,8 +8,9 @@ import {advanceHabitats,countHabitatPlacement,visitWorms} from '../src/inhabitan
 import {needsLocalTick} from '../src/local-clock.js';
 import {canUsePracticeTool,toolAllowance} from '../src/practice-tools.js';
 const now=1700000000000;
-function start(){const r=createLocal('local','A','B',now,'normal','untimed');for(const id of ['local-x','local-o'])for(let i=0;i<3;i++)recordImmunityCombo(r,id,33);return r;}
-const activate=(r,id='local-x',at=now)=>localCommand(r,'inventory',{tool:'immunity',playerId:id},at,()=>0);
+function start(){const r=createLocal('local','A','B',now,'normal','untimed');for(const p of r.players)p.inventory.immunity.cards['immunity-1']=1;return r;}
+// Preserve coverage of timed effects already active in historical saved games.
+const activate=(r,id='local-x',at=now)=>{const next=localCommand(r,'inventory',{tool:'immunity',playerId:id},at,()=>0);next.inventoryEffects.immunities=next.inventoryEffects.immunities.map(e=>e.player===id?{player:id,expiresAt:at+33000}:e);return next;};
 const cell=(id,x,owner='local-x')=>({id,x,y:1,owner,symbol:owner==='local-x'?'X':'O'});
 test('OVNI sigue su cuenta atrás y solo abduce fichas sin protección; el rival puede protegerse también',()=>{
  let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.territoryEvents=[{id:'u',kind:'ufo',region:r.cells.map(({x,y})=>({x,y})),turnsRemaining:3}];

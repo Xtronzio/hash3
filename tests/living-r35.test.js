@@ -159,6 +159,6 @@ test('Separated black-hole cores have bounded individual halos rather than one e
 test('Pandemic, black hole, tornado rain and hurricane have distinct icons and all thirteen ecology glyphs appear in setup',()=>{
  assert.equal(new Set([...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION].map(k=>territoryIcons[k])).size,9);
  const markup=ecologyChoicesMarkup({faunaEnabled:true,territoryEnabled:true,machine:true,machineInventory:true},'');
- assert.equal((markup.match(/<svg/g)||[]).length,13);
+ assert.equal((markup.match(/<svg/g)||[]).length,16);
  for(const kind of NATURAL_EVENT_ROTATION)assert.ok(markup.includes('data-ecology-kind="'+kind+'"'));
 });

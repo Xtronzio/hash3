@@ -6,11 +6,13 @@ export function recordTerritoryImpact(room,event,before,hit,now){
  const survivingIds=new Set(room.cells.map(c=>c.id)),removed=[...before.values()].filter(c=>!survivingIds.has(c.id)).length;
  const flipped=[...before].filter(([k,c])=>after.get(k)?.id===c.id&&after.get(k)?.symbol!==c.symbol).length;
  const colonized=[...after].filter(([k,c])=>c.symbol==='*'&&before.get(k)?.symbol!=='*').length;
- const impact={id:event.id,kind:event.kind,at:now,destroyed:effect==='demolish'?hit.size:0,freed:removed,converted:flipped,reordered:changed.length,occupied:colonized};
+ const impact={id:event.id,kind:event.kind,bombPhase:event.bombPhase,at:now,destroyed:effect==='demolish'?hit.size:0,freed:removed,converted:flipped,reordered:changed.length,occupied:colonized};
  room.territoryImpacts=[...(room.territoryImpacts||[]).filter(e=>e.id!==event.id),impact].slice(-6);return impact;
 }
 export function territoryImpactText(event){
  const label=event.kind==='cataclysm'?'Cataclismo':eventLabel(event.kind),effect=eventRule(event.kind)?.effect;
+ if(event.kind==='death')return 'Celda muerta · esta casilla queda inalterable';
+ if(event.bombPhase==='bomb')return `Bombardeo ha liberado ${event.freed} fichas · invasores en un turno`;
  if(effect==='demolish')return `${label} ha destruido ${event.destroyed} ${event.destroyed===1?'celda':'celdas'}`;
  if(['pandemic','contagion'].includes(event.kind))return `${label} ha convertido ${event.converted} ${event.converted===1?'ficha':'fichas'}`;
  if(effect==='shuffle')return `${label} ha reordenado ${event.reordered} ${event.reordered===1?'celda':'celdas'}`;

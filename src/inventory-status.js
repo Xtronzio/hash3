@@ -1,4 +1,4 @@
-import {immunitySeconds} from './immunity.js';
+import {immunityCountdown,immunityUnit} from './immunity.js';
 
 // Read effect records once per snapshot, never terrain or pieces while panning.
 export function activeInventoryEffects(game,now=game?.clockNow??Date.now()){
@@ -18,12 +18,13 @@ export function activeInventoryEffects(game,now=game?.clockNow??Date.now()){
   for(const [by,items] of groups)add(tool,by,items.length,Math.min(...items.map(e=>e.remaining??1)),unit);
  };
  grouped('block',game.inventoryEffects?.blocks||[],'turnos rivales');
- grouped('shield',game.inventoryEffects?.shields||[],'turnos rivales');
+ grouped('shield',(game.inventoryEffects?.shields||[]).filter(e=>e.turnsRemaining==null),'turnos rivales');
+ grouped('shield',(game.inventoryEffects?.shields||[]).filter(e=>e.turnsRemaining!=null),'turnos completos');
  grouped('rival',game.inventoryEffects?.forced||[],'colocación rival');
  for(const event of game.territoryEvents||[])grouped('antidote',(event.antidotes||[]).map(c=>({...c,remaining:event.turnsRemaining??1})),'turnos hasta impacto');
  if(game.practiceHint)add(game.practiceHint.action==='expand'?'hint-expand':'hint',game.practiceHint.player,1,null,'');
- grouped('frontier',(game.frontiers||[]).filter(f=>f.type!=='border'),'');
+ grouped('frontier',(game.frontiers||[]).filter(f=>f.type!=='border'&&f.type!=='beaver'),'');
  grouped('border',(game.frontiers||[]).filter(f=>f.type==='border'),'');
- for(const p of game.players){const seconds=immunitySeconds(game,p.id,now);if(seconds)add('immunity',p.id,1,seconds,'segundos');}
+ for(const p of game.players){const seconds=immunityCountdown(game,p.id,now);if(seconds)add('immunity',p.id,1,seconds,immunityUnit(game,p.id));}
  return effects;
 }
