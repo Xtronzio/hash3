@@ -25,7 +25,7 @@ try{
    const inv=game.players[0].inventory;for(const t of practiceTools)inv.cards[t.id]=0;for(const t of practiceTools.slice(0,6))inv.cards[t.id]=3;
    game.players[0].score=9999;inv.immunity.cards={'immunity-1':0,'immunity-3':0,'immunity-33':0};
    await context.addInitScript(game=>{localStorage.setItem('hash3_locals',JSON.stringify([game]));localStorage.setItem('hash3_local',JSON.stringify({id:game.id}));sessionStorage.setItem('hash3_restore_local','1');},game);
-   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.locator('.game .viewport').waitFor();
+   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.locator('.game .viewport').waitFor();await page.evaluate(()=>document.fonts.ready);
    const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]),tap=async el=>name==='firefox'?el.click():el.tap();
    for(const kind of ['rhino','rhino-plague','beaver','beaver-plague','death'])assert.equal(await page.locator(`.board-territory-status [data-ecology-kind="${kind}"]`).count(),1);
    assert.equal(await page.locator('.board-territory-status [data-ecology-countdown="rhino"]').textContent(),'−2');
@@ -33,6 +33,9 @@ try{
    assert.equal(await page.locator('.board .dead-cell').count(),1);assert.equal(await page.locator('.board .dead-cell').getAttribute('data-action'),null);
    assert.ok(await page.locator('.board .territory-warning.territory-rhino').count()>0);
    assert.equal(await page.locator('.board .territory-warning.territory-rhino').first().evaluate(e=>getComputedStyle(e).borderStyle),'dashed');
+   // The Death jump scrolls the viewport. A hold deliberately cancels on any
+   // scroll event: let WebKit deliver that navigation before pressing Recharge.
+   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.waitForTimeout(150);
    const trigger=page.locator('.refill-trigger');if(name==='firefox'){await trigger.focus();await page.keyboard.down('Space');await page.waitForTimeout(1100);await page.keyboard.up('Space');}else{const box=await trigger.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(1100);await page.mouse.up();}await page.locator('.refill-selector').waitFor();
    const buy=page.locator('[data-action="refill-buy"][data-tool="immunity"]');assert.equal(await buy.isEnabled(),true);assert.match(await buy.innerText(),/333/);await buy.evaluate(e=>e.scrollIntoView({block:'nearest'}));await tap(buy);
    let saved=await read();assert.equal(saved.players[0].score,9666);assert.equal(saved.players[0].inventory.immunity.cards['immunity-1'],1);assert.equal(Object.values(saved.players[0].inventory.cards).reduce((a,b)=>a+b),18);

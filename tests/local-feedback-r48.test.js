@@ -29,7 +29,7 @@ test('Points jump and optional breakdown are separate; summary never contains th
  assert.match(html,/10 Líneas de 3 · \+30 \/ Bonus · \+3/);assert.match(html,/&lt;Jorge&gt;/);assert.deepEqual(f,copy);
 });
 
-test('Pause dropdown contains only details, leaving stock visible; #33 retains its original outlined typography',()=>{
+test('Pause dropdown contains only details, leaving stock visible; #33 uses the approved unframed C geometry',()=>{
  const r=createLocal('local','X','O',0);const html=pausedScoreMarkup(r,{ranking:'<ol>Ranking</ol>',stock:'<aside>Stock</aside>'});
- assert.doesNotMatch(html,/Stock/);assert.match(html,/Ranking/);assert.match(brandMark,/aria-label="#33"/);assert.match(brandMark,/<path fill="#f2f4f5"/);
+ assert.doesNotMatch(html,/Stock/);assert.match(html,/Ranking/);assert.match(brandMark,/aria-label="#33"/);assert.match(brandMark,/data-brand="c-unframed"/);assert.match(brandMark,/<g fill="#f2f4f5"/);
 });

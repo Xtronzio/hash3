@@ -35,6 +35,7 @@ on:
       - release/local-territory-ui-r60
       - release/local-planned-events-r61
       - release/local-fauna-r62
+      - release/local-brand-c-r62
   workflow_dispatch:
 permissions:
   contents: write

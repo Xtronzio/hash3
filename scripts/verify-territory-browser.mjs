@@ -87,9 +87,9 @@ try{
   const png=await fs.readFile(path.join('docs',icon.href.slice('/hash3/'.length)));
   assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),icon.size);assert.equal(png.readUInt32BE(20),icon.size);
  }
- assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/hash3-apple-touch-icon-r53.png'));
+ assert.deepEqual(await fs.readFile('docs/apple-touch-icon.png'),await fs.readFile('public/icons/hash3-apple-touch-icon-c1.png'));
  const icoLink=productionHtml.match(/<link\b[^>]*rel="shortcut icon"[^>]*>/)[0].match(/href="([^"]+)"/)[1];
- assert.equal(icoLink,'/hash3/icons/hash3-favicon-r55.ico');assert.deepEqual(await fs.readFile('docs/icons/hash3-favicon-r55.ico'),await fs.readFile('public/favicon.ico'));
+ assert.equal(icoLink,'/hash3/icons/hash3-favicon-c1.ico');assert.deepEqual(await fs.readFile('docs/icons/hash3-favicon-c1.ico'),await fs.readFile('public/favicon.ico'));
  results.push({pagesFaviconsAndAppleIconResolve:true,passed:true});
  for(const viewport of [{width:390,height:844},{width:1024,height:768}]){
   const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,serviceWorkers:'block'});
