@@ -978,7 +978,7 @@ app.addEventListener('click',async e=>{
     await run(async()=>{const vote=action.startsWith('vote-');rankOpen=false;const next=isLocal()?localCommand(room,action):await command(vote?'vote':action,{code:room.code,voteId:room.vote?.id,yes:action==='vote-yes'});accept(next);});return;
   }
   if(action==='close-ranking'){setRankingOpen(false);return;}
-  if(action==='map'||action==='close-map'){worldMapOpen=action==='map';if(worldMapOpen&&rankOpen){rankOpen=false;render();}document.querySelector('.world-map').hidden=!worldMapOpen;if(worldMapOpen)document.querySelector('.world-map').dispatchEvent(new Event('map-open'));document.querySelector(worldMapOpen?'.world-map [data-action="close-map"]':'.game-minimap')?.focus({preventScroll:true});return;}
+  if(action==='map'||action==='close-map'){worldMapOpen=action==='map';if(worldMapOpen)rankOpen=false;render();if(worldMapOpen)document.querySelector('.world-map').dispatchEvent(new Event('map-open'));document.querySelector(worldMapOpen?'.world-map [data-action="close-map"]':'.game-minimap')?.focus({preventScroll:true});return;}
   if(action==='pair-start'){await run(async()=>{acceptPair(await command('pair_start',{code:pairLobby.code}));});return;}
   if(action==='pair-leave'){await run(async()=>{await command('pair_leave',{code:pairLobby.code});pairLobby=null;save('hash3_pair',null);renderHome();});return;}
   if(action==='pair-copy-code'){await copyGameCode(pairLobby.code,'Código de pareja');return;}
