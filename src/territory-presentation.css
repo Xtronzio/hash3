@@ -1,0 +1,65 @@
+.territory-descriptions{--mode-color:var(--yellow);color:var(--yellow);border-top:1px solid #655226;padding-top:16px;margin-top:16px}
+.territory-descriptions .inventory-icon,.territory-descriptions .inventory-count{color:var(--yellow)}
+.territory-descriptions .inventory-description-panel{border-color:#655226}
+.territory-descriptions .inventory-description-panel p{color:var(--text,#e3e5e9)}
+.territory-descriptions .inventory-description-panel .inventory-description-status{color:var(--yellow)}
+.territory-descriptions .inventory-description-toggle.is-open{color:var(--yellow)!important;border-color:var(--yellow)!important}
+.territory-counter-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;line-height:1.5;color:var(--muted);margin:8px 0 12px}
+.territory-counter-legend b{color:var(--yellow);font-size:13px}
+.custom-territory-band .band-actions{display:flex;flex-direction:column;gap:3px;flex:none}
+.custom-territory-band .territory-bag{width:40px;height:40px;min-height:40px;padding:8px;color:var(--yellow);border-color:#655226;display:grid;place-items:center}
+.custom-territory-band .band-actions button{flex:none}
+.custom-territory-band .territory-bag svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.inventory-player-heading{margin:0 0 10px}
+.paused-game~.inventory-sheet{position:fixed;left:8px;right:8px;bottom:8px;z-index:120;max-height:65dvh}
+.custom-territory-band .band-fold{display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:8px;border:1px solid currentColor;background:#101216;color:var(--yellow);border-radius:7px}
+.custom-territory-band .band-fold svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
+.custom-territory-band.is-collapsed .band-actions{flex-direction:row}
+.custom-territory-band.is-collapsed .band-actions button{height:32px;min-height:32px;padding:4px}
+.glyph-covered>svg,.board-frontier-cell.glyph-covered>.frontier-grid-icon,.board-frontier-cell.glyph-covered>.beaver-barrier-turns{visibility:hidden}
+.static-cell-card{pointer-events:none;z-index:8;background:#101216;color:var(--yellow);display:grid;place-items:center;border-radius:3px}
+.static-cell-card>svg{width:76%;height:76%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.static-cell-card .watch-cell-symbol{position:static;display:grid;place-items:center;width:90%;height:90%;background:#101216}
+.static-cell-card .antidote-cell{position:static;display:grid;place-items:center;width:65%;height:65%;font-size:28px;line-height:1}
+.static-cell-card .ecology-clock{position:absolute;right:2px;bottom:1px;font-size:11px;line-height:1;background:#101216;padding:1px}
+/* Real accepted effects, with one opaque glyph at each affected position. */
+.board-action{background:#101216;color:var(--yellow);animation-delay:var(--visit-delay,0ms)}
+.board-action.inventory-action{color:#00e5ff}
+.board-action-rodent{animation-name:mouse-nibble}
+.board-action-worm{animation-name:worm-burrow}
+.board-action-rhino{animation-name:rhino-charge}
+.board-action-beaver{animation-name:beaver-build}
+.board-action-build,.board-action-activate,.board-action-expand-2,.board-action-expand-3,.board-action-frontier,.board-action-border{animation-name:cell-build}
+.board-action-destroy,.board-action-ambush,.board-action-reconquest{animation-name:sword-strike}
+.board-action-meteorites{animation-name:meteor-impact}
+.board-action-earthquake,.board-action-cataclysm{animation-name:cataclysm-demolition}
+.board-action-tornado,.board-action-tornado-rain,.board-action-hurricane{animation-name:wind-spiral}
+.board-action-contagion,.board-action-pandemic,.board-action-antidote{animation-name:infection-wave}
+.board-action-blackhole{animation-name:stellar-collapse}
+.board-action-death{animation-name:death-arrival}
+.board-action-invader-colony{animation-name:invader-entry}
+.board-action-opposite{animation-name:piece-flip}
+.board-action-shift,.board-action-swap{animation-name:piece-transfer}
+.board-action-erase{animation-name:piece-erase}
+.board-action-shield{animation-name:shield-pulse}
+.board-action-block{animation-name:block-close}
+.board-action-sapper{animation-name:bomb-defuse}
+@keyframes mouse-nibble{0%{opacity:0;transform:scale(.3)}20%,65%{opacity:1;transform:scale(1)}35%,55%{transform:translateX(-8%) rotate(-8deg)}45%{transform:translateX(8%) rotate(8deg)}100%{opacity:0;transform:scale(.2)}}
+@keyframes worm-burrow{0%{opacity:0;transform:translateX(-45%) scale(.7)}20%{opacity:1;transform:translateX(-20%) rotate(-8deg)}45%{transform:translateX(0) rotate(8deg)}70%{opacity:1;transform:translateX(20%) rotate(-8deg)}100%{opacity:0;transform:translateX(45%) scale(.5)}}
+@keyframes rhino-charge{0%{opacity:0;transform:translateX(-65%) scale(.8)}25%{opacity:1;transform:translateX(-20%) scale(1.1)}55%{opacity:1;transform:translateX(15%) scale(1)}100%{opacity:0;transform:translateX(65%) scale(.8)}}
+@keyframes beaver-build{0%{opacity:0;transform:translateY(-20%) scale(.5)}25%,55%{opacity:1;transform:rotate(-12deg)}40%,70%{transform:rotate(12deg) translateY(8%)}100%{opacity:0;transform:scale(1)}}
+@keyframes cell-build{0%{opacity:0;clip-path:inset(100% 0 0);transform:scale(.7)}30%{opacity:1;clip-path:inset(50% 0 0)}65%{clip-path:inset(0);transform:scale(1.1)}100%{opacity:0;transform:scale(1)}}
+@keyframes sword-strike{0%{opacity:0;transform:rotate(-45deg) scale(.5)}30%{opacity:1;transform:rotate(20deg) scale(1.2)}55%{transform:rotate(-10deg) scale(1)}100%{opacity:0;transform:scale(.65)}}
+@keyframes meteor-impact{0%{opacity:0;transform:translate(-40%,-90%) scale(.4)}35%{opacity:1;transform:translate(0,0) scale(1.15)}55%{transform:scale(.8)}100%{opacity:0;transform:scale(1.4)}}
+@keyframes wind-spiral{0%{opacity:0;transform:rotate(-160deg) scale(.3)}30%{opacity:1;transform:rotate(0) scale(1.15)}75%{opacity:1;transform:rotate(220deg) scale(.8)}100%{opacity:0;transform:rotate(360deg) scale(.2)}}
+@keyframes infection-wave{0%{opacity:0;transform:scale(.2)}25%{opacity:1;transform:scale(.8);box-shadow:0 0 0 0 #ffce3366}60%{transform:scale(1);box-shadow:0 0 0 8px #ffce3311}100%{opacity:0;transform:scale(1.15);box-shadow:0 0 0 12px transparent}}
+@keyframes stellar-collapse{0%{opacity:0;transform:rotate(0) scale(1.25)}20%{opacity:1}70%{opacity:1;transform:rotate(230deg) scale(.6)}100%{opacity:0;transform:rotate(360deg) scale(.05)}}
+@keyframes death-arrival{0%{opacity:0;filter:blur(3px);transform:scale(1.3)}50%{opacity:1;filter:blur(0);transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+@keyframes invader-entry{0%{opacity:0;transform:translateY(-55%) scale(.4)}35%{opacity:1;transform:translateY(0) scale(1.1)}65%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@keyframes piece-flip{0%{opacity:0;transform:rotateY(90deg)}35%{opacity:1;transform:rotateY(0)}65%{transform:rotateY(180deg)}100%{opacity:0;transform:rotateY(360deg)}}
+@keyframes piece-transfer{0%{opacity:0;transform:translateX(-30%) rotate(-20deg)}35%,65%{opacity:1;transform:translateX(0) rotate(0)}100%{opacity:0;transform:translateX(30%) rotate(20deg)}}
+@keyframes piece-erase{0%{opacity:0;transform:translateY(15%) scale(1.1)}25%{opacity:1}100%{opacity:0;filter:blur(3px);transform:translateY(-20%) scale(.1)}}
+@keyframes shield-pulse{0%{opacity:0;transform:scale(.4)}35%{opacity:1;transform:scale(1.15)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.1)}}
+@keyframes block-close{0%{opacity:0;transform:translateY(-30%) scale(1.2)}30%{opacity:1;transform:translateY(5%) scale(1)}55%{transform:translateY(0) scale(.95)}100%{opacity:0;transform:scale(1)}}
+@keyframes bomb-defuse{0%{opacity:0;transform:scale(.5)}30%{opacity:1;transform:scale(1.1)}60%{opacity:1;transform:rotate(-15deg)}100%{opacity:0;transform:scale(.25)}}
+@media(prefers-reduced-motion:reduce){.board-action{animation:none!important;filter:none;transform:none}}

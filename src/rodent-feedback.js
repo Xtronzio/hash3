@@ -5,14 +5,20 @@ export function rodentVisitFeedback(previous,next){
 }
 export function boardActionFeedback(previous,next){
  if(!previous||previous.id!==next.id||next.status!=='playing')return null;
- const visits=[...(rodentVisitFeedback(previous,next)?.visits||[])];
- if(next.lastEvent?.id!==previous.lastEvent?.id&&next.lastEvent?.tool==='nuclear')visits.push(...(next.lastEvent.affected||[]).map(p=>({...p,kind:'nuclear'})));
+ const visits=[...(rodentVisitFeedback(previous,next)?.visits||[])],toolVisits=[];
+ const event=next.lastEvent;
+ if(event?.id!==previous.lastEvent?.id&&event?.tool&&event.tool!=='tornado'){
+  const prior=new Map((previous.cells||[]).map(c=>[c.id,c]));
+  const points=event.affected||event.cells||event.region||(Number.isFinite(event.x)&&Number.isFinite(event.y)?[event]:(next.cells||[]).filter(c=>!prior.has(c.id)||prior.get(c.id).x!==c.x||prior.get(c.id).y!==c.y||prior.get(c.id).symbol!==c.symbol));
+  toolVisits.push(...points.map(p=>({x:p.x,y:p.y,kind:event.tool,inventory:true})));
+ }
  const habitat=next.habitatEvent,neutral=next.neutralEvent;
- if(habitat&&habitat.id!==previous.habitatEvent?.id)visits.push(...(habitat.actions||[]));
+ if(habitat&&habitat.id!==previous.habitatEvent?.id)visits.push(...(habitat.actions||[]),...(habitat.visualActions||[]));
  if(neutral&&neutral.id!==previous.neutralEvent?.id)visits.push({x:neutral.x,y:neutral.y,kind:'neutral'});
+ visits.push(...toolVisits);
  // A meal can free the exact cell chosen for # in the same command. The
  // resulting action must explain #, rather than covering it with a mouse.
  const neutralPositions=new Set(visits.filter(v=>v.kind==='neutral').map(v=>`${v.x},${v.y}`));
- const distinct=visits.filter(v=>v.kind==='neutral'||!neutralPositions.has(`${v.x},${v.y}`));
+ const distinct=[...new Map(visits.filter(v=>v.kind==='neutral'||!neutralPositions.has(`${v.x},${v.y}`)).map(v=>[`${v.x},${v.y}`,v])).values()];
  return distinct.length?{visits:distinct}:null;
 }

@@ -8,8 +8,10 @@ import {terrainOf,key} from './game.js';
 import {navigationIcon} from './navigation-icons.js';
 import {frontierMarkup,frontierCells} from './frontiers.js';
 import {wormTrailParts} from './worm-trails.js';
+import {cellGlyphs} from './cell-presentation.js';
 
 export function overviewModel(room,own,target,{includeFrontiers=true}={}){
+  const glyphs=cellGlyphs(room,own?.id);
   const threatCells=territoryThreatCells(room),actual=terrainOf(room),known=new Set(actual.map(c=>key(c.x,c.y))),terrain=[...actual,...habitatReservations(room).filter(c=>!known.has(key(c.x,c.y)))],myPair=room.pairs.find(p=>p.id===own?.pair),targetPair=room.pairs.find(p=>p.id===target?.pair);
   if(!terrain.length)return null;
   let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
@@ -19,7 +21,7 @@ export function overviewModel(room,own,target,{includeFrontiers=true}={}){
   const eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y))),rodents=new Map(habitatLocations(room).map(r=>[key(r.x,r.y),r]));
   const position=target?.lastMove?{x:target.lastMove.x+.5,y:target.lastMove.y+.5}:targetPair?{x:targetPair.active.x+1.5,y:targetPair.active.y+1.5}:null;
   const growthCells=invasionGrowthCells(room),bombKeys=new Set(activeInvasionBombs(room,growthCells).map(c=>key(c.x,c.y)));
-  return {bounds,threatCells,deadCells:room.deadCells||[],lastNavigationMove:lastNavigationMove(own),watchTargets:room.watchTargets||[],invasionGrowth:growthCells,wormTrails:wormTrailParts(room),habitats:habitatLocations(room),frontiers:includeFrontiers?frontierMarkup(room):'',terrain:terrain.map(p=>{const c=cells.get(key(p.x,p.y)),r=rodents.get(key(p.x,p.y));const dead=(room.deadCells||[]).some(d=>d.x===p.x&&d.y===p.y);return {...p,dead,symbol:c?.symbol,invasionBomb:bombKeys.has(key(p.x,p.y)),fill:dead?'#111214':r?'var(--yellow)':c?(c.symbol==='#'?wildcardFill(c):c.symbol==='*'?'var(--yellow)':c.id&&c.id===target?.lastMove?.id?'var(--blue)':c.symbol==='X'?'var(--red)':'var(--green)'):'#343e4c',eaten:!c&&eaten.has(key(p.x,p.y)),rodent:r||null};}),active:myPair?.active,ownColor:own?.symbol==='X'?'var(--red)':'var(--green)',target:position};
+  return {bounds,threatCells,deadCells:room.deadCells||[],lastNavigationMove:lastNavigationMove(own),watchTargets:room.watchTargets||[],visibleWatchTargets:[...glyphs.values()].filter(e=>e.type==='target'),ecologyPins:[...glyphs.values()].filter(e=>e.type==='event'||e.type==='antidote'),frontierCells:frontierCells(room).map(c=>glyphs.has(key(c.x,c.y))&&glyphs.get(key(c.x,c.y)).type!=='frontier'?{...c,suppressSign:true}:c),invasionGrowth:growthCells,wormTrails:wormTrailParts(room),habitats:habitatLocations(room),frontiers:includeFrontiers?frontierMarkup(room):'',terrain:terrain.map(p=>{const c=cells.get(key(p.x,p.y)),r=rodents.get(key(p.x,p.y));const dead=(room.deadCells||[]).some(d=>d.x===p.x&&d.y===p.y);return {...p,dead,cardCovered:glyphs.has(key(p.x,p.y)),symbol:c?.symbol,invasionBomb:bombKeys.has(key(p.x,p.y)),fill:dead?'#111214':r?'var(--yellow)':c?(c.symbol==='#'?wildcardFill(c):c.symbol==='*'?'var(--yellow)':c.id&&c.id===target?.lastMove?.id?'var(--blue)':c.symbol==='X'?'var(--red)':'var(--green)'):'#343e4c',eaten:!c&&eaten.has(key(p.x,p.y)),rodent:r||null};}),active:myPair?.active,ownColor:own?.symbol==='X'?'var(--red)':'var(--green)',target:position};
 }
 
 export function overviewPoint(bounds,rect,clientX,clientY){

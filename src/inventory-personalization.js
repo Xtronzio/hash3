@@ -30,7 +30,8 @@ export function inventoryBandMarkup(content,game,actor,preferences){
 }
 export function territoryBandMarkup(content,preferences){
  const folded=preferences.territoryCollapsed,label=(folded?'Desplegar':'Plegar')+' barra del territorio';
- return `<div class="custom-territory-band ${folded?'is-collapsed':''}"><button class="band-fold" data-action="toggle-territory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
+ const bag='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/></svg>';
+ return `<div class="custom-territory-band ${folded?'is-collapsed':''}"><nav class="band-actions" aria-label="Inventario y barra del territorio"><button class="band-fold" data-action="toggle-territory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button class="territory-bag" data-action="territory-inventory" aria-label="Inventario del territorio · descripciones" title="Entender los eventos del territorio">${bag}</button></nav><div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
 }
 export function floatingInventoryMarkup(game,actor,preferences){
  if(!['solo','local'].includes(game.mode)||!['playing','paused'].includes(game.status)||!inventoryEnabled(game,actor))return '';

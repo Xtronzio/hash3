@@ -99,11 +99,12 @@ export function announceBriefFauna(room,kind,zone,now){
  zone.birthScale||={};zone.birthScale[kind]=(zone.birthScale[kind]||0)+1;return true;
 }
 export function resolveBriefFauna(room,event,now){
- const base=event.kind.split('-')[0],actions=[];
+ const base=event.kind.split('-')[0],actions=[],visualActions=[];
  if(base==='rhino'){
   const terrain=new Set(terrainOf(room).map(c=>key(c.x,c.y))),edges=new Set(frontierSegments(room).map(edgeKey)),hit=new Map();
   for(const path of event.paths){let prev=null;for(const c of path){if(!terrain.has(key(c.x,c.y))||isDeadCell(room,c.x,c.y)||(room.frontiers||[]).some(f=>f.cells?.some(p=>p.x===c.x&&p.y===c.y))||prev&&crosses(prev,c,edges))break;hit.set(key(c.x,c.y),c);prev=c;}}
   actions.push(...clearBriefCells(room,[...hit.values()]).map(c=>({...c,kind:'rhino'})));
+  visualActions.push(...[...hit.values()].map((c,i)=>({...c,kind:'rhino',group:i})));
  }else{
   for(const cells of event.paths){const protectedKeys=faunaProtection(room),legal=cells.filter(c=>!isDeadCell(room,c.x,c.y)&&!protectedKeys.has(key(c.x,c.y))&&!room.cells.some(p=>p.x===c.x&&p.y===c.y)&&!habitatBlocked(room,c.x,c.y));
    if(legal.length!==3)continue;
@@ -113,7 +114,7 @@ export function resolveBriefFauna(room,event,now){
   }
  }
  room.faunaEvents=room.faunaEvents.filter(e=>e.id!==event.id);
- if(actions.length)room.habitatEvent={id:crypto.randomUUID(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};
+ if(actions.length||visualActions.length)room.habitatEvent={id:crypto.randomUUID(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions],visualActions:[...(room.habitatEvent?.at===now?room.habitatEvent.visualActions||[]:[]),...visualActions]};
 }
 export function deathRegion(room){
  const safe=faunaProtection(room),anchor=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y))),terrain=terrainOf(room),known=new Set(terrain.map(c=>key(c.x,c.y)));
