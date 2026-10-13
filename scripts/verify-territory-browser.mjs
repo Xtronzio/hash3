@@ -150,7 +150,8 @@ try{
  })());
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),10);
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt] .ecology-clock').count(),0);
- assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt]').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:not(.has-forecast)').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].has-forecast').first().evaluate(el=>getComputedStyle(el).opacity),'0.85');
  await visual.locator('[data-action="map"]').tap();await frame(visual);
  const liveMap=await visual.locator('.map-terrain').innerHTML();
  await visual.screenshot({path:path.join(output,'shared-live-map.png')});
