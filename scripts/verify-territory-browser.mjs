@@ -170,11 +170,11 @@ try{
  await visual.locator('.board .available').first().tap();await visual.locator('.board .available').first().tap();
  await visual.locator('[data-action="practice-tool"][data-tool="rival"]').first().tap();
  await frame(visual);
- assert.equal(await visual.locator('.inventory-dock .dock-used-cell').count(),4);
+ assert.equal(await visual.locator('.turn-used-cards [data-used-tool]').count(),2);
  const dock=await visual.evaluate(()=>{
-  const x=document.querySelector('.dock-used-cards.x'),bag=document.querySelector('.inventory-dock-button'),o=document.querySelector('.dock-used-cards.o');
+  const x=document.querySelector('.turn-used-cards .dock-used-cards.x'),bag=document.querySelector('.inventory-dock-button'),o=document.querySelector('.turn-used-cards .dock-used-cards.o'),board=document.querySelector('.map-wrap');
   const xr=x.getBoundingClientRect(),br=bag.getBoundingClientRect(),or=o.getBoundingClientRect();
-  return {x:x.getAttribute('aria-label'),o:o.getAttribute('aria-label'),red:getComputedStyle(x).color,green:getComputedStyle(o).color,ordered:xr.right<=br.left+1&&br.right<=or.left+1,width:document.documentElement.scrollWidth,viewport:innerWidth};
+  return {x:x.getAttribute('aria-label'),o:o.getAttribute('aria-label'),red:getComputedStyle(x).color,green:getComputedStyle(o).color,ordered:xr.bottom<=board.getBoundingClientRect().top&&or.bottom<=board.getBoundingClientRect().top&&br.bottom<=board.getBoundingClientRect().top,width:document.documentElement.scrollWidth,viewport:innerWidth};
  });
  assert.ok(dock.x.includes('X')&&dock.o.includes('O'));assert.equal(dock.red,'rgb(0, 229, 255)');assert.equal(dock.green,'rgb(0, 229, 255)');assert.ok(dock.ordered);assert.ok(dock.width<=dock.viewport);
  await visual.waitForTimeout(1000);
@@ -184,7 +184,7 @@ try{
  await visual.screenshot({path:path.join(output,'inventory-both-sides-320.png')});
  await visual.setViewportSize({width:390,height:844});await frame(visual);
  await visual.locator('[data-action="pause"]').tap();await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
- assert.equal(await visual.locator('.dock-used-cards.x .dock-used-card').count(),1);assert.equal(await visual.locator('.dock-used-cards.o .dock-used-card').count(),0);assert.equal(await visual.locator('.board-inventory-status [data-inventory-effect="rival"]').count(),1);
+ assert.equal(await visual.locator('.dock-used-cards.x .dock-used-card').count(),1);assert.equal(await visual.locator('.dock-used-cards.o .dock-used-card').count(),1);assert.equal(await visual.locator('.board-inventory-status [data-inventory-effect="rival"]').count(),1);
  assert.deepEqual(visualErrors,[]);results.push({sharedMaps:true,readableZoomGlyphs:true,phenomenaInactive:true,inventoryBothSides:true,passed:true});await visual.close();
  const {page:expansion,errors:expansionErrors}=await load(context,(()=>{
   const r=createLocal('local','X','O',Date.now(),'normal','untimed',undefined,'X',false,{faunaEnabled:false,territoryEnabled:false});
@@ -417,8 +417,8 @@ try{
   await strategy.setViewportSize({width,height:844});await frame(strategy);
   assert.ok(await strategy.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   for(const selector of ['.player-inventory-rows','.territory-rows'])assert.equal(await strategy.locator(selector).first().evaluate(el=>getComputedStyle(el).gridTemplateRows.split(' ').length),2);
-  const arrangement=await strategy.evaluate(()=>{const board=document.querySelector('.viewport').getBoundingClientRect(),player=document.querySelector('.board-inventory-status').getBoundingClientRect(),territory=document.querySelector('.board-territory-status').getBoundingClientRect(),warning=document.querySelector('.turn-warnings').getBoundingClientRect();return {clear:player.bottom<=board.top+1&&territory.top>=board.bottom-1,warningAbove:warning.bottom<=player.top+1,height:board.height};});
-  assert.ok(arrangement.clear&&arrangement.warningAbove);assert.ok(arrangement.height>=200);
+  const arrangement=await strategy.evaluate(()=>{const board=document.querySelector('.viewport').getBoundingClientRect(),player=document.querySelector('.board-inventory-status').getBoundingClientRect(),territory=document.querySelector('.board-territory-status').getBoundingClientRect(),warning=document.querySelector('.territory-zone > .turn-warnings').getBoundingClientRect();return {clear:player.bottom<=board.top+1&&territory.top>=board.bottom-1,warningBelow:warning.top>=board.bottom-1&&warning.bottom<=territory.top+1,height:board.height};});
+  assert.ok(arrangement.clear&&arrangement.warningBelow);assert.ok(arrangement.height>=200);
   assert.equal(await strategy.locator('.inventory-column-category').count(),0);
   assert.equal(await strategy.locator('.board-inventory-status [data-ecology-kind]').count(),0);
   assert.equal(await strategy.locator('.board-territory-status [data-tool]').count(),0);

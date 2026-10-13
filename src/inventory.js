@@ -52,8 +52,8 @@ export function inventoryRefill(previous,next,playerId){
  }
  return refill;
 }
-export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null,choice=null,uses=null}={}){
- if(!inventoryEnabled(game,playerId))return '';
+export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null,choice=null,uses=null,section='dock'}={}){
+ if(section!=='uses'&&!inventoryEnabled(game,playerId))return '';
  const total=inventoryCardTotal(game,playerId),inv=inventoryFor(game,playerId);
  const protectedNow=immunityRemaining(game,playerId)>0,team=game?.players?.find(p=>p.id===playerId)?.symbol==='O'?'o':'x';
  const effects=activeInventoryEffects(game),ongoing=(tool,player)=>effects.some(e=>e.tool===tool&&e.player===player);
@@ -62,7 +62,7 @@ export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=nul
  const chosenLabel=card?`${card.label} · ${choice.prepared?'Preparada':'Usada'} · quedan ${toolStock(game,playerId,card.id)}`:'';
  const chosen=card?`<span class="dock-card-choice ${team} ${choice.prepared?'is-prepared':'dock-used-card'}" data-dock-card="${card.id}" role="img" aria-label="${chosenLabel}" title="${chosenLabel}" style="left:${protectedNow?29:0}px;--card-choice-delay:${delay}ms">${toolIcon(card.id)}<b>×${toolStock(game,playerId,card.id)}</b></span>`:'';
  const recorded=uses??game.players.flatMap(p=>(p.inventory?.turnUse?.tools||game.practiceTurn?.player===p.id&&game.practiceTurn.used||[]).map(tool=>({player:p.id,tool})));
- const lastUses=recorded.filter(u=>practiceTools.some(t=>t.id===u.tool)&&!ongoing(u.tool,u.player)).map(u=>{
+ const lastUses=recorded.filter(u=>practiceTools.some(t=>t.id===u.tool)&&(section==='uses'||!ongoing(u.tool,u.player))).map(u=>{
   const played=game.players.find(p=>p.id===u.player),tool=practiceTools.find(t=>t.id===u.tool);
   const team=played?.symbol==='O'?'o':'x',symbol=played?.symbol||'?';
   const label=symbol+' usó '+tool.label;
@@ -70,16 +70,18 @@ export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=nul
  });
  const side=symbol=>{
   const selectedHere=card&&team===symbol.toLowerCase();
-  const used=lastUses.filter(u=>u.symbol===symbol&&!(selectedHere&&u.tool===card.id)).slice(-(selectedHere?1:2)).map(u=>u.markup);
+  const used=lastUses.filter(u=>u.symbol===symbol&&!(selectedHere&&u.tool===card.id)).slice(section==='uses'?0:-(selectedHere?1:2)).map(u=>u.markup);
   if(selectedHere)used.push(chosen);
+  if(section==='uses')return used.length?`<span class="dock-used-cards ${symbol.toLowerCase()}" aria-label="Cartas de ${symbol}">${used.join('')}</span>`:'';
   const slots=Array.from({length:2},(_,i)=>`<span class="dock-used-cell ${used[i]?'':'is-empty'}" ${used[i]?'':`aria-label="${symbol} · sin carta"`}>${used[i]||''}</span>`).join('');
   return `<span class="dock-used-cards ${symbol.toLowerCase()}" role="group" aria-label="Últimas cartas usadas por los colonos · ${symbol}">${slots}</span>`;
  };
 
+ if(section==='uses')return lastUses.length||card?`<div class="turn-used-cards" role="group" aria-label="Cartas usadas en el turno">${side('X')}${side('O')}</div>`:'';
  const protection=protectedNow?`<span class="dock-immunity-active ${team} ${choice?.player===playerId&&choice.tool==='immunity'?'is-newly-chosen':''}" style="--card-choice-delay:${delay}ms" role="img" aria-label="Inmunidad total activa" title="Inmunidad total activa">${toolIcon('immunity')}<b data-immunity-clock="${playerId}">${immunityCountdown(game,playerId)}</b></span>`:'';
  const label=`Inventario · ${total} carta${total===1?'':'s'} de ${MAX_CARDS}${protectedNow?' · Inmunidad total activa':''}${chosenLabel?' · '+chosenLabel:''} · ${inv.comboPending?'Recarga ganada pendiente de hueco':'Recarga con colocación manual de ≥33 puntos'}`;
  const active=refill?.player===playerId;
- return `<div class="inventory-dock">${side('X')}<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-counter"><span class="inventory-badge ${total?'':'is-empty'} ${total>=MAX_CARDS?'is-full':''}" aria-hidden="true">${total}/${MAX_CARDS}</span>${inv.comboPending?'<span class="inventory-pending" aria-hidden="true">+1</span>':''}</span><span class="inventory-dock-icon ${protectedNow?'is-protected':''}" style="padding-left:${protectedNow?29:0}px">${icon}${protection}</span></button>${side('O')}</div>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">${refill.message||`Inventario recargado · +${refill.added} ${refill.tool}`}</span>`:''}`;
+ return `<div class="inventory-dock">${section==='bag'?'':side('X')}<button class="inventory-dock-button ${active?'is-refilled':''}" data-action="inventory" aria-label="${label}" title="${label}" aria-expanded="${open}" aria-controls="inventory-panel"><span class="inventory-dock-counter"><span class="inventory-badge ${total?'':'is-empty'} ${total>=MAX_CARDS?'is-full':''}" aria-hidden="true">${total}/${MAX_CARDS}</span>${inv.comboPending?'<span class="inventory-pending" aria-hidden="true">+1</span>':''}</span><span class="inventory-dock-icon ${protectedNow?'is-protected':''}" style="padding-left:${protectedNow?29:0}px">${icon}${protection}</span></button>${section==='bag'?'':side('O')}</div>${active?`<span class="inventory-refill-toast" role="status" aria-live="polite" aria-atomic="true">${refill.message||`Inventario recargado · +${refill.added} ${refill.tool}`}</span>`:''}`;
 }
 export function immunityComboNotice(previous,next,playerId){
  if(!previous||previous.id!==next?.id||!['solo','local'].includes(next.mode))return null;
@@ -142,8 +144,9 @@ export function describedInventoryMarkup(game,playerId,{openTools=new Set(),show
  }).join('');
  return `<div class="inventory-descriptions">${local?`<p class="inventory-capacity" aria-label="${inventoryCardTotal(game,playerId)} de ${MAX_CARDS} cartas guardadas">${inventoryCardTotal(game,playerId)}/${MAX_CARDS} <span>cartas${inventoryFor(game,playerId).comboPending?' · +1 por combo pendiente de hueco':''}</span></p>`:''}<p class="inventory-description-instruction">Pulsa cada icono para desplegar su descripción.${local?' Solo «Usar» activa la carta.':''}</p><div class="inventory-description-strip">${inventoryRows(id=>control(tools.find(t=>t.id===id)))}</div><section class="inventory-immunity-bottom" aria-label="Inmunidad y premios">${tools.filter(t=>t.id==='immunity'||t.goal).map(control).join('')}</section><div class="inventory-description-panels">${panels}</div><details class="inventory-description-rules"><summary>Reglas del inventario y recarga</summary><p>Una herramienta por turno, además de tu ficha. Activa Combo primero para usar otras dos herramientas distintas. Inmunidad es independiente: dura tres turnos completos y se puede activar fuera de turno, sin apilar protecciones. Las cartas no reinician el reloj. Comprar o cambiar cartas gasta puntos voluntariamente.</p><p>En partidas nuevas eliges tres cartas distintas; hay una selección recomendada. Cada colocación manual que suma ≥33 puntos para tu propio símbolo recarga una carta (incluidos bonus): máximo 18 cartas normales y tres unidades por tipo, sin límite adicional de tipos. Las protecciones de Inmunidad se guardan aparte, sin límite. Sin recargas por tiempo ni por turnos. Cartas, fenómenos, fichas de tu color colocadas por el rival y turnos automáticos no recargan. Si la mochila está llena, conserva como máximo una recarga ganada hasta dejar hueco. Mantén un segundo el botón flotante de Recarga: puedes comprar hasta tres unidades, iguales o distintas, una por pulsación. Tras la tercera compra o cambio debes mantener otro segundo. En «Cambiar», eliges una unidad normal guardada para entregar y luego otra carta de valor igual o inferior al de la entregada: pagas el precio de la nueva, conservas la cantidad total y no consumes la recarga por combo pendiente. Cancelar no gasta cartas ni puntos. Precio visible de 3 o 33 puntos; Reconquista, Bomba atómica e Inmunidad total cuestan 333. El escudo se compra por 33; las protecciones no salen en la recarga por combo. Los guardados conservan todas sus cartas. Doble, Ficha contraria, Ficha rival, Borrar, Desplazar, Permutar y Combo tienen triple peso en el sorteo.</p></details>${!local&&showShortcuts?`<nav class="inventory-start" aria-label="Accesos a partidas">${inventoryShortcutsMarkup()}</nav>`:''}</div>`;
 }
-export function inventoryMarkup(game,playerId,{showShortcuts=true,openTools=new Set()}={}){
- if(!game||['solo','local'].includes(game.mode))return `<h3 class="heading inventory-player-heading">Jugador</h3>`+describedInventoryMarkup(game,playerId,{showShortcuts,openTools})+territoryGuideMarkup(game,playerId,{openTools});
+export function inventoryMarkup(game,playerId,{showShortcuts=true,openTools=new Set(),section='all'}={}){
+ if(section==='territory')return territoryGuideMarkup(game,playerId,{openTools});
+ if(!game||['solo','local'].includes(game.mode))return `<h3 class="heading inventory-player-heading">Jugador</h3>`+describedInventoryMarkup(game,playerId,{showShortcuts,openTools})+(section==='player'?'':territoryGuideMarkup(game,playerId,{openTools}));
  const local=game&&['solo','local'].includes(game.mode),state=local?practiceTurn(game,playerId):null,inv=inventoryFor(game,playerId);
  if(local)return compactInventoryMarkup(game,playerId);
  const catalogCard=t=>{

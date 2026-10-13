@@ -199,9 +199,9 @@ export function advanceTerritory(room,now=Date.now()){
    room.inventoryEffects.shields=(room.inventoryEffects.shields||[]).filter(s=>!removed.has(s.cell));
    room.inventoryEffects.blocks=(room.inventoryEffects.blocks||[]).filter(c=>!hit.has(key(c.x,c.y)));
   }
-  recordTerritoryImpact(room,event,before,hit,now);
   actions.push(...changes);
-  if(mixes&&localLiving(room))scoreLandings(room,[...before.values()],changes,{kind:event.kind});
+  const scores=mixes&&localLiving(room)?scoreLandings(room,[...before.values()],changes,{kind:event.kind}):[];
+  recordTerritoryImpact(room,event,before,hit,now,scores);
   room.territoryEvents=room.territoryEvents.filter(e=>e.id!==event.id);
   if(eventRule(event.kind)?.family!=='invaders')rebalanceAfterTerritory(room,now);
  }
