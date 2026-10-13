@@ -38,6 +38,7 @@ on:
       - release/local-brand-c-r62
       - release/local-paused-machine-r64
       - release/local-territory-guide-r65
+      - release/local-zones-impact-r66
   workflow_dispatch:
 permissions:
   contents: write
@@ -62,6 +63,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-zones-impact-r66.mjs
       - run: node scripts/verify-custom-inventory-r57.mjs
       - run: node scripts/verify-bombs-r56.mjs
       - run: node scripts/verify-brief-ecology-r62.mjs
