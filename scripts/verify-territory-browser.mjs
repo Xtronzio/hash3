@@ -303,7 +303,8 @@ try{
  assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);// The newly placed frontier wins at the invasion's centre; its warning survives.
  assert.equal(placedBorder.territoryEvents[0].id,'border-warning');
  assert.deepEqual(placedBorder.territoryEvents[0].region,borderRoom.territoryEvents[0].region);
- await borderPage.waitForFunction(()=>document.querySelector('.board [data-cell-glyph="barriers"][data-glyph-x="1"][data-glyph-y="1"]'));
+ await borderPage.waitForFunction(()=>document.querySelectorAll('.board .board-frontier-cell:not(.glyph-covered)').length===3);
+ assert.ok(await borderPage.locator('.board .territory-warning.territory-invader-colony').count()>0);
  assert.equal(await borderPage.locator('.board [data-cell-glyph="invader-colony"][data-glyph-x="1"][data-glyph-y="1"]').count(),0);
  await borderPage.screenshot({path:path.join(output,'border-warning.png')});
  await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
