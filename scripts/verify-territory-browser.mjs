@@ -300,7 +300,11 @@ try{
  await selectBorder();await tapBorder(0,0);await tapBorder(1,0);await tapBorder(1,1);
  const placedBorder=await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
  assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.deepEqual(placedBorder.frontiers[0].cells,[{x:0,y:0},{x:1,y:0},{x:1,y:1}]);
- assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);await borderPage.waitForFunction(()=>document.querySelector('.board [data-cell-glyph="invader-colony"]'));
+ assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);// The newly placed frontier wins at the invasion's centre; its warning survives.
+ assert.equal(placedBorder.territoryEvents[0].id,'border-warning');
+ assert.deepEqual(placedBorder.territoryEvents[0].region,borderRoom.territoryEvents[0].region);
+ await borderPage.waitForFunction(()=>document.querySelector('.board [data-cell-glyph="barriers"][data-glyph-x="1"][data-glyph-y="1"]'));
+ assert.equal(await borderPage.locator('.board [data-cell-glyph="invader-colony"][data-glyph-x="1"][data-glyph-y="1"]').count(),0);
  await borderPage.screenshot({path:path.join(output,'border-warning.png')});
  await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
  await borderPage.locator('[data-action="close-map"]').tap();await borderPage.locator('[data-action="pause"]').tap();
