@@ -50,7 +50,11 @@ test('Accepted tool effects animate changed positions once, including an opposit
 });
 test('Rhino visual route includes empty/protected traversed cells without changing clear logic or paid points',()=>{
  const r=fresh();r.cells=[{id:'food',x:0,y:0,symbol:'X',owner:'local-x'}];r.players[0].score=333;const event={id:'rino',kind:'rhino',paths:[[{x:0,y:0},{x:1,y:0},{x:2,y:0}]]};r.faunaEvents=[event];resolveBriefFauna(r,event,2000);
- assert.equal(r.cells.length,0);assert.equal(r.habitatEvent.actions.length,1);assert.equal(r.habitatEvent.visualActions.length,3);assert.equal(r.players[0].score,333);assert.equal(r.terrain.length,9);
+ assert.equal(r.cells.length,0);assert.equal(r.habitatEvent.actions.length,1);assert.equal(r.habitatEvent.visualRoutes.length,1);assert.equal(boardActionFeedback({...r,habitatEvent:null},r).visits.length,3);assert.equal(r.players[0].score,333);assert.equal(r.terrain.length,9);
+});
+test('Long empty rhino careers keep a compact saved trace and expand only for a fresh animation',()=>{
+ const r=fresh();r.terrain=Array.from({length:33333},(_,x)=>({x,y:0}));r.cells=[];const event={id:'long',kind:'rhino',paths:[r.terrain]};r.faunaEvents=[event];resolveBriefFauna(r,event,2000);
+ assert.ok(JSON.stringify(r.habitatEvent).length<500);assert.equal(r.habitatEvent.visualRoutes[0].to.x,33332);assert.equal(boardActionFeedback({...r,habitatEvent:null},r).visits.length,33333);assert.equal(boardActionFeedback(r,r),null);
 });
 test('All territory effects have a finite animation; reduced motion overrides them and approved OVNI is retained',()=>{
  const css=fs.readFileSync(new URL('../src/territory-presentation.css',import.meta.url),'utf8'),original=fs.readFileSync(new URL('../src/board.css',import.meta.url),'utf8');

@@ -14,6 +14,12 @@ export function boardActionFeedback(previous,next){
  }
  const habitat=next.habitatEvent,neutral=next.neutralEvent;
  if(habitat&&habitat.id!==previous.habitatEvent?.id)visits.push(...(habitat.actions||[]),...(habitat.visualActions||[]));
+ if(habitat&&habitat.id!==previous.habitatEvent?.id)for(const route of habitat.visualRoutes||[]){
+  const {from,to}=route;if(!from||!to||![from.x,from.y,to.x,to.y].every(Number.isInteger))continue;
+  const length=Math.max(Math.abs(to.x-from.x),Math.abs(to.y-from.y))+1;if(length>(next.terrain?.length??(next.blocks?.length||0)*9))continue;
+  const dx=Math.sign(to.x-from.x),dy=Math.sign(to.y-from.y);
+  for(let i=0;i<length;i++)visits.push({x:from.x+i*dx,y:from.y+i*dy,kind:'rhino',group:i});
+ }
  if(neutral&&neutral.id!==previous.neutralEvent?.id)visits.push({x:neutral.x,y:neutral.y,kind:'neutral'});
  visits.push(...toolVisits);
  // A meal can free the exact cell chosen for # in the same command. The
