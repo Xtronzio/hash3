@@ -366,7 +366,7 @@ function drawBoard(canExpand,ready,target) {
   const reservedKeys=new Set((room.inventoryEffects?.blocks||[]).filter(e=>e.by===uid&&e.remaining>0).map(e=>key(e.x,e.y)));
   let nodes=new Map();
   const cellMarkup=pos=>{
-    if(deadKeys.has(key(pos.x,pos.y)))return `<span class="cell terrain-cell dead-cell" style="${style(pos)}" role="img" aria-label="Celda muerta inalterable ${pos.x}, ${pos.y}"><svg viewBox="0 0 32 32" aria-hidden="true">${briefIcons.death}</svg></span>`;
+    if(deadKeys.has(key(pos.x,pos.y)))return `<span class="cell terrain-cell dead-cell ${rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(pos.x,pos.y))?'glyph-covered':''}" style="${style(pos)}" role="img" aria-label="Celda muerta inalterable ${pos.x}, ${pos.y}"><svg viewBox="0 0 32 32" aria-hidden="true">${briefIcons.death}</svg></span>`;
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
     const isTarget=c&&c.id===target?.lastMove?.id,last=c&&c.id===own.lastMove?.id;
     const color=c?(c.symbol==='*'?'invader':c.symbol==='#'?'neutral'+(c.wildcardSymbol?' wildcard-'+c.wildcardSymbol.toLowerCase():''):myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
