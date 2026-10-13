@@ -37,6 +37,7 @@ on:
       - release/local-fauna-r62
       - release/local-brand-c-r62
       - release/local-paused-machine-r64
+      - release/local-territory-guide-r65
   workflow_dispatch:
 permissions:
   contents: write
@@ -65,6 +66,7 @@ jobs:
       - run: node scripts/verify-bombs-r56.mjs
       - run: node scripts/verify-brief-ecology-r62.mjs
       - run: node scripts/verify-paused-machine-r64.mjs
+      - run: node scripts/verify-territory-presentation-r65.mjs
       - run: npm run verify:brand-trade
       - run: npm run verify:browser
       - run: npm run verify:transfer

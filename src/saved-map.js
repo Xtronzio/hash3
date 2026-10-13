@@ -7,6 +7,7 @@ import {overviewModel,overviewPoint} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {immediateAbove} from './game.js';
 import {targetDestinations} from './watch-targets.js';
+import {cellGlyphs} from './cell-presentation.js';
 
 // A snapshot is only drawn; inspecting it never dispatches a game command.
 export function savedMapModel(room,own){
@@ -15,7 +16,8 @@ export function savedMapModel(room,own){
   const target=own?immediateAbove((room.players||[]).filter(p=>['solo','local'].includes(room.mode)||!p.bot),own.id,!!room.commonWorld):null;
   const model=overviewModel(room,own,target);if(!model)return null;
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
-  return {...model,destinations:targetDestinations(room,own?.id),ecologyPins:ecologyPinTargets(room,own?.id),ecologyTargets:Object.fromEntries(['rodent','rodent-plague','worm','worm-plague','build','destroy','bomb',...new Set([...(room.territoryEvents||[]),...(room.invasions||[])].map(e=>e.kind)),'neutral','frontier','border','barriers'].map(kind=>[kind,ecologyTargets(room,kind,own?.id)])),frontierCells:frontierCells(room),terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?wildcardFill(c):c?.symbol==='*'?'var(--yellow)':'#343e4c'};})};
+  const glyphs=cellGlyphs(room,own?.id);
+  return {...model,destinations:targetDestinations(room,own?.id),ecologyPins:model.ecologyPins,ecologyTargets:Object.fromEntries(['rodent','rodent-plague','worm','worm-plague','build','destroy','bomb',...new Set([...(room.territoryEvents||[]),...(room.invasions||[])].map(e=>e.kind)),'neutral','frontier','border','barriers'].map(kind=>[kind,ecologyTargets(room,kind,own?.id)])),frontierCells:model.frontierCells,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?wildcardFill(c):c?.symbol==='*'?'var(--yellow)':'#343e4c'};})};
 }
 export function thumbnailMarkup(room){
   const model=savedMapModel(room);if(!model)return '<span class="saved-map-pending" aria-label="Mapa no disponible">—</span>';

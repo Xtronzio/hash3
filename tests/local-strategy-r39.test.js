@@ -115,7 +115,7 @@ test('Territory arrival badges use the pending task of each kind, freeze on paus
  r.territoryEvents=[{id:'warning',kind:'invader-rain',region:[{x:2,y:2}],turnsRemaining:3}];const before=structuredClone(r);
  const card=(html,kind)=>html.match(new RegExp('<button[^>]*data-ecology-kind="'+kind+'"[^>]*>[^]*?<\\/button>'))[0];
  let html=ecologyNavigationMarkup(r,'local-x');assert.match(card(html,'build'),/data-ecology-countdown="build"[^>]*>−1/);assert.match(card(html,'destroy'),/data-ecology-countdown="destroy"[^>]*>−2/);assert.match(card(html,'invader-rain'),/data-ecology-countdown="invader-rain"[^>]*>−3/);
- if(r.territoryPlans.invaders!=='invader-colony')assert.doesNotMatch(card(html,'invader-colony'),/ecology-badge/);assert.doesNotMatch(card(html,r.territoryPlans.natural==='meteorites'?'earthquake':'meteorites'),/ecology-badge/);assert.deepEqual(r,before);
+ if(r.territoryPlans.invaders!=='invader-colony')assert.doesNotMatch(card(html,'invader-colony'),/data-ecology-countdown/);const other=card(html,r.territoryPlans.natural==='meteorites'?'earthquake':'meteorites');assert.doesNotMatch(other,/data-ecology-countdown/);assert.match(other,/data-ecology-state="unplanned"/);assert.deepEqual(r,before);
  r.status='paused';html=ecologyNavigationMarkup(r,'local-x',{inspection:true,now:now+999999});assert.match(card(html,'build'),/>−1/);assert.match(card(html,'destroy'),/>−2/);
  r.works[0].done=1;html=ecologyNavigationMarkup(r,'local-x');assert.match(card(html,'build'),/is-forecast/);assert.match(card(html,'destroy'),/>−2/);
 });

@@ -12,8 +12,8 @@ export function bindMap({room,layout,zoom,target,own,changeZoom,interacting,onCl
   const viewport=document.querySelector('.viewport'),panel=document.querySelector('.world-map'),big=panel?.querySelector('.map-canvas');
   const cacheKey='map:'+own?.id+':'+target?.id,model=snapshotMemo(room,cacheKey,()=>overviewModel(room,own,target,{includeFrontiers:false}));if(!viewport||!big||!model)return;
   const {bounds,terrain}=model;
-  const prepared=snapshotMemo(room,cacheKey+':rendering',()=>prepareMapRendering(model,frontierCells(room)));
-  const pinIndex=snapshotMemo(room,cacheKey+':pins',()=>cellIndex(ecologyPinTargets(room,own?.id)));
+  const prepared=snapshotMemo(room,cacheKey+':rendering',()=>prepareMapRendering(model));
+  const pinIndex=snapshotMemo(room,cacheKey+':pins',()=>cellIndex(model.ecologyPins||[]));
   const mini=document.querySelector('.game-minimap svg');if(mini){
    const rect=mini.getBoundingClientRect(),scale=Math.min(rect.width/bounds.width,rect.height/bounds.height);
    mini.setAttribute('viewBox',`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);

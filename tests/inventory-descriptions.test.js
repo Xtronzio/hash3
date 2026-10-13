@@ -13,7 +13,7 @@ test('Every hall and backpack item has a collapsed, accessible description, even
    assert.match(html,new RegExp(`data-description-panel="${id}"[^>]*hidden`));
   }
   for(const t of [...practiceTools,...immunityTools])assert.ok(html.includes(t.description));
-  assert.equal((html.match(/class="inventory-icon-row"/g)||[]).length,2);
+  assert.equal((html.match(/class="inventory-icon-row"/g)||[]).length,4);
  }
  assert.deepEqual(game,before);
  const hall=inventoryMarkup(null,null);assert.doesNotMatch(hall,/data-use-tool/);
