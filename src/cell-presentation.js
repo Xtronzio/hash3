@@ -7,7 +7,9 @@ import {lastGlyphPerCell} from './glyph-order.js';
 export {lastGlyphPerCell} from './glyph-order.js';
 const key=p=>`${p.x},${p.y}`;
 const identity=e=>e.id||e.cell||`${e.x},${e.y}:${e.by||''}`;
-const changed=(a,b)=>!a||a.x!==b.x||a.y!==b.y||a.phase!==b.phase||a.bombPhase!==b.bombPhase||a.done!==b.done;
+const pointSignature=p=>p?`${p.x},${p.y}:${p.cellId||''}`:'';
+const geometry=e=>['members','region','cells','build','destroy'].map(field=>{const list=e[field]||[];return `${list.length}:${pointSignature(list[0])}:${pointSignature(list.at(-1))}`;}).join('|')+'|'+(e.groups||[]).map(group=>`${group.length}:${pointSignature(group[0])}:${pointSignature(group.at(-1))}`).join('|');
+const changed=(a,b)=>!a||a.x!==b.x||a.y!==b.y||a.phase!==b.phase||a.bombPhase!==b.bombPhase||a.done!==b.done||geometry(a)!==geometry(b);
 
 // Cosmetic provenance travels with the save. Stamp only new/moved markers;
 // countdown ticks never reorder cards. Historical snapshots are not replayed.

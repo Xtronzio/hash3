@@ -1,3 +1,4 @@
+import {pendingInvasionBombs} from './pending-bombs.js';
 export function rodentVisitFeedback(previous,next){
  const event=next?.rodentVisit;
  if(!previous||previous.id!==next.id||!event||event.id===previous.rodentVisit?.id||!event.visits?.length)return null;
@@ -9,7 +10,8 @@ export function boardActionFeedback(previous,next){
  const event=next.lastEvent;
  if(event?.id!==previous.lastEvent?.id&&event?.tool&&event.tool!=='tornado'){
   const prior=new Map((previous.cells||[]).map(c=>[c.id,c]));
-  const points=event.affected||event.cells||event.region||(Number.isFinite(event.x)&&Number.isFinite(event.y)?[event]:(next.cells||[]).filter(c=>!prior.has(c.id)||prior.get(c.id).x!==c.x||prior.get(c.id).y!==c.y||prior.get(c.id).symbol!==c.symbol));
+  const bomb=event.tool==='shift'&&event.bombId?pendingInvasionBombs(next).find(b=>b.id===event.bombId):null;
+  const points=bomb?.blast||(bomb?[bomb]:null)||event.affected||event.cells||event.region||(Number.isFinite(event.x)&&Number.isFinite(event.y)?[event]:(next.cells||[]).filter(c=>!prior.has(c.id)||prior.get(c.id).x!==c.x||prior.get(c.id).y!==c.y||prior.get(c.id).symbol!==c.symbol));
   toolVisits.push(...points.map(p=>({x:p.x,y:p.y,kind:event.tool,inventory:true})));
  }
  const habitat=next.habitatEvent,neutral=next.neutralEvent;

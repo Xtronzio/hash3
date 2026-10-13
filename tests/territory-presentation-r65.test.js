@@ -37,6 +37,11 @@ test('Last marker wins across cell, map and save without removing older effects 
  const model=savedMapModel(next,next.players[0]);assert.equal(model.visibleWatchTargets.length,0);assert.equal(model.watchTargets.length,1);assert.equal(model.ecologyPins.filter(e=>e.x===1&&e.y===1).length,1);assert.doesNotMatch(mapCellSymbols(model.terrain),/data-symbol="X"/);
  const restored=JSON.parse(JSON.stringify(next));assert.equal(cellGlyphs(restored,'local-x').get('1,1').kind,'contagion');assert.equal(overviewModel(restored,restored.players[0]).visibleWatchTargets.length,0);
 });
+test('Moving a bomb group updates its marker priority without spending a second card or advancing its warning',()=>{
+ const r=fresh();r.presentationSequence=2;r.watchTargets=[{id:'watch',x:2,y:2,number:1,visualOrder:2,visualAt:1200}];r.territoryEvents=[{id:'wave',kind:'invader-rain',bombPhase:'bomb',x:0,y:0,region:[{x:1,y:1}],groups:[[{x:1,y:1}]],turnsRemaining:3,visualOrder:1,visualAt:1100}];
+ const moved={...r,clockNow:1300,version:r.version+1,territoryEvents:[{...r.territoryEvents[0],region:[{x:2,y:2}],groups:[[{x:2,y:2}]]}],lastEvent:{id:'move-bomb',kind:'inventory',tool:'shift',bombId:'wave:0'}};
+ const stamped=stampCellPresentation(r,moved);assert.equal(cellGlyphs(stamped,'local-x').get('2,2').kind,'invader-rain');assert.equal(stamped.territoryEvents[0].turnsRemaining,3);assert.equal(stamped.watchTargets.length,1);assert.equal(boardActionFeedback(r,stamped).visits[0].kind,'shift');
+});
 test('Clock countdown updates do not reorder icons; actual application order survives a clock rollback',()=>{
  const r=fresh(),next={...r,clockNow:1100,territoryEvents:[{id:'a',kind:'ufo',x:1,y:1,region:[{x:1,y:1}],turnsRemaining:3}]};
  const stamped=stampCellPresentation(r,next),ticked=stampCellPresentation(stamped,{...stamped,clockNow:1200,territoryEvents:[{...stamped.territoryEvents[0],turnsRemaining:2}]});assert.equal(ticked.presentationSequence,stamped.presentationSequence);assert.equal(ticked.territoryEvents[0].visualOrder,stamped.territoryEvents[0].visualOrder);
