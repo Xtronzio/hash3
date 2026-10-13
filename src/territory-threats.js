@@ -31,7 +31,7 @@ export function territoryThreatCells(room){
   for(const b of room.bombs||[])add(b.blast?.length?b.blast:[b],'bomb',b.id,new Set(),false);
   const occupied=new Map((room.cells||[]).map(c=>[key(c.x,c.y),c]));
   for(const w of room.works||[])add((w.destroy?.slice(w.done||0)||[]).filter(c=>!w.reconquer||occupied.get(key(c.x,c.y))?.symbol==='*'),'destroy',w.id);
-  for(const r of room.rodentRaids||[])if(r.phase!=='hidden')add(r.members?.length?r.members:[r],'rodent',r.id,new Set(),false);
+  for(const r of room.rodentRaids||[])if(r.phase!=='hidden')add(r.members?.length?r.members:[r],'rodent',r.id,habitatSafe,!!r.brief);
   for(const w of room.worms||[])if(w.warningTurns!=null||!w.turnDriven)add([w],'worm',w.id,new Set(),false);
   return [...result.values()];
  });

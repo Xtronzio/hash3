@@ -214,7 +214,7 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
   if(turnEcology(room)&&['rodent','worm'].includes(kind))count=large?(briefEcology(room)?3:3*livingFactor(area.length)):Math.min(count,1);
   count=Math.max(0,Math.min(count,Math.floor(cap-residents)));
   if(briefEcology(room)&&large&&['rodent','worm'].includes(kind)&&count!==3)count=0;
-  if(kind==='rodent'){if(count){const raid={id:uuid(),player:playerId,...point,count,remaining:3,mealsLeft:3,turn:0,phase:'arriving',phaseAt:now,visited:[],members:[],...(turnEcology(room)?{warningTurns:3,announcedTurn:room.ecologyTurns||0,scale:large?'large':'local'}:{})};if(briefEcology(room))raid.brief=true;room.rodentRaids.push(raid);positionRodents(room,raid,point,random);zone.birthScale.rodent=(zone.birthScale.rodent||0)+1;}continue;}
+  if(kind==='rodent'){if(count){const raid={id:uuid(),player:playerId,...point,count,remaining:3,mealsLeft:3,turn:0,phase:'arriving',phaseAt:now,visited:[],members:[],...(turnEcology(room)?{warningTurns:3,announcedTurn:room.ecologyTurns||0,scale:large?'large':'local'}:{})};if(briefEcology(room))raid.brief=true;room.rodentRaids.push(raid);positionRodents(room,raid,point,random);if(raid.brief&&raid.members.length!==count){room.rodentRaids=room.rodentRaids.filter(r=>r.id!==raid.id);continue;}zone.birthScale.rodent=(zone.birthScale.rodent||0)+1;}continue;}
   let bornWorms=0;const batch=uuid();
   for(let i=0;i<count;i++){
    if(kind==='work'){if(!project(room,point,playerId,random,now))break;continue;}
@@ -270,14 +270,14 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
  room.frontiers=(room.frontiers||[]).filter(f=>{if(f.type!=='beaver'||f.bornTurn===room.ecologyTurns)return true;f.turnsRemaining--;return f.turnsRemaining>0;});
 }
 function positionRodents(room,raid,point,random){
- const area=areaAt(room,raid),known=new Set(area.map(c=>key(c.x,c.y))),seen=new Set((raid.visited||[]).map(c=>key(c.x,c.y)));
+ const area=areaAt(room,raid),known=new Set(area.map(c=>key(c.x,c.y))),seen=new Set((raid.visited||[]).map(c=>key(c.x,c.y))),safe=raid.brief?faunaProtection(room):new Set();
  const taken=new Set([...room.worms.flatMap(w=>w.body||[]),...habitatReservations(room),...room.rodentRaids.filter(r=>r.id!==raid.id&&r.phase!=='hidden').flatMap(r=>r.members||[])].map(c=>key(c.x,c.y)));
- const candidates=room.cells.filter(c=>known.has(key(c.x,c.y))&&!same(c,point)&&['X','O'].includes(c.symbol)&&!isImmune(room,c.owner)&&!taken.has(key(c.x,c.y))&&!seen.has(key(c.x,c.y)));
+ const candidates=room.cells.filter(c=>known.has(key(c.x,c.y))&&!same(c,point)&&['X','O'].includes(c.symbol)&&!isImmune(room,c.owner)&&!safe.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)&&!taken.has(key(c.x,c.y))&&!seen.has(key(c.x,c.y)));
  raid.members=[];
  for(let i=0;i<raid.count;i++){
   let c=choose(candidates,random);
   if(c)candidates.splice(candidates.indexOf(c),1);
-  else c=choose(area.filter(c=>!same(c,point)&&!room.cells.some(p=>same(c,p))&&!taken.has(key(c.x,c.y))&&!seen.has(key(c.x,c.y))),random);
+  else c=choose(area.filter(c=>!same(c,point)&&!habitatBlocked(room,c.x,c.y)&&!safe.has(key(c.x,c.y))&&!room.cells.some(p=>same(c,p))&&!taken.has(key(c.x,c.y))&&!seen.has(key(c.x,c.y))),random);
   if(!c)break;
   taken.add(key(c.x,c.y));raid.members.push({id:raid.id+':'+i,x:c.x,y:c.y,cellId:c.id||null});
  }

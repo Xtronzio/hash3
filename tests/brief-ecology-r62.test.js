@@ -92,3 +92,10 @@ test('Rhino planning scales to 33333 cells and map queries keep death and beaver
  const model=savedMapModel(r,r.players[0]),index=prepareMapRendering(model),box={x:-2,y:0,width:12,height:8};assert.ok(index.detail.query(box).length<=80);
  const markup=mapWindowMarkup(model,index,box,48);assert.match(markup,/map-dead-cells/);assert.match(markup,/beaver-barrier/);assert.ok(markup.length<25000);
 });
+
+test('Mouse appearances avoid skulls and shields; diagonal rhinos cannot cross a saved border corner',()=>{
+ const r=fresh(9);r.terrain=Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)}));r.territoryEnabled=false;r.deadCells=[{x:1,y:1}];r.cells=[piece(2,2)];r.inventoryEffects.shields=[{cell:r.cells[0].id,by:'local-x',remaining:3}];
+ countHabitatPlacement(r,'local-x',{x:0,y:0},now,random,{completed:false});const zone=r.habitatZones[0];zone.next.rodent=zone.placements+1;zone.next.worm=zone.next.work=9999;countHabitatPlacement(r,'local-x',{x:0,y:0},now,random);
+ assert.equal(r.rodentRaids.length,1);assert.ok(r.rodentRaids[0].members.every(c=>!(c.x===1&&c.y===1)&&!(c.x===2&&c.y===2)));
+ const corner=fresh();corner.terrain=[{x:0,y:0},{x:1,y:1},{x:2,y:2}];corner.frontiers=[{id:'edge',type:'border',edges:[{a:{x:1,y:0},b:{x:1,y:1}}]}];assert.equal(rhinoRoutes(corner)[0].length,2);
+});

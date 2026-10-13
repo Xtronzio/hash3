@@ -41,7 +41,11 @@ export function clearBriefCells(room,points){
  return removed.map(({x,y})=>({x,y}));
 }
 const dirs=[[1,0],[0,1],[1,1],[1,-1]];
-const crosses=(a,b,edges)=>edges.has(edgeKey({a,b}))||a.x!==b.x&&a.y!==b.y&&(edges.has(edgeKey({a,b:{x:b.x,y:a.y}}))||edges.has(edgeKey({a,b:{x:a.x,y:b.y}})));
+const crosses=(a,b,edges)=>{
+ if(a.x===b.x||a.y===b.y)return edges.has(edgeKey({a,b}));
+ const mid1={x:b.x,y:a.y},mid2={x:a.x,y:b.y};
+ return [{a,b:mid1},{a:mid1,b},{a,b:mid2},{a:mid2,b}].some(e=>edges.has(edgeKey(e)));
+};
 // Enumerate maximal runs, not every suffix: O(4N) command work, independent of viewport.
 export function rhinoRoutes(room,count=1){
  const barriers=new Set((room.frontiers||[]).flatMap(f=>f.cells||[]).map(c=>key(c.x,c.y))),dead=new Set((room.deadCells||[]).map(c=>key(c.x,c.y)));
