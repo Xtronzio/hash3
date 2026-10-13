@@ -53,7 +53,7 @@ export function inventoryRefill(previous,next,playerId){
  return refill;
 }
 export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=null,choice=null,uses=null,section='dock'}={}){
- if(!inventoryEnabled(game,playerId))return '';
+ if(section!=='uses'&&!inventoryEnabled(game,playerId))return '';
  const total=inventoryCardTotal(game,playerId),inv=inventoryFor(game,playerId);
  const protectedNow=immunityRemaining(game,playerId)>0,team=game?.players?.find(p=>p.id===playerId)?.symbol==='O'?'o':'x';
  const effects=activeInventoryEffects(game),ongoing=(tool,player)=>effects.some(e=>e.tool===tool&&e.player===player);

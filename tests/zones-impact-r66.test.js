@@ -41,4 +41,5 @@ test('Turn cards survive opponent tools and pause, then clear only after the nex
 test('Backpacks expose independent catalogues, and used ongoing cards remain in the top history',()=>{
  const r=fresh();assert.doesNotMatch(inventoryMarkup(r,'local-x',{section:'player'}),/id="territory-guide"/);const territory=inventoryMarkup(r,'local-x',{section:'territory'});assert.match(territory,/id="territory-guide"/);assert.doesNotMatch(territory,/data-use-tool|inventory-player-heading/);
  r.inventoryEffects.forced=[{player:'local-x',by:'local-o',symbol:'O'}];const html=inventoryDockMarkup(r,'local-x',{section:'uses',uses:[{player:'local-o',tool:'rival'}]});assert.match(html,/data-used-tool="rival"/);assert.doesNotMatch(html,/data-action="inventory"/);
+ r.mode='solo';r.humanId='local-x';r.playerInventory=false;r.machineInventory=true;assert.match(inventoryDockMarkup(r,'local-x',{section:'uses',uses:[{player:'local-o',tool:'rival'}]}),/data-used-tool="rival"/);assert.equal(inventoryDockMarkup(r,'local-x',{section:'bag'}),'');
 });
