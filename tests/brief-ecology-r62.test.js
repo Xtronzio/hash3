@@ -104,5 +104,5 @@ test('Mouse appearances avoid skulls and shields; diagonal rhinos cannot cross a
 test('A preserved historical bomb warning resolves to static occupation with no phantom bomb or growth forecast',()=>{
  const r=fresh();r.territoryEvents=[{id:'legacy-wave',kind:'invader-rain',region:[{x:1,y:1}],turnsRemaining:2}];const score=r.players.map(p=>p.score);turns(r,2);
  assert.equal(r.cells.filter(c=>c.symbol==='*').length,1);assert.deepEqual(pendingInvasionBombs(r),[]);assert.deepEqual(activeInvasionBombs(r),[]);assert.deepEqual(invasionGrowthCells(r),[]);assert.deepEqual(ecologyTargets(r,'invader-rain'),[]);assert.equal(ecologyTargets(r,'invader-colony').length,1);assert.deepEqual(r.players.map(p=>p.score),score);
- assert.match(turnOutlookMarkup(r,'local-x'),/Ocupación invasora/);assert.doesNotMatch(turnOutlookMarkup(r,'local-x'),/Invasión en crecimiento|casillas hasta el límite/);
+ assert.match(turnOutlookMarkup(r,'local-x'),/permanecen estáticos/);assert.doesNotMatch(turnOutlookMarkup(r,'local-x'),/Invasión en crecimiento|casillas hasta el límite/);
 });
