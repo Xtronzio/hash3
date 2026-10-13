@@ -24,7 +24,10 @@ try{
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.locator('.game .viewport').waitFor();
    const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]),before=await read();
    await page.locator('.board-territory-status [data-action="territory-inventory"]').click();
-   assert.equal(await page.locator('.floating-refill').isVisible(),false,'Floating controls must not cover territory cards while reading');
+   assert.equal(await page.locator('.floating-refill').isVisible(),true,'Refill remains available while reading');
+   const control=await page.locator('.floating-refill').boundingBox(),map=await page.locator('.game .map-wrap').boundingBox(),sheet=await page.locator('#inventory-panel').boundingBox();
+   assert.ok(control.y>=map.y&&control.y+control.height<=map.y+map.height+1,'Refill must stay inside the board');
+   assert.ok(control.y+control.height<=sheet.y+1,'Refill must not cover inventory descriptions');
    for(const entry of TERRITORY_GUIDE){const toggle=page.locator(`#territory-guide [data-tool="territory:${entry.id}"]`);await toggle.evaluate(e=>e.scrollIntoView({block:'nearest',inline:'nearest'}));await toggle.click();const panel=page.locator(`[data-description-panel="territory:${entry.id}"]`);assert.equal(await panel.isVisible(),true);assert.equal(await panel.locator('p').first().innerText(),entry.description);assert.equal(await panel.locator('[data-use-tool]').count(),0);await toggle.evaluate(e=>e.scrollIntoView({block:'nearest',inline:'nearest'}));await toggle.click();}
    for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){await page.setViewportSize(size);await page.locator('#territory-guide').evaluate(e=>e.scrollIntoView());await page.evaluate(()=>document.fonts.ready);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(output,`a-territory-guide-r65-${name}-${size.width}.png`)});}
    assert.deepEqual(await read(),before);await page.locator('[data-action="close-inventory"]').click();await page.setViewportSize({width:390,height:844});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.locator('.board-territory-status [data-ecology-kind="pandemic"]').click();
