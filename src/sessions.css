@@ -95,3 +95,15 @@ body:has(.inspection-overlay){overflow:hidden}
 
 .achievement-panel.mode-red{--mode-color:var(--red)}.achievement-panel.mode-cyan{--mode-color:#00e5ff}.achievement-panel.mode-green{--mode-color:var(--green)}.achievement-panel.mode-silver,.achievement-panel .metric-modes .mode-silver{--mode-color:#fff}
 .achievement-selectors button:focus-visible{outline-color:var(--mode-color)}
+
+/* Saved positions show the actual balance without a long repeated subtitle. */
+.saved-game-copy{gap:3px}
+.saved-game .saved-game-names{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-game .saved-game-scores{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px;line-height:1.2;font-variant-numeric:tabular-nums}
+.saved-game .saved-score-x{color:var(--red)}
+.saved-game .saved-score-o{color:var(--green)}
+.saved-game .saved-game-meta{display:flex;align-items:center;gap:8px;line-height:1.2;min-height:18px}
+.saved-game .saved-game-meta>span:not(.sr-only){font-size:11px}
+.saved-game-meta-icon{display:inline-flex;flex:none}
+.saved-game .saved-game-meta-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:360px){.saved-game .saved-game-scores{font-size:13px;gap:4px 10px}.saved-game .saved-game-info.saved-game-open{gap:6px}}

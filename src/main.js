@@ -3,7 +3,7 @@ import {territoryThreatCells} from './territory-threats.js';
 import {inventoryPreferences,storeInventoryPreferences,inventoryBandMarkup,territoryBandMarkup,floatingInventoryMarkup,inventoryEditorMarkup,bindInventoryEditor,bindFloatingInventory,reorderInventory} from './inventory-personalization.js';
 import {nuclearBlast,nuclearContext,nuclearIcon} from './nuclear-tool.js';
 import './inventory-personalization.css';
-import {chooseMachineCard} from './bot-inventory.js';
+import {createMachineRunner} from './machine-runner.js';
 import {pausedScoreMarkup} from './paused-ui.js';
 import {bindRefillHold,floatingRefillMarkup,refillSelectorMarkup,canOpenRefill,REFILL_HOLD_MS} from './floating-refill.js';
 import {startingInventoryMarkup} from './starting-inventory.js';
@@ -21,7 +21,6 @@ import {eventOutlook} from './event-outlook.js';
 import {wormTrailParts,wormTrailMarkup} from './worm-trails.js';
 import {snapshotMemo} from './snapshot-memo.js';
 import {ONLINE_ENABLED,ONLINE_NOTICE,modeAvailable} from './online-availability.js';
-import {machineTurnKey} from './machine-turn.js';
 import {copyText,legacyCopyText} from './clipboard.js';
 import {profileToken,profileUrl,restoreProfile,validProfileToken} from './profile-link.js';
 import {bindLocalTransfer} from './local-transfer-ui.js';
@@ -81,7 +80,7 @@ import {hallModes,hallModeClass,hallNameField,symbolSelector,machineDifficultySe
 import {client, ensurePlayer, command, profileAccess} from './api.js';
 import {key, rankedPlayers, immediateAbove, expansionOptions, terrainOf, playableTerrain, availableCells} from './game.js';
 
-import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHumanId, localMachineId} from './local.js';
+import {reconcileLocalBoard,createLocal, localCommand, localHumanId} from './local.js';
 import {scoreFeedback} from './feedback.js';
 import {tornadoFeedback} from './tornado-feedback.js';
 import {needsLocalTick} from './local-clock.js';
@@ -108,7 +107,7 @@ function updateImpactNotices(previous,next){
  impactNotices=[...impactNotices.filter(e=>e.until>Date.now()),...newTerritoryImpacts(previous,next).map(e=>({...e,until:Date.now()+8000}))].slice(-3);
  if(impactNotices.length)impactNoticeTimer=setTimeout(()=>{impactNotices=impactNotices.filter(e=>e.until>Date.now());for(const n of document.querySelectorAll('[data-impact-id]'))if(!impactNotices.some(e=>e.id===n.dataset.impactId))n.remove();},Math.max(...impactNotices.map(e=>e.until))-Date.now()+10);
 }
-let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null, machineTimer=null,machineWorker=null,machineRequest=0,machinePendingKey=null;
+let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, localSetup=null;
 let figureEffect=null,figureTimer,scoreFloatTimer,landingEffect=null,landingGlowTimer,landingFloatTimer;
 let rodentEffect=null,rodentTimer;
 function startRodentEffect(feedback){
@@ -694,7 +693,7 @@ function renderPaused(){
 }
 function suspendLocal(){
  if(!isLocal()||room.status!=='playing'||busy)return;
- try{clearTimeout(machineTimer);accept(localCommand(room,'pause'));}catch{}
+ try{stopMachine();accept(localCommand(room,'pause'));}catch{}
 }
 function timeModeSelector(id,value='timed'){
  return `<label for="${id}">Ritmo de la partida</label><select id="${id}"><option value="timed" ${value==='timed'?'selected':''}>◷ Con reloj · 33 segundos por turno</option><option value="untimed" ${value==='untimed'?'selected':''}>Por turnos · sin reloj</option></select>`;
@@ -1030,11 +1029,11 @@ app.addEventListener('click',async e=>{
   if(action==='confirm-leave'){
     await run(async()=>{
       if(!isLocal())await command('leave',{code:room.code});else accept(localCommand(room,'pause'));
-      clearTimeout(machineTimer);room=null;leaveOpen=false;finishOpen=false;selectedExpansion=null;activeKey=null;
+      stopMachine();room=null;leaveOpen=false;finishOpen=false;selectedExpansion=null;activeKey=null;
       inventoryOpen=false;history.replaceState(null,'',location.pathname);render();notify('Has salido. Conservas tus puntos y puedes volver desde Mis partidas.');
     });return;
   }
-  if(action==='home'){if(room?.status!=='finished'&&ownPlayer()?.active!==false){leaveOpen=true;renderLeave();return;}clearTimeout(machineTimer);room=null;finishOpen=false;selectedExpansion=null;activeKey=null;history.replaceState(null,'',location.pathname);render();return;}
+  if(action==='home'){if(room?.status!=='finished'&&ownPlayer()?.active!==false){leaveOpen=true;renderLeave();return;}stopMachine();room=null;finishOpen=false;selectedExpansion=null;activeKey=null;history.replaceState(null,'',location.pathname);render();return;}
   if(action==='finish'){setRankingOpen(false);finishOpen=true;renderFinish();return;}
   if(action==='cancel-finish'){finishOpen=false;document.querySelector('.finish-dialog')?.remove();return;}
   if(action==='confirm-finish'){finishOpen=false;}
@@ -1140,6 +1139,10 @@ function openIncomingTransfer(input){
 window.addEventListener('hashchange',()=>{
  try{openIncomingTransfer(location.href);}catch(error){notify(error.message||'No se pudo abrir la copia. Tu partida se conserva.');}
 });
+const machineRunner=createMachineRunner({getRoom:()=>room,isHidden:()=>document.hidden,isBusy:()=>busy,
+ createWorker:()=>new Worker(new URL('./machine-worker.js',import.meta.url),{type:'module'}),
+ apply:choice=>accept(localCommand(room,choice.action,choice.payload)),tradeHoldMs:REFILL_HOLD_MS,
+ onError:()=>notify('La máquina no ha podido completar su turno. Pausa y retoma para reintentar; la partida sigue guardada.')});
 async function init(){
  if(openIncomingTransfer(location.href))return;
  const incoming=profileToken(location.href,location.href),hasProfile=new URLSearchParams(location.hash.slice(1)).has('perfil');
@@ -1262,41 +1265,8 @@ function updateTimer() {
     if(seconds===0)document.querySelectorAll('[data-action="move"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
   }
 }
-function stopMachine(){clearTimeout(machineTimer);machineRequest++;machineWorker?.terminate();machineWorker=null;machinePendingKey=null;}
-function scheduleMachine() {
-  const turnKey=machineTurnKey(room,document.hidden);
-  if(!turnKey){stopMachine();return;}
-  if(machinePendingKey===turnKey)return;
-  stopMachine();machinePendingKey=turnKey;
-  const expected=room.id;
-  machineTimer=setTimeout(()=>{
-    if(machineTurnKey(room,document.hidden)!==turnKey||busy){stopMachine();return;}
-    const request=machineRequest,version=room.version;
-    const applyChoice=choice=>{
-      if(request!==machineRequest||machineTurnKey(room,document.hidden)!==turnKey)return;
-      if(busy){stopMachine();return;}
-      const commit=()=>{
-        if(request!==machineRequest||machineTurnKey(room,document.hidden)!==turnKey)return;
-        machinePendingKey=null;
-        if(busy){scheduleMachine();return;}
-        try{accept(localCommand(room,choice.action,choice.payload));}
-        catch{scheduleMachine();}
-      };
-      if(choice.action==='trade')machineTimer=setTimeout(commit,REFILL_HOLD_MS);else commit();
-    };
-    const fallback=()=>applyChoice(chooseMachineCard(room)||machineChoice(room,Math.random,{maxTimeMs:40,maxNodes:800}));
-    try{
-      const worker=new Worker(new URL('./machine-worker.js',import.meta.url),{type:'module'});machineWorker=worker;
-      worker.onmessage=({data})=>{
-        worker.terminate();if(machineWorker===worker)machineWorker=null;
-        if(request!==machineRequest||machineTurnKey(room,document.hidden)!==turnKey)return;
-        if(data.error)fallback();else if(data.id===expected&&data.version===version)applyChoice(data.choice);
-      };
-      worker.onerror=()=>{worker.terminate();if(machineWorker===worker)machineWorker=null;if(request===machineRequest&&machineTurnKey(room,document.hidden)===turnKey)fallback();};
-      worker.postMessage({id:expected,room});
-    }catch{fallback();}
-  },room.lastEvent?.points?1500:650);
-}
+function stopMachine(){machineRunner.stop();}
+function scheduleMachine(){machineRunner.schedule();}
 setInterval(()=>{
   updateTimer();
   if(isLocal()&&!busy&&!document.hidden&&needsLocalTick(room)) {

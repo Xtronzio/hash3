@@ -41,7 +41,7 @@ class Position {
     this.wildcards=localLiving(room);
     this.board=new Uint8Array(this.cells.length);
     for(const c of room.cells){const i=this.index.get(key(c.x,c.y));if(i!==undefined)this.board[i]=this.wildcards&&c.symbol==='#'?4:symbolNumber(c.symbol);}
-    const reserved=new Set([...frontierCells(room).filter(c=>!c.borderSide),...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[])].map(c=>key(c.x,c.y)));
+    const reserved=new Set([...frontierCells(room).filter(c=>!c.borderSide),...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.deadCells||[])].map(c=>key(c.x,c.y)));
     this.habitatBlocks=new Set(this.cells.map((c,i)=>reserved.has(key(c.x,c.y))?i:-1).filter(i=>i>=0));
     this.free=this.cells.slice(0,this.legalSize).map((_,i)=>i).filter(i=>!this.board[i]&&!this.habitatBlocks.has(i));
     this.figures=[0,...['X','O'].map(s=>room.players.find(p=>p.symbol===s)?.figures||0)];
