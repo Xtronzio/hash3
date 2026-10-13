@@ -11,7 +11,7 @@
 .custom-territory-band .band-actions button{flex:none}
 .custom-territory-band .territory-bag svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .inventory-player-heading{margin:0 0 10px}
-.game.inventory-visible .map-wrap>.floating-refill,.game.inventory-visible .map-wrap>.floating-inventory-card{visibility:hidden;pointer-events:none}
+body:has(.inventory-sheet) .game .map-wrap>.floating-refill,body:has(.inventory-sheet) .game .map-wrap>.floating-inventory-card{visibility:hidden;pointer-events:none}
 .paused-game~.inventory-sheet{position:fixed;left:8px;right:8px;bottom:8px;z-index:120;max-height:65dvh}
 .custom-territory-band .band-fold{display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:8px;border:1px solid currentColor;background:#101216;color:var(--yellow);border-radius:7px}
 .custom-territory-band .band-fold svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
