@@ -11,7 +11,7 @@ export function territoryThreatCells(room){
   if(room.status==='finished')return [];
   const protectedKeys=protectedTerritoryKeys(room),shieldKeys=new Set(),shields=new Set((room.inventoryEffects?.shields||[]).filter(s=>s.remaining>0).map(s=>s.cell));
   for(const c of room.cells||[])if(shields.has(c.id))shieldKeys.add(key(c.x,c.y));
-  const habitatSafe=new Set([...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
+  const habitatSafe=new Set([...(room.deadCells||[]),...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
   const terrain=terrainOf(room),result=new Map(),add=(points,kind,eventId,excluded=new Set(),shieldsBlock=true)=>{
    for(const c of points||[])if(Number.isFinite(c.x)&&Number.isFinite(c.y)&&!protectedKeys.has(key(c.x,c.y))&&!excluded.has(key(c.x,c.y))&&(!shieldsBlock||!shieldKeys.has(key(c.x,c.y))))result.set(key(c.x,c.y),{x:c.x,y:c.y,kind,eventId});
   };
@@ -26,10 +26,12 @@ export function territoryThreatCells(room){
     add(terrain.filter(c=>c.x>=left&&c.x<=right&&c.y>=top&&c.y<=bottom),e.kind,e.id,excluded);
    }
   }
+  for(const e of room.faunaEvents||[])add(e.region,e.kind,e.id,habitatSafe);
+  for(const w of room.worms||[])if(w.brief)add(w.route,'worm',w.id);
   for(const b of room.bombs||[])add(b.blast?.length?b.blast:[b],'bomb',b.id,new Set(),false);
   const occupied=new Map((room.cells||[]).map(c=>[key(c.x,c.y),c]));
   for(const w of room.works||[])add((w.destroy?.slice(w.done||0)||[]).filter(c=>!w.reconquer||occupied.get(key(c.x,c.y))?.symbol==='*'),'destroy',w.id);
-  for(const r of room.rodentRaids||[])if(r.phase!=='hidden')add(r.members?.length?r.members:[r],'rodent',r.id,new Set(),false);
+  for(const r of room.rodentRaids||[])if(r.phase!=='hidden')add(r.members?.length?r.members:[r],'rodent',r.id,habitatSafe,!!r.brief);
   for(const w of room.worms||[])if(w.warningTurns!=null||!w.turnDriven)add([w],'worm',w.id,new Set(),false);
   return [...result.values()];
  });

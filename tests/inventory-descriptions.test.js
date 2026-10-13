@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {inventoryMarkup} from '../src/inventory.js';
 import {practiceTools,immunityTools} from '../src/practice-tools.js';
 import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
-const ids=[...practiceTools,...immunityTools].map(t=>t.id).concat('target','immunity-1','immunity-3','immunity-33');
+const ids=[...practiceTools,...immunityTools].map(t=>t.id).concat('target');
 test('Every hall and backpack item has a collapsed, accessible description, even when empty',()=>{
  const game=createLocal('local','X','O',Date.now(),'normal','untimed');
  const before=structuredClone(game);

@@ -1,3 +1,4 @@
+import {briefEcology} from './brief-ecology.js';
 import {inventoryEnabled} from './inventory-enabled.js';
 export const IMMUNITY_MS=33000;
 export const IMMUNITY_POINTS=33;
@@ -26,22 +27,24 @@ export function initializeImmunity(game,now=game.clockNow??Date.now()){
   game.inventoryEffects.immunities||=[];
   if((game.immunityVersion??0)<2)for(const effect of game.inventoryEffects.immunities)effect.remaining=Math.min(1,effect.remaining);
   if(game.immunityVersion!==3){game.inventoryEffects.immunities=game.inventoryEffects.immunities.filter(e=>e.remaining>0);}
-  if(game.immunityVersion!==3)for(const e of game.inventoryEffects.immunities){e.expiresAt=now+IMMUNITY_MS;delete e.remaining;}
+  if(game.immunityVersion!==3)for(const e of game.inventoryEffects.immunities)if(e.turnsRemaining==null){e.expiresAt=now+IMMUNITY_MS;delete e.remaining;}
   game.immunityVersion=3;
 }
 export function immunitySeconds(game,playerId,now=game.clockNow??Date.now()){
  const e=game?.inventoryEffects?.immunities?.find(e=>e.player===playerId);if(!e)return 0;
  return Math.max(0,Math.ceil((e.remainingMs??(e.expiresAt!=null?e.expiresAt-now:e.remaining>0?IMMUNITY_MS:0))/1000));
 }
-export const immunityRemaining=(game,playerId,now=game.clockNow??Date.now())=>immunitySeconds(game,playerId,now)>0?1:0;
+export const immunityCountdown=(game,playerId,now=game.clockNow??Date.now())=>game?.inventoryEffects?.immunities?.find(e=>e.player===playerId)?.turnsRemaining??immunitySeconds(game,playerId,now);
+export const immunityUnit=(game,playerId)=>game?.inventoryEffects?.immunities?.find(e=>e.player===playerId)?.turnsRemaining!=null?'turnos':'segundos';
+export const immunityRemaining=(game,playerId,now=game.clockNow??Date.now())=>immunityCountdown(game,playerId,now)>0?1:0;
 export const isImmune=(game,playerId,now=game.clockNow??Date.now())=>immunityRemaining(game,playerId,now)>0;
 export function expireImmunities(game,now=Date.now()){
  const before=game.inventoryEffects.immunities.length;
- game.inventoryEffects.immunities=game.inventoryEffects.immunities.filter(e=>e.remainingMs!=null||e.expiresAt>now);
+ game.inventoryEffects.immunities=game.inventoryEffects.immunities.filter(e=>e.turnsRemaining!=null?e.turnsRemaining>0:e.remainingMs!=null||e.expiresAt>now);
  return before!==game.inventoryEffects.immunities.length;
 }
-export function freezeImmunities(game,now){for(const e of game.inventoryEffects.immunities)e.remainingMs=Math.max(0,e.expiresAt-now);}
-export function resumeImmunities(game,now){for(const e of game.inventoryEffects.immunities){e.expiresAt=now+(e.remainingMs??IMMUNITY_MS);delete e.remainingMs;}}
+export function freezeImmunities(game,now){for(const e of game.inventoryEffects.immunities)if(e.turnsRemaining==null)e.remainingMs=Math.max(0,e.expiresAt-now);}
+export function resumeImmunities(game,now){for(const e of game.inventoryEffects.immunities)if(e.turnsRemaining==null){e.expiresAt=now+(e.remainingMs??IMMUNITY_MS);delete e.remainingMs;}}
 // Local terrain is shared. Occupied cells belong to their piece owner; empty
 // cells built by a player retain that owner's territory. Frontiers retain by.
 export function protectedTerritoryKeys(game,now=game.clockNow??Date.now()){
@@ -59,7 +62,7 @@ export function immunityProgress(game,playerId){
 // Count a placement, never a turn or accumulated score. Doble's placements
 // qualify separately; points from a card or the rival's forced symbol do not.
 export function recordImmunityCombo(game,playerId,points,{automatic=false,scorer=playerId}={}){
-  if(!inventoryEnabled(game,playerId))return [];
+  if(briefEcology(game)||!inventoryEnabled(game,playerId))return [];
   if(automatic||scorer!==playerId||!Number.isFinite(points)||points<IMMUNITY_POINTS||!['solo','local'].includes(game.mode))return [];
   const inv=immunityFor(game,playerId);inv.combos++;
   const earned=immunityGoals.filter(goal=>inv.combos%goal.combos===0);
@@ -72,7 +75,7 @@ export function spendImmunity(game,playerId){
   inv.cards[source.id]--;
 }
 export function activateImmunity(game,playerId,now=game.clockNow??Date.now()){
-  game.inventoryEffects.immunities.push({player:playerId,expiresAt:now+IMMUNITY_MS});
+  game.inventoryEffects.immunities.push(briefEcology(game)?{player:playerId,turnsRemaining:3,announcedTurn:game.ecologyTurns||0}:{player:playerId,expiresAt:now+IMMUNITY_MS});
   game.inventoryEffects.forced=game.inventoryEffects.forced.filter(e=>e.player!==playerId);
 }
 export function completeImmunityRound(){} // Turns never consume timed protection.

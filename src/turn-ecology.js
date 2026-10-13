@@ -14,4 +14,4 @@ export function initializeTurnEcology(room){
  for(const k of ['territoryNextNaturalAt','territoryNextInvaderAt']){delete room[k];delete room[k+'Remaining'];}
  room.turnEcologyVersion=1;room.ruleVersion=Math.max(13,room.ruleVersion||0);
 }
-export const ecologyTurnIds=room=>new Set([...(room.territoryEvents||[]),...(room.works||[]),...(room.bombs||[]),...(room.rodentRaids||[]),...(room.worms||[])].map(e=>e.id));
+export const ecologyTurnIds=room=>new Set([...(room.territoryEvents||[]),...(room.faunaEvents||[]),...(room.works||[]),...(room.bombs||[]),...(room.rodentRaids||[]),...(room.worms||[])].map(e=>e.id));

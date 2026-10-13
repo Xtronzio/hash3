@@ -77,7 +77,7 @@ test('Each family draws without replacement independently and survives serializa
   r=JSON.parse(JSON.stringify(r));
  }
  assert.deepEqual([...natural].sort(),[...LOCAL_NATURAL_ROTATION].sort());
- for(const pair of [invaders.slice(0,2),invaders.slice(2)])assert.deepEqual(pair.sort(),[...INVADER_EVENT_ROTATION].sort());
+ for(const kind of invaders)assert.equal(kind,'invader-rain');
 });
 test('Historical rain/cataclysm definitions remain recognised and do not become asterisks',()=>{
  for(const kind of ['rain','cataclysm']){

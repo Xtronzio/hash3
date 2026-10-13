@@ -33,7 +33,7 @@ export const EVENT_BALANCE=Object.freeze({
   recoveryMs:33000,
   recoveryMoves:3
 });
-export const LOCAL_EVENT_RULES=Object.freeze({tornado:{label:'Tornado',family:'natural',effect:'shuffle',distribution:'local',basis:'fixed'},contagion:{label:'Contagio',family:'natural',effect:'vacate',distribution:'local',basis:'pieces'}});
+export const LOCAL_EVENT_RULES=Object.freeze({death:{label:'Celda muerta',family:'death',effect:'death',distribution:'local',basis:'fixed'},tornado:{label:'Tornado',family:'natural',effect:'shuffle',distribution:'local',basis:'fixed'},contagion:{label:'Contagio',family:'natural',effect:'vacate',distribution:'local',basis:'pieces'}});
 export const LOCAL_NATURAL_ROTATION=Object.freeze(['meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo']);
 export const eventRule=kind=>LOCAL_EVENT_RULES[kind]||TERRITORY_EVENT_RULES[kind]||null;
 export const territoryAttemptInterval=(size,family='natural')=>3*Math.ceil(EVENT_BALANCE[family==='invaders'?'invaderPlacementsPerAttempt':'placementsPerAttempt']*Math.max(EVENT_BALANCE.placementScaleReference,size)/(3*EVENT_BALANCE.placementScaleReference));
@@ -59,7 +59,7 @@ export function pickEventKind(room,family='natural',random=Math.random){
   room.territoryInvasionIndex=0;
   room.territoryBag=[];
  }
- const rotation=family==='invaders'?INVADER_EVENT_ROTATION:localLiving(room)?LOCAL_NATURAL_ROTATION:NATURAL_EVENT_ROTATION;
+ const rotation=family==='invaders'?((room.ruleVersion||0)>=22&&localLiving(room)?['invader-rain']:INVADER_EVENT_ROTATION):localLiving(room)?LOCAL_NATURAL_ROTATION:NATURAL_EVENT_ROTATION;
  if(localLiving(room)){
   room.livingBags||={};
   if(room.localEventCatalogue!==3){room.livingBags.natural=[];room.localEventCatalogue=3;}

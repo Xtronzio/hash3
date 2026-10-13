@@ -19,14 +19,11 @@ test('A habitat action changes the board without restarting the same machine tur
  const key=machineTurnKey(r),version=r.version;const waiting=localCommand(r,'tick',{},2000,()=>0);assert.equal(waiting,r);assert.equal(r.version,version);completeEventTurns(r,2000);assert.equal(r.cells.length,0);assert.equal(machineTurnKey(r),key);
  r=localCommand(r,'move',{x:2,y:2},2001,()=>0);assert.equal(machineTurnKey(r),null);assert.equal(r.pairs[0].turn,'X');
 });
-test('Rodent positions and animation phases are shared by board, map and pause, with no phantom hidden positions',()=>{
+test('Brief mouse positions are shared by board, map and pause and disappear after three actions',()=>{
  const r=start();r.mode='local';r.territoryEnabled=false;r.terrain=Array.from({length:111},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,50).map((c,i)=>({...c,id:'f'+i,symbol:'X',owner:'local-x'}));r.players[0].ecologyPlacements=r.players[0].placements=65;
- countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0);r.worms=[];
- const birth=habitatLocations(r).filter(e=>e.kind==='rodent');assert.equal(birth.length,1);assert.equal(rodentTurnsRemaining(r.rodentRaids[0]),9);assert.deepEqual(ecologyPinTargets(r).filter(e=>e.kind==='rodent').map(e=>[e.x,e.y]),birth.map(e=>[e.x,e.y]));assert.match(habitatMark('rodent','',birth[0]),/phase-arriving/);
- completeEventTurns(r,1000);countHabitatPlacement(r,'local-o',{x:14,y:3},1001,()=>0);countHabitatPlacement(r,'local-x',{x:14,y:3},1002,()=>0);assert.match(ecologyMapPins(ecologyPinTargets(r),1002),/phase-eating/);
- countHabitatPlacement(r,'local-o',{x:14,y:3},1003,()=>0);assert.equal(habitatLocations(r).filter(e=>e.kind==='rodent').length,0);assert.equal(ecologyPinTargets(r).filter(e=>e.kind==='rodent').length,0);
- countHabitatPlacement(r,'local-x',{x:14,y:3},1004,()=>0);assert.notDeepEqual(habitatLocations(r).filter(e=>e.kind==='rodent').map(e=>[e.x,e.y]),birth.map(e=>[e.x,e.y]));
- const saved=JSON.parse(JSON.stringify(r));saved.status='paused';assert.match(habitatMark('rodent','',habitatLocations(saved)[0]),/is-frozen/);assert.equal(saved.rodentRaids[0].turn,4);
+ countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0);r.worms=[];const birth=habitatLocations(r).filter(e=>e.kind==='rodent');assert.equal(birth.length,1);assert.equal(rodentTurnsRemaining(r.rodentRaids[0]),3);completeEventTurns(r,1000);
+ countHabitatPlacement(r,'local-o',{x:14,y:3},1001,()=>0);const moved=habitatLocations(r).filter(e=>e.kind==='rodent');assert.notDeepEqual(moved.map(e=>[e.x,e.y]),birth.map(e=>[e.x,e.y]));assert.deepEqual(ecologyPinTargets(r).filter(e=>e.kind==='rodent').map(e=>[e.x,e.y]),moved.map(e=>[e.x,e.y]));
+ const saved=JSON.parse(JSON.stringify(r));saved.status='paused';assert.match(habitatMark('rodent','',habitatLocations(saved)[0]),/is-frozen/);countHabitatPlacement(r,'local-x',{x:14,y:3},1002,()=>0);countHabitatPlacement(r,'local-o',{x:14,y:3},1003,()=>0);assert.equal(habitatLocations(r).filter(e=>e.kind==='rodent').length,0);assert.equal(ecologyPinTargets(r).filter(e=>e.kind==='rodent').length,0);
 });
 test('Workers retain current worksite markers across the full three-turn cycle and advance both posts together',()=>{
  const r=start();r.works=[{id:'work',kind:'work',done:0,destroy:[{x:2,y:0},{x:2,y:1},{x:2,y:2}],build:[{x:3,y:0},{x:3,y:1},{x:3,y:2}],nextAt:34000}];

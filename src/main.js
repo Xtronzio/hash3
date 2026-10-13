@@ -1,3 +1,4 @@
+import {briefIcons} from './brief-ecology.js';
 import {territoryThreatCells} from './territory-threats.js';
 import {inventoryPreferences,storeInventoryPreferences,inventoryBandMarkup,territoryBandMarkup,floatingInventoryMarkup,inventoryEditorMarkup,bindInventoryEditor,bindFloatingInventory,reorderInventory} from './inventory-personalization.js';
 import {nuclearBlast,nuclearContext,nuclearIcon} from './nuclear-tool.js';
@@ -84,7 +85,7 @@ import {reconcileLocalBoard,createLocal, localCommand, machineChoice, localHuman
 import {scoreFeedback} from './feedback.js';
 import {tornadoFeedback} from './tornado-feedback.js';
 import {needsLocalTick} from './local-clock.js';
-import {isImmune,immunitySeconds} from './immunity.js';
+import {isImmune,immunityCountdown,immunityUnit} from './immunity.js';
 import {VERSION_LABEL} from './version.js';
 import {startUpdates} from './updates.js';
 
@@ -286,7 +287,7 @@ function boardFrontierCell(cell,minX,minY,size,padding,preview=false,pivot=false
  if(cell.borderSide)return `<span class="board-border-cell ${preview?'is-preview':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="${preview?'Propuesta de frontera':'Frontera'} · ${cell.borderSide}"><svg viewBox="${cell.x} ${cell.y} 1 1"><path d="${borderPath(cell)}"/></svg></span>`;
  if(bombTarget)return `<button class="board-frontier-cell is-bomb-target" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" aria-label="Bomba sobre muro en ${cell.x}, ${cell.y}">${frontierSlash}</button>`;
  const controls=pivot?`<button class="frontier-pivot-place" data-action="inventory-target" data-x="${cell.x}" data-y="${cell.y}" aria-label="Colocar muro en el punto elegido ${cell.x}, ${cell.y}" ${valid?'':'disabled'}></button>`:'';
- return `<span class="board-frontier-cell ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${preview?(cell.borderCell?'Propuesta de frontera':'Propuesta de muro'):(cell.borderCell?'Frontera, solo se rompe con Bomba':'Muro, solo se rompe con Bomba')} · ${cell.x}, ${cell.y}">${frontierSlash}${controls}</span>`;
+ return `<span class="board-frontier-cell ${cell.beaver?'is-beaver':''} ${preview?'is-preview':''} ${preview&&!valid?'is-invalid':''}" style="left:${(cell.x-minX)*size+padding}px;top:${(cell.y-minY)*size+padding}px;width:${size}px;height:${size}px" role="${pivot?'group':'img'}" aria-label="${cell.beaver?'Barrera de castor // · '+cell.turnsRemaining+' turnos':preview?(cell.borderCell?'Propuesta de frontera':'Propuesta de muro'):(cell.borderCell?'Frontera, solo se rompe con Bomba':'Muro, solo se rompe con Bomba')} · ${cell.x}, ${cell.y}">${cell.beaver?`<svg viewBox="0 0 32 32" class="beaver-barrier-sign" aria-hidden="true">${briefIcons['beaver-barrier']}</svg><b class="beaver-barrier-turns">${cell.turnsRemaining}</b>`:frontierSlash}${controls}</span>`;
 }
 async function analyzeHelp(kind){
  const snapshot=structuredClone(room),player=uid,now=Date.now();notifyInventory(kind==='expand'?'Buscando una ampliación favorable…':'Analizando movimientos e inventario…');
@@ -333,12 +334,12 @@ function drawBoard(canExpand,ready,target) {
   const board=document.querySelector('.board');board.replaceChildren();
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
-  const {cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys,bombKeys}=snapshotMemo(room,'board-model:'+pair.id,()=>{
+  const {deadKeys,cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys,bombKeys}=snapshotMemo(room,'board-model:'+pair.id,()=>{
     const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
     const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
     const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
     const growthCells=invasionGrowthCells(room);
-    return {cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys:new Set(growthCells.map(c=>key(c.x,c.y))),bombKeys:new Set(activeInvasionBombs(room,growthCells).map(c=>key(c.x,c.y)))};
+    return {deadKeys:new Set((room.deadCells||[]).map(c=>key(c.x,c.y))),cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys:new Set(growthCells.map(c=>key(c.x,c.y))),bombKeys:new Set(activeInvasionBombs(room,growthCells).map(c=>key(c.x,c.y)))};
   });
   const nuclearPreview=selection?.tool==='nuclear'&&selection.point?nuclearBlast(room,selection.point,nuclearContext(room)):[],nuclearKeys=new Set(nuclearPreview.map(c=>key(c.x,c.y)));
   const selectionReady=selection&&(ready||(microLength(selection.tool)||selection.tool==='nuclear')&&canUsePracticeTool(room,uid,selection.tool));
@@ -354,7 +355,7 @@ function drawBoard(canExpand,ready,target) {
   const wormTrailIndex=snapshotMemo(room,'board-worm-trails',()=>cellIndex(wormTrailParts(room)));
   const frontierIndex=snapshotMemo(room,'board-walls',()=>cellIndex(frontierGroups(room).flatMap(f=>f.cells.map(c=>({...c,frontierId:f.id})))));
   const playerNames=new Map(room.players.map(p=>[p.id,p.name])),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
-  const habitatBlocks=new Set([...barrierKeys,...wormBody,...reservations.map(c=>key(c.x,c.y))]);
+  const habitatBlocks=new Set([...deadKeys,...barrierKeys,...wormBody,...reservations.map(c=>key(c.x,c.y))]);
   const blockedFor=id=>new Set([...habitatBlocks,...(room.inventoryEffects?.blocks||[]).filter(e=>e.remaining>0&&(e.by===id?e.fresh:!isImmune(room,id))).map(e=>key(e.x,e.y))]);
   const blockedKeys=blockedFor(uid),sourceBlocked=selection?.source?blockedFor(selection.source.owner):null,watch=watchedKeys(room);
   const bombDestinationKeys=selection?.source?.bombId?new Set(bombDestinations(room,selection.source).map(c=>key(c.x,c.y))):null;
@@ -362,6 +363,7 @@ function drawBoard(canExpand,ready,target) {
   const reservedKeys=new Set((room.inventoryEffects?.blocks||[]).filter(e=>e.by===uid&&e.remaining>0).map(e=>key(e.x,e.y)));
   let nodes=new Map();
   const cellMarkup=pos=>{
+    if(deadKeys.has(key(pos.x,pos.y)))return `<span class="cell terrain-cell dead-cell" style="${style(pos)}" role="img" aria-label="Celda muerta inalterable ${pos.x}, ${pos.y}"><svg viewBox="0 0 32 32" aria-hidden="true">${briefIcons.death}</svg></span>`;
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
     const isTarget=c&&c.id===target?.lastMove?.id,last=c&&c.id===own.lastMove?.id;
     const color=c?(c.symbol==='*'?'invader':c.symbol==='#'?'neutral'+(c.wildcardSymbol?' wildcard-'+c.wildcardSymbol.toLowerCase():''):myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
@@ -854,7 +856,7 @@ app.addEventListener('click',async e=>{
   if(action==='refill-buy'){
     const playerId=b.dataset.player;if(playerId!==refillPlayer||playerId!==uid||refillPurchases>=3||!canOpenRefill(room,playerId))return;
     const tool=b.dataset.tool,replace=refillExchange?refillReplace:null;if(refillExchange&&!replace)return;
-    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId,replace}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;refillReplace=null;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`${replace?'Cambio · −1 '+practiceTools.find(t=>t.id===replace).label:'Recarga'} · +1 ${practiceTools.find(t=>t.id===tool).label} · −${spent} puntos`,{inventory:true});});
+    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId,replace}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;refillReplace=null;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`${replace?'Cambio · −1 '+practiceTools.find(t=>t.id===replace).label:'Recarga'} · +1 ${(tool==='immunity'?'Inmunidad total':practiceTools.find(t=>t.id===tool).label)} · −${spent} puntos`,{inventory:true});});
     (document.querySelector(`.refill-selector [data-tool="${tool}"]:not(:disabled)`)||document.querySelector('[data-action="close-refill"]')||document.querySelector('[data-action="refill-hold"]'))?.focus({preventScroll:true});return;
   }
   if(action==='remove-target'){if(!isLocal())return;await run(async()=>accept(localCommand(room,'remove-target',{id:b.dataset.id})));return;}
@@ -1248,7 +1250,7 @@ function updateTimer() {
     const events=clocks.get(kind).filter(e=>!node.dataset.ecologySource||e.id===node.dataset.ecologySource);
     if(events.length){const seconds=Math.min(...events.map(e=>ecologySeconds(e,clockNow)));node.textContent=seconds;node.setAttribute('aria-label',`${seconds} segundos`);}
   }
-  for(const node of document.querySelectorAll('[data-immunity-clock]')){const seconds=immunitySeconds(room,node.dataset.immunityClock,clockNow);node.textContent=seconds;node.setAttribute('aria-label',`${seconds} segundos de inmunidad`);}
+  for(const node of document.querySelectorAll('[data-immunity-clock]')){const seconds=immunityCountdown(room,node.dataset.immunityClock,clockNow);node.textContent=seconds;node.setAttribute('aria-label',`${seconds} ${immunityUnit(room,node.dataset.immunityClock)} de inmunidad`);}
   for(const node of document.querySelectorAll('[data-recovery-clock]'))node.textContent=Math.max(0,Math.ceil((room.ecologyRecovery?.remainingMs??((room.ecologyRecovery?.until??clockNow)-clockNow))/1000));
   if(document.querySelector('[data-appearance-clock]')){const rows=eventOutlook(room,uid,clockNow).rows;for(const node of document.querySelectorAll('[data-appearance-clock]'))node.textContent=rows.find(e=>e.clockKind===node.dataset.appearanceClock)?.seconds??0;}
   const p=ownPair(),node=document.querySelector('.turn-timer');

@@ -107,7 +107,7 @@ test('Reconquerers never erase X/O/# if a reserved invasive cell changes before 
 });
 test('Builders respect walls and the declared cell goal and stop at the actual cap',()=>{
  let r=board(32);r.cellTarget=33;r.works=[{id:'w',kind:'work',reconquer:true,destroy:[],build:[{x:-1,y:0},{x:-1,y:1}],done:0,nextAt:now}];
- completeEventTurns(r,now,()=>0,2);r=localCommand(r,'move',{x:1,y:0},now,()=>0);assert.equal(r.terrain.length,33);assert.equal(r.status,'finished');assert.equal(r.finalResult.ruleVersion,21);
+ completeEventTurns(r,now,()=>0,2);r=localCommand(r,'move',{x:1,y:0},now,()=>0);assert.equal(r.terrain.length,33);assert.equal(r.status,'finished');assert.equal(r.finalResult.ruleVersion,22);
  const blocked=board();blocked.frontiers=[{id:'wall',cells:[{x:-1,y:0}],by:'local-x'}];blocked.works=[{id:'w',kind:'work',reconquer:true,destroy:[],build:[{x:-1,y:0}],done:0,nextAt:now}];completeEventTurns(blocked,now);assert.equal(blocked.terrain.length,99);
 });
 test('Migration of a paused R37 test save is atomic and idempotent, with pins and finished records preserved',()=>{
@@ -118,8 +118,8 @@ test('Migration of a paused R37 test save is atomic and idempotent, with pins an
  assert.deepEqual(loaded.terrain,before.terrain);assert.deepEqual(loaded.players,before.players);assert.deepEqual(games.find(g=>g.id==='finished'),finished);assert.equal(storage.getItem('hash3_game_pins'),JSON.stringify(['local:'+r.id]));
  const saved=storage.getItem('hash3_locals');loadLocalGames(storage,9999999);assert.equal(storage.getItem('hash3_locals'),saved);
 });
-test('Only invasion cells with legal next territory have dashed frames; fully grown and static marks do not',()=>{
- const r=board();seedInvasions(r,[{x:2,y:2}],'invader-colony');r.cells.push(piece('*',8,8));
+test('Historical invasion cells with legal next territory have dashed frames; fully grown and static marks do not',()=>{
+ const r=board();r.ruleVersion=21;seedInvasions(r,[{x:2,y:2}],'invader-colony');r.cells.push(piece('*',8,8));
  assert.deepEqual(invasionGrowthCells(r),[{x:2,y:2}]);const paused={...r,status:'paused'};assert.deepEqual(invasionGrowthCells(paused),invasionGrowthCells(r));
  const model=savedMapModel(r,r.players[0]),markup=mapWindowMarkup(model,prepareMapRendering(model),model.bounds,48);assert.match(markup,/class="map-invasion-growth"/);assert.match(markup,/stroke-dasharray=".12 .08"/);assert.equal((markup.match(/puede expandirse/g)||[]).length,1);
  r.invasions[0].grown=9;assert.deepEqual(invasionGrowthCells(r),[]);r.invasions[0].grown=1;r.frontiers=[{cells:[[2,1],[2,3],[1,2],[3,2]].map(([x,y])=>({x,y}))}];assert.deepEqual(invasionGrowthCells(r),[]);

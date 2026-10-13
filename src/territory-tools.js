@@ -1,3 +1,6 @@
+import {briefEcology,initializeBriefEcology,deathRegion,DEATH_INTERVAL,briefIcons} from './brief-ecology.js';
+import {isDeadCell} from './dead-cells.js';
+import {planBombWave} from './bomb-wave.js';
 import {invaderIcon,invasionBombIcon} from './invader-mark.js';
 import {recordTerritoryImpact} from './territory-impact.js';
 import {turnEcology,eventTurns} from './turn-ecology.js';
@@ -34,8 +37,10 @@ export const territoryIcons={
 };
 territoryIcons['invader-rain']=`<g transform="scale(.5)">${invasionBombIcon}</g>`;
 territoryIcons['invader-colony']=`<g transform="scale(.5)">${invaderIcon}</g>`;
+territoryIcons.death=briefIcons.death;
 territoryIcons.contagion='<circle cx="9" cy="12" r="5"/><path d="M9 4v3m0 10v3M1 12h3m10 0h3M3 6l3 3m6 6 3 3M3 18l3-3m6-6 3-3M20 12h9m-4-4 4 4-4 4"/><circle cx="24" cy="24" r="3"/>';territoryIcons.tornado='<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>';
 export function initializeTerritory(room,random=Math.random){
+ initializeBriefEcology(room);
  room.territoryEvents||=[];
  initializeInvasions(room);
  if(localLiving(room)&&room.livingTerritoryVersion!==1){
@@ -68,7 +73,7 @@ export function initializeTerritory(room,random=Math.random){
 // Connected patch chosen from a boundary, with every pair's anchor preserved.
 // O(N) command work; never called from pan/pinch or board-window queries.
 export function territoryRegion(room,kind,random=Math.random,count=Math.floor(terrainOf(room).length*EVENT_BALANCE.incidenceNumerator/EVENT_BALANCE.incidenceDenominator)){
- const terrain=terrainOf(room),known=new Map(terrain.map(c=>[key(c.x,c.y),c]));
+ const terrain=terrainOf(room).filter(c=>!isDeadCell(room,c.x,c.y)),known=new Map(terrain.map(c=>[key(c.x,c.y),c]));
  const anchors=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y)));
  const eligible=terrain.filter(c=>kind==='ufo'||!anchors.has(key(c.x,c.y)));
  const neighbors=c=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:c.x+dx,y:c.y+dy}));
@@ -124,7 +129,7 @@ function announceTerritory(room,now,random,trigger,family,increment=0){
  if(reserved&&choice.order.includes(reserved))choice.order=[reserved,...choice.order.filter(k=>k!==reserved)];
  const reserveNext=()=>{if(plannedEcology(room))room.territoryPlans[family]=pickEventKind(room,family,random).order[0];};
  for(const kind of choice.order){
-  const planned=kind==='ufo'?territoryRegion(room,'ufo',random,impactCount(room,kind)):
+  const planned=briefEcology(room)&&kind==='invader-rain'?planBombWave(room,impactCount(room,kind),random):kind==='ufo'?territoryRegion(room,'ufo',random,impactCount(room,kind)):
    kind==='earthquake'?territoryRegion(room,'cataclysm',random,impactCount(room,kind)):
    plannedEventRegion(room,kind,random,now);
   const region=Array.isArray(planned)?planned:planned.region;
@@ -135,7 +140,7 @@ function announceTerritory(room,now,random,trigger,family,increment=0){
    if(e.remainingMs==null)e.remainingMs=Math.max(0,(e.nextAt||now+33000)-now);
   confirmEventKind(room,choice,kind);reserveNext();
   room.territoryEvents.push({id:crypto.randomUUID(),kind,milestone,trigger,region,
-   ...(planned.groups?{groups:planned.groups}:{}),...(planned.paths?{paths:planned.paths}:{}),...(planned.approaches?{approaches:planned.approaches}:{}),...(planned.seeded?{seeded:true}:{}),x:region[0].x,y:region[0].y,
+   ...(planned.groups?{groups:planned.groups}:{}),...(planned.paths?{paths:planned.paths}:{}),...(planned.approaches?{approaches:planned.approaches}:{}),...(planned.seeded?{seeded:true}:{}),...(planned.bombPhase?{bombPhase:planned.bombPhase}:{}),x:region[0].x,y:region[0].y,
    ...(turnEcology(room)?{turnsRemaining:3,announcedTurn:room.ecologyTurns||0}:{nextAt:now+EVENT_BALANCE.warningMs})});return true;
  }
  // An impossible attack is skipped, never queued up for a later burst.
@@ -151,10 +156,15 @@ export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.rand
 export function territoryPlacementDue(room,now=Date.now(),increment=0,{naturalOnly=false}={}){
  return territoryEnabled(room)&&territoryReady(room)&&!room.territoryEvents?.length&&!faunaSuspended(room,now)&&
   (turnEcology(room)||!localLiving(room)||!room.endsAt||Date.parse(room.endsAt)-now>=EVENT_BALANCE.warningMs)&&
-  (territoryProgress(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&(territoryProgress(room)+increment>=room.territoryNextInvasion||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextInvaderAt));
+  (briefEcology(room)&&territoryProgress(room)+increment>=room.territoryNextDeathTurn||territoryProgress(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&(territoryProgress(room)+increment>=room.territoryNextInvasion||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextInvaderAt));
 }
 export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random,{increment=0}={}){
- initializeTerritory(room,random);if(!territoryPlacementDue(room,now,increment))return false;
+ initializeTerritory(room,random);
+ if(briefEcology(room)&&room.territoryEnabled!==false&&!room.territoryEvents.length&&!faunaSuspended(room,now)&&territoryProgress(room)+increment>=room.territoryNextDeathTurn){
+  room.territoryNextDeathTurn=territoryProgress(room)+increment+DEATH_INTERVAL;const region=deathRegion(room);
+  if(region.length){room.territoryEvents.push({id:crypto.randomUUID(),kind:'death',region,x:region[0].x,y:region[0].y,turnsRemaining:3,announcedTurn:room.ecologyTurns||0});return true;}
+ }
+ if(!territoryPlacementDue(room,now,increment))return false;
  const family=territoryProgress(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt?'natural':'invaders';
  return announceTerritory(room,now,random,plannedEcology(room)?'turns':'placements',family,increment);
 }

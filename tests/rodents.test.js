@@ -12,9 +12,9 @@ import {recordCombo} from '../src/records.js';
 function fixture(size=333){const r=createLocal('local','A','B',1000,'advanced','untimed');r.terrain=Array.from({length:size},(_,i)=>({x:i%15,y:Math.floor(i/15)}));r.cells=r.terrain.slice(0,60).map(c=>({...c,id:`food-${c.x},${c.y}`,symbol:'X',owner:'local-x'}));return r;}
 function animal(kind='rodent',point={x:0,y:0}){return {id:kind,player:'local-x',kind,...point,eaten:0,phase:0,nextAt:34000,...(kind==='worm'?{body:[point]}:{})};}
 function birth(r,count){r.players[0].ecologyPlacements=r.players[0].placements=count-1;r.players[0].habitatNext={rodent:Math.ceil(count/33)*33,bomb:Math.ceil(count/66)*66,worm:Math.ceil(count/99)*99,work:Math.ceil(count/198)*198};countHabitatPlacement(r,'local-x',{x:0,y:0},1000,()=>0);}
-test('Plagas de roedores scale 3/6/9 after a three-turn warning; three meals occupy nine completed turns with separate locations',()=>{
+test('Historical plagas de roedores scale 3/6/9 after a three-turn warning; three meals occupy nine completed turns with separate locations',()=>{
  for(const [size,group] of [[333,3],[999,6],[3333,9]]){
-  const r=fixture(size);r.territoryEnabled=false;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.habitatZones[0].birthScale={rodent:1};r.habitatZones[0].next.rodent=r.habitatZones[0].placements+1;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:true});r.worms=[];r.habitatZones[0].next.worm=1000000;completeEventTurns(r,1000,()=>0,3);
+  const r=fixture(size);r.ruleVersion=21;r.territoryEnabled=false;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:false});r.habitatZones[0].birthScale={rodent:1};r.habitatZones[0].next.rodent=r.habitatZones[0].placements+1;countHabitatPlacement(r,'local-x',{x:14,y:3},1000,()=>0,{completed:true});r.worms=[];r.habitatZones[0].next.worm=1000000;completeEventTurns(r,1000,()=>0,3);
   assert.equal(r.rodentRaids[0].count,group);assert.equal(r.rodentRaids[0].members.length,group);assert.equal(r.cells.length,60);
   const visits=[];let oldId;
   for(let turn=1;turn<=9;turn++){
