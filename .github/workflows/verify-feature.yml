@@ -34,6 +34,7 @@ on:
       - release/local-checks-r59
       - release/local-territory-ui-r60
       - release/local-planned-events-r61
+      - release/local-fauna-r62
   workflow_dispatch:
 permissions:
   contents: write
@@ -60,6 +61,7 @@ jobs:
         timeout-minutes: 4
       - run: node scripts/verify-custom-inventory-r57.mjs
       - run: node scripts/verify-bombs-r56.mjs
+      - run: node scripts/verify-brief-ecology-r62.mjs
       - run: npm run verify:brand-trade
       - run: npm run verify:browser
       - run: npm run verify:transfer

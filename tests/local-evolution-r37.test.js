@@ -54,15 +54,15 @@ test('All three storms score their final arrangement and preserve stock, occupan
   const store=memory();saveLocalGame(store,r,1002);const saved=loadLocalGames(store,1003)[0];assert.deepEqual(saved.cells,r.cells);assert.deepEqual(saved.players.map(p=>p.score),r.players.map(p=>p.score));
  }
 });
-test('Seed becomes nine invaded cells over eight completed turns, follows a narrow strip and never fills a 3×3 template',()=>{
- const r=board();r.terrain=Array.from({length:12},(_,x)=>({x,y:0}));r.cells=r.terrain.map(c=>piece('O',c.x,0));
+test('Historical R37 seed becomes nine invaded cells over eight completed turns, follows a narrow strip and never fills a 3×3 template',()=>{
+ const r=board();r.ruleVersion=21;r.terrain=Array.from({length:12},(_,x)=>({x,y:0}));r.cells=r.terrain.map(c=>piece('O',c.x,0));
  const plan=plannedEventRegion(r,'invader-colony',()=>0,now);assert.equal(plan.region.length,1);assert.ok(plan.seeded);
  applyPlannedEvent(r,{id:'seed',kind:'invader-colony',...plan},now);assert.equal(r.cells.filter(c=>c.symbol==='*').length,1);
  for(let i=0;i<8;i++){advanceInvasions(r,now+i,()=>0);assert.equal(r.cells.filter(c=>c.symbol==='*').length,i+2);}
  assert.equal(r.invasions.length,0);advanceInvasions(r,2000);assert.equal(r.cells.filter(c=>c.symbol==='*').length,9);assert.equal(r.cells.length,12);
 });
-test('Growth respects walls, shields, immunity, latest placed piece and surviving terrain',()=>{
- const r=board();r.terrain=Array.from({length:5},(_,x)=>({x,y:0}));seedInvasions(r,[{x:0,y:0}],'invader-colony');
+test('Historical growth respects walls, shields, immunity, latest placed piece and surviving terrain',()=>{
+ const r=board();r.ruleVersion=21;r.terrain=Array.from({length:5},(_,x)=>({x,y:0}));seedInvasions(r,[{x:0,y:0}],'invader-colony');
  r.cells.push(piece('O',1,0));const id=r.cells[1].id;
  r.frontiers=[{id:'wall',type:'border',cells:[{x:1,y:0}]}];assert.deepEqual(advanceInvasions(r,1000),[]);r.frontiers=[];
  r.inventoryEffects.shields=[{cell:id,remaining:2}];assert.deepEqual(advanceInvasions(r,1000),[]);r.inventoryEffects.shields=[];
@@ -70,11 +70,11 @@ test('Growth respects walls, shields, immunity, latest placed piece and survivin
  // After three blocked turns that seed retires instead of accumulating a hidden attack.
  assert.equal(r.invasions.length,0);assert.equal(r.cells.filter(c=>c.symbol==='*').length,1);
 });
-test('Invasion movement is shared by accepted turns, Doble completes once and ticks/cards do not advance growth',()=>{
+test('Migrated invasion marks remain static through Doble, accepted turns and clocks',()=>{
  let r=board(99);seedInvasions(r,[{x:10,y:0}],'invader-colony');const x=()=>r.cells.filter(c=>c.symbol==='*').length;
  r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},1000);assert.equal(x(),1);
  r=localCommand(r,'tick',{},999999);assert.equal(x(),1);r=localCommand(r,'move',{x:0,y:0},999999);assert.equal(x(),1);
- r=localCommand(r,'move',{x:1,y:0},999999);assert.equal(x(),2);assert.equal(r.pairs[0].turn,'O');
+ r=localCommand(r,'move',{x:1,y:0},999999);assert.equal(x(),1);assert.equal(r.pairs[0].turn,'O');
  const markup=ecologyNavigationMarkup(r,'local-x');assert.doesNotMatch(markup,/2\/9/);assert.ok(ecologyTargets(r,'invader-colony','local-x').some(e=>e.invasion));
 });
 test('Legacy colony warning migration keeps its deadline, seeds once and never starts historical stars growing',()=>{
@@ -96,8 +96,8 @@ test('Habitant births prioritise invaded cells and supply builders alongside rec
  countHabitatPlacement(r,'local-o',{x:20,y:5},1001,()=>0);assert.equal(r.works.length,3);assert.ok(r.works.every(w=>w.reconquer));
  completeEventTurns(r,34001);assert.equal(r.cells.length,4);assert.equal(r.terrain.length,336);
 });
-test('Worm successful appearance batches progress 3,6,9,9 without counting failed births or individuals',()=>{
- const r=board(999);r.territoryEnabled=false;r.cells=Array.from({length:25},(_,i)=>piece('O',i,0));
+test('Historical worm successful appearance batches progress 3,6,9,9 without counting failed births or individuals',()=>{
+ const r=board(999);r.ruleVersion=21;r.territoryEnabled=false;r.cells=Array.from({length:25},(_,i)=>piece('O',i,0));
  countHabitatPlacement(r,'local-x',{x:30,y:5},1000,()=>0);
  const z=r.habitatZones[0];z.next.rodent=z.next.work=1000000;
  for(const limit of [3,6,9,9]){

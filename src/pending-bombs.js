@@ -1,3 +1,4 @@
+import {waveContext,waveBlast} from './bomb-wave.js';
 import {terrainOf,key} from './game.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {protectedTerritoryKeys} from './immunity.js';
@@ -20,16 +21,19 @@ export function disarmInvasionBombs(room,point){
  return {disarmed:targets.length,invasionId:anchor.invasionId,phase:'active',cells:targets.map(({x,y})=>({x,y}))};
 }
 export function pendingInvasionBombs(room){
- return (room.territoryEvents||[]).filter(e=>e.kind==='invader-rain'&&e.turnsRemaining>0).flatMap(e=>e.region.map((p,index)=>({...p,id:e.id+':'+index,eventId:e.id,index,turnsRemaining:e.turnsRemaining,kind:'invader-rain'})));
+ return (room.territoryEvents||[]).filter(e=>e.kind==='invader-rain'&&e.turnsRemaining>0).flatMap(e=>e.bombPhase==='bomb'?(e.groups||[]).map((blast,index)=>({...blast[0],blast,id:e.id+':'+index,eventId:e.id,index,turnsRemaining:e.turnsRemaining,kind:'invader-rain',wave:true})):e.region.map((p,index)=>({...p,id:e.id+':'+index,eventId:e.id,index,turnsRemaining:e.turnsRemaining,kind:'invader-rain'})));
 }
 export function bombDestinations(room,bomb,now=room.clockNow??Date.now()){
+ if(bomb.wave){const others=new Set(pendingInvasionBombs(room).filter(b=>b.id!==bomb.id).flatMap(b=>b.blast||[b]).map(p=>key(p.x,p.y))),context=waveContext(room,others);return [...context.values()].filter(c=>waveBlast(c,context).length===3);}
  const protectedKeys=protectedTerritoryKeys(room,now),others=new Set(pendingInvasionBombs(room).filter(b=>b.id!==bomb.id).map(p=>key(p.x,p.y)));
  return terrainOf(room).filter(p=>!others.has(key(p.x,p.y))&&!protectedKeys.has(key(p.x,p.y))&&!habitatBlocked(room,p.x,p.y)&&!room.cells.some(c=>c.x===p.x&&c.y===p.y&&c.symbol==='*'));
 }
 export function movePendingBomb(room,bombId,point,now){
  const bomb=pendingInvasionBombs(room).find(b=>b.id===bombId);
  if(!bomb||!bombDestinations(room,bomb,now).some(p=>p.x===point.x&&p.y===point.y))throw new Error('Elige una bomba pendiente y un destino válido.');
- const event=room.territoryEvents.find(e=>e.id===bomb.eventId),old=event.region[bomb.index];
+ const event=room.territoryEvents.find(e=>e.id===bomb.eventId);
+ if(bomb.wave){const others=new Set(pendingInvasionBombs(room).filter(b=>b.id!==bomb.id).flatMap(b=>b.blast||[b]).map(p=>key(p.x,p.y)));event.groups[bomb.index]=waveBlast(point,waveContext(room,others));event.region=event.groups.flat();event.x=event.region[0].x;event.y=event.region[0].y;return;}
+ const old=event.region[bomb.index];
  event.region[bomb.index]={...point};
  if(event.groups)for(const g of event.groups)for(let i=0;i<g.length;i++)if(g[i].x===old.x&&g[i].y===old.y)g[i]={...point};
  // A transported bomb is already inside the territory; retain all other lanes.
@@ -43,6 +47,7 @@ export function disarmPendingBombs(room,point){
  // The selected announcement alone: never cancel another warning or its clock.
  const event=room.territoryEvents.find(e=>e.id===anchor.eventId);
  const targets=bombs.filter(b=>b.eventId===anchor.eventId).sort((a,b)=>Math.abs(a.x-point.x)+Math.abs(a.y-point.y)-Math.abs(b.x-point.x)-Math.abs(b.y-point.y)||a.index-b.index).slice(0,3);
+ if(anchor.wave){const indices=new Set(targets.map(b=>b.index)),cells=targets.flatMap(b=>b.blast);event.groups=event.groups.filter((_,index)=>!indices.has(index));event.region=event.groups.flat();if(!event.region.length)room.territoryEvents=room.territoryEvents.filter(e=>e.id!==event.id);else {event.x=event.region[0].x;event.y=event.region[0].y;}return {disarmed:targets.length,eventId:event.id,cells};}
  const removed=new Set(targets.map(b=>key(b.x,b.y))),indices=new Set(targets.map(b=>b.index));
  event.region=event.region.filter((_,index)=>!indices.has(index));
  if(event.groups)event.groups=event.groups.map(g=>g.filter(p=>!removed.has(key(p.x,p.y)))).filter(g=>g.length);

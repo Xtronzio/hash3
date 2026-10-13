@@ -18,14 +18,15 @@ export function chooseMachineCard(room,now=Date.now()){
   const inv=player.inventory,turn=inv.completedTurns||0;
   if(level!=='basic'&&inv.machineTradeTurn!==turn&&practiceTurn(room,actor).used.length===0){
    const stars=room.cells.filter(c=>c.symbol==='*').length;
-   const wanted=[...(toolCells(room,actor,'sapper').some(c=>room.cells.some(p=>p.owner===actor&&(c.phase==='active'?Math.abs(p.x-c.x)+Math.abs(p.y-c.y)===1:p.x===c.x&&p.y===c.y)))?['sapper']:[]),...(toolCells(room,actor,'antidote').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['antidote']:[]),...(stars>=9?['reconquest']:stars?['ambush']:[]),'double'];
+   const threatened=room.territoryEvents?.some(e=>e.region.some(c=>room.cells.some(p=>p.owner===actor&&p.x===c.x&&p.y===c.y)));
+   const wanted=[...(threatened&&!usable('immunity')?['immunity']:[]),...(toolCells(room,actor,'sapper').some(c=>room.cells.some(p=>p.owner===actor&&(c.phase==='active'?Math.abs(p.x-c.x)+Math.abs(p.y-c.y)===1:p.x===c.x&&p.y===c.y)))?['sapper']:[]),...(toolCells(room,actor,'antidote').some(c=>room.cells.some(p=>p.x===c.x&&p.y===c.y&&p.owner===actor))?['antidote']:[]),...(stars>=9?['reconquest']:stars?['ambush']:[]),'double'];
    for(const tool of wanted){
-    if(inv.cards[tool])continue;let trade=tradeAvailability(room,actor,tool,now),replace=null;
+    if(inv.cards[tool]||tool==='immunity'&&usable('immunity'))continue;let trade=tradeAvailability(room,actor,tool,now),replace=null;
     if(!trade.allowed&&trade.reason==='Mochila llena'){
      replace=['destroy','hint-expand','sapper','antidote','ambush','reconquest','shield','frontier'].find(id=>id!==tool&&inv.cards[id]>0&&!usable(id)&&tradeAvailability(room,actor,tool,now,{replace:id}).allowed)||null;
      if(replace)trade=tradeAvailability(room,actor,tool,now,{replace});
     }
-    if(!trade.allowed||player.score<3*trade.price)continue;const probe=structuredClone(room);probe.players.find(p=>p.id===actor).inventory.cards[tool]=1;if(canUsePracticeTool(probe,actor,tool,now))return {action:'trade',payload:{tool,playerId:actor,...(replace?{replace}:{})}};
+    if(!trade.allowed||player.score<3*trade.price)continue;const probe=structuredClone(room);if(tool==='immunity')probe.players.find(p=>p.id===actor).inventory.immunity.cards['immunity-1']=1;else probe.players.find(p=>p.id===actor).inventory.cards[tool]=1;if(canUsePracticeTool(probe,actor,tool,now))return {action:'trade',payload:{tool,playerId:actor,...(replace?{replace}:{})}};
    }
   }
   const command=(tool,point,extra={})=>({action:'inventory',payload:{tool,playerId:actor,...point,...extra}});

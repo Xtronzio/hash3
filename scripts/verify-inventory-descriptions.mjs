@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-inventory.js';
 import {practiceTools} from '../src/practice-tools.js';
-const ids=practiceTools.map(t=>t.id).concat('target','immunity','immunity-1','immunity-3','immunity-33');
+const ids=practiceTools.map(t=>t.id).concat('target','immunity');
 export async function verifyInventoryDescriptions({context,load,output,results}){
  const r=createLocal('local','X','O',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});
  const {page,errors}=await load(context,r);

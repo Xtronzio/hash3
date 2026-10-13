@@ -1,3 +1,4 @@
+import {briefIcons} from './brief-ecology.js';
 import {targetColors} from './watch-targets.js';
 import {invaderIcon,invasionBombIcon} from './invader-mark.js';
 import {cellIndex,overviewGrid,frontierOverviewGrid} from './board-window.js';
@@ -21,7 +22,7 @@ export function mapFrameMarkup(model){
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){
- return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[])};
+ return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[]),dead:cellIndex(model.deadCells||[])};
 }
 export function mapWindowMarkup(model,index,box,scale){
  const detail=box.width*box.height<=MAP_DETAIL_LIMIT,cells=detail?index.detail.query(box):index.coarse.query(box);
@@ -29,7 +30,7 @@ export function mapWindowMarkup(model,index,box,scale){
  const worms=detail?`<g class="worm-map-trail" fill="none" stroke="var(--yellow)" stroke-width=".07" stroke-linecap="round">${wormTrailMarkup(index.worms.query(box))}</g>`:'';
  const growth=detail?invasionGrowthMarkup(index.growth.query(box)):'';
  const threats=threatMarkup(index.threats?.query(box)||[],{compact:!detail});
- return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+threats+mapFrameMarkup(model);
+ return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+threats+deadMarkup(index.dead?.query(box)||[])+mapFrameMarkup(model);
 }
 
 export function invasionGrowthMarkup(points){
@@ -40,3 +41,5 @@ export function threatMarkup(points,{compact=false}={}){
  if(compact)return `<g class="map-territory-threat" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08"><path d="${points.map(c=>`M${c.x+.04} ${c.y+.04}h.92v.92h-.92Z`).join('')}"/><title>Celdas amenazadas</title></g>`;
  return `<g class="map-territory-threat" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08">${points.map(c=>`<rect x="${c.x+.04}" y="${c.y+.04}" width=".92" height=".92"><title>Celda amenazada</title></rect>`).join('')}</g>`;
 }
+
+export function deadMarkup(points){return `<g class="map-dead-cells" fill="none" stroke="#aab0ba" stroke-width="1.8">${points.map(c=>`<g transform="translate(${c.x} ${c.y}) scale(.03125)"><rect x="1.5" y="1.5" width="29" height="29" fill="#111214"/>${briefIcons.death}<title>Celda muerta · inalterable</title></g>`).join('')}</g>`;}

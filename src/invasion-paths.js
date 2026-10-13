@@ -1,3 +1,4 @@
+import {briefEcology} from './brief-ecology.js';
 import {key,terrainOf} from './game.js';
 import {frontierSegments,edgeKey} from './frontiers.js';
 import {localLiving} from './living-balance.js';
@@ -83,7 +84,7 @@ function growthOptions(colony,context,exclude=null){
  return {candidates,fronts};
 }
 export function invasionGrowthCells(room,now=room.clockNow??Date.now()){
- if(!localLiving(room)||room.territoryEnabled===false)return [];
+ if(briefEcology(room)||!localLiving(room)||room.territoryEnabled===false)return [];
  const context=growthContext(room,now),result=new Map();
  for(const colony of room.invasions||[])if(colony.grown<9&&colony.failed<3)for(const [k,c] of growthOptions(colony,context).fronts)result.set(k,{x:c.x,y:c.y});
  return [...result.values()];
@@ -94,7 +95,7 @@ export function removeDefeatedInvasions(room){
  room.invasions=room.invasions.filter(c=>alive.has(c.id));
 }
 export function advanceInvasions(room,now=Date.now(),random=Math.random,exclude=null){
- initializeInvasions(room);if(!localLiving(room)||room.status!=='playing'||room.territoryEnabled===false)return [];
+ initializeInvasions(room);if(briefEcology(room)||!localLiving(room)||room.status!=='playing'||room.territoryEnabled===false)return [];
  const context=growthContext(room,now),occupied=context.occupied,actions=[];
  for(const colony of room.invasions){
   if(colony.grown>=9)continue;

@@ -42,14 +42,14 @@ test('Legacy preferences receive immunity in the bar and opt-in floating preserv
  assert.equal(preferences.order.at(-1),'immunity');assert.deepEqual(preferences.floating,['hint']);assert.deepEqual(preferences.positions,legacy.positions);
  assert.match(inventoryStatusMarkup(r,{playerId:'local-x',preferences}),/data-tool="immunity"[^>]*>[^]*?<small>×3<\/small>/);
  assert.doesNotMatch(inventoryStatusMarkup(r,{playerId:'local-x',preferences}).match(/<button[^>]*data-tool="immunity"[^>]*>/)[0],/disabled/);
- assert.match(inventoryEditorMarkup(preferences,'immunity'),/Sacar Inmunidad como flotante/);
+ assert.match(inventoryEditorMarkup(preferences,'immunity'),/Sacar Inmunidad total como flotante/);
  const floated=normalizeInventoryPreferences({...preferences,floating:[...preferences.floating,'immunity']});
  const updated=storeInventoryPreferences(r,'local-x',floated,storage());delete updated.inventoryPreferences;assert.deepEqual(updated,before);
  assert.doesNotMatch(inventoryStatusMarkup(r,{playerId:'local-x',preferences:floated}),/data-tool="immunity" data-player="local-x"/);
  assert.match(floatingInventoryMarkup(r,'local-x',floated),/data-floating-tool="immunity"/);assert.match(floatingInventoryMarkup(r,'local-x',floated),/×3/);
  r=localCommand(r,'inventory',{tool:'immunity',playerId:'local-x'},now);
  assert.equal(r.players[0].inventory.immunity.cards['immunity-1'],2);assert.equal(r.pairs[0].turn,'O');assert.match(inventoryStatusMarkup(r,{playerId:'local-o'}),/data-tool="immunity" data-player="local-x"/);assert.deepEqual(r.players[0].inventory.cards,before.players[0].inventory.cards);
- assert.match(floatingInventoryMarkup(r,'local-x',floated),/data-immunity-clock="local-x">33/);
- assert.match(inventoryStatusMarkup(r,{playerId:'local-x',preferences}),/data-immunity-clock="local-x">33/);
- r=localCommand(r,'pause',{},now+1000);const html=floatingInventoryMarkup(r,'local-x',floated);assert.match(html,/data-tool="immunity"[^>]*disabled/);assert.match(html,/data-immunity-clock="local-x">32/);
+ assert.match(floatingInventoryMarkup(r,'local-x',floated),/data-immunity-clock="local-x">3/);
+ assert.match(inventoryStatusMarkup(r,{playerId:'local-x',preferences}),/data-immunity-clock="local-x">3/);
+ r=localCommand(r,'pause',{},now+1000);const html=floatingInventoryMarkup(r,'local-x',floated);assert.match(html,/data-tool="immunity"[^>]*disabled/);assert.match(html,/data-immunity-clock="local-x">3/);
 });

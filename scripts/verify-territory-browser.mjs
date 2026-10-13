@@ -321,20 +321,20 @@ try{
  await turnPage.locator('[data-action="events"][aria-label="Próximos eventos"]').tap();assert.doesNotMatch(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
  await turnPage.screenshot({path:path.join(output,'worm-turns-r38.png')});
  assert.deepEqual(turnErrors,[]);results.push({wormNineMealsWithoutCounters:true,passed:true});await turnPage.close();
- // A live invasion remains active without a fictitious seconds clock.
+ // New-rule invaders remain static and navigable, without a growth frame or clock.
  const growthRoom=createLocal('local','X','O',Date.now(),'normal','untimed');growthRoom.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));seedInvasions(growthRoom,[{x:2,y:2}],'invader-colony');for(let i=0;i<3;i++)advanceInvasions(growthRoom,Date.now(),()=>0);
  const {page:growthPage,errors:growthErrors}=await load(context,growthRoom);
  await growthPage.locator('.board-territory-status [data-action="locate-ecology"][data-ecology-kind="invader-colony"]').first().tap();await frame(growthPage);
  assert.doesNotMatch(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"]').innerText(),/4\/9/);
  assert.equal(await growthPage.locator('.board-territory-status [data-ecology-kind="invader-colony"] .ecology-clock').count(),0);
- assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.ok(await growthPage.locator('.board .invasion-growth').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth').first().evaluate(el=>getComputedStyle(el,'::after').borderTopStyle),'dashed');assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
+ assert.equal(await growthPage.locator('.board .phenomenon-marker.is-growing').count(),0);assert.equal(await growthPage.locator('.board .invasion-growth').count(),0);assert.ok(await growthPage.locator('.board .invader').count()>0);assert.equal(await growthPage.locator('.board .invasion-growth:not(.invader)').count(),0);
  await growthPage.screenshot({path:path.join(output,'invasion-growing-r38.png')});
  await growthPage.locator('[data-action="map"]').tap();
  await growthPage.locator('.world-map [data-action="locate-ecology"][data-ecology-kind="invader-colony"]').tap();await frame(growthPage);
- assert.ok(await growthPage.locator('.world-map .map-invasion-growth rect').count()>0);
+ assert.equal(await growthPage.locator('.world-map .map-invasion-growth rect').count(),0);
  await growthPage.locator('[data-action="close-map"]').tap();await growthPage.locator('[data-action="pause"]').tap();
- assert.ok(await growthPage.locator('.inspection-canvas .map-invasion-growth rect').count()>0);
- assert.deepEqual(growthErrors,[]);results.push({invasionGrowingDashedFrames:true,passed:true});await growthPage.close();
+ assert.equal(await growthPage.locator('.inspection-canvas .map-invasion-growth rect').count(),0);
+ assert.deepEqual(growthErrors,[]);results.push({invasionStaticAndNavigable:true,passed:true});await growthPage.close();
  // Shared wildcards score each participant through actual touch placements.
  const wildRoom=createLocal('local','X','O',Date.now(),'normal','untimed');wildRoom.faunaEnabled=false;
  wildRoom.cells=[{id:'wild',symbol:'#',x:1,y:1,owner:null},{id:'x',symbol:'X',x:0,y:1,owner:'local-x'},{id:'o',symbol:'O',x:1,y:0,owner:'local-o'}];

@@ -1,3 +1,4 @@
+import {isDeadCell} from './dead-cells.js';
 import {expansionFitsLimit} from './board-limits.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
 import {isImmune} from './immunity.js';
@@ -38,12 +39,12 @@ export function expansionOptions(terrain,active,room) {
   }
   const reservations=habitatReservations(room||{}),frontierContext=expansionFrontierContext(terrain,active,room);
   return [...candidates.values()].filter(p=>{
-    let adds=false,touches=false;
+    let adds=false,touches=false,dead=false;
     for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++) {
-      const x=p.x+dx,y=p.y+dy;if(!known.has(key(x,y)))adds=true;
+      const x=p.x+dx,y=p.y+dy;if(isDeadCell(room,x,y))dead=true;if(!known.has(key(x,y)))adds=true;
       if(linked.has(key(x,y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>linked.has(key(x+a,y+b))))touches=true;
     }
-    return adds&&touches&&expansionFitsLimit(room,known,p)&&!reservations.some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
+    return !dead&&adds&&touches&&expansionFitsLimit(room,known,p)&&!reservations.some(c=>c.x>=p.x&&c.x<p.x+3&&c.y>=p.y&&c.y<p.y+3)&&!expansionCrossesFrontier(terrain,active,p,room,frontierContext);
   });
 }
 const canonical=points=>points.map(([x,y])=>`${x},${y}`).sort().join(';');

@@ -46,11 +46,11 @@ test('Growth does not bypass independent clocks; invasion warnings pause exactly
  let r=board(332);r.cells=[];r.terrain.push({x:2,y:10});
  assert.equal(recordTerritoryGrowth(r,1,1000,()=>0),false);assert.equal(r.territoryMilestone,1);
  r.territoryNextInvasion=0;assert.equal(recordTerritoryGrowth(r,1,1000,()=>0),true);
- assert.equal(r.territoryEvents[0].kind,'invader-rain');assert.equal(r.territoryEvents[0].region.length,3);
+ assert.equal(r.territoryEvents[0].kind,'invader-rain');assert.equal(r.territoryEvents[0].region.length,9);
  r=localCommand(r,'pause',{},11000);assert.equal(r.territoryEvents[0].turnsRemaining,3);
  const paused=JSON.stringify(r);assert.equal(localCommand(r,'tick',{},1000000),r);
  r=localCommand(JSON.parse(paused),'resume',{},1000000);assert.equal(r.territoryEvents[0].turnsRemaining,3);
- r=completeEventTurns(r,1023000);assert.equal(r.cells.filter(c=>c.symbol==='*').length,3);assert.equal(r.ecologyRecovery,undefined);
+ r=completeEventTurns(r,1023000);assert.equal(r.territoryEvents[0].turnsRemaining,1);r=completeEventTurns(r,1023001,()=>0,1);assert.equal(r.cells.filter(c=>c.symbol==='*').length,9);assert.equal(r.ecologyRecovery,undefined);
  r.terrain=board(666).terrain;assert.equal(recordTerritoryGrowth(r,333,1056000,()=>0),false);
 });
 test('Scaling birth intervals and population limits potential meals below one meal per placement across large boards',()=>{
@@ -113,7 +113,7 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  r.ecologyTurns++;r.players[0].placements++;assert.ok(recordTerritoryPlacement(r,10001,()=>0));assert.equal(r.territoryNextInvasion,66);assert.equal(r.territoryNextPlacement,66);
  });
 test('Phenomena require 33 shared figures, respect the switch and work below 333 cells',()=>{
- for(const size of [99,332,333]){const r=board(size);r.territoryNextInvasion=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=32;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=16;r.players[1].figures=17;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,3);}
+ for(const size of [99,332,333]){const r=board(size);r.territoryNextInvasion=0;r.territoryEnabled=false;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.territoryEnabled=true;r.players[0].figures=32;assert.equal(recordTerritoryPlacement(r,1000,()=>0),false);r.players[0].figures=16;r.players[1].figures=17;assert.ok(recordTerritoryPlacement(r,1000,()=>0));assert.equal(r.territoryEvents[0].region.length,9);}
 });
 test('Invasions do not stop fauna, change natural deadlines or reset birth budgets',()=>{
  const r=board(333);r.territoryNextPlacement=333;r.territoryNextInvasion=0;
