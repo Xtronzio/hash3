@@ -238,7 +238,7 @@ try{
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
   await page.locator('#local-goal-type').selectOption('time');
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
-  assert.equal(await page.locator('.ecology-choice-icons svg').count(),13);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),16);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
@@ -248,6 +248,12 @@ try{
   await page.locator('.ecology-choices').scrollIntoViewIfNeeded();
   const setupLayout=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,controls:[...document.querySelectorAll('.ecology-choice')].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right};})}));
   assert.ok(setupLayout.scrollWidth<=setupLayout.width);assert.ok(setupLayout.controls.every(r=>r.left>=0&&r.right<=setupLayout.width));
+  for(const width of [320,390]){
+   await page.setViewportSize({width,height:844});await frame(page);
+   const checks=await page.locator('.ecology-choice input').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().bottom));
+   assert.equal(checks.length,4);assert.ok(Math.max(...checks)-Math.min(...checks)<=1,'Setup checkboxes must share a baseline at '+width);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  }
   await page.screenshot({path:path.join(output,'setup-'+mode+'-duration-icons.png')});
   await page.locator('#local-goal-target').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(output,'setup-'+mode+'-total-time.png')});
@@ -260,7 +266,7 @@ try{
   assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
-  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:13,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:16,setupChecksAligned:true,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
  }
  // Exercise the real Worker: the former winning target is a worm body.
  for(const difficulty of ['basic','medium','high','pro']){

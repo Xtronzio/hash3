@@ -19,6 +19,7 @@ import {ecologyNavigationMarkup,ecologyTargets} from '../src/ecology-navigation.
 import {refillSelectorMarkup} from '../src/floating-refill.js';
 import {savedMapModel} from '../src/saved-map.js';
 import {prepareMapRendering,mapWindowMarkup} from '../src/map-render.js';
+import {turnOutlookMarkup} from '../src/turn-event-ui.js';
 import {territoryThreatCells} from '../src/territory-threats.js';
 const now=1000,random=()=>.2;
 function fresh(size=99){const r=createLocal('local','X','O',now,'normal','untimed','medium','X',false,{random});r.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.territoryNextPlacement=r.territoryNextInvasion=99999;for(const p of r.players)p.score=999;return r;}
@@ -98,4 +99,10 @@ test('Mouse appearances avoid skulls and shields; diagonal rhinos cannot cross a
  countHabitatPlacement(r,'local-x',{x:0,y:0},now,random,{completed:false});const zone=r.habitatZones[0];zone.next.rodent=zone.placements+1;zone.next.worm=zone.next.work=9999;countHabitatPlacement(r,'local-x',{x:0,y:0},now,random);
  assert.equal(r.rodentRaids.length,1);assert.ok(r.rodentRaids[0].members.every(c=>!(c.x===1&&c.y===1)&&!(c.x===2&&c.y===2)));
  const corner=fresh();corner.terrain=[{x:0,y:0},{x:1,y:1},{x:2,y:2}];corner.frontiers=[{id:'edge',type:'border',edges:[{a:{x:1,y:0},b:{x:1,y:1}}]}];assert.equal(rhinoRoutes(corner)[0].length,2);
+});
+
+test('A preserved historical bomb warning resolves to static occupation with no phantom bomb or growth forecast',()=>{
+ const r=fresh();r.territoryEvents=[{id:'legacy-wave',kind:'invader-rain',region:[{x:1,y:1}],turnsRemaining:2}];const score=r.players.map(p=>p.score);turns(r,2);
+ assert.equal(r.cells.filter(c=>c.symbol==='*').length,1);assert.deepEqual(pendingInvasionBombs(r),[]);assert.deepEqual(activeInvasionBombs(r),[]);assert.deepEqual(invasionGrowthCells(r),[]);assert.deepEqual(ecologyTargets(r,'invader-rain'),[]);assert.equal(ecologyTargets(r,'invader-colony').length,1);assert.deepEqual(r.players.map(p=>p.score),score);
+ assert.match(turnOutlookMarkup(r,'local-x'),/Ocupación invasora/);assert.doesNotMatch(turnOutlookMarkup(r,'local-x'),/Invasión en crecimiento|casillas hasta el límite/);
 });
