@@ -25,6 +25,7 @@ test('Saved pinned/imported/paused rows show actual X/O balance without modifyin
  const snapshot=structuredClone(r),markup=gamesMarkup({local:[r],pins:['local:'+r.id]});
  assert.match(markup,/saved-score-x[^>]*>X <b>22\.750/);assert.match(markup,/saved-score-o[^>]*>O <b>18\.045/);
  assert.match(markup,/aria-label="Pausada"/);assert.match(markup,/aria-label="Sin reloj"/);assert.match(markup,/aria-label="Copia importada"/);
+ assert.match(markup,/aria-label="Ver y retomar: VS máquina, [^"]*22\.750 puntos[^"]*Sin reloj[^"]*Copia importada"/);
  assert.match(markup,/disabled title="Desancla la partida para borrarla"/);assert.deepEqual(r,snapshot);
 });
 test('Machine cannot choose a dead cell even if its apparent combo is better',()=>{

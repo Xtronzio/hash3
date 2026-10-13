@@ -35,7 +35,10 @@ try{
    for(const game of games){
     await page.locator(`[data-action="load-game"][data-id="${game.id}"]`).click();await page.locator('[data-action="resume"]').click();
     await page.waitForFunction(({id,human})=>{const r=JSON.parse(localStorage.getItem('hash3_locals')).find(g=>g.id===id);return r.pairs[0].turn===human&&!r.pairs[0].pending;},{id:game.id,human:game.playerSymbol},{timeout:20000});
-    const advanced=(await read()).find(g=>g.id===game.id);assert.ok(advanced.cells.length>game.cells.length);assert.deepEqual(advanced.deadCells,game.deadCells);assert.equal(advanced.cells.some(c=>c.x===-10&&c.y===-5),false);
+    const advanced=(await read()).find(g=>g.id===game.id),machine=advanced.players.find(p=>p.id!==advanced.humanId),previous=game.players.find(p=>p.id===machine.id);
+    // A legitimate Ambush/Bomb can remove pieces before placing. Progress is
+    // a completed machine turn and its accepted move, not net piece count.
+    assert.ok(machine.inventory.completedTurns>(previous.inventory.completedTurns||0));assert.equal(advanced.lastEvent.kind,'move');assert.equal(advanced.lastEvent.actor,machine.id);assert.deepEqual(advanced.deadCells,game.deadCells);assert.equal(advanced.cells.some(c=>c.x===-10&&c.y===-5),false);
     await page.locator('[data-action="pause"]').click();const frozen=(await read()).find(g=>g.id===game.id);await page.waitForTimeout(900);assert.deepEqual((await read()).find(g=>g.id===game.id),frozen);
     await page.locator('[data-action="go-games"]').click();
    }
