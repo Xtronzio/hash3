@@ -300,7 +300,7 @@ try{
  await selectBorder();await tapBorder(0,0);await tapBorder(1,0);await tapBorder(1,1);
  const placedBorder=await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
  assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.deepEqual(placedBorder.frontiers[0].cells,[{x:0,y:0},{x:1,y:0},{x:1,y:1}]);
- assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);assert.ok(await borderPage.locator('.board .invasion-entry').count()>0);
+ assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);await borderPage.waitForFunction(()=>document.querySelector('.board [data-cell-glyph="invader-colony"]'));
  await borderPage.screenshot({path:path.join(output,'border-warning.png')});
  await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
  await borderPage.locator('[data-action="close-map"]').tap();await borderPage.locator('[data-action="pause"]').tap();
@@ -310,7 +310,7 @@ try{
  const trailRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  trailRoom.worms=[{id:'trail',kind:'worm',x:2,y:1,body:[{x:0,y:0},{x:1,y:0},{x:2,y:1}],eaten:2,turnsRemaining:3}];
  const {page:trailPage,errors:trailErrors}=await load(context,trailRoom);
- assert.equal(await trailPage.locator('.worm-trail-layer path').count(),2);assert.equal(await trailPage.locator('.worm-body').first().evaluate(el=>getComputedStyle(el,'::after').display),'none');assert.equal(await trailPage.locator('.board .habitat-worm').count(),1);
+ assert.equal(await trailPage.locator('.worm-trail-layer path').count(),2);assert.equal(await trailPage.locator('.worm-body').first().evaluate(el=>getComputedStyle(el,'::after').display),'none');assert.equal(await trailPage.locator('.board [data-cell-glyph="worm"]').count(),1);
  await trailPage.screenshot({path:path.join(output,'worm-trail.png')});
  await trailPage.locator('[data-action="map"]').tap();const wormMap=await trailPage.locator('.world-map .worm-map-trail').innerHTML();
  await trailPage.locator('[data-action="close-map"]').tap();await trailPage.locator('[data-action="pause"]').tap();
@@ -322,11 +322,11 @@ try{
  turnRoom.cells=[{id:'food',x:3,y:3,symbol:'O',owner:'local-o'},{id:'food2',x:4,y:3,symbol:'X',owner:'local-x'}];
  turnRoom.worms=[{id:'turn-worm',kind:'worm',x:3,y:3,body:[{x:3,y:3}],eaten:0,mealLimit:9,turnDriven:true,turnsSinceMeal:2}];
  const {page:turnPage,errors:turnErrors}=await load(context,turnRoom);
- assert.equal(await turnPage.locator('.habitat-worm b').count(),0);
+ assert.equal(await turnPage.locator('[data-cell-glyph="worm"] b').count(),0);
  assert.equal(await turnPage.locator('.board-territory-status [data-ecology-kind="worm"] .ecology-clock').count(),0);
  const moveCell=turnPage.locator('.board [data-action="move"][data-x="0"][data-y="0"]');await moveCell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(turnPage);await moveCell.tap();
  await turnPage.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].worms[0].eaten===1);
- assert.equal(await turnPage.locator('.habitat-worm b').count(),0);
+ assert.equal(await turnPage.locator('[data-cell-glyph="worm"] b').count(),0);
  await turnPage.locator('[data-action="events"][aria-label="Próximos eventos"]').tap();assert.doesNotMatch(await turnPage.locator('.event-outlook-body').innerText(),/1\/9 comidas/);
  await turnPage.screenshot({path:path.join(output,'worm-turns-r38.png')});
  assert.deepEqual(turnErrors,[]);results.push({wormNineMealsWithoutCounters:true,passed:true});await turnPage.close();
