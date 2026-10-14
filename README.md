@@ -483,3 +483,9 @@ Pruebas: `npm test` y `node scripts/verify-tornado-catalog-r68.mjs` en los tres 
 Las cartas y los accesos auxiliares se pliegan por separado. La flecha horizontal muestra mochila/calendario del territorio o mochila/personalización del jugador. Recogido, el carril ocupa44px junto a las dos filas de cartas; el contador sigue junto al zoom. Ambos estados se recuerdan por colono y acompañan sus preferencias al trasladar partidas.
 
 Pausa y mapas comparten controles; la distribución horizontal corta conserva espacio de juego. QA: `node scripts/verify-drawers-r69.mjs` en Chromium/Firefox/WebKit emulados, además del pipeline existente. Puntos, inventarios y reglas23 se conservan.
+
+## R0.21.70 · Controles corregidos
+
+Flechas laterales con marco. Una sola mochila propia junto al zoom, con el contador rival recuperado también durante la partida; pausa mantiene ambos. Personalizar vuelve al icono anterior de tres deslizadores y ocupa la primera posición del cajón azul, sin mochila duplicada. Inventarios desactivados siguen mostrando -/-, sin modificar sus reservas ni activar opciones.
+
+Conservar plegados independientes, preferencias y guardados. QA de cajones ampliada con marcos, iconos, ambos signos y configuraciones de inventario; tres motores emulados y pipeline antes de publicación.

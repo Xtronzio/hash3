@@ -8,6 +8,7 @@ import {targetIcon} from './watch-targets.js';
 import {separateFloatingControl} from './floating-layout.js';
 
 const chevron='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+const editIcon='<svg data-icon="inventory-sliders" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18"/><circle cx="8" cy="5" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="19" r="2"/></svg>';
 const floatIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M12 3h9v9m0-9L10 14"/></svg>';
 const lateralChevron='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
 function bandControls(folded,drawerCollapsed,territory){
@@ -30,9 +31,9 @@ export function storeInventoryPreferences(game,actor,preferences,storage){
  return next;
 }
 export function inventoryBandMarkup(content,game,actor,preferences,{access='',navigation=''}={}){
- if(!inventoryEnabled(game,actor))return navigation?`<div class="player-tools"><nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>${content}`:content;
+ if(!inventoryEnabled(game,actor))return navigation?`<div class="player-tools">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>${content}`:content;
  const folded=preferences.inventoryCollapsed,drawerCollapsed=preferences.inventoryDrawerCollapsed!==false;
- const actions=`<nav class="band-actions" aria-label="Personalizar y plegar inventario">${bandControls(folded,drawerCollapsed,false)}<div class="band-auxiliary" ${drawerCollapsed?'hidden':''}><button class="player-bag" data-action="player-inventory" aria-label="Abrir mochila del jugador" title="Inventario del jugador">${backpackIcon()}</button><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y sacarlas al tablero">${floatIcon}</button></div></nav>`;
+ const actions=`<nav class="band-actions" aria-label="Personalizar y plegar inventario">${bandControls(folded,drawerCollapsed,false)}<div class="band-auxiliary" ${drawerCollapsed?'hidden':''}><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y sacarlas al tablero">${editIcon}</button></div></nav>`;
  return `<div class="custom-inventory-band has-drawer ${navigation?'has-toolbar ':''}${folded?'is-collapsed ':''}${drawerCollapsed?'is-drawer-collapsed':''}">${navigation?`<div class="band-toolbar">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:''}<div class="band-body">${actions}<div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div></div>`;
 }
 export function territoryBandMarkup(content,preferences){

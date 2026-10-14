@@ -5,7 +5,7 @@
 .has-drawer .band-main-controls,.has-drawer .band-auxiliary{display:flex;flex-direction:column;gap:4px;flex:none}
 .has-drawer .band-auxiliary[hidden]{display:none!important}
 .has-drawer .band-body .band-actions button{display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:9px;color:inherit;border:1px solid currentColor;border-radius:7px;background:#101216;touch-action:manipulation}
-.has-drawer .band-body .band-actions .band-drawer-toggle{border-color:transparent;background:transparent;padding:13px}
+.has-drawer .band-body .band-actions .band-drawer-toggle{padding:13px}
 .has-drawer .band-drawer-toggle svg{width:16px;height:16px;transform:rotate(180deg)}
 .has-drawer.is-drawer-collapsed .band-drawer-toggle svg{transform:none}
 .has-drawer .band-body>.custom-band-content{width:auto;flex:1;min-width:0;max-height:none}
@@ -13,6 +13,13 @@
 .has-drawer.is-collapsed .band-body{height:44px}
 .has-drawer .band-toolbar>.inventory-dock{margin-right:auto}
 .has-drawer .inventory-dock-icon svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.inventory-counter-pair{display:flex;align-items:center;gap:8px;min-width:0;margin-right:auto}
+.inventory-counter-pair .paused-inventory-summary{flex:none;min-height:44px}
+.inventory-counter-pair .paused-inventory-player{gap:3px;white-space:nowrap}
+.inventory-counter-pair .paused-inventory-bag{width:22px;height:26px}
+.inventory-counter-pair .inventory-capacity-value{font-size:12px;line-height:16px}
+.inventory-counter-pair .paused-inventory-pending{font-size:10px}
+@media(max-width:360px){.inventory-counter-pair{gap:4px}.inventory-counter-pair .paused-inventory-bag{width:18px;height:24px}.inventory-counter-pair .inventory-capacity-value{font-size:11px}}
 @media(max-height:450px) and (orientation:landscape){
  #app>.game .has-drawer .band-main-controls,#app>.game .has-drawer .band-auxiliary{flex-direction:row}
  #app>.game .has-drawer .band-body .custom-band-content{max-height:48px;overflow:auto}
