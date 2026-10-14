@@ -10,7 +10,7 @@ const frame=page=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>req
 const piece=(symbol,x,y)=>({id:symbol+x+','+y,symbol,x,y,owner:'local-'+symbol.toLowerCase()});
 function fixture(kind='pandemic'){
  const r=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:true});
- r.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));r.pairs[0].active={x:3,y:3};r.players.forEach((p,i)=>{p.score=100*(i+1);p.figures=2;});
+ r.inventoryPreferences=Object.fromEntries(r.players.map(p=>[p.id,{inventoryDrawerCollapsed:false,territoryDrawerCollapsed:false}]));r.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));r.pairs[0].active={x:3,y:3};r.players.forEach((p,i)=>{p.score=100*(i+1);p.figures=2;});
  r.cells=[piece('X',0,0),piece('X',1,0),piece('O',2,0),piece('O',0,2),piece('O',1,2),piece('X',2,2)];r.territoryNextPlacement=r.territoryNextInvasion=r.territoryNextDeathTurn=99999;
  r.territoryEvents=[{id:'r66-'+kind,kind,region:kind==='earthquake'?[{x:4,y:4},{x:5,y:4},{x:4,y:5},{x:5,y:5}]:[{x:2,y:0},{x:2,y:2}],turnsRemaining:1,announcedTurn:0}];return r;
 }

@@ -8,8 +8,12 @@ import {targetIcon} from './watch-targets.js';
 import {separateFloatingControl} from './floating-layout.js';
 
 const chevron='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-const editIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18"/><circle cx="8" cy="5" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="19" r="2"/></svg>';
 const floatIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M12 3h9v9m0-9L10 14"/></svg>';
+const lateralChevron='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+function bandControls(folded,drawerCollapsed,territory){
+ const kind=territory?'territory':'inventory',label=(folded?'Desplegar':'Plegar')+(territory?' barra del territorio':' barra de inventario'),drawerLabel=(drawerCollapsed?'Abrir':'Recoger')+(territory?' mochila y calendario':' mochila y personalización');
+ return `<div class="band-main-controls"><button class="band-fold" data-action="toggle-${kind}-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button class="band-drawer-toggle" data-action="toggle-${kind}-drawer" aria-label="${drawerLabel}" title="${drawerLabel}" aria-expanded="${!drawerCollapsed}">${lateralChevron}</button></div>`;
+}
 const name=id=>id==='target'?'Diana':[...practiceTools,...immunityTools].find(t=>t.id===id)?.label||'';
 const icon=id=>id==='target'?`<svg viewBox="0 0 24 24" aria-hidden="true">${targetIcon}</svg>`:toolIcon(id);
 const preferenceKey=(game,actor)=>`hash3_inventory_preferences:${game.mode}:${game.mode==='solo'?'colono':actor}`;
@@ -27,14 +31,14 @@ export function storeInventoryPreferences(game,actor,preferences,storage){
 }
 export function inventoryBandMarkup(content,game,actor,preferences,{access='',navigation=''}={}){
  if(!inventoryEnabled(game,actor))return navigation?`<div class="player-tools"><nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>${content}`:content;
- const folded=preferences.inventoryCollapsed,label=(folded?'Desplegar':'Plegar')+' barra de inventario';
- const actions=`<nav class="band-actions" aria-label="Personalizar y plegar inventario">${access}<button class="band-fold" data-action="toggle-inventory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y elegir flotantes">${editIcon}</button></nav>`;
- return `<div class="custom-inventory-band ${navigation?'has-toolbar ':''}${folded?'is-collapsed':''}">${navigation?`<div class="band-toolbar">${actions}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:actions}<div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
+ const folded=preferences.inventoryCollapsed,drawerCollapsed=preferences.inventoryDrawerCollapsed!==false;
+ const actions=`<nav class="band-actions" aria-label="Personalizar y plegar inventario">${bandControls(folded,drawerCollapsed,false)}<div class="band-auxiliary" ${drawerCollapsed?'hidden':''}><button class="player-bag" data-action="player-inventory" aria-label="Abrir mochila del jugador" title="Inventario del jugador">${backpackIcon()}</button><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y sacarlas al tablero">${floatIcon}</button></div></nav>`;
+ return `<div class="custom-inventory-band has-drawer ${navigation?'has-toolbar ':''}${folded?'is-collapsed ':''}${drawerCollapsed?'is-drawer-collapsed':''}">${navigation?`<div class="band-toolbar">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:''}<div class="band-body">${actions}<div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div></div>`;
 }
 export function territoryBandMarkup(content,preferences){
- const folded=preferences.territoryCollapsed,label=(folded?'Desplegar':'Plegar')+' barra del territorio';
+ const folded=preferences.territoryCollapsed,drawerCollapsed=preferences.territoryDrawerCollapsed!==false;
  const bag=backpackIcon();
- return `<div class="custom-territory-band ${folded?'is-collapsed':''}"><nav class="band-actions" aria-label="Inventario y barra del territorio"><button class="band-fold" data-action="toggle-territory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button class="territory-bag" data-action="territory-inventory" aria-label="Inventario del territorio · descripciones" title="Entender los eventos del territorio">${bag}</button><button class="territory-calendar" data-action="events" aria-label="Próximos eventos" title="Próximos eventos" aria-controls="events-panel">${navigationIcon('events')}</button></nav><div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
+ return `<div class="custom-territory-band has-drawer ${folded?'is-collapsed ':''}${drawerCollapsed?'is-drawer-collapsed':''}"><div class="band-body"><nav class="band-actions" aria-label="Inventario y barra del territorio">${bandControls(folded,drawerCollapsed,true)}<div class="band-auxiliary" ${drawerCollapsed?'hidden':''}><button class="territory-bag" data-action="territory-inventory" aria-label="Inventario del territorio · descripciones" title="Entender los eventos del territorio">${bag}</button><button class="territory-calendar" data-action="events" aria-label="Próximos eventos" title="Próximos eventos" aria-controls="events-panel">${navigationIcon('events')}</button></div></nav><div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div></div>`;
 }
 export function floatingInventoryMarkup(game,actor,preferences){
  if(!['solo','local'].includes(game.mode)||!['playing','paused'].includes(game.status)||!inventoryEnabled(game,actor))return '';
