@@ -147,6 +147,16 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     }else if(tool==='shift'&&payload.bombId){
       movePendingBomb(room,payload.bombId,{x:payload.toX,y:payload.toY},now);spendCard(room,playerId,tool);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,bombId:payload.bombId};
+    }else if(tool==='shift'){
+      const old=toolCells(room,playerId,tool).find(c=>c.x===payload.x&&c.y===payload.y),destination={x:payload.toX,y:payload.toY};
+      if(!old||!moveDestination(room,playerId,destination)||isBlockedCell(room,old.owner,destination.x,destination.y))throw new Error('Elige un destino vacío, conectado y sin bloqueo para la ficha rival.');
+      const before=structuredClone(room.cells),source={x:old.x,y:old.y},changed={...old,...destination,id:id()};
+      room.cells[room.cells.findIndex(c=>c.id===old.id)]=changed;
+      for(const player of room.players)if(player.lastMove?.id===old.id)delete player.lastMove;
+      const owner=room.players.find(v=>v.id===changed.owner);if(owner)owner.lastMove=changed;
+      const landing=scoreLandings(room,before,[source,destination],{kind:'shift',actor:playerId}),own=landing.find(s=>s.player===playerId);
+      recordMax(actor,own?own.points-own.bonus:0,own?.figures||0);spendCard(room,playerId,tool);
+      room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,landing,cells:[source,destination]};
     }else if(['tornado','bomb','frontier','border'].includes(tool)){
       const result=applyAreaTool(room,playerId,tool,payload,random);
       if(tool==='tornado'){const own=result.landing.find(s=>s.player===playerId);recordMax(actor,own?own.points-own.bonus:0,own?.figures||0);}
@@ -175,14 +185,9 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       }
       if(tool==='erase'){room.cells.splice(index,1);removeDefeatedInvasions(room);}
       if(tool==='opposite'){changed={...old,id:id(),symbol:actor.symbol,owner:playerId};room.cells[index]=changed;}
-      if(tool==='shift'){
-        const destination={x:payload.toX,y:payload.toY};
-        if(!moveDestination(room,playerId,destination)||isBlockedCell(room,old.owner,destination.x,destination.y))throw new Error('Elige un destino vacío, conectado y sin bloqueo para la ficha rival.');
-        changed={...old,...destination,id:id()};room.cells[index]=changed;
-      }
       if(tool==='block')room.inventoryEffects.blocks.push({x,y,by:playerId,remaining:2,fresh:true});
       if(tool==='shield')room.inventoryEffects.shields.push({cell:old.id,by:playerId,remaining:3,turnsRemaining:3,announcedTurn:room.ecologyTurns||0});
-      if(['erase','opposite','shift'].includes(tool))for(const player of room.players)if(player.lastMove?.id===old.id)delete player.lastMove;
+      if(['erase','opposite'].includes(tool))for(const player of room.players)if(player.lastMove?.id===old.id)delete player.lastMove;
       if(changed&&['X','O'].includes(changed.symbol)){
         const scorer=room.players.find(v=>v.symbol===changed.symbol),result=scoreCell(room,changed,scorer);
         room.players.find(v=>v.id===changed.owner).lastMove=changed;

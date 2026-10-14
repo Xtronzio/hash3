@@ -1,0 +1,34 @@
+/* The toolbar keeps both real stock readers; cards use their shared gap. */
+.player-cards-slot{display:flex;flex:1;min-width:0;overflow:hidden}
+.player-cards-slot:has(>.turn-used-cards){min-width:28px}
+.game .player-cards-slot>.turn-used-cards{flex:1;min-width:0;max-width:none;width:100%;height:44px;min-height:44px;padding:4px;overflow-x:auto;overflow-y:hidden}
+.player-cards-slot .dock-used-cards:first-child{margin-left:auto}
+.player-cards-slot .dock-used-cards:last-child{margin-right:auto}
+.inventory-counter-pair:has(.player-cards-slot){gap:4px}
+/* Messages share the top row with the turn heading, including in the map. */
+.turn-feedback-bar.has-player-notices{flex-direction:row;align-items:center;gap:6px}
+.game .turn-feedback-bar.has-player-notices>.compact-turnbar{flex:0 1 auto;max-width:38%;border-bottom:0}
+.turn-feedback-bar.has-player-notices>.player-feedback-row{flex:1;min-width:0;padding:2px 0}
+.player-feedback-notices [data-action="cancel-tool-selection"]{display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;padding:9px}
+.player-feedback-notices [data-action="cancel-tool-selection"] svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+@media(max-width:360px){
+ .player-cards-slot .dock-used-card,.player-cards-slot .dock-card-choice{min-width:28px;width:28px;padding:2px;gap:0}
+ .player-cards-slot .dock-used-card>b{position:absolute;left:1px;bottom:0;font-size:8px;line-height:9px}
+ .player-cards-slot .dock-card-choice>b{left:auto;right:0}
+}
+@media(max-width:600px) and (orientation:portrait){
+ .game .turn-feedback-bar.has-player-notices>.compact-turnbar{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:3px;max-width:38%;padding:2px 0}
+ .has-player-notices .compact-turnbar>.brand{grid-column:1;grid-row:1;justify-self:start}
+ .game .has-player-notices .compact-turnbar>.turn-state{grid-column:1;grid-row:2;font-size:14px;padding:3px 5px}
+ .has-player-notices .compact-turnbar>.turn-clocks{grid-column:2;grid-row:1/3;margin:0;align-self:center}
+ .player-feedback-notices>.practice-banner,.player-feedback-notices>.expansion-controls{font-size:12px}
+ .player-feedback-notices>.practice-banner>span,.player-feedback-notices>.expansion-controls>span{max-height:78px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+ .player-feedback-notices>.practice-banner:has(>button+button){display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:4px}
+ .player-feedback-notices>.practice-banner:has(>button+button)>span{grid-column:1;grid-row:1/3}
+ .player-feedback-notices>.practice-banner:has(>button+button)>button{grid-column:2;min-width:44px;width:44px;padding:2px;font-size:11px}
+}
+
+/* Turn text calls attention once when its meaning changes, then keeps its frame. */
+.game .compact-turnbar .turn-state{--feedback-color:#f2f3f4;animation:none}
+.player-feedback-notices .player-notice-extra{display:block;font-size:inherit;color:#00e5ff;line-height:inherit}
+.player-feedback-notices .inventory-refill-toast{position:static;transform:none;width:auto;max-width:none;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;text-align:inherit;animation:none;pointer-events:auto}
