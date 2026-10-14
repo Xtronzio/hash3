@@ -21,9 +21,9 @@ export async function verifyLocalInventory({context,load,output,results}){
  // Use the same erase action that was still showing a white message on Jorge’s screen.
  const erase=stock.locator('[data-tool="erase"]');await erase.evaluate(el=>el.scrollIntoView());await erase.tap();
  const target=page.locator('.board [data-action="inventory-target"][data-x="0"][data-y="0"]');await target.evaluate(el=>el.scrollIntoView());await target.tap();
- assert.match(await page.locator('#notice').innerText(),/^Borrar aplicada\. Los puntos se conservan/);
- const style=await page.locator('#notice').evaluate(el=>{const s=getComputedStyle(el);return {color:s.color,font:+parseFloat(s.fontSize),weight:+s.fontWeight,border:s.borderLeftWidth};});
- assert.equal(style.color,'rgb(0, 229, 255)');assert.ok(style.font>=16&&style.weight>=700);assert.equal(style.border,'6px');
+ assert.match(await page.locator('.turn-feedback-bar .player-notice-extra').innerText(),/^Borrar aplicada\. Los puntos se conservan/);
+ const style=await page.locator('.turn-feedback-bar .player-notice-extra').evaluate(el=>{const s=getComputedStyle(el),frame=getComputedStyle(el.closest('.practice-banner'));return {color:s.color,font:+parseFloat(s.fontSize),weight:+s.fontWeight,border:parseFloat(frame.borderLeftWidth),shadow:frame.boxShadow,pulse:frame.animationName};});
+ assert.equal(style.color,'rgb(0, 229, 255)');assert.ok(style.font>=12&&style.weight>=700);assert.ok(style.border>=1);assert.notEqual(style.shadow,'none');assert.equal(style.pulse,'playerFeedbackPulse');assert.equal(await page.locator('#notice.inventory-notice.visible').count(),0);
  assert.equal(await capacity.innerText(),'3/18');const after=await saved();assert.equal(after.players[0].score,999);assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.frontiers,before.frontiers);assert.deepEqual(after.terrain,before.terrain);assert.equal(after.pairs[0].turn,'X');
  await page.screenshot({path:path.join(output,'inventario-cian-contador-pila-r50.png')});
  assert.equal(await page.locator('.refill-trigger small').innerText(),'1s');const touch=await context.newCDPSession(page),box=await page.locator('.refill-trigger').boundingBox();
