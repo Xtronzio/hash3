@@ -75,6 +75,9 @@ try{
     return {differentRatio:different/(512*512),brand:document.querySelector('.brand-mark').dataset.brand};
    });
    assert.equal(vectorRaster.brand,'c-unframed');assert.ok(vectorRaster.differentRatio<.025,`${name}: SVG/PNG differ beyond antialiasing: ${vectorRaster.differentRatio}`);
+   // These bounds describe the compact header after the temporary top-row trade notice expires.
+   await page.locator('.turn-feedback-bar .player-feedback-row').waitFor({state:'detached',timeout:6000});
+   assert.deepEqual(await read(),after,'Notice expiry must not change the trade result');
    for(const size of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){
     await page.setViewportSize(size);
     await page.locator('.compact-turnbar .brand-mark').waitFor({state:'visible'});
