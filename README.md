@@ -462,3 +462,10 @@ Cada barra tiene su propio botón de plegar/desplegar: inventario arriba y terri
 Bomba atómica (333 puntos): previsualiza y demuele hasta33 celdas contiguas alrededor del centro, junto con todas sus fichas, conservando los puntos ya cobrados. Respeta Escudo, Inmunidad, habitantes y anclajes. Si la zona elegible es menor, afecta las disponibles. Consume una carta y herramienta; después se juega o amplía normalmente. Reconquista sigue limpiando hasta33 invasores sin perder terreno. La bomba común y Artificieros comparten un contorno grueso sin relleno, con X roja pequeña para desactivación.
 
 Pruebas: `npm test`, `npm run build:github` y `node scripts/verify-custom-inventory-r57.mjs` en el pipeline, con tres motores emulados. Duelo/Mundo siguen desactivados. La ampliación de funciones de Diana se mantiene como propuesta.
+
+
+## R0.21.67 · Herramientas alineadas
+
+Mochila, plegado, ajustes y zoom comparten fila sobre el tablero. En pausa, los inventarios X/O están en la fila del zoom; pulsar la mochila propia abre sus cartas. Calendario, mochila y plegado del territorio usan el mismo tamaño de44px. Los contadores y el +1 pendiente conservan espacio al plegar. Bomba comparte el grosor de trazo del catálogo en todas sus superficies.
+
+Cambio de presentación: guardados, puntuaciones, inventarios, preferencias y reglas locales conservados. QA de escritorio, móvil y horizontal: `node scripts/verify-alignment-r67.mjs`, además del pipeline existente; navegadores emulados, sin ensayo físico.

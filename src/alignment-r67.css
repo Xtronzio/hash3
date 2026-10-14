@@ -1,0 +1,72 @@
+/* Shared 44px controls; counters own their width in every fold state. */
+.custom-inventory-band,.custom-territory-band{gap:4px;align-items:flex-start;justify-content:flex-start}
+.custom-inventory-band>.band-actions,.custom-territory-band>.band-actions,.band-toolbar>.band-actions{display:flex;flex-direction:column;gap:4px;flex:none}
+.custom-territory-band>.band-actions,.band-toolbar>.band-actions{flex-direction:row;align-items:center}
+.custom-inventory-band .band-actions>button,.custom-territory-band .band-actions>button,.band-navigation>button{display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;min-height:44px;padding:9px;border:1px solid currentColor;border-radius:7px;background:#101216;color:inherit;touch-action:manipulation}
+.band-actions svg,.band-navigation>button>svg{display:block;width:24px;height:24px;min-height:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.custom-inventory-band.has-toolbar{display:flex;flex-direction:column;width:100%;height:auto;align-items:stretch}
+.band-toolbar,.player-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px;min-width:0;flex:none;width:100%}
+.band-navigation{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-left:auto;flex:none;color:var(--text,#fff);pointer-events:auto}
+.has-toolbar>.custom-band-content{flex:none;width:100%}
+.custom-inventory-band .inventory-dock{display:flex;align-items:center;position:relative;flex:none;min-width:0;width:auto;max-width:none;color:#00e5ff}
+.custom-inventory-band .inventory-dock .inventory-dock-button{display:flex;align-items:center;justify-content:center;flex-direction:row;gap:5px;flex:none;width:auto;min-width:80px;max-width:none;height:44px;min-height:44px;padding:5px 7px;border:1px solid currentColor;border-radius:7px;background:#101216;color:#00e5ff;white-space:nowrap}
+.custom-inventory-band .inventory-dock-counter{display:flex;align-items:center;gap:2px;min-height:0;flex:none}
+.custom-inventory-band .inventory-dock-counter .inventory-badge{position:static;width:auto;height:auto;min-width:0;max-width:none;padding:0;border:0;background:transparent;font-size:12px;line-height:16px;color:#00e5ff;box-shadow:none}
+.custom-inventory-band .inventory-dock-counter .inventory-pending{position:static;padding:0;font-size:10px;line-height:16px;color:#00e5ff;background:transparent;flex:none}
+.custom-inventory-band .inventory-dock-icon{padding-left:0!important;min-height:24px;flex:none}
+.custom-inventory-band .inventory-dock-icon>svg{width:24px;height:24px;flex:none}
+.custom-inventory-band .dock-immunity-active{position:absolute;top:-4px;right:-4px;left:auto;bottom:auto;transform:none;width:16px;height:16px;margin:0;box-shadow:none;color:#00e5ff}
+.custom-inventory-band .dock-immunity-active svg{width:14px;height:14px}.custom-inventory-band .dock-immunity-active b{font-size:8px}
+.custom-inventory-band .inventory-refill-toast{position:fixed;bottom:108px;z-index:20}
+.custom-inventory-band.is-collapsed,.custom-territory-band.is-collapsed{height:44px;justify-content:flex-start;align-items:flex-start}
+.custom-inventory-band.is-collapsed>.band-actions,.custom-territory-band.is-collapsed>.band-actions{flex-direction:row}
+.custom-inventory-band.is-collapsed .band-actions button,.custom-territory-band.is-collapsed .band-actions button{width:44px;height:44px;min-height:44px;padding:9px}
+.custom-inventory-band.is-collapsed .inventory-dock .inventory-dock-button{width:auto;min-width:80px;height:44px;padding:5px 7px}
+.custom-inventory-band.has-toolbar.is-collapsed{height:auto;min-height:44px}
+.custom-band-content .player-inventory-rows,.custom-band-content .territory-rows{grid-template-rows:repeat(2,44px);gap:4px}
+.custom-band-content .inventory-icon-row{gap:4px}
+.custom-band-content .player-inventory-rows .inventory-effect,.custom-band-content .territory-rows .ecology-jump{width:44px;height:44px;min-height:44px}
+.custom-inventory-band .band-fold[aria-expanded=true] svg,.custom-territory-band .band-fold[aria-expanded=true] svg{transform:rotate(180deg)}
+.custom-inventory-band .band-fold[aria-expanded=false] svg,.custom-territory-band .band-fold[aria-expanded=false] svg{transform:none}
+/* Pause puts the two existing stock readers beside the map navigation.
+   The own reader opens its catalogue, replacing the duplicate blue bag. */
+.inspection-panel>.inspection-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:2px;order:0;width:100%;min-width:0}
+.inspection-toolbar>.inspection-metadata{font-size:10px;line-height:14px;flex:none}
+.inspection-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;width:100%}
+.inspection-map-actions{display:flex;align-items:center;gap:4px;flex:none;margin-left:auto}
+.inspection-map-actions>button{width:44px;height:44px;min-height:44px;padding:9px}
+.inspection-toolbar .paused-inventory-summary{flex:1;min-width:max-content;min-height:44px;gap:5px;pointer-events:auto}
+.inspection-toolbar .paused-bag-access{display:flex;align-items:center;flex:none;width:auto;height:44px;min-height:44px;padding:3px;border:0;background:transparent;color:inherit;border-radius:6px}
+.paused-bag-access:hover{background:#ffffff0a}
+.inspection-toolbar .paused-inventory-player{gap:3px;flex:none;white-space:nowrap}
+.inspection-toolbar .paused-inventory-bag{width:22px;height:26px}
+.inspection-toolbar .inventory-capacity-value{font-size:15px;line-height:20px}
+.inspection-toolbar .paused-inventory-pending{font-size:9px}
+.game .band-toolbar .target-jump-options,.game .player-tools .target-jump-options{top:calc(100% + 5px);bottom:auto;max-height:55dvh;overflow-y:auto}
+.game .board-inventory-status{overflow:visible;z-index:5}
+.game .world-map .band-toolbar .target-jump-menu{z-index:12}
+@media(max-width:360px){
+ .band-navigation,.band-toolbar>.band-actions,.inspection-map-actions{gap:2px}
+ .custom-inventory-band .inventory-dock .inventory-dock-button,.custom-inventory-band.is-collapsed .inventory-dock .inventory-dock-button{min-width:74px;gap:3px;padding-inline:4px}
+ .custom-inventory-band .inventory-dock-counter .inventory-badge{font-size:11px}
+ .inspection-tools{gap:2px}.inspection-toolbar .paused-inventory-summary{gap:2px}
+ .inspection-toolbar .paused-inventory-summary .inventory-capacity-value{font-size:12px}.inspection-toolbar .paused-inventory-bag{width:16px;height:24px}
+ .inspection-toolbar .paused-inventory-player{gap:2px}.inspection-toolbar .paused-bag-access{padding-inline:0}
+}
+@media(max-height:450px) and (orientation:landscape){
+ #app>.game .band-toolbar>.band-actions,#app>.game .custom-territory-band>.band-actions{display:flex;flex-direction:row;align-items:center}
+ #app>.game .custom-inventory-band .inventory-dock .inventory-dock-button{height:44px;padding:5px 7px;flex-direction:row;gap:5px}
+ #app>.game .custom-inventory-band .inventory-dock-counter .inventory-badge{font-size:12px;line-height:16px}
+ #app>.game .custom-band-content{max-height:48px;overflow:auto;overscroll-behavior:contain}
+ #app .inspection-panel:has(>.custom-inventory-band){grid-template-columns:minmax(0,1fr) var(--paused-inventory-column,210px) var(--paused-territory-column,170px)!important;grid-template-rows:auto minmax(0,1fr)!important}
+ #app .inspection-panel:has(>.custom-inventory-band)>.inspection-toolbar{grid-column:1 / 4!important;grid-row:1!important}
+ #app .inspection-panel:has(>.custom-inventory-band)>.inspection-canvas{grid-column:1!important;grid-row:2!important}
+ #app .inspection-panel:has(>.custom-inventory-band)>.custom-inventory-band{grid-column:2!important;grid-row:2!important}
+ #app .inspection-panel:has(>.custom-inventory-band)>.custom-territory-band{grid-column:3!important;grid-row:2!important}
+ #app .inspection-panel>.custom-inventory-band,#app .inspection-panel>.custom-territory-band{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+ #app .inspection-panel>.custom-inventory-band>.band-actions,#app .inspection-panel>.custom-territory-band>.band-actions{display:flex;flex-direction:row}
+ #app .inspection-panel .custom-band-content{width:100%;height:auto;flex:1;min-height:0;overflow:auto}
+ #app .inspection-panel:has(>.custom-inventory-band.is-collapsed){--paused-inventory-column:44px}
+ #app .inspection-panel:has(>.custom-territory-band.is-collapsed){--paused-territory-column:44px}
+ #app .inspection-panel>.is-collapsed>.band-actions{flex-direction:column;align-items:center}
+}
