@@ -1,3 +1,4 @@
+import {backpackIcon} from './backpack-icon.js';
 import {stampTurnCards,displayedTurnCards} from './turn-card-display.js';
 import {prepareImpactFocus,impactFocusEntries} from './impact-focus.js';
 import {briefIcons} from './brief-ecology.js';
@@ -74,6 +75,7 @@ import './paused-inventory.css';
 import './territory-presentation.css';
 import './zones-r66.css';
 import './alignment-r67.css';
+import './saved-game-settings.css';
 import {pausedInventorySummaryMarkup} from './paused-inventory.js';
 import {overviewMarkup,overviewModel} from './map-overview.js';
 import {prepareMapRendering,mapWindowMarkup,MAP_SYMBOL_SCALE} from './map-render.js';
@@ -149,8 +151,8 @@ if(ONLINE_ENABLED&&(urlCode||pairUrlCode))hallDialog='online';
 const humans = () => room.players.filter(p=>!p.bot);
 const gameRank=()=>rankedPlayers(humans(),!!room.commonWorld);
 const above=()=>immediateAbove(isLocal()?room.players:humans(),uid,!!room.commonWorld);
-const iconPaths={back:'<path d="m15 5-7 7 7 7"/>',expand:'<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',worm:habitatIcons.worm,bomb:habitatIcons.bomb,build:habitatIcons.build,frontier:'<rect x="3" y="3" width="18" height="18"/><path d="m12 6 6 6-6 6-6-6Z"/>',play:'<path d="m8 4 12 8-12 8V4Z"/>',home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3V10Z"/>',rodent:rodentIcon,activate:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8m-4-4h8"/>',fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',inventory:'<path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
-const navIcon=kind=>`<svg viewBox="0 0 ${['rodent','worm','bomb','build'].includes(kind)?'32 32':'24 24'}" aria-hidden="true" focusable="false">${navigationPaths[kind]||iconPaths[kind]||''}</svg>`;
+const iconPaths={back:'<path d="m15 5-7 7 7 7"/>',expand:'<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',worm:habitatIcons.worm,bomb:habitatIcons.bomb,build:habitatIcons.build,frontier:'<rect x="3" y="3" width="18" height="18"/><path d="m12 6 6 6-6 6-6-6Z"/>',play:'<path d="m8 4 12 8-12 8V4Z"/>',home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3V10Z"/>',rodent:rodentIcon,activate:'<rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8m-4-4h8"/>',fit:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/>',center:'<circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>',above:'<path d="m5 19 14-14M5 5h14v14"/>',pause:'<path d="M8 5v14M16 5v14"/>',games:'<path d="M3 7V5h7l2 3h9v12H3V7Z"/>',finish:'<path d="M5 22V3m0 1c5-4 9 4 15 0v10c-6 4-10-4-15 0"/>',exit:'<path d="M10 4H4v16h6m4-12 4 4-4 4m-6-4h12"/>',map:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h11m0-7v18m0-7h7"/>',chevron:'<path d="m6 9 6 6 6-6"/>'};
+const navIcon=kind=>kind==='inventory'?backpackIcon():`<svg viewBox="0 0 ${['rodent','worm','bomb','build'].includes(kind)?'32 32':'24 24'}" aria-hidden="true" focusable="false">${navigationPaths[kind]||iconPaths[kind]||''}</svg>`;
 const iconButton=(action,kind,label,extra='')=>`<button data-action="${action}" aria-label="${label}" title="${label}" ${extra}>${navIcon(kind)}</button>`;
 function setRankingOpen(open){
  rankOpen=open;

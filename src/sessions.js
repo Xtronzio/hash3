@@ -2,7 +2,7 @@ import {initializeInventory} from './practice-tools.js';
 import {initializeFreeExpansions} from './free-expansion.js';
 import {initializeHabitats} from './inhabitants.js';
 import {archiveTerritoryResult} from './achievements.js';
-import {localCommand} from './local.js';
+import {localCommand,LOCAL_RULE_VERSION} from './local.js';
 const valid=g=>g&&typeof g.id==='string'&&['solo','local'].includes(g.mode)&&Array.isArray(g.players)&&Array.isArray(g.pairs)&&['playing','paused','finished'].includes(g.status);
 export const gamePinKey=(game,uid='')=>game.local||game.mode?`local:${game.id}`:`online:${uid}:${game.id}`;
 export function loadGamePins(storage){try{const pins=JSON.parse(storage.getItem('hash3_game_pins'));return Array.isArray(pins)?pins.filter(p=>typeof p==='string'):[];}catch{return [];}}
@@ -25,8 +25,8 @@ export function loadLocalGames(storage,now=Date.now()){
     games.push(imported);
   }}catch{}
   let migrated=!canonical&&games.length>0;
-  for(const game of games)if(game.status!=='finished'&&(game.briefEcologyVersion!==1||game.territoryPlanVersion!==1||game.inventoryEconomyVersion!==1||game.players.some(p=>p.inventory?.cards?.antidote==null||p.inventory?.cards?.sapper==null)||game.wildcardUsageVersion!==1||game.players.some(p=>p.inventory?.cards?.swap==null))||game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==3||game.inventoryCadenceVersion!==1||game.territoryActivityVersion!==4||game.rodentLifecycleVersion!==1||game.status!=='finished'&&(game.wormLifecycleVersion!==1||game.invasionVersion!==1||game.inhabitantReclaimVersion!==1||game.turnEcologyVersion!==1)||game.players.some(p=>p.freeExpansionVersion!==5)){
-    if(game.status!=='finished')game.ruleVersion=22;
+  for(const game of games)if(game.status!=='finished'&&(game.ruleVersion!==LOCAL_RULE_VERSION||game.briefEcologyVersion!==1||game.territoryPlanVersion!==1||game.inventoryEconomyVersion!==1||game.players.some(p=>p.inventory?.cards?.antidote==null||p.inventory?.cards?.sapper==null)||game.wildcardUsageVersion!==1||game.players.some(p=>p.inventory?.cards?.swap==null))||game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==3||game.inventoryCadenceVersion!==1||game.territoryActivityVersion!==4||game.rodentLifecycleVersion!==1||game.status!=='finished'&&(game.wormLifecycleVersion!==1||game.invasionVersion!==1||game.inhabitantReclaimVersion!==1||game.turnEcologyVersion!==1)||game.players.some(p=>p.freeExpansionVersion!==5)){
+    if(game.status!=='finished')game.ruleVersion=LOCAL_RULE_VERSION;
     initializeInventory(game);initializeFreeExpansions(game);initializeHabitats(game,now);migrated=true;
   }
   // Persist conversion/refunds atomically before returning an upgraded map;
