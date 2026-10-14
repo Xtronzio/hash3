@@ -45,6 +45,11 @@ try{for(const [name,engine]of Object.entries({chromium,webkit,firefox}).filter((
   r.cells=groups.flatMap((g,j)=>[['X',0,0],['X',1,0],['O',2,0],['O',0,2],['O',1,2],['X',2,2]].map(([symbol,x,y],i)=>({id:j+':'+i,x:g[0].x+x,y,symbol,owner:'local-'+symbol.toLowerCase()})));r.territoryEvents=[{id:'triple-r68-4',kind:'tornado',region:groups.flat(),groups,turnsRemaining:1,announcedTurn:0}];r.territoryNextPlacement=r.territoryNextInvasion=999999;
   await context.addInitScript(r=>{if(!localStorage.getItem('r68-seeded')){localStorage.setItem('hash3_locals',JSON.stringify([r]));localStorage.setItem('hash3_local',JSON.stringify({id:r.id}));sessionStorage.setItem('hash3_restore_local','1');localStorage.setItem('r68-seeded','1');}},r);
   await page.goto(origin);await page.locator('.game .viewport').waitFor();await page.locator('[data-action="fit-board"]').click();await frame(page);assert.equal(await page.locator('[data-cell-glyph="tornado"]').count(),3);await page.screenshot({path:path.join(output,`three-tornados-r68-${name}.png`)});
+  const overview=page.locator('.board-overview-map');
+  if(await overview.count()){
+   const point=await overview.evaluate(svg=>{const v=svg.viewBox.baseVal,b=svg.getBoundingClientRect();return {x:(4.5-v.x)/v.width*b.width,y:(4.5-v.y)/v.height*b.height};});
+   await overview.click({position:point});await frame(page);
+  }
   const move=page.locator('.board .terrain-cell[data-x="4"][data-y="4"]');assert.equal(await move.getAttribute('data-action'),'move',JSON.stringify({cell:await move.getAttribute('aria-label'),game:(await read())[0]}));await move.click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].territoryEvents.length===0);const next=(await read())[0];assert.deepEqual(next.players.map(p=>p.score),[109,206]);assert.deepEqual(next.players.map(p=>p.inventory.cards),r.players.map(p=>p.inventory.cards));
   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);await context.close();results.push({name,passed:true});console.log('PASS three tornados / one backpack / real saved settings: '+name);
  }catch(error){if(page)await page.screenshot({path:path.join(output,`failure-r68-${name}.png`)}).catch(()=>{});throw error;}finally{await browser.close();}
