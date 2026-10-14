@@ -1,0 +1,21 @@
+/* One compact row for cards, readable instructions and the existing actions. */
+.player-feedback-row{display:flex;align-items:stretch;gap:6px;flex:none;min-width:0;padding:4px 0}
+.player-feedback-row>.turn-used-cards{flex:0 1 auto;max-width:38%;min-width:38px;align-self:center;padding:4px;min-height:44px}
+.player-feedback-row:not(:has(.player-feedback-notices))>.turn-used-cards{max-width:100%}
+.player-feedback-notices{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.player-feedback-notices>.practice-banner,.player-feedback-notices>.expansion-controls{margin:0;min-width:0;gap:6px;padding:5px 7px;min-height:44px;line-height:1.25}
+.player-feedback-notices>.practice-banner>span,.player-feedback-notices>.expansion-controls>span{min-width:0;flex:1;overflow-wrap:anywhere}
+.player-feedback-notices button{flex:none;min-height:44px;padding:6px 8px}
+.player-feedback-notices>.expansion-controls{border:1px solid currentColor;border-radius:8px}
+
+/* Match the territory pulse and keep the original white/cyan/blue colours. */
+.game .compact-turnbar .turn-state{--feedback-color:var(--text);border:1px solid currentColor;border-radius:8px;padding:5px 8px;flex:0 1 auto;box-shadow:0 0 8px color-mix(in srgb,var(--feedback-color) 35%,transparent),inset 0 0 5px color-mix(in srgb,var(--feedback-color) 18%,transparent);animation:playerFeedbackPulse .65s ease-in-out infinite}
+.game .turn-clocks{margin-left:auto}
+.practice-banner{--feedback-color:#00e5ff}
+.expansion-controls{--feedback-color:#bbd8ff}
+.player-feedback-row .practice-banner,.player-feedback-row .expansion-controls{box-shadow:0 0 8px color-mix(in srgb,var(--feedback-color) 35%,transparent),inset 0 0 5px color-mix(in srgb,var(--feedback-color) 18%,transparent);animation:playerFeedbackPulse .65s ease-in-out infinite}
+.turn-used-cards .dock-used-card,.turn-used-cards .dock-card-choice{--feedback-color:#00e5ff;box-shadow:0 0 8px #00e5ff66,inset 0 0 5px #00e5ff33}
+.game .turn-used-cards .is-prepared,.game .turn-used-cards .is-feedback-active,.game .inventory-shortcut.is-feedback-active,.game .inventory-pending-effect{--feedback-color:#00e5ff;animation:playerFeedbackPulse .65s ease-in-out infinite;box-shadow:0 0 8px #00e5ff66,inset 0 0 5px #00e5ff33}
+body:has(.game) #notice.inventory-notice.visible,.game .inventory-refill-toast{--feedback-color:#00e5ff;animation:playerFeedbackPulse .65s ease-in-out infinite}
+@keyframes playerFeedbackPulse{0%,100%{filter:brightness(1);box-shadow:0 0 8px color-mix(in srgb,var(--feedback-color) 35%,transparent),inset 0 0 5px color-mix(in srgb,var(--feedback-color) 18%,transparent)}50%{filter:brightness(1.65);box-shadow:0 0 12px color-mix(in srgb,var(--feedback-color) 55%,transparent),inset 0 0 8px color-mix(in srgb,var(--feedback-color) 35%,transparent)}}
+@media(prefers-reduced-motion:reduce){.game .compact-turnbar .turn-state,.player-feedback-row .practice-banner,.player-feedback-row .expansion-controls,.game .turn-used-cards .is-prepared,.game .turn-used-cards .is-feedback-active,.game .inventory-shortcut.is-feedback-active,.game .inventory-pending-effect,body:has(.game) #notice.inventory-notice.visible,.game .inventory-refill-toast{animation:none}}
