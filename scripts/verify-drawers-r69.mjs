@@ -11,7 +11,7 @@ const frame=page=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>req
 function fixture({status='playing',folded=false,lateral=true,large=false}={}){
  const r=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:true});
  r.terrain=Array.from({length:large?33333:304},(_,i)=>({x:i%(large?183:19),y:Math.floor(i/(large?183:19))}));
- r.players.forEach(p=>{p.score=25912;p.inventory.cards.double=84;p.inventory.comboPending=1;});r.status=status;
+ r.players.forEach(p=>{p.score=25912;p.inventory.cards.double=84;p.inventory.comboPending=1;});r.inventoryEffects.immunities=[{player:'local-x',turnsRemaining:3}];r.status=status;
  r.inventoryPreferences=Object.fromEntries(r.players.map(p=>[p.id,normalizeInventoryPreferences({inventoryCollapsed:folded,territoryCollapsed:folded,inventoryDrawerCollapsed:lateral,territoryDrawerCollapsed:lateral})]));return r;
 }
 try{for(const [name,engine]of Object.entries({chromium,webkit,firefox}).filter(([name])=>!process.env.HASH3_QA_ENGINE||name===process.env.HASH3_QA_ENGINE)){
@@ -33,7 +33,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit,firefox}).filter((
     for(const b of boxes.buttons){assert.ok(b.width>=44&&b.height>=44);assert.ok(b.x>=boxes.band.x-1&&b.right<=boxes.band.right+1,JSON.stringify({size,status,folded,lateral,boxes}));}
     if(!folded)assert.ok(boxes.content.width>=48,JSON.stringify({size,status,boxes}));
    }
-   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.equal(await page.locator(status==='paused'?'.paused-minimap .paused-inventory-bag':'.board-inventory-status .inventory-dock-icon>svg').first().evaluate(el=>getComputedStyle(el).fill),'none');assert.deepEqual(await read(),before);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.ok((await page.locator(status==='paused'?'.paused-minimap .paused-inventory-bag':'.board-inventory-status .inventory-dock-icon svg').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).fill))).every(fill=>fill==='none'));assert.deepEqual(await read(),before);
    if(size.width===390||size.width===740)await page.screenshot({path:path.join(output,`drawers-r69-${name}-${size.width}-${status}-${folded}-${lateral}.png`)});
   }
   await page.setViewportSize({width:390,height:844});await load(fixture());const base=await read(),strip=()=>page.locator('.board-inventory-status .custom-inventory-band'),territory=()=>page.locator('.board-territory-status .custom-territory-band');

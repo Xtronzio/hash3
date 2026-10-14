@@ -12,7 +12,7 @@
 .has-drawer.is-collapsed .band-main-controls,.has-drawer.is-collapsed .band-auxiliary{flex-direction:row}
 .has-drawer.is-collapsed .band-body{height:44px}
 .has-drawer .band-toolbar>.inventory-dock{margin-right:auto}
-.has-drawer .inventory-dock-icon>svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.has-drawer .inventory-dock-icon svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media(max-height:450px) and (orientation:landscape){
  #app>.game .has-drawer .band-main-controls,#app>.game .has-drawer .band-auxiliary{flex-direction:row}
  #app>.game .has-drawer .band-body .custom-band-content{max-height:48px;overflow:auto}
