@@ -1,0 +1,4 @@
+/* The same light pulse as an announced territory card, without changing size. */
+.ecology-jump.is-imminent,.turn-warnings .ecology-warning-chip.is-imminent{animation:ecologyActivate .65s ease-in-out infinite;animation-delay:0ms}
+.ecology-jump.is-imminent.is-frozen,.turn-warnings .ecology-warning-chip.is-frozen{animation:none;box-shadow:inset 0 0 8px #f4c65d55}
+@media(prefers-reduced-motion:reduce){.ecology-jump.is-imminent,.turn-warnings .ecology-warning-chip.is-imminent{animation:none;box-shadow:inset 0 0 8px #f4c65d55}}
