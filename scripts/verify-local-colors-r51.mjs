@@ -19,7 +19,7 @@ export async function verifyLocalColors({context,load,output,results}){
   assert.equal(await page.locator('.inventory-badge').innerText(),'18/18');assert.equal(await color(page.locator('.inventory-badge')),cyan);
   assert.equal(await page.locator('.inventory-dock-counter .inventory-pending').innerText(),'+1');assert.equal(await color(page.locator('.inventory-dock-counter .inventory-pending')),cyan);
   const badge=await page.locator('.inventory-dock-counter').boundingBox(),bag=await page.locator('.inventory-dock-icon>svg').boundingBox();
-  assert.ok(badge.y+badge.height<=bag.y,'Counter must not overlap the bag');assert.ok(bag.height>=26&&bag.width>=26,'Bag icon remains fully visible');
+  assert.ok(badge.x+badge.width<=bag.x||bag.x+bag.width<=badge.x||badge.y+badge.height<=bag.y||bag.y+bag.height<=badge.y,'Counter must not overlap the bag');assert.ok(bag.height>=24&&bag.width>=24,'Bag icon remains fully visible at the shared toolbar size');
   assert.equal(await color(page.locator('.dock-immunity-active')),cyan);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow');
   for(const kind of ['double','erase','frontier','border'])assert.equal(await color(page.locator('.board-inventory-status [data-tool="'+kind+'"] svg')),cyan);
