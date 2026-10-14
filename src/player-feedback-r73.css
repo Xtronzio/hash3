@@ -1,4 +1,5 @@
 /* One compact row for cards, readable instructions and the existing actions. */
+.turn-feedback-bar{display:flex;flex-direction:column;flex:none;min-width:0}
 .player-feedback-row{display:flex;align-items:stretch;gap:6px;flex:none;min-width:0;padding:4px 0}
 .player-feedback-row>.turn-used-cards{flex:0 1 auto;max-width:38%;min-width:38px;align-self:center;padding:4px;min-height:44px}
 .player-feedback-row:not(:has(.player-feedback-notices))>.turn-used-cards{max-width:100%}
@@ -7,6 +8,13 @@
 .player-feedback-notices>.practice-banner>span,.player-feedback-notices>.expansion-controls>span{min-width:0;flex:1;overflow-wrap:anywhere}
 .player-feedback-notices button{flex:none;min-height:44px;padding:6px 8px}
 .player-feedback-notices>.expansion-controls{border:1px solid currentColor;border-radius:8px}
+@media(max-height:450px) and (orientation:landscape){
+ .turn-feedback-bar:has(.player-feedback-row){flex-direction:row;align-items:stretch;gap:8px}
+ .game .turn-feedback-bar:has(.player-feedback-row) .compact-turnbar{flex:0 1 auto;max-width:38%;border-bottom:0}
+ .turn-feedback-bar>.player-feedback-row{flex:1;min-width:0;padding:1px 0}
+ .player-feedback-row>.turn-used-cards{min-height:30px;padding:1px 3px}
+ .game .compact-turnbar .turn-state{padding:3px 6px}
+}
 
 /* Match the territory pulse and keep the original white/cyan/blue colours. */
 .game .compact-turnbar .turn-state{--feedback-color:var(--text);border:1px solid currentColor;border-radius:8px;padding:5px 8px;flex:0 1 auto;box-shadow:0 0 8px color-mix(in srgb,var(--feedback-color) 35%,transparent),inset 0 0 5px color-mix(in srgb,var(--feedback-color) 18%,transparent);animation:playerFeedbackPulse .65s ease-in-out infinite}

@@ -12,7 +12,7 @@ function fixture({symbol='X',expanding=false,solo=false}={}){
  r.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));r.pairs[0].active={x:0,y:0};r.pairs[0].turn=symbol;
  r.players.forEach(p=>{p.inventory.cards={erase:3,double:3,rival:3,nuclear:3};p.inventory.comboPending=0;});
  r.cells=[{id:'x',x:0,y:0,symbol:'X',owner:'local-x'},{id:'o',x:2,y:0,symbol:'O',owner:'local-o'}];
- r.territoryNextPlacement=r.territoryNextInvasion=99999;r.turnCards={'local-x':[], 'local-o':[]};
+ r.territoryEvents=[{id:'imminent',kind:'ufo',x:2,y:0,region:[{x:2,y:0}],turnsRemaining:1,announcedTurn:0},{id:'later',kind:'contagion',x:0,y:0,region:[{x:0,y:0}],turnsRemaining:3,announcedTurn:0}];r.territoryNextPlacement=r.territoryNextInvasion=99999;r.turnCards={'local-x':[], 'local-o':[]};
  if(expanding){r.cells=r.terrain.map((c,i)=>({...c,id:'full-'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.pairs[0].credits=1;r.pairs[0].pending=1;r.pairs[0].expander=symbol==='X'?'local-x':'local-o';}
  return r;
 }
@@ -27,22 +27,22 @@ try{for(const [name,engine] of Object.entries({chromium,webkit,firefox}).filter(
   const pulse=async locator=>{assert.equal(await locator.evaluate(e=>getComputedStyle(e).animationName),'playerFeedbackPulse');assert.equal(await locator.evaluate(e=>getComputedStyle(e).animationIterationCount),'infinite');};
   const geometry=async scope=>{
    const row=page.locator(scope),box=await row.evaluate(e=>{const rect=n=>{const r=n.getBoundingClientRect();return {x:r.x,right:r.right,y:r.y,bottom:r.bottom,width:r.width,height:r.height};};const c=e.querySelector('.turn-used-cards'),b=e.querySelector('.practice-banner');return {row:rect(e),cards:c&&rect(c),banner:b&&rect(b),buttons:[...e.querySelectorAll('button')].map(rect),text:b&&rect(b.querySelector('span')),overflow:document.documentElement.scrollWidth>innerWidth+1};});
-   assert.ok(!box.overflow,JSON.stringify(box));if(box.cards&&box.banner){assert.ok(box.cards.right<=box.banner.x+1,JSON.stringify(box));assert.ok(Math.abs((box.cards.y+box.cards.bottom)-(box.banner.y+box.banner.bottom))<3,JSON.stringify(box));}
+   assert.ok(!box.overflow,JSON.stringify(box));assert.ok((await page.locator('.viewport').boundingBox()).height>0,'The board must retain visible height with player and territory warnings');if(box.cards&&box.banner){assert.ok(box.cards.right<=box.banner.x+1,JSON.stringify(box));assert.ok(Math.abs((box.cards.y+box.cards.bottom)-(box.banner.y+box.banner.bottom))<3,JSON.stringify(box));}
    assert.ok(box.buttons.every(b=>b.height>=44&&b.x>=box.row.x-1&&b.right<=box.row.right+1),JSON.stringify(box));if(box.text)assert.ok(box.text.width>=30,JSON.stringify(box));
   };
   for(const size of (process.env.HASH3_QA_QUICK?[{width:390,height:844}]:[{width:320,height:740},{width:390,height:844},{width:428,height:926},{width:740,height:320},{width:1280,height:900},{width:1920,height:1080}]))for(const symbol of ['X','O']){
    await page.setViewportSize(size);await load(fixture({symbol}));const before=await read();await pulse(page.locator('.turn-state'));
    assert.equal(await page.locator('.turn-state').evaluate(e=>getComputedStyle(e).borderTopColor),'rgb(242, 243, 244)');
    assert.equal(await page.locator('.turn-symbol').evaluate(e=>getComputedStyle(e).color),symbol==='X'?'rgb(255, 74, 88)':'rgb(36, 211, 147)');
-   await page.locator('.board-inventory-status [data-tool="erase"]').click();await pulse(page.locator('.arena>.player-feedback-row .inventory-target-banner'));await pulse(page.locator('.arena>.player-feedback-row .is-prepared'));await pulse(page.locator('.board-inventory-status [data-tool="erase"]'));
-   await geometry('.arena>.player-feedback-row');assert.deepEqual(await read(),before,'Selecting or highlighting a card must not spend stock or change saves');
+   await page.locator('.board-inventory-status [data-tool="erase"]').click();await pulse(page.locator('.turn-feedback-bar>.player-feedback-row .inventory-target-banner'));await pulse(page.locator('.turn-feedback-bar>.player-feedback-row .is-prepared'));await pulse(page.locator('.board-inventory-status [data-tool="erase"]'));
+   await geometry('.turn-feedback-bar>.player-feedback-row');assert.deepEqual(await read(),before,'Selecting or highlighting a card must not spend stock or change saves');
    // Sample the bright phase of the actual animation, without changing game data.
    const light=await page.locator('.inventory-target-banner').evaluate(e=>{const a=e.getAnimations().find(a=>a.animationName==='playerFeedbackPulse');a.pause();a.currentTime=325;return {filter:getComputedStyle(e).filter,shadow:getComputedStyle(e).boxShadow};});assert.match(light.filter,/brightness\(1\.65\)/);assert.match(light.shadow,/12px/);
-   if(size.width===390||size.width===1280)await page.screenshot({path:path.join(output,`player-feedback-r73-${name}-${size.width}-${symbol}-selected.png`)});
+   if(size.width===390||size.width===1280||size.width===740)await page.screenshot({path:path.join(output,`player-feedback-r73-${name}-${size.width}-${symbol}-selected.png`)});
    await page.locator('[data-action="cancel-tool-selection"]').click();assert.equal(await page.locator('.is-prepared').count(),0);assert.equal(await page.locator('.board-inventory-status [data-tool="erase"]').evaluate(e=>getComputedStyle(e).animationName),'none');assert.deepEqual(await read(),before);
-   await page.locator('.board-inventory-status [data-tool="nuclear"]').click();await geometry('.arena>.player-feedback-row');await page.locator('[data-action="cancel-tool-selection"]').click();assert.deepEqual(await read(),before);
+   await page.locator('.board-inventory-status [data-tool="nuclear"]').click();await geometry('.turn-feedback-bar>.player-feedback-row');await page.locator('[data-action="cancel-tool-selection"]').click();assert.deepEqual(await read(),before);
    await page.locator('.board-inventory-status [data-tool="double"]').click();const after=await read();assert.equal(after.players.find(p=>p.symbol===symbol).inventory.cards.double,2);assert.equal(after.players.find(p=>p.symbol!==symbol).inventory.cards.double,3);assert.deepEqual(after.players.map(p=>p.score),before.players.map(p=>p.score));
-   await pulse(page.locator('.arena>.player-feedback-row [data-used-tool="double"]'));await geometry('.arena>.player-feedback-row');
+   await pulse(page.locator('.turn-feedback-bar>.player-feedback-row [data-used-tool="double"]'));await geometry('.turn-feedback-bar>.player-feedback-row');
    await page.locator('[data-action="map"]').click();await geometry('.world-map .player-feedback-row');await pulse(page.locator('.world-map .player-feedback-row .practice-banner'));assert.deepEqual(await read(),after);
    await page.locator('[data-action="close-map"]').click();await page.locator('[data-action="pause"]').click();assert.equal(await page.locator('.paused-minimap .inventory-pending-effect').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).animationName==='none')),true);
   }
