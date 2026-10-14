@@ -21,6 +21,7 @@ try{for(const [name,engine] of Object.entries({chromium,webkit,firefox}).filter(
  try{
   const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'}),errors=[],requests=[];
   context.on('request',r=>{if(new URL(r.url()).hostname.endsWith('.supabase.co'))requests.push(r.url());});await context.route('**/*.supabase.co/**',r=>r.abort());await context.route('**/version.json*',r=>r.fulfill({status:404,body:''}));await context.route('https://fonts.googleapis.com/**',r=>r.abort());await context.route('https://fonts.gstatic.com/**',r=>r.abort());
+  await context.addInitScript(()=>{window.r71CardAnimations=[];const animate=Element.prototype.animate;Element.prototype.animate=function(frames,options){const a=animate.call(this,frames,options);if(this.dataset?.usedTool)window.r71CardAnimations.push({node:this,player:this.dataset.usedPlayer,tool:this.dataset.usedTool,frames,options});return a;};});
   page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
   const load=async r=>{await page.goto(origin);await page.evaluate(r=>{localStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([r]));localStorage.setItem('hash3_local',JSON.stringify({id:r.id}));sessionStorage.setItem('hash3_restore_local','1');},r);await page.reload();await page.locator(r.status==='paused'?'.paused-minimap .inspection-canvas':'.game .viewport').waitFor();await frame(page);};
@@ -51,13 +52,13 @@ try{for(const [name,engine] of Object.entries({chromium,webkit,firefox}).filter(
   await page.setViewportSize({width:390,height:844});const use=fixture();use.players.forEach(p=>p.inventory.comboPending=0);await load(use);const before=await read();
   await page.locator('.board-inventory-status [data-tool="double"]').click();
   const used=page.locator('.turn-used-cards [data-used-tool="double"][data-used-player="local-x"]');await used.waitFor();
-  const light=await used.evaluate(el=>el.getAnimations().map(a=>({duration:a.effect.getTiming().duration,iterations:a.effect.getTiming().iterations,frames:a.effect.getKeyframes()})));
-  assert.ok(light.some(a=>a.duration===650&&a.iterations===3&&a.frames.some(f=>f.boxShadow?.includes('0, 229, 255'))),JSON.stringify(light));
-  assert.equal(await page.locator('.turn-used-cards [data-used-player="local-o"]').evaluateAll(nodes=>nodes.reduce((n,e)=>n+e.getAnimations().length,0)),0,'Do not animate the rival history for our use');
+  const light=await used.evaluate(el=>window.r71CardAnimations.filter(a=>a.node===el).map(a=>({duration:a.options.duration,iterations:a.options.iterations,delay:a.options.delay,frames:a.frames})));
+  assert.ok(light.some(a=>a.duration===650&&a.iterations===3&&a.frames.some(f=>f.boxShadow?.includes('#00e5ff88'))),JSON.stringify(light));
+  assert.equal(await page.evaluate(()=>window.r71CardAnimations.filter(a=>a.player==='local-o').length),0,'Do not animate the rival history for our use');
   const after=await read();assert.equal(after.players[0].inventory.cards.double,before.players[0].inventory.cards.double-1);assert.deepEqual(after.players[1].inventory,before.players[1].inventory);assert.deepEqual(after.territoryEvents,before.territoryEvents);assert.deepEqual(after.players.map(p=>p.score),before.players.map(p=>p.score));
   await page.locator('[data-action="pause"]').click();assert.equal(await page.locator('.paused-minimap .territory-rows [data-ecology-kind="ufo"]').evaluate(e=>getComputedStyle(e).animationName),'none');
   await page.emulateMedia({reducedMotion:'reduce'});await load(fixture());assert.equal(await page.locator('.territory-zone>.turn-warnings [data-kind="ufo"]').evaluate(e=>getComputedStyle(e).animationName),'none');
-  await page.locator('.board-inventory-status [data-tool="double"]').click();assert.equal(await page.locator('.turn-used-cards [data-used-player="local-x"]').evaluateAll(nodes=>nodes.reduce((n,e)=>n+e.getAnimations().length,0)),0);
+  await page.locator('.board-inventory-status [data-tool="double"]').click();assert.equal(await page.evaluate(()=>window.r71CardAnimations.length),0);
   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);await context.close();results.push({name,passed:true});console.log('PASS equal arrows / X-O counters / automatic imminent light / accepted card use / no history replay: '+name);
  }catch(error){if(page)await page.screenshot({path:path.join(output,`failure-r71-${name}.png`)}).catch(()=>{});throw error;}finally{await browser.close();}
 }}finally{await fs.writeFile(path.join(output,'feedback-r71-results.json'),JSON.stringify(results));await new Promise(r=>server.httpServer.close(r));}
