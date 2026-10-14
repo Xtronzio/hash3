@@ -66,7 +66,7 @@ export function inventoryDockMarkup(game,playerId,{icon='',open=false,refill=nul
   const played=game.players.find(p=>p.id===u.player),tool=practiceTools.find(t=>t.id===u.tool);
   const team=played?.symbol==='O'?'o':'x',symbol=played?.symbol||'?';
   const label=symbol+' usó '+tool.label;
-  return {symbol,tool:u.tool,markup:'<span class="dock-used-card '+team+'" data-used-tool="'+u.tool+'" data-used-player="'+u.player+'" title="'+label+'" aria-label="'+label+'"><b>'+symbol+'</b>'+toolIcon(u.tool)+'</span>'};
+  return {symbol,tool:u.tool,markup:'<span class="dock-used-card '+team+(ongoing(u.tool,u.player)?' is-feedback-active':'')+'" data-used-tool="'+u.tool+'" data-used-player="'+u.player+'" title="'+label+'" aria-label="'+label+'"><b>'+symbol+'</b>'+toolIcon(u.tool)+'</span>'};
  });
  const side=symbol=>{
   const selectedHere=card&&team===symbol.toLowerCase();
