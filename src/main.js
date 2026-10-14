@@ -8,7 +8,7 @@ import {nuclearBlast,nuclearContext,nuclearIcon} from './nuclear-tool.js';
 import './inventory-personalization.css';
 import {createMachineRunner} from './machine-runner.js';
 import {stampCellPresentation,cellGlyphs,glyphMarkup,glyphLabel} from './cell-presentation.js';
-import {animateInventoryAction} from './inventory-animation.js';
+import {animateInventoryAction,resumeInventoryAnimations} from './inventory-animation.js';
 import {pausedScoreMarkup} from './paused-ui.js';
 import {bindRefillHold,floatingRefillMarkup,refillSelectorMarkup,canOpenRefill,REFILL_HOLD_MS} from './floating-refill.js';
 import {startingInventoryMarkup} from './starting-inventory.js';
@@ -77,6 +77,7 @@ import './zones-r66.css';
 import './alignment-r67.css';
 import './saved-game-settings.css';
 import './drawers-r69.css';
+import './control-glow-r71.css';
 import {pausedInventorySummaryMarkup} from './paused-inventory.js';
 import {overviewMarkup,overviewModel} from './map-overview.js';
 import {prepareMapRendering,mapWindowMarkup,MAP_SYMBOL_SCALE} from './map-render.js';
@@ -236,6 +237,7 @@ function accept(next) {
   scheduleMachine();
 }
 function render() {
+ if(room?.status!=='playing')resumeInventoryAnimations(app,room);
  const stripSelectors=['.board-inventory-status .inventory-shortcuts','.board-territory-status .custom-band-content','.world-map .inventory-shortcuts','.world-map .custom-territory-band .custom-band-content','.inspection-panel .inventory-shortcuts','.inspection-panel .custom-territory-band .custom-band-content'];
  const stripScroll=stripSelectors.map(selector=>({selector,left:document.querySelector(selector)?.scrollLeft||0}));
  const restoreStrips=()=>{for(const {selector,left}of stripScroll){const el=document.querySelector(selector);if(el)el.scrollLeft=left;}};
@@ -300,6 +302,7 @@ function render() {
   disposeMap=bindMap({room,layout,zoom,target,own,onNavigate:scheduleBoard,mapState:worldMapState,changeZoom:changeMapZoom,onClose:()=>{worldMapOpen=false;},interacting:value=>{mapInteracting=value;if(!value&&mapDeferred){mapDeferred=false;setTimeout(()=>render(),0);}}});
   const mapCleanup=disposeMap,floatingCleanup=bindFloatingImmunity(document.querySelector('.map-wrap'),room.id),favoriteCleanup=bindFavoriteSurfaces(['.map-wrap','.world-map'],preferences);disposeMap=()=>{mapCleanup?.();floatingCleanup();favoriteCleanup();};
   renderRefill();renderInventoryEditor();
+  resumeInventoryAnimations(app,room);
   if(busy)document.querySelectorAll('[data-action="move"],[data-action="select-expansion"],[data-action="confirm-expansion"]').forEach(b=>b.disabled=true);
 }
 let layout={minX:0,minY:0,size:56,padding:100};

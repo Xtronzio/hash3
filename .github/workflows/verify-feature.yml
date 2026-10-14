@@ -43,6 +43,7 @@ on:
       - release/local-tornado-catalog-r68
       - release/local-drawers-r69
       - release/local-controls-r70
+      - release/local-feedback-r71
   workflow_dispatch:
 permissions:
   contents: write
@@ -68,6 +69,7 @@ jobs:
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
       - run: node scripts/verify-drawers-r69.mjs
+      - run: node scripts/verify-feedback-r71.mjs
       - run: node scripts/verify-tornado-catalog-r68.mjs
       - run: node scripts/verify-alignment-r67.mjs
       - run: node scripts/verify-zones-impact-r66.mjs
