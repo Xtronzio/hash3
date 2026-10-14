@@ -76,6 +76,7 @@ import './territory-presentation.css';
 import './zones-r66.css';
 import './alignment-r67.css';
 import './saved-game-settings.css';
+import {playerGameSettingsMarkup} from './saved-game-settings.js';
 import './drawers-r69.css';
 import './control-glow-r71.css';
 import {pausedInventorySummaryMarkup} from './paused-inventory.js';
@@ -272,7 +273,7 @@ function render() {
   const mapNavigation=`<button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">${navIcon('fit')}</button>${jumpButtons}${iconButton('close-map','restore','Volver al tablero')}`;
   const mapInventoryStatus=inventoryBandMarkup(inventoryContent,room,uid,preferences,{access:worldMapOpen?inventoryAccess:'',navigation:mapNavigation});
   const usedCards=isLocal()?inventoryDockMarkup(room,uid,{section:'uses',uses:displayedTurnCards(room),choice:inventoryCardChoice?{...inventoryCardChoice,now:performance.now(),prepared:!inventoryCardChoice.applied}:null}):'';
-  const rankRows=players=>players.map(p=>{const index=scoreList.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}<small class="rank-combo">Combo máx. ${comboLabel(p)}</small><small class="rank-rodent">${escape(rodentLabel(room,p.id))}</small></span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span></li>`;}).join('');
+  const rankRows=players=>players.map(p=>{const index=scoreList.findIndex(t=>t.id===p.id);return `<li class="rank-row ${p.id===uid?'me '+own.symbol.toLowerCase():''} ${p.id===target?.id?'target-row':''}"><span class="rank-position ${['gold','silver','bronze'][index]||''}">${index+1}</span><span class="rank-name ${p.id===target?.id?'blue':''}">${escape(p.name)}${p.id===uid?' · tú':p.id===target?.id?' · superior':''}<small class="rank-combo">Combo máx. ${comboLabel(p)}</small><small class="rank-rodent">${escape(rodentLabel(room,p.id))}</small></span><span class="rank-score mono">${p.score}</span><span class="rank-max">${maxLabel(p)} <small>${p.max?.change>0?'↑':p.max?.change<0?'↓':''}</small></span>${playerGameSettingsMarkup(room,p.id)}</li>`;}).join('');
   const title=canExpand?'Estás ampliando':expanding?'Tu rival está ampliando':ready?'Tu turno':'Turno de tu rival';
   const tools=isLocal()?practiceTurn(room,uid):null,nextSymbol=room.inventoryEffects?.forced?.find(e=>e.player===uid)?.symbol||own.symbol;
   const turnSymbol=room.inventoryEffects?.forced?.find(e=>e.player===pair[pair.turn.toLowerCase()])?.symbol||pair.turn;
@@ -697,7 +698,7 @@ function renderPaused(){
  const own=ownPlayer();
  const mode=isLocal()?(room.mode==='solo'?'VS máquina':'Sin conexión'):room.kind==='duel'?'Duelo':'Sala libre';
  const list=gameRank();
- const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small></div></li>`).join('')}</ol></section>`;
+ const ranking=`<section class="paused-ranking" aria-label="Ranking de la partida pausada"><h2 class="heading">Marcador</h2><ol>${list.map((p,i)=>`<li class="${p.id===uid?'me '+own.symbol.toLowerCase():''}"><b class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</b><div><strong>${escape(p.name)}${p.id===uid?' · tú':''}</strong><span>${p.score.toLocaleString('es-ES')} puntos · #MAX ${maxLabel(p)}</span><div class="rank-detail-line"><small>Combo máx. ${comboLabel(p)} · ${escape(rodentLabel(room,p.id))}</small>${playerGameSettingsMarkup(room,p.id)}</div></div></li>`).join('')}</ol></section>`;
  const inspection=savedMapModel(room,own);
  const inspectButton=(action,kind,label)=>`<button data-inspect-action="${action}" aria-label="${label}" title="${label}">${navIcon(kind)}</button>`;
  const mapControls=inspection?`<nav class="inspection-controls inspection-toolbar" aria-label="Controles del mapa guardado"><span class="inspection-metadata">${inspection.terrain.length.toLocaleString('es-ES')} casillas · ${inspection.bounds.width-4} × ${inspection.bounds.height-4}</span><div class="inspection-tools">${pausedInventorySummaryMarkup(room,uid,{interactive:true,open:inventoryOpen&&inventorySection==='player'})}<div class="inspection-map-actions">${inspectButton('fit','fit','Ver mapa completo')}${targetNavigation(room,{inspection:true,playerId:uid})}${pauseMapOpen?iconButton('close-pause-map','restore','Salir de pantalla completa'):iconButton('expand-pause-map','fullscreen','Ampliar mapa a pantalla completa')}</div></div></nav>`:'';

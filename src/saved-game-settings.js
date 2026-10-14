@@ -2,6 +2,7 @@ import {backpackIcon} from './backpack-icon.js';
 import {rodentIcon} from './rodents.js';
 import {territoryIcons} from './territory-tools.js';
 import {machineLevels,machineLevelLabel} from './machine.js';
+import {inventoryEnabled} from './inventory-enabled.js';
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const svg=path=>`<svg viewBox="0 0 32 32" aria-hidden="true">${path}</svg>`;
@@ -19,8 +20,17 @@ export function savedGameSettings(game){
  return settings;
 }
 export const savedSettingsDescription=game=>savedGameSettings(game).map(s=>s.label+(s.enabled==null?'':': '+(s.enabled?'activado':'desactivado'))).join(' · ');
-export function savedGameSettingsMarkup(game){
- return savedGameSettings(game).map(s=>{
+export function playerGameSettingsMarkup(game,playerId){
+ const player=game.players?.find(p=>p.id===playerId);if(!player||!['solo','local'].includes(game.mode))return '';
+ const machine=game.mode==='solo'&&player.id!==(game.humanId||game.pairs?.[0]?.x);
+ const settings=savedGameSettings(game).filter(s=>!s.id.includes('inventory')&&(s.id!=='difficulty'||machine));
+ settings.unshift({id:machine?'machine-inventory':'player-inventory',label:`Inventario ${player.symbol} · ${player.name}`,enabled:inventoryEnabled(game,player.id),icon:backpackIcon(),owner:machine?'robot':'human',color:'cyan'});
+ settings.push({id:'clock',label:'Reloj de turno (33 s)',enabled:game.timeMode!=='untimed',icon:svg('<circle cx="16" cy="16" r="12"/><path d="M16 7v9l6 4"/>'),color:'white'});
+ return `<span class="player-game-settings" data-settings-player="${esc(player.id)}" role="group" aria-label="Configuración de ${esc(player.name)}">${settingsMarkup(settings)}</span>`;
+}
+export function savedGameSettingsMarkup(game){return settingsMarkup(savedGameSettings(game));}
+function settingsMarkup(settings){
+ return settings.map(s=>{
   const label=s.label+(s.enabled==null?'':': '+(s.enabled?'activado':'desactivado'));
   return `<span class="saved-game-setting ${s.color} ${s.enabled===false?'is-off':''}" data-setting="${s.id}" ${s.enabled==null?`data-value="${s.value}"`:`data-enabled="${s.enabled}"`} title="${esc(label)}" role="img" aria-label="${esc(label)}"><span class="saved-game-setting-icon">${s.icon}</span>${s.owner?`<svg class="saved-game-setting-owner" viewBox="0 0 24 24" aria-hidden="true">${owners[s.owner]}</svg>`:''}${s.enabled===false?'<svg class="saved-game-setting-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21 21 3"/></svg>':''}</span>`;
  }).join('');

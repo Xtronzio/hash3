@@ -11,3 +11,13 @@
 .saved-game-setting.is-off>.saved-game-setting-icon{opacity:.45}
 .saved-game .saved-game-setting-off{position:absolute;inset:0;width:24px;height:24px;stroke:var(--red);stroke-width:2}
 @media(max-width:360px){.saved-game .saved-game-meta{gap:4px}}
+/* Reuse the Hall setting icons in each participant's expanded score row. */
+.rank-detail-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.player-game-settings{display:inline-flex!important;flex-wrap:wrap;align-items:center;gap:4px;max-width:100%;margin:0!important;vertical-align:middle}
+.player-game-settings .saved-game-setting{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;margin:0;color:var(--text,#fff)}
+.player-game-settings .saved-game-setting.cyan{color:#00e5ff}.player-game-settings .saved-game-setting.yellow{color:var(--yellow)}
+.player-game-settings .saved-game-setting-icon{display:flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;color:inherit}
+.player-game-settings .saved-game-setting-owner{position:absolute;right:-2px;bottom:-1px;width:12px;height:12px;padding:1px;border-radius:3px;background:#101216;stroke:currentColor}
+.player-game-settings .saved-game-setting-off{position:absolute;inset:0;width:24px;height:24px;stroke:var(--red);stroke-width:2}
+.game .score-panel .rank-row>.player-game-settings{grid-column:2/-1;overflow:visible}
+.paused-ranking:has(.player-game-settings) ol,.game .score-panel .rank-extra:has(.player-game-settings){max-height:none;overflow:visible}
