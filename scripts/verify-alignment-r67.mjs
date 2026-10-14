@@ -37,7 +37,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit,firefox}).filter((
     const root=q(status==='paused'?'.paused-minimap':'.game'),toolbar=q(status==='paused'?'.inspection-tools':'.board-inventory-status .band-toolbar');
     const bags=status==='paused'?[...toolbar.querySelectorAll('[data-paused-inventory]')]:[toolbar.querySelector('.inventory-dock-button')];
     const zoom=toolbar.querySelector(status==='paused'?'[data-inspect-action="fit"]':'[data-action="fit-board"]');
-    const territory=[...root.querySelectorAll('.custom-territory-band>.band-actions>button')].filter(el=>el.checkVisibility()).map(box);
+    const territory=[...root.querySelectorAll('.custom-territory-band .band-actions button')].filter(el=>el.checkVisibility()).map(box);
     const controls=[...toolbar.querySelectorAll('button,summary')].filter(el=>el.checkVisibility()).map(box);
     const overflow=[...toolbar.querySelectorAll('.inventory-badge,.inventory-pending')].some(el=>{const child=box(el),parent=box(el.closest('button'));return child.x<parent.x||child.right>parent.right||child.y<parent.y||child.bottom>parent.bottom;});
     const rows=[...root.querySelectorAll('.custom-band-content .inventory-icon-row')].filter(el=>el.checkVisibility()).map(row=>[...row.children].map(box));
@@ -48,7 +48,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit,firefox}).filter((
    for(const bag of geometry.bags)assert.ok(Math.abs(bag.center-geometry.zoom.center)<1,JSON.stringify({size,status,folded,geometry}));
    for(const control of geometry.controls){assert.ok(control.width>=44&&control.height>=44,JSON.stringify({size,status,folded,control}));assert.ok(control.x>=0&&control.right<=size.width+1);}
    assert.ok(geometry.canvas.height>=40,JSON.stringify({size,status,folded,geometry}));
-   if(size.height>450)for(const control of geometry.territory){assert.equal(control.height,44);assert.equal(control.y,geometry.territory[0].y);}
+   for(const control of geometry.territory){assert.equal(control.height,44);assert.equal(control.width,44);}
    if(!folded)for(const row of geometry.rows)for(const card of row){assert.equal(card.width,44);assert.equal(card.height,44,JSON.stringify({size,status,folded,geometry}));}
    assert.deepEqual(await read(),before);await page.screenshot({path:path.join(output,`alignment-r67-${name}-${size.width}-${status}-${folded?'folded':'open'}.png`)});
   }

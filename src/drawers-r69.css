@@ -1,0 +1,27 @@
+/* Two independent folds: cards vertically, auxiliary accesses to the left. */
+.custom-inventory-band.has-drawer,.custom-territory-band.has-drawer{display:flex;flex-direction:column;align-items:stretch;width:100%;height:auto;min-width:0}
+.has-drawer .band-body{display:flex;align-items:flex-start;gap:4px;min-width:0;width:100%}
+.has-drawer .band-body>.band-actions{display:flex;flex-direction:row;gap:4px;flex:none;align-items:flex-start}
+.has-drawer .band-main-controls,.has-drawer .band-auxiliary{display:flex;flex-direction:column;gap:4px;flex:none}
+.has-drawer .band-auxiliary[hidden]{display:none!important}
+.has-drawer .band-body .band-actions button{display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:9px;color:inherit;border:1px solid currentColor;border-radius:7px;background:#101216;touch-action:manipulation}
+.has-drawer .band-body .band-actions .band-drawer-toggle{border-color:transparent;background:transparent;padding:13px}
+.has-drawer .band-drawer-toggle svg{width:16px;height:16px;transform:rotate(180deg)}
+.has-drawer.is-drawer-collapsed .band-drawer-toggle svg{transform:none}
+.has-drawer .band-body>.custom-band-content{width:auto;flex:1;min-width:0;max-height:none}
+.has-drawer.is-collapsed .band-main-controls,.has-drawer.is-collapsed .band-auxiliary{flex-direction:row}
+.has-drawer.is-collapsed .band-body{height:44px}
+.has-drawer .band-toolbar>.inventory-dock{margin-right:auto}
+.has-drawer .inventory-dock-icon>svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-height:450px) and (orientation:landscape){
+ #app>.game .has-drawer .band-main-controls,#app>.game .has-drawer .band-auxiliary{flex-direction:row}
+ #app>.game .has-drawer .band-body .custom-band-content{max-height:48px;overflow:auto}
+ #app .inspection-panel>.has-drawer{align-self:stretch;width:100%;min-height:0;overflow:hidden}
+ #app .inspection-panel>.has-drawer .band-body{flex:1;min-height:0;height:auto}
+ #app .inspection-panel .has-drawer .band-body>.custom-band-content{height:100%;overflow:auto}
+ #app .inspection-panel .has-drawer.is-collapsed .band-body{height:100%}
+ #app .inspection-panel .has-drawer.is-collapsed .band-main-controls{flex-direction:column}
+ #app .inspection-panel .has-drawer.is-collapsed .band-auxiliary{flex-direction:column}
+ #app .inspection-panel:has(>.custom-inventory-band.is-collapsed:not(.is-drawer-collapsed)){--paused-inventory-column:92px}
+ #app .inspection-panel:has(>.custom-territory-band.is-collapsed:not(.is-drawer-collapsed)){--paused-territory-column:92px}
+}

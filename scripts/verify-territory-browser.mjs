@@ -44,7 +44,7 @@ function fixture(size,kind='invader-colony'){
  return r;
 }
 async function load(context,r){
- r=structuredClone(r);for(const e of [...r.territoryEvents||[],...r.works||[]]){e.turnsRemaining??=3;delete e.nextAt;delete e.remainingMs;}
+ r=structuredClone(r);r.inventoryPreferences=Object.fromEntries(r.players.map(p=>[p.id,{...r.inventoryPreferences?.[p.id],inventoryDrawerCollapsed:false,territoryDrawerCollapsed:false}]));for(const e of [...r.territoryEvents||[],...r.works||[]]){e.turnsRemaining??=3;delete e.nextAt;delete e.remainingMs;}
  const page=await context.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  // No real identity, room or service is accessed by these local fixtures.

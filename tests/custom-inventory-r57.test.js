@@ -17,7 +17,7 @@ test('Preferences normalize a complete unique catalogue and balance visible rows
  const reordered=reorderInventory(preferences.order,'sapper','bomb');assert.equal(reordered[0],'sapper');assert.deepEqual(new Set(reordered),new Set(INVENTORY_ORDER));assert.equal(preferences.order[0],'bomb');
 });
 test('Customization and fold state persist per colonist, preserve gameplay exactly and ride with transfers',()=>{
- const store=storage(),r=fresh(),before=structuredClone(r),preferences=normalizeInventoryPreferences({order:['nuclear','hint'],floating:['nuclear','hint'],positions:{hint:{x:.2,y:.7}},inventoryCollapsed:true,territoryCollapsed:true});
+ const store=storage(),r=fresh(),before=structuredClone(r),preferences=normalizeInventoryPreferences({order:['nuclear','hint'],floating:['nuclear','hint'],positions:{hint:{x:.2,y:.7}},inventoryCollapsed:true,territoryCollapsed:true,inventoryDrawerCollapsed:false,territoryDrawerCollapsed:false});
  const updated=storeInventoryPreferences(r,'local-x',preferences,store);assert.deepEqual(r,before);
  const gameData=structuredClone(updated);delete gameData.inventoryPreferences;assert.deepEqual(gameData,before);
  assert.deepEqual(inventoryPreferences(updated,'local-x',store),preferences);assert.deepEqual(inventoryPreferences(updated,'local-o',store),normalizeInventoryPreferences());

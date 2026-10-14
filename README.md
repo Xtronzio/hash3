@@ -477,3 +477,9 @@ Tornado territorial anuncia tres zonas completas3×3 sin solapamiento y mezcla c
 Todas las mochilas usan el mismo dibujo sin X/O dentro: cian para jugador y amarillo para territorio. Mis partidas muestra iconos de inventario propio/rival, fauna, fenómenos, figuras y dificultad; una diagonal roja identifica lo desactivado. Puntos, reservas, preferencias y ancladas conservados.
 
 Pruebas: `npm test` y `node scripts/verify-tornado-catalog-r68.mjs` en los tres motores emulados, además del pipeline y QA de alineación anteriores. Solo local/VS máquina.
+
+## R0.21.69 · Cajones laterales
+
+Las cartas y los accesos auxiliares se pliegan por separado. La flecha horizontal muestra mochila/calendario del territorio o mochila/personalización del jugador. Recogido, el carril ocupa44px junto a las dos filas de cartas; el contador sigue junto al zoom. Ambos estados se recuerdan por colono y acompañan sus preferencias al trasladar partidas.
+
+Pausa y mapas comparten controles; la distribución horizontal corta conserva espacio de juego. QA: `node scripts/verify-drawers-r69.mjs` en Chromium/Firefox/WebKit emulados, además del pipeline existente. Puntos, inventarios y reglas23 se conservan.

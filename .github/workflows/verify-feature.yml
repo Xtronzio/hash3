@@ -41,6 +41,7 @@ on:
       - release/local-zones-impact-r66
       - release/local-alignment-r67
       - release/local-tornado-catalog-r68
+      - release/local-drawers-r69
   workflow_dispatch:
 permissions:
   contents: write
@@ -65,6 +66,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-drawers-r69.mjs
       - run: node scripts/verify-tornado-catalog-r68.mjs
       - run: node scripts/verify-alignment-r67.mjs
       - run: node scripts/verify-zones-impact-r66.mjs

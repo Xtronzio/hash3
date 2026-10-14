@@ -16,7 +16,7 @@ try{
    context.on('request',r=>{if(new URL(r.url()).hostname.endsWith('.supabase.co'))requests.push(r.url());});
    await context.route('**/*.supabase.co/**',r=>r.abort());await context.route('**/version.json*',r=>r.fulfill({status:404,body:''}));
    const game=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','high','X',true,{faunaEnabled:false,territoryEnabled:false});
-   game.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));game.pairs[0].active={x:3,y:3};game.pairs[0].terrainAnchor={x:0,y:0};
+   game.inventoryPreferences=Object.fromEntries(game.players.map(p=>[p.id,{inventoryDrawerCollapsed:false,territoryDrawerCollapsed:false}]));game.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));game.pairs[0].active={x:3,y:3};game.pairs[0].terrainAnchor={x:0,y:0};
    game.cells=game.terrain.filter(c=>(c.x+c.y)%3!==0).map((c,i)=>({...c,id:`qa:${c.x}:${c.y}`,symbol:['X','O','*','#'][i%4],owner:i%4===0?'local-x':i%4===1?'local-o':null}));
    for(const p of game.players)for(const t of Object.keys(p.inventory.cards))p.inventory.cards[t]=0;
    Object.assign(game.players[0].inventory.cards,{double:1,hint:1,nuclear:1,sapper:1});game.players[0].score=12345;game.players[0].inventory.immunity.cards['immunity-1']=2;
