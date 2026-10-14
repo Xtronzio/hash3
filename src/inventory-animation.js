@@ -20,8 +20,10 @@ export function animateInventoryAction(root,previous,next){
  // Help and multi-card actions may spend stock without replacing lastEvent.
  // Read only the two small inventories, never the board or saved history.
  for(const player of next.players){
-  const before=previous.players.find(p=>p.id===player.id)?.inventory?.cards||{};
+  const old=previous.players.find(p=>p.id===player.id)?.inventory,before=old?.cards||{};
   for(const [tool,count] of Object.entries(player.inventory?.cards||{}))if(count<(before[tool]||0))spent.set(player.id+'|'+tool,true);
+  const usage=player.inventory?.turnUse,usedBefore=usage?.turn===old?.turnUse?.turn?old?.turnUse?.tools||[]:[];
+  for(const tool of usage?.tools?.slice(usedBefore.length)||[])spent.set(player.id+'|'+tool,true);
  }
  if(event?.id!==previous.lastEvent?.id&&event?.tool&&['inventory','move'].includes(event.kind))spent.set((event.actor||event.player)+'|'+event.tool,true);
  if(!spent.size)return;

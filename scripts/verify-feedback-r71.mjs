@@ -24,7 +24,7 @@ try{for(const [name,engine] of Object.entries({chromium,webkit,firefox}).filter(
   page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
   const load=async r=>{await page.goto(origin);await page.evaluate(r=>{localStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([r]));localStorage.setItem('hash3_local',JSON.stringify({id:r.id}));sessionStorage.setItem('hash3_restore_local','1');},r);await page.reload();await page.locator(r.status==='paused'?'.paused-minimap .inspection-canvas':'.game .viewport').waitFor();await frame(page);};
-  for(const size of [{width:320,height:740},{width:390,height:844},{width:428,height:926},{width:740,height:320},{width:1280,height:900},{width:1920,height:1080}])for(const status of ['playing','paused'])for(const symbol of ['X','O']){
+  for(const size of (process.env.HASH3_QA_QUICK?[{width:390,height:844}]:[{width:320,height:740},{width:390,height:844},{width:428,height:926},{width:740,height:320},{width:1280,height:900},{width:1920,height:1080}]))for(const status of ['playing','paused'])for(const symbol of ['X','O']){
    await page.setViewportSize(size);await load(fixture({symbol,status}));const before=await read();
    const scope=status==='paused'?'.paused-minimap':'.game';
    const geometry=await page.locator(scope).evaluate(root=>{
@@ -48,14 +48,14 @@ try{for(const [name,engine] of Object.entries({chromium,webkit,firefox}).filter(
    assert.deepEqual(await read(),before);
    if(size.width===390&&symbol==='X')await page.screenshot({path:path.join(output,`feedback-r71-${name}-${status}.png`)});
   }
-  await page.setViewportSize({width:390,height:844});await load(fixture());const before=await read();
+  await page.setViewportSize({width:390,height:844});const use=fixture();use.players.forEach(p=>p.inventory.comboPending=0);await load(use);const before=await read();
   await page.locator('.board-inventory-status [data-tool="double"]').click();
   const used=page.locator('.turn-used-cards [data-used-tool="double"][data-used-player="local-x"]');await used.waitFor();
   const light=await used.evaluate(el=>el.getAnimations().map(a=>({duration:a.effect.getTiming().duration,iterations:a.effect.getTiming().iterations,frames:a.effect.getKeyframes()})));
   assert.ok(light.some(a=>a.duration===650&&a.iterations===3&&a.frames.some(f=>f.boxShadow?.includes('0, 229, 255'))),JSON.stringify(light));
   assert.equal(await page.locator('.turn-used-cards [data-used-player="local-o"]').evaluateAll(nodes=>nodes.reduce((n,e)=>n+e.getAnimations().length,0)),0,'Do not animate the rival history for our use');
   const after=await read();assert.equal(after.players[0].inventory.cards.double,before.players[0].inventory.cards.double-1);assert.deepEqual(after.players[1].inventory,before.players[1].inventory);assert.deepEqual(after.territoryEvents,before.territoryEvents);assert.deepEqual(after.players.map(p=>p.score),before.players.map(p=>p.score));
-  await page.locator('[data-action="pause"]').click();assert.equal(await page.locator('.paused-minimap [data-ecology-kind="ufo"]').evaluate(e=>getComputedStyle(e).animationName),'none');
+  await page.locator('[data-action="pause"]').click();assert.equal(await page.locator('.paused-minimap .territory-rows [data-ecology-kind="ufo"]').evaluate(e=>getComputedStyle(e).animationName),'none');
   await page.emulateMedia({reducedMotion:'reduce'});await load(fixture());assert.equal(await page.locator('.territory-zone>.turn-warnings [data-kind="ufo"]').evaluate(e=>getComputedStyle(e).animationName),'none');
   await page.locator('.board-inventory-status [data-tool="double"]').click();assert.equal(await page.locator('.turn-used-cards [data-used-player="local-x"]').evaluateAll(nodes=>nodes.reduce((n,e)=>n+e.getAnimations().length,0)),0);
   assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);await context.close();results.push({name,passed:true});console.log('PASS equal arrows / X-O counters / automatic imminent light / accepted card use / no history replay: '+name);
