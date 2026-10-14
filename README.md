@@ -469,3 +469,11 @@ Pruebas: `npm test`, `npm run build:github` y `node scripts/verify-custom-invent
 Mochila, plegado, ajustes y zoom comparten fila sobre el tablero. En pausa, los inventarios X/O están en la fila del zoom; pulsar la mochila propia abre sus cartas. Calendario, mochila y plegado del territorio usan el mismo tamaño de44px. Los contadores y el +1 pendiente conservan espacio al plegar. Bomba comparte el grosor de trazo del catálogo en todas sus superficies.
 
 Cambio de presentación: guardados, puntuaciones, inventarios, preferencias y reglas locales conservados. QA de escritorio, móvil y horizontal: `node scripts/verify-alignment-r67.mjs`, además del pipeline existente; navegadores emulados, sin ensayo físico.
+
+## R0.21.68 · Tres Tornados y ajustes visibles
+
+Tornado territorial anuncia tres zonas completas3×3 sin solapamiento y mezcla cada una de forma independiente. Las figuras nuevas puntúan para X y O. Los avisos ya guardados conservan su geometría; no se repiten eventos ni pagos.
+
+Todas las mochilas usan el mismo dibujo sin X/O dentro: cian para jugador y amarillo para territorio. Mis partidas muestra iconos de inventario propio/rival, fauna, fenómenos, figuras y dificultad; una diagonal roja identifica lo desactivado. Puntos, reservas, preferencias y ancladas conservados.
+
+Pruebas: `npm test` y `node scripts/verify-tornado-catalog-r68.mjs` en los tres motores emulados, además del pipeline y QA de alineación anteriores. Solo local/VS máquina.

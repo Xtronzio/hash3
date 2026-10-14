@@ -1,3 +1,4 @@
+import {backpackIcon} from './backpack-icon.js';
 import {brandMark} from './brand.js';
 import {profileAccessMarkup} from './profile-access-ui.js';
 import {ONLINE_ENABLED,modeAvailable} from './online-availability.js';
@@ -37,12 +38,11 @@ const paths={
   offline:'<path d="M3 10a21 21 0 0 1 22-1M7 15a14 14 0 0 1 13-2M12 20a6 6 0 0 1 5-1M5 28 28 5"/><circle cx="16" cy="26" r="1"/>',
   games:'<path d="M4 9V6h9l3 4h12v18H4V9Z"/>',
   ranking:'<path d="M4 27V16h7v11m0 0V6h9v21m0 0V20h8v7H4"/>',
-  inventory:'<rect x="6" y="8" width="20" height="21" rx="4"/><path d="M11 8V5a5 5 0 0 1 10 0v3M6 16h20m-14 6h8M3 16v8m26-8v8"/>',
   achievements:'<path d="M9 4h14v9a7 7 0 0 1-14 0V4Zm0 3H4v5a6 6 0 0 0 6 6M23 7h5v5a6 6 0 0 1-6 6M16 20v7m-6 1h12"/>',
   play:'<path d="m12 7 14 9-14 9Z" fill="currentColor" stroke="none"/>',
   help:'<circle cx="16" cy="16" r="12"/><path d="M12 12a4 4 0 0 1 8 0c0 3-4 3-4 6m0 5v.1"/>'
 };
-export function hallIcon(name){return `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${paths[name]||paths.profile}</svg>`;}
+export function hallIcon(name){if(name==='inventory')return backpackIcon();return `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${paths[name]||paths.profile}</svg>`;}
 export function hallReturnButton(action,{previous=false}={}){
  const label=previous?'Volver a la pantalla anterior':'Volver al hall';
  return `<button class="text-icon-button navigation-return ${previous?'':'saved-games-home'}" data-action="${action}" aria-label="${label}" title="${label}">${hallIcon(previous?'back':'home')}</button>`;

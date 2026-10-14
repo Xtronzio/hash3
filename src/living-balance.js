@@ -16,7 +16,7 @@ export function livingImpact(room,kind,rule){
  if(kind==='invader-rain')return 3*f;
  if(kind==='invader-colony')return f;
  if(kind==='blackhole')return 9*f;
- if(kind==='tornado')return 9;
+ if(kind==='tornado')return (room.ruleVersion||0)>=23?27:9;
  if(kind==='contagion')return 9;
  const size=rule.basis==='pieces'?room.cells.length:n;
  const rate=rule.effect==='demolish'?.03:rule.effect==='vacate'?.06:.09;

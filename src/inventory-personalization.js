@@ -1,3 +1,4 @@
+import {backpackIcon} from './backpack-icon.js';
 import {navigationIcon} from './navigation-icons.js';
 import {normalizeInventoryPreferences,reorderInventory} from './inventory-layout.js';
 import {toolIcon,inventoryShortcutMarkup} from './inventory.js';
@@ -32,7 +33,7 @@ export function inventoryBandMarkup(content,game,actor,preferences,{access='',na
 }
 export function territoryBandMarkup(content,preferences){
  const folded=preferences.territoryCollapsed,label=(folded?'Desplegar':'Plegar')+' barra del territorio';
- const bag='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l1 13H4L5 8ZM9 8V6a3 3 0 0 1 6 0v2"/></svg>';
+ const bag=backpackIcon();
  return `<div class="custom-territory-band ${folded?'is-collapsed':''}"><nav class="band-actions" aria-label="Inventario y barra del territorio"><button class="band-fold" data-action="toggle-territory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button class="territory-bag" data-action="territory-inventory" aria-label="Inventario del territorio · descripciones" title="Entender los eventos del territorio">${bag}</button><button class="territory-calendar" data-action="events" aria-label="Próximos eventos" title="Próximos eventos" aria-controls="events-panel">${navigationIcon('events')}</button></nav><div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
 }
 export function floatingInventoryMarkup(game,actor,preferences){

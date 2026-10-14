@@ -84,7 +84,24 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
   return groups.length===3?{region:groups.flat(),groups}:[];
  }
 
- if(kind==='tornado')return wholeSquare(room,3,random,now);
+ if(kind==='tornado'){
+  if(!localLiving(room)||(room.ruleVersion||0)<23)return wholeSquare(room,3,random,now);
+  // Three complete independent squares, prepared only at announcement.
+  const pool=allowed(room,now),eligible=new Set(pool.map(c=>key(c.x,c.y))),squares=[],phases=new Map();
+  for(const p of randomSubset(pool,pool.length,random)){
+   const group=Array.from({length:9},(_,i)=>({x:p.x+i%3,y:p.y+Math.floor(i/3)}));
+   if(group.some(c=>!eligible.has(key(c.x,c.y))))continue;
+   const phase=key((p.x%3+3)%3,(p.y%3+3)%3),bucket=phases.get(phase)||[];
+   bucket.push(group);phases.set(phase,bucket);squares.push(group);
+   // Same phase guarantees disjoint squares. Otherwise at most 18 candidates
+   // remain, keeping the exact fallback bounded even on large boards.
+   if(bucket.length===3)return {region:bucket.flat(),groups:bucket};
+  }
+  const disjoint=(a,b)=>Math.abs(a[0].x-b[0].x)>=3||Math.abs(a[0].y-b[0].y)>=3;
+  for(let a=0;a<squares.length;a++)for(let b=a+1;b<squares.length;b++)if(disjoint(squares[a],squares[b]))
+   for(let c=b+1;c<squares.length;c++)if(disjoint(squares[a],squares[c])&&disjoint(squares[b],squares[c])){const groups=[squares[a],squares[b],squares[c]];return {region:groups.flat(),groups};}
+  return [];
+ }
  if(kind==='pandemic'){
   const protectedKeys=immutable(room,now),available=new Set(terrainOf(room).map(c=>key(c.x,c.y)));
   return randomSubset(room.cells.filter(c=>available.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)),count,random).map(c=>({x:c.x,y:c.y}));
@@ -170,7 +187,7 @@ export function applyPlannedEvent(room,event,now=Date.now()){
   room.invasions=(room.invasions||[]).filter(c=>live.has(c.id));
   actions.push(...region.map(c=>({...c,kind:event.kind})));
  }else if(rule.effect==='shuffle'){
-  const groups=event.kind==='tornado-rain'?event.groups||[region]:[region];
+  const groups=['tornado','tornado-rain'].includes(event.kind)?event.groups||[region]:[region];
   for(const group of groups)actions.push(...shuffle(room,group,random,blocked).map(c=>({...c,kind:event.kind})));
  }else if(rule.effect==='blackhole'){
   // Clear the 3×3 core; only shuffle existing surrounding terrain within
