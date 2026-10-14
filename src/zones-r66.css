@@ -9,22 +9,6 @@
 .territory-impact-announcements{display:flex;gap:5px;overflow-x:auto;touch-action:pan-x}
 .territory-impact-announcements:empty{display:none}
 .territory-impact-announcements>button{flex:none;min-height:44px;max-width:min(90vw,420px);padding:5px 8px;border:1px solid var(--yellow);background:#30270e;color:var(--yellow);font-size:12px;line-height:1.25;text-align:left}
-.custom-inventory-band>.band-actions,.custom-territory-band>.band-actions{display:grid;grid-template-columns:44px 40px;grid-template-rows:40px 40px;gap:4px}
-.custom-inventory-band>.band-actions>.inventory-dock,.custom-territory-band>.band-actions>.territory-bag{grid-column:1;grid-row:1/3}
-.custom-territory-band>.band-actions>.band-fold{grid-column:2;grid-row:1}.custom-territory-band>.band-actions>.territory-calendar{grid-column:2;grid-row:2}
-.custom-inventory-band>.band-actions>.band-fold{grid-column:2;grid-row:1}.custom-inventory-band>.band-actions>[data-action="edit-inventory-layout"]{grid-column:2;grid-row:2}
-.custom-inventory-band .inventory-dock{min-width:0;width:44px;max-width:44px;position:relative;display:grid;place-items:center;color:#00e5ff}
-.custom-inventory-band>.band-actions .inventory-dock-button{width:44px;min-width:44px;max-width:44px;height:80px;padding:3px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;background:transparent;color:#00e5ff;border:1px solid currentColor}
-.custom-inventory-band .inventory-badge{position:static;min-width:0;height:auto;border:0;background:transparent;color:#00e5ff;font-size:10px;padding:0}
-.custom-inventory-band .inventory-dock-icon{padding-left:0!important}.custom-inventory-band .inventory-dock-icon>svg{width:28px;height:28px}
-.custom-inventory-band .dock-immunity-active{position:absolute;left:auto;right:-3px;top:auto;bottom:-6px;transform:none;width:14px;height:14px;box-shadow:none;color:#00e5ff}.custom-inventory-band .dock-immunity-active svg{width:12px;height:12px}.custom-inventory-band .dock-immunity-active b{font-size:8px}
-.custom-inventory-band .inventory-pending{font-size:9px}.custom-inventory-band .inventory-refill-toast{position:fixed;bottom:108px;z-index:20}
-.custom-territory-band>.band-actions>button,.custom-inventory-band>.band-actions>button{width:40px;height:40px;min-height:40px;padding:8px;color:inherit;border:1px solid currentColor;background:#101216;display:grid;place-items:center;border-radius:7px}
-.custom-territory-band>.band-actions>.territory-bag{height:84px;width:44px}
-.custom-inventory-band.is-collapsed,.custom-territory-band.is-collapsed{height:44px}
-.custom-inventory-band.is-collapsed>.band-actions,.custom-territory-band.is-collapsed>.band-actions{display:flex;align-items:center;flex-direction:row}
-.custom-inventory-band.is-collapsed .inventory-dock-button{height:40px;flex-direction:row;width:auto;max-width:none;gap:3px}.custom-inventory-band.is-collapsed .inventory-dock{width:auto;max-width:none}
-.custom-territory-band.is-collapsed>.band-actions>.territory-bag{height:40px}
 .game .game-bottom>[data-action="go-hall"]{margin-left:auto}
 .impact-footprint{position:absolute;pointer-events:none;z-index:9;box-sizing:border-box;border:2px dashed var(--yellow);background:repeating-linear-gradient(135deg,#ffd34e25 0 3px,#ffd34e08 3px 7px);box-shadow:inset 0 0 8px #ffd34e55}
 #inventory-panel:has(.territory-descriptions) .inventory-sheet-heading{color:var(--yellow)}
@@ -35,12 +19,6 @@
    orientation never changes the saved fold or ordering preferences. */
 @media(max-height:450px) and (orientation:landscape){
  #app>.game .board-inventory-status,#app>.game .board-territory-status{padding:1px 0}
- #app>.game .custom-inventory-band>.band-actions,#app>.game .custom-territory-band>.band-actions{display:flex;flex-direction:row;align-items:center;gap:4px}
- #app>.game .custom-inventory-band>.band-actions>button,#app>.game .custom-territory-band>.band-actions>button{width:44px;height:44px;min-height:44px}
- #app>.game .custom-inventory-band>.band-actions .inventory-dock-button{height:44px;padding:1px;gap:1px}
- #app>.game .custom-inventory-band .inventory-badge{font-size:9px;line-height:10px}
- #app>.game .custom-inventory-band .inventory-pending{font-size:8px;line-height:10px}
- #app>.game .custom-inventory-band .inventory-dock-counter{display:flex;gap:2px;align-items:center}
  #app>.game .custom-band-content{max-height:48px;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y}
  #app>.game .territory-zone>.turn-warnings{padding:1px 0}
 }

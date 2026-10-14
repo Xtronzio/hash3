@@ -173,11 +173,11 @@ export function inventoryShortcutMarkup(game,actor,id,{paused=false}={}){
  const label=`${t.label} · ${stock} carta${stock===1?'':'s'}${paused?' · pausado':enabled?' · usar ahora':t.id==='hint-expand'?' · al ampliar o desde 333 figuras':' · no disponible en este turno'}`;
  return `<button class="inventory-effect inventory-shortcut ${stock?'has-stock':'is-inactive'} ${enabled?'is-ready':''} ${player.symbol.toLowerCase()}" data-action="${t.group==='help'?'practice-hint':'practice-tool'}" data-tool="${t.id}" data-player="${actor}" aria-label="${label}" title="${label}" ${enabled?'':'disabled'}>${toolIcon(t.id)}<small>×${stock}</small></button>`;
 }
-export function inventoryStatusMarkup(game,{paused=false,playerId,preferences}={}){
+export function inventoryStatusMarkup(game,{paused=false,playerId,preferences,includeCapacity=true}={}){
  if(!['solo','local'].includes(game.mode))return '';
  const pair=game.pairs[0],actor=playerId|| (game.mode==='solo'?localHumanId(game):pair.pending?pair.expander:pair.turn==='X'?pair.x:pair.o);
  const player=game.players.find(p=>p.id===actor);if(!player)return '';
- const capacity=paused?pausedInventorySummaryMarkup(game,actor):'';
+ const capacity=paused&&includeCapacity?pausedInventorySummaryMarkup(game,actor):'';
  if(!inventoryEnabled(game,actor))return paused?`<div class="inventory-effects-bar">${capacity}</div>`:'';
  const effects=activeInventoryEffects(game),inv=inventoryFor(game,actor),cards=inv.cards;
  // Prepared only when a game snapshot renders; never during pan, zoom or clock ticks.

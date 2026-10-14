@@ -24,10 +24,11 @@ export function storeInventoryPreferences(game,actor,preferences,storage){
  try{storage?.setItem(preferenceKey(game,actor),JSON.stringify(normalized));}catch{}
  return next;
 }
-export function inventoryBandMarkup(content,game,actor,preferences,{access=''}={}){
- if(!inventoryEnabled(game,actor))return content;
+export function inventoryBandMarkup(content,game,actor,preferences,{access='',navigation=''}={}){
+ if(!inventoryEnabled(game,actor))return navigation?`<div class="player-tools"><nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>${content}`:content;
  const folded=preferences.inventoryCollapsed,label=(folded?'Desplegar':'Plegar')+' barra de inventario';
- return `<div class="custom-inventory-band ${folded?'is-collapsed':''}"><nav class="band-actions" aria-label="Personalizar y plegar inventario">${access}<button class="band-fold" data-action="toggle-inventory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y elegir flotantes">${editIcon}</button></nav><div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
+ const actions=`<nav class="band-actions" aria-label="Personalizar y plegar inventario">${access}<button class="band-fold" data-action="toggle-inventory-bar" aria-label="${label}" title="${label}" aria-expanded="${!folded}">${chevron}</button><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y elegir flotantes">${editIcon}</button></nav>`;
+ return `<div class="custom-inventory-band ${navigation?'has-toolbar ':''}${folded?'is-collapsed':''}">${navigation?`<div class="band-toolbar">${actions}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:actions}<div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div>`;
 }
 export function territoryBandMarkup(content,preferences){
  const folded=preferences.territoryCollapsed,label=(folded?'Desplegar':'Plegar')+' barra del territorio';

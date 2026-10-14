@@ -6,7 +6,7 @@ export async function verifyLocalTargets({context,load,output,results}){
  r.players[0].navigationLastMove={x:20,y:20};r.players[1].lastMove={x:15,y:15};r.players[1].score=3;r.watchTargets=[{id:'red',number:1,x:2,y:2},{id:'green',number:2,x:15,y:15},{id:'blue',number:3,x:28,y:28}];
  const {page,errors}=await load(context,r);
  assert.equal(await page.locator('.board-inventory-status [data-tool="target"]').count(),1);
- const menu=page.locator('.map-jumps .target-jump-menu');await menu.locator('summary').tap();
+ const menu=page.locator('.board-inventory-status .target-jump-menu');await menu.locator('summary').tap();
  assert.equal(await menu.locator('[data-target-color]').count(),4);await page.screenshot({path:path.join(output,'target-menu-r42.png')});
  for(const color of ['roja','verde','azul','blanca']){if(!await menu.evaluate(el=>el.open))await menu.locator('summary').tap();await menu.locator(`[data-target-color="${color}"]`).tap();}
  for(const n of [1,2,3]){await menu.locator('summary').tap();await menu.locator(`[data-marker-number="${n}"]`).tap();}

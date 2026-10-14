@@ -103,7 +103,7 @@ try{
    const before=await read();assert.ok(before.nodes>0&&before.nodes<1500,`Unbounded detailed cells: ${before.nodes}`);assert.ok(before.overflow<=1,`Horizontal overflow: ${before.overflow}`);
    await touchDrag(page,-110,-50);const after=await read();assert.notEqual(after.scroll,before.scroll,'Touch drag did not move board');
    await pinch(page);assert.ok((await read()).nodes<1500);
-   await page.locator('.map-jumps .target-jump-menu summary').tap();await page.locator('.map-jumps [data-action="center"]').tap();
+   await page.locator('.board-inventory-status .target-jump-menu summary').tap();await page.locator('.board-inventory-status [data-action="center"]').tap();
    await page.locator('[data-action="map"]').tap();await page.locator('.world-map:not([hidden])').waitFor();
    assert.ok(await page.locator('.world-map .ecology-map-pin').count()<=33);
    await page.screenshot({path:path.join(output,`map-${viewport.width}-${size}.png`)});
@@ -165,7 +165,7 @@ try{
  assert.equal(await visual.locator('.board-overview-map').count(),1);
  for(const symbol of ['X','O','#','*'])assert.ok(await visual.locator(`.board-overview-map [data-symbol="${symbol}"]`).count()>0);
  await visual.screenshot({path:path.join(output,'shared-board-zoom-out.png')});
- await visual.locator('.map-jumps .target-jump-menu summary').tap();await visual.locator('.map-jumps [data-action="center"]').tap();await frame(visual);
+ await visual.locator('.board-inventory-status .target-jump-menu summary').tap();await visual.locator('.board-inventory-status [data-action="center"]').tap();await frame(visual);
  await visual.locator('[data-action="practice-tool"][data-tool="double"]').first().tap();
  await visual.locator('.board .available').first().tap();await visual.locator('.board .available').first().tap();
  await visual.locator('[data-action="practice-tool"][data-tool="rival"]').first().tap();
@@ -425,7 +425,7 @@ try{
  }
  await strategy.locator('.board-inventory-status [data-tool="target"]').tap();
  for(const [x,y]of [[0,0],[1,0],[2,2]])await strategy.locator(`.board [data-action="watch-target-cell"][data-x="${x}"][data-y="${y}"]`).tap();
- assert.equal(await strategy.locator('.map-jumps [data-action="locate-target"]').count(),3);
+ assert.equal(await strategy.locator('.board-inventory-status [data-action="locate-target"]').count(),3);
  await strategy.locator('.board-inventory-status [data-tool="target"]').tap();
  await strategy.locator('.board-inventory-status [data-action="practice-tool"][data-tool="shift"]').tap();
  await strategy.locator('.pending-invasion-bomb[data-bomb-id="movable-r39:0"]').tap();

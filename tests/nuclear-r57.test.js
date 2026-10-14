@@ -42,7 +42,7 @@ test('Nuclear retires defeated invasion focus, breaks hit unprotected barriers a
  applyNuclearTool(r,{x:4,y:4});assert.deepEqual(r.invasions,[]);assert.deepEqual(r.frontiers.map(f=>f.id),['protected','far']);assert.ok(r.terrain.some(c=>c.x===3&&c.y===4));
 });
 test('Bomb outline has no filled silhouette or black cutout and the small red cross leaves its perimeter readable',()=>{
- assert.match(invasionBombIcon,/fill="none"/);assert.doesNotMatch(invasionBombIcon,/fill="currentColor"|#08090b/);assert.match(invasionBombIcon,/stroke-width="5.5"/);assert.doesNotMatch(bombDisarmCross,/#08090b/);assert.match(bombDisarmCross,/var\(--red\)/);
+ assert.match(invasionBombIcon,/fill="none"/);assert.doesNotMatch(invasionBombIcon,/fill="currentColor"|#08090b/);assert.match(invasionBombIcon,/stroke-width="3.6"/);assert.doesNotMatch(bombDisarmCross,/#08090b/);assert.match(bombDisarmCross,/var\(--red\)/);
 });
 test('Nuclear selection stays bounded with 33,333 cells',()=>{
  const r=fixture();r.terrain=Array.from({length:33333},(_,i)=>({x:i%183,y:Math.floor(i/183)}));const blast=nuclearBlast(r,{x:91,y:91});assert.equal(blast.length,33);assert.ok(blast.every(c=>Math.abs(c.x-91)<7&&Math.abs(c.y-91)<7));assert.equal(toolCells(r,'local-x','nuclear').length,33332);
