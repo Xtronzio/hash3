@@ -42,6 +42,7 @@ on:
       - release/local-alignment-r67
       - release/local-tornado-catalog-r68
       - release/local-drawers-r69
+      - release/local-controls-r70
   workflow_dispatch:
 permissions:
   contents: write

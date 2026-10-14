@@ -34,7 +34,7 @@ try{for(const [name,engine]of Object.entries({chromium,webkit,firefox}).filter((
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(await read(),before);await page.screenshot({path:path.join(output,`settings-r68-${name}-${size.width}.png`)});
   }
   await page.setViewportSize({width:390,height:844});await page.locator(`.saved-game[data-id="${games[0].id}"] [data-action="load-game"]`).click();await page.locator('.paused-minimap').waitFor();
-  const pausedBags=page.locator('.paused-minimap [data-icon="backpack"]');assert.equal(await pausedBags.count(),4);assert.ok((await pausedBags.evaluateAll(nodes=>nodes.map(n=>n.innerHTML))).every(v=>v===backpackDOM));
+  const pausedBags=page.locator('.paused-minimap [data-icon="backpack"]');assert.equal(await pausedBags.count(),3);assert.ok((await pausedBags.evaluateAll(nodes=>nodes.map(n=>n.innerHTML))).every(v=>v===backpackDOM));
   assert.equal(await page.locator('.paused-inventory-bag').first().evaluate(el=>getComputedStyle(el).color),'rgb(0, 229, 255)');await page.locator('[data-action="resume"]').click();await page.locator('.game .viewport').waitFor();
   const player=page.locator('.board-inventory-status .inventory-dock-button [data-icon="backpack"]'),territory=page.locator('.board-territory-status [data-icon="backpack"]');assert.equal(await player.innerHTML(),backpackDOM);assert.equal(await territory.innerHTML(),backpackDOM);assert.equal(await territory.evaluate(el=>getComputedStyle(el).color),'rgb(255, 206, 51)');
   await context.close();

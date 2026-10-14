@@ -264,7 +264,7 @@ function render() {
   const preferences=inventoryPreferences(room,uid,localStorage);
   const habitatButtons=territoryBandMarkup(ecologyNavigationMarkup(room,uid),preferences),availabilityPhase=pair.deadline&&Date.parse(pair.deadline)<=Date.now()?'expired':'active';
   const inventoryContent=snapshotMemo(room,'inventory:'+uid+':'+availabilityPhase+':'+JSON.stringify(preferences),()=>inventoryStatusMarkup(room,{playerId:uid,preferences}));
-  const inventoryAccess=isLocal()?inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),section:'bag',open:inventoryOpen&&inventorySection==='player',refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null}):'';
+  const inventoryAccess=isLocal()?`<div class="inventory-counter-pair">${inventoryDockMarkup(room,uid,{icon:navIcon('inventory'),section:'bag',open:inventoryOpen&&inventorySection==='player',refill:inventoryRefillEffect?.until>performance.now()?inventoryRefillEffect:null})||pausedInventorySummaryMarkup(room,uid,{participants:'own'})}${pausedInventorySummaryMarkup(room,uid,{participants:'rival'})}</div>`:'';
   const boardNavigation=`${room.commonWorld?'':iconButton('fit-board','fit','Zoom extensión del tablero')}${jumpButtons}`;
   const inventoryStatus=inventoryBandMarkup(inventoryContent,room,uid,preferences,{access:worldMapOpen?'':inventoryAccess,navigation:boardNavigation});
   const mapNavigation=`<button data-map-action="fit" aria-label="Ver mapa completo" title="Zoom extensión del mapa">${navIcon('fit')}</button>${jumpButtons}${iconButton('close-map','restore','Volver al tablero')}`;
@@ -909,7 +909,7 @@ app.addEventListener('click',async e=>{
   }
   if(action==='events'||action==='map-events'){eventsOpen=!eventsOpen;inventoryOpen=false;render();return;}
   if(action==='close-events'){eventsOpen=false;renderEvents();document.querySelector('[data-action="events"]')?.focus();return;}
-  if(action==='inventory'||action==='map-inventory'||action==='player-inventory'){worldMapOpen=false;eventsOpen=false;inventoryOpen=!(inventoryOpen&&inventorySection==='player');inventorySection='player';inventoryDescriptionsOpen.clear();if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
+  if(action==='inventory'||action==='map-inventory'){worldMapOpen=false;eventsOpen=false;inventoryOpen=!(inventoryOpen&&inventorySection==='player');inventorySection='player';inventoryDescriptionsOpen.clear();if(inventorySelection)inventoryCardChoice=null;inventorySelection=null;render();return;}
   if(action==='close-inventory'){inventoryOpen=false;render();document.querySelector('[data-action="inventory"]')?.focus({preventScroll:true});return;}
   if(action==='practice-hint'){
     const kind=b.dataset.tool||b.dataset.useTool||'hint';

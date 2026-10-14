@@ -5,6 +5,21 @@ import {inventoryStatusMarkup} from '../src/inventory.js';
 import {INVENTORY_ROWS} from '../src/inventory-layout.js';
 import {practiceTools} from '../src/practice-tools.js';
 import {pausedInventorySummaryMarkup} from '../src/paused-inventory.js';
+import {inventoryBandMarkup} from '../src/inventory-personalization.js';
+import {normalizeInventoryPreferences} from '../src/inventory-layout.js';
+
+test('Single participant counters and the restored sliders remove duplicate player backpacks without writing stock',()=>{
+ const r=createLocal('solo','Jorge','Máquina',0,'normal','untimed','medium','O',true,{faunaEnabled:false,territoryEnabled:false}),before=structuredClone(r);
+ for(const side of ['own','rival']){
+  const html=pausedInventorySummaryMarkup(r,r.humanId,{participants:side});
+  assert.equal((html.match(/data-icon="backpack"/g)||[]).length,1);
+  assert.match(html,new RegExp(`data-paused-inventory="${side}"`));
+  assert.doesNotMatch(html,new RegExp(`data-paused-inventory="${side==='own'?'rival':'own'}"`));
+ }
+ const html=inventoryBandMarkup('',r,r.humanId,normalizeInventoryPreferences({inventoryDrawerCollapsed:false}));
+ assert.match(html,/data-icon="inventory-sliders"/);assert.doesNotMatch(html,/data-icon="backpack"/);assert.doesNotMatch(html,/data-action="player-inventory"/);
+ assert.deepEqual(r,before);
+});
 
 test('Both card rows stay balanced with the whole catalogue and one Diana',()=>{
  assert.deepEqual(INVENTORY_ROWS.map(row=>row.length),[13,13]);

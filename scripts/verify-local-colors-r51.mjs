@@ -15,7 +15,10 @@ export async function verifyLocalColors({context,load,output,results}){
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   const color=locator=>locator.evaluate(el=>getComputedStyle(el).color),saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
   const before=await saved();
-  assert.equal(await page.locator('.board-inventory-status .inventory-capacity-strip').count(),0);
+  assert.equal(await page.locator('.board-inventory-status .inventory-counter-pair [data-icon="backpack"]').count(),2);
+  assert.equal(await page.locator('.board-inventory-status .inventory-capacity-strip [data-paused-inventory="own"]').count(),0,'Own bag is already in its interactive dock');
+  assert.equal(await page.locator('.board-inventory-status [data-paused-inventory="rival"]').getAttribute('data-paused-player'),r.players[1].id);
+  assert.equal(await color(page.locator('.board-inventory-status [data-paused-inventory="rival"] .paused-inventory-bag')),cyan);
   assert.equal(await page.locator('.inventory-badge').innerText(),'18/18');assert.equal(await color(page.locator('.inventory-badge')),cyan);
   assert.equal(await page.locator('.inventory-dock-counter .inventory-pending').innerText(),'+1');assert.equal(await color(page.locator('.inventory-dock-counter .inventory-pending')),cyan);
   const badge=await page.locator('.inventory-dock-counter').boundingBox(),bag=await page.locator('.inventory-dock-icon>svg').boundingBox();
@@ -35,5 +38,5 @@ export async function verifyLocalColors({context,load,output,results}){
   await page.screenshot({path:path.join(output,`pausa-colores-r51-${viewport.width}.png`)});
   assert.deepEqual(errors,[]);await page.close();
  }
- results.push({localColorsR51:true,fullPendingCounterCyan:true,bagUnobscured:true,activeImmunityCyan:true,territoryControlsYellow:true,boardWallsRemainPurple:true,noRedundantLiveStrip:true,pausedCapacityVisible:true,threeViewports:true,passed:true});
+ results.push({localColorsR51:true,fullPendingCounterCyan:true,bagUnobscured:true,activeImmunityCyan:true,territoryControlsYellow:true,boardWallsRemainPurple:true,oneLiveBagPerParticipant:true,pausedCapacityVisible:true,threeViewports:true,passed:true});
 }
