@@ -903,7 +903,7 @@ app.addEventListener('click',async e=>{
   if(action==='refill-buy'){
     const playerId=b.dataset.player;if(playerId!==refillPlayer||playerId!==uid||refillPurchases>=3||!canOpenRefill(room,playerId))return;
     const tool=b.dataset.tool,replace=refillExchange?refillReplace:null;if(refillExchange&&!replace)return;
-    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId,replace}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;refillReplace=null;if(refillPurchases>=3)refillPlayer=null;accept(next);notify(`${replace?'Cambio · −1 '+practiceTools.find(t=>t.id===replace).label:'Recarga'} · +1 ${(tool==='immunity'?'Inmunidad total':practiceTools.find(t=>t.id===tool).label)} · −${spent} puntos`,{inventory:true});});
+    await run(async()=>{const before=room.players.find(p=>p.id===playerId).score,next=localCommand(room,'trade',{tool,playerId,replace}),spent=before-next.players.find(p=>p.id===playerId).score;refillPurchases++;refillReplace=null;if(refillPurchases>=3)refillPlayer=null;accept(next);notifyInventory(`${replace?'Cambio · −1 '+practiceTools.find(t=>t.id===replace).label:'Recarga'} · +1 ${(tool==='immunity'?'Inmunidad total':practiceTools.find(t=>t.id===tool).label)} · −${spent} puntos`);});
     (document.querySelector(`.refill-selector [data-tool="${tool}"]:not(:disabled)`)||document.querySelector('[data-action="close-refill"]')||document.querySelector('[data-action="refill-hold"]'))?.focus({preventScroll:true});return;
   }
   if(action==='remove-target'){if(!isLocal())return;await run(async()=>accept(localCommand(room,'remove-target',{id:b.dataset.id})));return;}

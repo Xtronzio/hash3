@@ -30,5 +30,5 @@
 
 /* Turn text calls attention once when its meaning changes, then keeps its frame. */
 .game .compact-turnbar .turn-state{--feedback-color:#f2f3f4;animation:none}
-.player-feedback-notices .player-notice-extra{display:block;font-size:inherit;color:#00e5ff;line-height:inherit}
+.player-feedback-notices .player-notice-extra{display:block;font-size:inherit;font-weight:700;color:#00e5ff;line-height:inherit}
 .player-feedback-notices .inventory-refill-toast{position:static;transform:none;width:auto;max-width:none;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;text-align:inherit;animation:none;pointer-events:auto}
