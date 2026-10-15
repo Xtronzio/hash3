@@ -1,0 +1,85 @@
+{
+  "note": "Synthetic self-avoiding walks, not measured human balance. Frequency 165, single resident, tail9; no lifetime cap.",
+  "results": [
+    {
+      "size": 9,
+      "attempts": 12,
+      "skipped": 9,
+      "rhinoOrientations": 5,
+      "anacondaLength": {
+        "min": 4,
+        "max": 9,
+        "mean": 7
+      },
+      "anacondaTurnsMean": 2.6666666666666665,
+      "body": 9,
+      "baseInterval": 165,
+      "elapsedMs": 10,
+      "historyBytes": 1492
+    },
+    {
+      "size": 99,
+      "attempts": 12,
+      "skipped": 3,
+      "rhinoOrientations": 5,
+      "anacondaLength": {
+        "min": 16,
+        "max": 45,
+        "mean": 27.333333333333332
+      },
+      "anacondaTurnsMean": 9.444444444444445,
+      "body": 9,
+      "baseInterval": 165,
+      "elapsedMs": 23,
+      "historyBytes": 7342
+    },
+    {
+      "size": 333,
+      "attempts": 12,
+      "skipped": 0,
+      "rhinoOrientations": 3,
+      "anacondaLength": {
+        "min": 28,
+        "max": 123,
+        "mean": 70.08333333333333
+      },
+      "anacondaTurnsMean": 23.583333333333332,
+      "body": 9,
+      "baseInterval": 165,
+      "elapsedMs": 59,
+      "historyBytes": 23312
+    },
+    {
+      "size": 999,
+      "attempts": 12,
+      "skipped": 0,
+      "rhinoOrientations": 5,
+      "anacondaLength": {
+        "min": 48,
+        "max": 273,
+        "mean": 127.25
+      },
+      "anacondaTurnsMean": 42.583333333333336,
+      "body": 9,
+      "baseInterval": 165,
+      "elapsedMs": 124,
+      "historyBytes": 44222
+    },
+    {
+      "size": 33333,
+      "attempts": 12,
+      "skipped": 0,
+      "rhinoOrientations": 5,
+      "anacondaLength": {
+        "min": 105,
+        "max": 216,
+        "mean": 152.41666666666666
+      },
+      "anacondaTurnsMean": 51.166666666666664,
+      "body": 9,
+      "baseInterval": 165,
+      "elapsedMs": 3497,
+      "historyBytes": 57316
+    }
+  ]
+}

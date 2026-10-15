@@ -1,3 +1,4 @@
+import {activateFog} from './fog.js';
 import {applyBombWave} from './bomb-wave.js';
 import {clearBriefCells} from './brief-ecology.js';
 // #3_11: geometría y efectos de eventos. Ninguna de estas funciones se
@@ -57,6 +58,15 @@ export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
  const r=eventRule(kind);if(!r)return [];
  const count=impactCount(room,kind);
  if(!count)return [];
+ if(kind==='fog')return localCluster(room,33,random,now);
+ if(kind==='clouds'){
+  const pool=allowed(room,now),known=new Map(pool.map(c=>[key(c.x,c.y),c])),groups=[],forbidden=new Set();
+  for(const seed of randomSubset(pool,pool.length,random)){
+   if(forbidden.has(key(seed.x,seed.y)))continue;const queue=[seed],seen=new Set([key(seed.x,seed.y)]),group=[];
+   for(let i=0;i<queue.length&&group.length<3;i++){const c=queue[i];group.push({x:c.x,y:c.y});for(const [dx,dy]of four){const k=key(c.x+dx,c.y+dy);if(known.has(k)&&!seen.has(k)&&!forbidden.has(k)){seen.add(k);queue.push(known.get(k));}}}
+   if(group.length!==3)continue;groups.push(group);for(const c of group)for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)forbidden.add(key(c.x+dx,c.y+dy));if(groups.length===3)break;
+  }return groups.length===3?{region:groups.flat(),groups}:[];
+ }
  if(localLiving(room)&&['invader-colony','invader-rain'].includes(kind))return planInvasion(room,allowed(room,now),count,kind==='invader-colony',random);
  if(localLiving(room)&&kind==='blackhole'){
   const pool=allowed(room,now),eligible=new Set(pool.map(c=>key(c.x,c.y))),groups=[],used=new Set();
@@ -171,7 +181,8 @@ export function applyPlannedEvent(room,event,now=Date.now()){
  }
  const actions=[],hit=new Set(region.map(c=>key(c.x,c.y)));
  const random=randomGenerator(event.id);
- if(event.kind==='death'){
+ if(rule.effect==='conceal'){activateFog(room,event,region);actions.push(...region.map(c=>({...c,kind:event.kind})));}
+ else if(event.kind==='death'){
   clearBriefCells(room,region);room.deadCells||=[];for(const c of region)if(!room.deadCells.some(p=>p.x===c.x&&p.y===c.y))room.deadCells.push({x:c.x,y:c.y});
   actions.push(...region.map(c=>({...c,kind:'death'})));
  }else if(localLiving(room)&&['pandemic','contagion'].includes(event.kind)){

@@ -85,8 +85,8 @@ test('Migration replaces old event clocks once without changing scores, stocks, 
 });
 
 test('Local small/large event catalogue draws every version; authoritative online catalogue stays unchanged',()=>{
- const r=fresh(),draws=[];for(let i=0;i<LOCAL_NATURAL_ROTATION.length;i++){const choice=pickEventKind(r,'natural',()=>0);draws.push(choice.order[0]);confirmEventKind(r,choice,choice.order[0]);}
- assert.equal(new Set(draws).size,8);assert.ok(draws.includes('contagion'));assert.ok(draws.includes('tornado'));assert.equal(NATURAL_EVENT_ROTATION.length,7);
+ const r=fresh(),draws=[];for(let i=0;i<LOCAL_NATURAL_ROTATION.length+2;i++){const choice=pickEventKind(r,'natural',()=>0);draws.push(choice.order[0]);confirmEventKind(r,choice,choice.order[0]);}
+ assert.equal(new Set(draws).size,10);assert.ok(draws.includes('contagion'));assert.ok(draws.includes('tornado'));assert.equal(NATURAL_EVENT_ROTATION.length,7);
 });
 
 

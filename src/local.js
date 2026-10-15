@@ -22,7 +22,7 @@ import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,r
 import {applyAreaTool} from './area-tools.js';
 import {awardFigures,scoreLandings} from './landing-score.js';
 export const TURN_SECONDS=33;
-export const LOCAL_RULE_VERSION=23;
+export const LOCAL_RULE_VERSION=24;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
 export const localMachineId=room=>{const p=room.pairs[0];return localHumanId(room)===p.x?p.o:p.x;};
@@ -96,7 +96,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   }
   const completes=!(room.practiceTurn?.remaining>1);
   const mayAnnounce=places&&completes&&territoryPlacementDue(territoryPreview,now,1,{naturalOnly:true})||grows&&territoryPlacementDue(room,now,0,{naturalOnly:true});
-  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=original.briefEcologyVersion!==room.briefEcologyVersion||original.territoryPlanVersion!==room.territoryPlanVersion||immunityChanged||advanced||original.turnEcologyVersion!==room.turnEcologyVersion||original.inhabitantReclaimVersion!==room.inhabitantReclaimVersion||original.habitatVersion!==room.habitatVersion||original.wormLifecycleVersion!==room.wormLifecycleVersion||original.invasionVersion!==room.invasionVersion||original.worms?.some(w=>!w.turnDriven)&&['local','solo'].includes(room.mode);
+  const advanced=advanceHabitats(room,now,random,{suppressFauna:mayAnnounce}),habitatChanged=original.faunaRouteVersion!==room.faunaRouteVersion||original.briefEcologyVersion!==room.briefEcologyVersion||original.territoryPlanVersion!==room.territoryPlanVersion||immunityChanged||advanced||original.turnEcologyVersion!==room.turnEcologyVersion||original.inhabitantReclaimVersion!==room.inhabitantReclaimVersion||original.habitatVersion!==room.habitatVersion||original.wormLifecycleVersion!==room.wormLifecycleVersion||original.invasionVersion!==room.invasionVersion||original.worms?.some(w=>!w.turnDriven)&&['local','solo'].includes(room.mode);
   const habitatTick=()=>{if(!habitatChanged)return original;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;};
   if(action==='request-free-expansion'){
     throw new Error('La ampliación voluntaria se solicita con Ampliación inteligente desde 333 figuras.');

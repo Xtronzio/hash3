@@ -71,12 +71,12 @@ test('Metorite and earthquake demolition shares the same 3% budget, with distinc
 });
 test('Each family draws without replacement independently and survives serialization',()=>{
  let r=make();const natural=[],invaders=[];
- for(let i=0;i<8;i++){
+ for(let i=0;i<10;i++){
   const n=pickEventKind(r,'natural');natural.push(n.order[0]);confirmEventKind(r,n);
   if(i<4){const v=pickEventKind(r,'invaders');invaders.push(v.order[0]);confirmEventKind(r,v);}
   r=JSON.parse(JSON.stringify(r));
  }
- assert.deepEqual([...natural].sort(),[...LOCAL_NATURAL_ROTATION].sort());
+ assert.deepEqual([...natural].sort(),[...LOCAL_NATURAL_ROTATION,'clouds','fog'].sort());
  for(const kind of invaders)assert.equal(kind,'invader-rain');
 });
 test('Historical rain/cataclysm definitions remain recognised and do not become asterisks',()=>{

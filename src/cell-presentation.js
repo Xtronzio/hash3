@@ -36,7 +36,7 @@ export function cellGlyphs(room,playerId){
   const candidates=[];
   for(const e of room.frontiers||[])for(const point of frontierFootprint(e,room))candidates.push({...e,...point,type:'frontier',glyphId:'frontier:'+e.id,kind:e.type==='beaver'?'beaver-barrier':'barriers'});
   for(const e of habitatLocations(room))if(!['rhino','rhino-plague','beaver','beaver-plague'].includes(e.kind))candidates.push({...e,type:'event',glyphId:'habitat:'+e.id+':'+e.kind});
-  for(const e of ecologyPinTargets(room,playerId))if(!e.invasion)candidates.push({...e,type:'event',glyphId:'event:'+e.id});
+  for(const e of ecologyPinTargets(room,playerId))if(!e.invasion&&!e.activeFog)candidates.push({...e,type:'event',glyphId:'event:'+e.id});
   for(const event of room.territoryEvents||[])for(const e of event.antidotes||[])candidates.push({...e,type:'antidote',kind:'antidote',glyphId:'antidote:'+event.id+':'+key(e)});
   for(const e of room.watchTargets||[])candidates.push({...e,type:'target',kind:'target',glyphId:'target:'+e.id});
   const dead=new Set((room.deadCells||[]).map(key));return new Map([...lastGlyphPerCell(candidates)].filter(([k])=>!dead.has(k)));

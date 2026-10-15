@@ -1,3 +1,4 @@
+import {perceivedRoom} from './fog.js';
 import {borderChains} from './area-tools.js';
 import {microLength,microExpansionChains} from './micro-expansion.js';
 import {canRequestStrategicExpansion} from './free-expansion.js';
@@ -51,6 +52,7 @@ function finishTurn(room,player,steps,now){
  return {room:next,steps:sequence};
 }
 export function planSuperHelp(original,playerId,now=Date.now(),{maxTimeMs=1400}={}){
+ original=perceivedRoom(original);
  if(!canUsePracticeTool(original,playerId,'super-hint',now))throw new Error('Súper Ayuda está disponible durante tu turno de colocación.');
  const prepared=structuredClone(original);initializeInventory(prepared);spendCard(prepared,playerId,'super-hint');
  const before=original.players.find(p=>p.id===playerId),opponent=original.players.find(p=>p.id!==playerId),start=performance.now(),seen=new Set();
@@ -77,7 +79,7 @@ export function planSuperHelp(original,playerId,now=Date.now(),{maxTimeMs=1400}=
   beam=next.sort((a,b)=>b.rating-a.rating).slice(0,5);
  }
  if(!best.steps.some(s=>s.action==='move'))throw new Error('No hay una secuencia de colocación disponible.');
- return {roomId:original.id,version:original.version,player:playerId,steps:best.steps,points:best.room.players.find(p=>p.id===playerId).score-before.score};
+ return {roomId:original.id,version:original.version,uncertain:!!original.fogEffects?.length,player:playerId,steps:best.steps,points:best.room.players.find(p=>p.id===playerId).score-before.score};
 }
 export function executeSuperHelp(original,plan,now=Date.now()){
  if(!plan||plan.roomId!==original.id||plan.version!==original.version||!canUsePracticeTool(original,plan.player,'super-hint',now))throw new Error('La partida ha cambiado; vuelve a pedir Súper Ayuda.');

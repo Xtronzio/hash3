@@ -11,7 +11,7 @@ export function territoryThreatCells(room){
   if(room.status==='finished')return [];
   const protectedKeys=protectedTerritoryKeys(room),shieldKeys=new Set(),shields=new Set((room.inventoryEffects?.shields||[]).filter(s=>s.remaining>0).map(s=>s.cell));
   for(const c of room.cells||[])if(shields.has(c.id))shieldKeys.add(key(c.x,c.y));
-  const habitatSafe=new Set([...(room.deadCells||[]),...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
+  const habitatSafe=new Set([...(room.deadCells||[]),...habitatReservations(room),...[...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
   const terrain=terrainOf(room),result=new Map(),add=(points,kind,eventId,excluded=new Set(),shieldsBlock=true)=>{
    for(const c of points||[])if(Number.isFinite(c.x)&&Number.isFinite(c.y)&&!protectedKeys.has(key(c.x,c.y))&&!excluded.has(key(c.x,c.y))&&(!shieldsBlock||!shieldKeys.has(key(c.x,c.y))))result.set(key(c.x,c.y),{x:c.x,y:c.y,kind,eventId});
   };
@@ -27,6 +27,7 @@ export function territoryThreatCells(room){
    }
   }
   for(const e of room.faunaEvents||[])add(e.region,e.kind,e.id,habitatSafe);
+  for(const w of room.anacondas||[])add(w.warningTurns!=null?w.route.slice(0,3):w.route.slice(w.cursor,w.cursor+3),'anaconda',w.id,habitatSafe);
   for(const w of room.worms||[])if(w.brief)add(w.route,'worm',w.id);
   for(const b of room.bombs||[])add(b.blast?.length?b.blast:[b],'bomb',b.id,new Set(),false);
   const occupied=new Map((room.cells||[]).map(c=>[key(c.x,c.y),c]));

@@ -2,9 +2,9 @@
 
 ## Estado y punto de partida
 
-Jorge autorizó implementar este bloque el 15/10/2026, con Sol6.1 Alto. Este archivo conserva el acuerdo para continuar en un chat nuevo. El bloque todavía NO está implementado. Publicación conocida: R0.21.75 / 20261015-r286, main 43cafdc097b3ade0be976fbef91c210009a49c14, PR48. R75 y sus archivos públicos están verificados; 552 pruebas del motor y pipeline Chromium/Firefox/WebKit aprobados. Antes de empezar, consultar main remoto y conservar cambios posteriores si los hubiera.
+Jorge autorizó implementar este bloque el 15/10/2026, con Sol6.1 Alto. Este archivo conserva el acuerdo para continuar en un chat nuevo. El bloque se implementa en R0.21.76/r287; las verificaciones y la publicación quedan registradas en el commit de cierre. Publicación conocida: R0.21.75 / 20261015-r286, main 43cafdc097b3ade0be976fbef91c210009a49c14, PR48. R75 y sus archivos públicos están verificados; 552 pruebas del motor y pipeline Chromium/Firefox/WebKit aprobados. Antes de empezar, consultar main remoto y conservar cambios posteriores si los hubiera.
 
-Repositorio: Xtronzio/hash3. Rama de preparación: feature/local-fauna-fog-r76. Leer AGENTS.md y este acuerdo. El nombre R76 es una referencia de trabajo, no una publicación realizada.
+Repositorio: Xtronzio/hash3. Rama de preparación: feature/local-fauna-fog-r76. Leer AGENTS.md y este acuerdo. R76 identifica la actualización; comprobar el despliegue remoto antes de darla por publicada.
 
 ## 1. Anaconda: gusano grande de avance progresivo
 

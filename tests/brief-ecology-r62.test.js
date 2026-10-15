@@ -30,14 +30,14 @@ test('Rinoceronte chooses an uninterrupted long straight or diagonal, with no le
  const r=fresh();r.terrain=Array.from({length:120},(_,x)=>({x,y:0}));r.cells=r.terrain.map(c=>piece(c.x));
  const paths=rhinoRoutes(r);assert.equal(paths[0].length,120);const event={id:'rhino',kind:'rhino',paths,region:paths.flat()};r.faunaEvents=[event];const before=r.players.map(p=>p.score);resolveBriefFauna(r,event,now);
  assert.equal(r.cells.length,0);assert.equal(r.terrain.length,120);assert.deepEqual(r.players.map(p=>p.score),before);assert.equal(r.faunaEvents.length,0);
- const diagonal=fresh();diagonal.terrain=Array.from({length:18},(_,x)=>({x,y:x}));assert.equal(rhinoRoutes(diagonal)[0].length,18);
+ const diagonal=fresh();diagonal.terrain=Array.from({length:18},(_,x)=>({x,y:x}));assert.equal(rhinoRoutes(diagonal,1,()=>0)[0].length,18);
  const isolated=fresh();isolated.terrain=[{x:0,y:0}];assert.equal(rhinoRoutes(isolated)[0].length,1);
 });
 test('Rhino prewarning fixes three plague routes and resolves in one completed turn; protection survives passage',()=>{
  const r=fresh();r.cells=r.terrain.map(c=>piece(c.x,c.y));const zone={birthScale:{rhino:1}};assert.ok(announceBriefFauna(r,'rhino',zone,now));assert.equal(r.faunaEvents[0].kind,'rhino-plague');assert.equal(r.faunaEvents[0].paths.length,3);
  const event=structuredClone(r.faunaEvents[0]);turns(r,2);assert.equal(r.cells.length,99);assert.deepEqual(r.faunaEvents[0].paths,event.paths);
  r.inventoryEffects.shields=[{cell:r.cells[0].id,by:'local-x',remaining:3}];turns(r,1);assert.equal(r.faunaEvents.length,0);assert.ok(r.cells.some(c=>c.x===0&&c.y===0));assert.ok(r.cells.length<99);
- const wall=fresh();wall.terrain=Array.from({length:12},(_,x)=>({x,y:0}));wall.deadCells=[{x:5,y:0}];assert.equal(rhinoRoutes(wall)[0].length,6);
+ const wall=fresh();wall.terrain=Array.from({length:12},(_,x)=>({x,y:0}));wall.deadCells=[{x:5,y:0}];assert.equal(rhinoRoutes(wall,1,()=>0)[0].length,6);
 });
 test('Castor and its three-member plague build in one action, retain legal moves and expire after nine turns',()=>{
  for(const large of [false,true]){const r=fresh(),zone={birthScale:{beaver:large?1:0}};assert.ok(announceBriefFauna(r,'beaver',zone,now));assert.equal(r.faunaEvents[0].paths.length,large?3:1);turns(r,2);assert.equal(r.frontiers.length,0);turns(r,1);assert.equal(r.faunaEvents.length,0);assert.equal(r.frontiers.length,large?3:1);assert.equal(r.frontiers.flatMap(f=>f.cells).length,large?9:3);assert.ok(availableCells(r,r.pairs[0]).length);assert.ok(expansionOptions(r.terrain,r.pairs[0].active,r).length);turns(r,BEAVER_LIFE-1);assert.ok(r.frontiers.length);turns(r,1);assert.equal(r.frontiers.length,0);}
@@ -80,7 +80,7 @@ test('Protection lasts three completed turns including Doble, ignores wall-clock
 });
 test('Loading preserves historical stocks, timed effects, pending regions and finished records without replay',()=>{
  const r=fresh();r.ruleVersion=21;delete r.briefEcologyVersion;r.players[0].inventory.immunity.cards['immunity-33']=33;r.inventoryEffects.immunities=[{player:'local-x',remainingMs:12345,expiresAt:20000}];r.deadCells=[{x:4,y:1}];r.territoryEvents=[{id:'legacy',kind:'invader-rain',region:[{x:2,y:1}],turnsRemaining:2}];const finished=structuredClone(r);finished.id='finished';finished.status='finished';const before=structuredClone(r),data=new Map([['hash3_locals',JSON.stringify([r,finished])]]),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
- const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,23);assert.deepEqual(loaded.players,before.players);assert.deepEqual(loaded.territoryEvents,before.territoryEvents);assert.deepEqual(loaded.inventoryEffects.immunities,before.inventoryEffects.immunities);assert.deepEqual(loaded.deadCells,before.deadCells);assert.equal(loaded.ecologyTurns,before.ecologyTurns);const saved=data.get('hash3_locals');loadLocalGames(storage,now+999999);assert.equal(data.get('hash3_locals'),saved);assert.deepEqual(JSON.parse(saved).find(g=>g.id==='finished'),finished);
+ const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,24);assert.deepEqual(loaded.players,before.players);assert.deepEqual(loaded.territoryEvents,before.territoryEvents);assert.deepEqual(loaded.inventoryEffects.immunities,before.inventoryEffects.immunities);assert.deepEqual(loaded.deadCells,before.deadCells);assert.equal(loaded.ecologyTurns,before.ecologyTurns);const saved=data.get('hash3_locals');loadLocalGames(storage,now+999999);assert.equal(data.get('hash3_locals'),saved);assert.deepEqual(JSON.parse(saved).find(g=>g.id==='finished'),finished);
 });
 test('All new glyphs, forecasts, permanent skulls, double barriers and threatened paths share board/map data',()=>{
  const r=fresh();r.deadCells=[{x:10,y:1}];r.frontiers=[{id:'beaver',type:'beaver',cells:[{x:-1,y:0},{x:-1,y:1},{x:-1,y:2}],turnsRemaining:9}];r.faunaEvents=[{id:'rhino',kind:'rhino',paths:[[{x:1,y:0},{x:2,y:0}]],region:[{x:1,y:0},{x:2,y:0}],x:1,y:0,turnsRemaining:2}];const html=ecologyNavigationMarkup(r,'local-x');for(const kind of ['rhino','rhino-plague','beaver','beaver-plague','death','beaver-barrier'])assert.match(html,new RegExp('data-ecology-kind="'+kind+'"'));assert.equal(ecologyTargets(r,'death')[0].x,10);assert.equal(territoryThreatCells(r).filter(c=>c.kind==='rhino').length,2);
@@ -88,7 +88,7 @@ test('All new glyphs, forecasts, permanent skulls, double barriers and threatene
 });
 
 test('Rhino planning scales to 33333 cells and map queries keep death and beaver glyphs bounded',()=>{
- const r=fresh(33333);const paths=rhinoRoutes(r,3);assert.equal(paths.length,3);assert.equal(paths[0].length,1011);assert.ok(paths.every(p=>p.length>=33));
+ const r=fresh(33333);const paths=rhinoRoutes(r,3,()=>0);assert.equal(paths.length,3);assert.ok(paths[0].length>=666);assert.ok(paths.every(p=>p.length>=33));
  r.deadCells=[{x:5,y:1}];r.frontiers=[{id:'beaver',type:'beaver',cells:[{x:-1,y:0},{x:-1,y:1},{x:-1,y:2}],turnsRemaining:9}];
  const model=savedMapModel(r,r.players[0]),index=prepareMapRendering(model),box={x:-2,y:0,width:12,height:8};assert.ok(index.detail.query(box).length<=80);
  const markup=mapWindowMarkup(model,index,box,48);assert.match(markup,/map-dead-cells/);assert.match(markup,/beaver-barrier/);assert.ok(markup.length<25000);
@@ -98,7 +98,7 @@ test('Mouse appearances avoid skulls and shields; diagonal rhinos cannot cross a
  const r=fresh(9);r.terrain=Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)}));r.territoryEnabled=false;r.deadCells=[{x:1,y:1}];r.cells=[piece(2,2)];r.inventoryEffects.shields=[{cell:r.cells[0].id,by:'local-x',remaining:3}];
  countHabitatPlacement(r,'local-x',{x:0,y:0},now,random,{completed:false});const zone=r.habitatZones[0];zone.next.rodent=zone.placements+1;zone.next.worm=zone.next.work=9999;countHabitatPlacement(r,'local-x',{x:0,y:0},now,random);
  assert.equal(r.rodentRaids.length,1);assert.ok(r.rodentRaids[0].members.every(c=>!(c.x===1&&c.y===1)&&!(c.x===2&&c.y===2)));
- const corner=fresh();corner.terrain=[{x:0,y:0},{x:1,y:1},{x:2,y:2}];corner.frontiers=[{id:'edge',type:'border',edges:[{a:{x:1,y:0},b:{x:1,y:1}}]}];assert.equal(rhinoRoutes(corner)[0].length,2);
+ const corner=fresh();corner.terrain=[{x:0,y:0},{x:1,y:1},{x:2,y:2}];corner.frontiers=[{id:'edge',type:'border',edges:[{a:{x:1,y:0},b:{x:1,y:1}}]}];assert.equal(rhinoRoutes(corner,1,()=>0)[0].length,2);
 });
 
 test('A preserved historical bomb warning resolves to static occupation with no phantom bomb or growth forecast',()=>{

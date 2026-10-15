@@ -1,3 +1,5 @@
+import {fogKeys,fogCellMarkup,perceivedRoom} from './fog.js';
+import './fog.css';
 import {backpackIcon} from './backpack-icon.js';
 import {stampTurnCards,displayedTurnCards} from './turn-card-display.js';
 import {prepareImpactFocus,impactFocusEntries} from './impact-focus.js';
@@ -345,7 +347,7 @@ function renderSuperHelp(){
  document.querySelector('.super-help-dialog')?.remove();if(!superHelpPlan)return;
  const steps=superHelpPlan.steps.map(s=>s.action==='inventory'?`${escape(practiceTools.find(t=>t.id===s.payload.tool)?.label||'Inmunidad')} · ×1`:`Colocar ficha en ${s.payload.x}, ${s.payload.y}`);
  const cards=superHelpPlan.steps.filter(s=>s.action==='inventory').map(s=>practiceTools.find(t=>t.id===s.payload.tool)?.label||'Inmunidad');
- app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop super-help-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="super-help-title"><h2 class="heading" id="super-help-title">Súper Ayuda</h2><p>Usará 1 Súper Ayuda${cards.length?` y ${escape(cards.join(', '))}`:''}. Solo juega tu turno actual.</p><ol class="super-help-steps">${steps.map(s=>`<li>${s}</li>`).join('')}</ol><p class="super-help-points">+${superHelpPlan.points} puntos previstos</p><div class="row"><button data-action="cancel-super-help">Cancelar</button><button class="primary" data-action="confirm-super-help">Ejecutar</button></div></section></div>`);
+ app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop super-help-dialog"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="super-help-title"><h2 class="heading" id="super-help-title">Súper Ayuda</h2><p>Usará 1 Súper Ayuda${cards.length?` y ${escape(cards.join(', '))}`:''}. Solo juega tu turno actual.</p><ol class="super-help-steps">${steps.map(s=>`<li>${s}</li>`).join('')}</ol><p class="super-help-points">${superHelpPlan.uncertain?'Estimación con la memoria anterior a la niebla':`+${superHelpPlan.points} puntos previstos`}</p><div class="row"><button data-action="cancel-super-help">Cancelar</button><button class="primary" data-action="confirm-super-help">Ejecutar</button></div></section></div>`);
  document.querySelector('[data-action="cancel-super-help"]')?.focus({preventScroll:true});
 }
 function expansionSummary() {
@@ -354,6 +356,7 @@ function expansionSummary() {
   return `${count} celda${count!==1?'s':''} nueva${count!==1?'s':''} · ${9-count} existentes`;
 }
 function drawBoard(canExpand,ready,target) {
+  const hidden=fogKeys(room);
   const pair=ownPair(),own=ownPlayer(),terrain=snapshotMemo(room,'board-terrain',()=>terrainOf(room));
   const selection=inventorySelection?.player===uid?inventorySelection:null;
   const activationTargets=selection?.tool==='activate'?snapshotMemo(room,'board-activation:'+uid,()=>toolCells(room,uid,'activate')):[];
@@ -376,7 +379,7 @@ function drawBoard(canExpand,ready,target) {
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
   const {deadKeys,cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys,bombKeys}=snapshotMemo(room,'board-model:'+pair.id,()=>{
     const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),linked=new Set(playableTerrain(room,pair).map(c=>key(c.x,c.y))),known=new Set(terrain.map(c=>key(c.x,c.y))),myPairIds=new Set([pair.x,pair.o]);
-    const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set((room.worms||[]).flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
+    const habitatPoints=new Map(habitatLocations(room).map(e=>[key(e.x,e.y),e])),wormBody=new Set([...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>w.body).map(c=>key(c.x,c.y))),projects=new Map((room.works||[]).flatMap(w=>[...w.destroy.slice(w.done).map(c=>({...c,kind:'destroy'})),...w.build.slice(w.done).map(c=>({...c,kind:'build'}))]).map(c=>[key(c.x,c.y),c]));
     const roders=new Map((room.rodents||[]).map(r=>[key(r.x,r.y),r])),eaten=new Set((room.eatenCells||[]).map(c=>key(c.x,c.y)));
     const growthCells=invasionGrowthCells(room);
     return {deadKeys:new Set((room.deadCells||[]).map(c=>key(c.x,c.y))),cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys:new Set(growthCells.map(c=>key(c.x,c.y))),bombKeys:new Set(activeInvasionBombs(room,growthCells).map(c=>key(c.x,c.y)))};
@@ -404,8 +407,9 @@ function drawBoard(canExpand,ready,target) {
   const cellMarkup=pos=>{
     if(deadKeys.has(key(pos.x,pos.y)))return `<span class="cell terrain-cell dead-cell ${rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(pos.x,pos.y))?'glyph-covered':''}" style="${style(pos)}" role="img" aria-label="Celda muerta inalterable ${pos.x}, ${pos.y}"><svg viewBox="0 0 32 32" aria-hidden="true">${briefIcons.death}</svg></span>`;
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
-    const isTarget=c&&c.id===target?.lastMove?.id,last=c&&c.id===own.lastMove?.id;
-    const color=c?(c.symbol==='*'?'invader':c.symbol==='#'?'neutral'+(c.wildcardSymbol?' wildcard-'+c.wildcardSymbol.toLowerCase():''):myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
+    const obscured=hidden.has(key(x,y));
+    const isTarget=!obscured&&c&&c.id===target?.lastMove?.id,last=!obscured&&c&&c.id===own.lastMove?.id;
+    const color=obscured?'fog-covered'+(c?' fog-occupied':' fog-empty'):c?(c.symbol==='*'?'invader':c.symbol==='#'?'neutral'+(c.wildcardSymbol?' wildcard-'+c.wildcardSymbol.toLowerCase():''):myPairIds.has(c.owner)?c.symbol.toLowerCase():'foreign'):'';
     const owner=c?(c.symbol==='*'?'los invasores':c.symbol==='#'?'el tablero':playerNames.get(c.owner)):'';
     const select=canExpand&&choiceKeys.has(key(x,y));
     const targeting=!!selection,source=selection?.source,chosen=source&&c?.id===source.id;
@@ -417,12 +421,12 @@ function drawBoard(canExpand,ready,target) {
     const moving=swirling&&c&&tornadoEffect.moving.has(c.id);
     const swirlStyle=swirling?`--tornado-delay:${Math.min(0,tornadoEffect.until-performance.now()-900)}ms;`:'';
     const landingSymbol=landingEffect?.until>performance.now()?landingEffect.cells.get(key(x,y)):null;
-    const glowing=landingSymbol||figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y));
+    const glowing=!obscured&&(landingSymbol||figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y)));
     const glowStyle=glowing?`--figure-color:${(landingSymbol||figureEffect.symbol)==='X'?'var(--red)':'var(--green)'};--figure-duration:${Math.max(1,(landingSymbol?landingEffect.until:figureEffect.until)-performance.now())}ms;`:'';
     const hinted=active&&ready&&!c&&room.practiceHint?.player===uid&&room.practiceHint.x===x&&room.practiceHint.y===y;
     const toolLabel=practiceTools.find(t=>t.id===selection?.tool)?.label;
-    const label=removable?`${source?(selection.tool==='swap'?'Segunda ficha de Permutar':'Destino de Desplazar'):toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol==='#'?'Comodín # compartido'+(c.wildcardSymbol?' · usado por '+c.wildcardSymbol:' · sin usar'):c.symbol+' de '+owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
-    return `<button class="cell terrain-cell ${(glyphs.has(key(x,y))||rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(x,y)))?'glyph-covered':''} ${nuclearKeys.has(key(x,y))?'nuclear-preview':''} ${growthKeys.has(key(x,y))?'invasion-growth':''} ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${targetMarking?'watch-target-cell':removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!targetMarking&&!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!targetMarking&&!removable&&!select&&!playable}" aria-label="${escape((bombKeys.has(key(x,y))?'Bomba invasora activa · puede expandirse. ':growthKeys.has(key(x,y))?'Invasión · puede expandirse. ':body?'Gusano · cuerpo bloquea esta celda. ':rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${c?mark(c.symbol,{activeBomb:bombKeys.has(key(x,y)),disarm:removable&&selection.tool==='sapper'}):''}</button>`;
+    const label=obscured?`Niebla · celda ${c?'ocupada, signo oculto':'libre'}, ${x}, ${y}${blocked?', bloqueada':''}`:removable?`${source?(selection.tool==='swap'?'Segunda ficha de Permutar':'Destino de Desplazar'):toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol==='#'?'Comodín # compartido'+(c.wildcardSymbol?' · usado por '+c.wildcardSymbol:' · sin usar'):c.symbol+' de '+owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
+    return `<button class="cell terrain-cell ${(glyphs.has(key(x,y))||rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(x,y)))?'glyph-covered':''} ${nuclearKeys.has(key(x,y))?'nuclear-preview':''} ${growthKeys.has(key(x,y))?'invasion-growth':''} ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${targetMarking?'watch-target-cell':removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!targetMarking&&!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!targetMarking&&!removable&&!select&&!playable}" aria-label="${escape((bombKeys.has(key(x,y))?'Bomba invasora activa · puede expandirse. ':growthKeys.has(key(x,y))?'Invasión · puede expandirse. ':body?'Gusano · cuerpo bloquea esta celda. ':rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(hinted?', sugerencia de ayuda':''))}">${obscured?fogCellMarkup(!!c):c?mark(c.symbol,{activeBomb:bombKeys.has(key(x,y)),disarm:removable&&selection.tool==='sapper'}):''}</button>`;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
   const glyphEntries=(window,compact=false)=>glyphIndex.query(window).filter(e=>!(tornadoEffect?.until>performance.now()&&tornadoEffect.positions.has(key(e.x,e.y)))&&!(rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(e.x,e.y)))&&!(['shift','sapper'].includes(selection?.tool)&&bombIndex.query(window).some(b=>b.x===e.x&&b.y===e.y))).map(e=>({id:'glyph:'+key(e.x,e.y),markup:`<span class="cell static-cell-card ${e.type==='event'?'phenomenon-marker':''}" data-cell-glyph="${e.kind}" data-glyph-x="${e.x}" data-glyph-y="${e.y}" style="${style(e)}${compact?';width:32px;height:32px':''}" role="img" aria-label="${glyphLabel(e)}">${glyphMarkup(e)}</span>`}));
@@ -482,6 +486,7 @@ function drawBoard(canExpand,ready,target) {
   if(swirling)for(const [i,m] of tornadoEffect.moves.entries()){
    const left=Math.min(m.from.x,m.to.x),top=Math.min(m.from.y,m.to.y);
    if(left>window.x+window.width||top>window.y+window.height||Math.max(m.from.x,m.to.x)+1<window.x||Math.max(m.from.y,m.to.y)+1<window.y)continue;
+   if(hidden.has(key(m.from.x,m.from.y))||hidden.has(key(m.to.x,m.to.y)))continue;
    const color=m.symbol==='#'?'neutral'+(m.wildcardSymbol?' wildcard-'+m.wildcardSymbol.toLowerCase():''):myPairIds.has(m.owner)?m.symbol.toLowerCase():'foreign';
    entries.push({id:'tornado:'+m.id,markup:nodes.get('tornado:'+m.id)?.markup||`<span class="cell tornado-piece ${color}" style="${style(m.from)};--tornado-dx:${(m.to.x-m.from.x)*size}px;--tornado-dy:${(m.to.y-m.from.y)*size}px;--tornado-spin:${i%2?-1:1};--tornado-delay:${Math.min(0,tornadoEffect.until-now-900)}ms" aria-hidden="true">${mark(m.symbol)}</span>`});
   }
@@ -940,7 +945,7 @@ app.addEventListener('click',async e=>{
     await run(async()=>{const next=usePracticeHint(room,uid);inventoryOpen=false;accept(next);center(next.practiceHint.x,next.practiceHint.y);});return;
   }
   if(action==='cancel-super-help'){inventoryCardChoice=null;superHelpPlan=null;render();return;}
-  if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,next=executeSuperHelp(room,plan);superHelpPlan=null;accept(next);notifyInventory(`Súper Ayuda completada · +${plan.points} puntos.`);});return;}
+  if(action==='confirm-super-help'){await run(async()=>{const plan=superHelpPlan,score=room.players.find(p=>p.id===uid).score,next=executeSuperHelp(room,plan),gained=next.players.find(p=>p.id===uid).score-score;superHelpPlan=null;accept(next);notifyInventory(`Súper Ayuda completada · +${gained} puntos.`);});return;}
   if(action==='practice-tool'){
     const tool=b.dataset.tool||b.dataset.useTool,toolPlayer=b.dataset.player||uid;
     if(!canUsePracticeTool(room,toolPlayer,tool)){notifyInventory('Herramienta no disponible en este turno.');return;}
@@ -1235,7 +1240,7 @@ if(document.modelContext?.registerTool){
       execute(input){
         if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new Error('La consulta no acepta parámetros.');
         if(!room)return {status:'home'};
-        return {code:room.code,status:room.status,level:room.level||'normal',ranking:rankedPlayers(room.players).map(p=>({name:p.name,symbol:p.symbol,score:p.score,figures:p.figures})),you:ownPlayer()?.name,pair:ownPair(),cells:room.cells.map(({x,y,symbol})=>({x,y,symbol}))};
+        return {code:room.code,status:room.status,level:room.level||'normal',ranking:rankedPlayers(room.players).map(p=>({name:p.name,symbol:p.symbol,score:p.score,figures:p.figures})),you:ownPlayer()?.name,pair:ownPair(),cells:perceivedRoom(room).cells.map(({x,y,symbol})=>({x,y,symbol}))};
       }
     },{signal:lifecycle.signal})).catch(()=>{});
   }catch{/* WebMCP is optional; normal play remains available. */}

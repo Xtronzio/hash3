@@ -489,3 +489,11 @@ Pausa y mapas comparten controles; la distribución horizontal corta conserva es
 Flechas laterales con marco. Una sola mochila propia junto al zoom, con el contador rival recuperado también durante la partida; pausa mantiene ambos. Personalizar vuelve al icono anterior de tres deslizadores y ocupa la primera posición del cajón azul, sin mochila duplicada. Inventarios desactivados siguen mostrando -/-, sin modificar sus reservas ni activar opciones.
 
 Conservar plegados independientes, preferencias y guardados. QA de cajones ampliada con marcos, iconos, ambos signos y configuraciones de inventario; tres motores emulados y pipeline antes de publicación.
+
+### R0.21.76 · Anaconda y niebla (solo modalidades locales)
+
+La Anaconda recorre tres celdas contiguas por turno completo, tras tres turnos de aviso, hasta quedarse sin continuación; no vuelve sobre sus pasos. Su cuerpo protege hasta nueve celdas. Intento inicial cada165 turnos de zona, con la escala habitual, y una activa como máximo. Rinocerontes alternan orientaciones y zonas sin repetir corredores ni sus inversos; el historial viaja con el guardado.
+
+Nubes ocultan tres grupos separados de tres celdas; Niebla, una región compacta de33. Aviso y efecto duran tres turnos cada uno. Se distingue libre/ocupado, con punto blanco para colocar, pero no signo/propietario. Se sigue puntuando con el tablero real. Máquina y ayudas usan memoria anterior; las cartas que identifican una ficha no permiten seleccionarla mientras esté oculta. Pausa, mapas y traslado conservan el efecto. Los fenómenos que convierten/reordenan siguen cobrando únicamente figuras nuevas al aterrizar, con bonus, sin restar puntos previos ni recargar inventario.
+
+Validación específica: `node --test tests/fauna-fog-r76.test.js`, `node scripts/simulate-fauna-r76.mjs` y `node scripts/verify-fauna-fog-r76.mjs` (tres motores emulados en CI). No cambia Duelo/Mundo ni servicios remotos.
