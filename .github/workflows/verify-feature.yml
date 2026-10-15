@@ -77,6 +77,8 @@ jobs:
         timeout-minutes: 4
       - run: node scripts/verify-inverse-fill-r78.mjs
       - run: node scripts/verify-inverse-r77.mjs
+      - run: npm run verify:browser
+      - run: npm run verify:transfer
       - run: node scripts/verify-fauna-fog-r76.mjs
       - run: node scripts/verify-drawers-r69.mjs
       - run: node scripts/verify-feedback-r71.mjs
@@ -91,8 +93,6 @@ jobs:
       - run: node scripts/verify-paused-machine-r64.mjs
       - run: node scripts/verify-territory-presentation-r65.mjs
       - run: npm run verify:brand-trade
-      - run: npm run verify:browser
-      - run: npm run verify:transfer
       - uses: actions/upload-artifact@v4
         if: always()
         with:

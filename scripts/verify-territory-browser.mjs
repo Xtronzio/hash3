@@ -256,7 +256,7 @@ try{
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   }
   await page.screenshot({path:path.join(output,'setup-'+mode+'-duration-icons.png')});
-  await page.locator('#local-goal-target').scrollIntoViewIfNeeded();
+  await page.locator('[data-setup-choices="local-goal-target"]').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(output,'setup-'+mode+'-total-time.png')});
   await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();await frame(page);
   assert.equal(await page.locator('.inventory-dock-button,.board-inventory-status [data-tool],.floating-immunity').count(),0);
