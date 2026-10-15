@@ -25,7 +25,7 @@ const targets=(goal,records=[])=>goal==='time'
  :goal==='inverse'?[...new Set(records.filter(r=>r.kind==='inverse-empty').map(goalTarget))].sort((a,b)=>a-b):CELL_TARGETS;
 const goalLabels={cells:'Celdas',moves:'Movimientos',time:'Tiempo',inverse:'Inverso'};
 const metrics={score:'Puntos',figures:'Figuras',placements:'Colocaciones',bestCombo:'Combo',max:'#MAX'};
-const settingsLabel=r=>`${r.variant==='inverse'?'Inverso · '+(r.drawing||'Dibujo')+' · ':''}${r.level==='advanced'?'Avanzado':'Normal'} · ${r.timeMode==='untimed'?'Sin reloj':'Con reloj'}${r.difficulty?' · '+r.difficulty:''} · Tu inventario ${r.playerInventory!==false?'✓':'—'} · Inventario rival ${r.machineInventory?'✓':'—'} · Fauna ${r.faunaEnabled?'✓':'—'} · Fenómenos ${r.territoryEnabled?'✓':'—'}`;
+const settingsLabel=r=>`${r.variant==='inverse'?(r.inverseVersion===2?'Inverso · relleno · ':'Inverso anterior · ')+(r.drawing||'Dibujo')+' · ':''}${r.level==='advanced'?'Avanzado':'Normal'} · ${r.timeMode==='untimed'?'Sin reloj':'Con reloj'}${r.difficulty?' · '+r.difficulty:''} · Tu inventario ${r.playerInventory!==false?'✓':'—'} · Inventario rival ${r.machineInventory?'✓':'—'} · Fauna ${r.faunaEnabled?'✓':'—'} · Fenómenos ${r.territoryEnabled?'✓':'—'}`;
 export function achievementSelection(results=[],view={}){
  const records=results.filter(valid),mode=metricModes.some(([m])=>m===view.mode)?view.mode:records[0]?.mode||'solo';
  const inMode=records.filter(r=>r.mode===mode),goal=goalLabels[view.goal]?view.goal:inMode[0]?goalType(inMode[0]):'cells';

@@ -593,5 +593,5 @@ de dificultad/símbolo e iconos de ecología vigentes, cartas iniciales plegable
 Contorno/relleno en tablero, mapa, pausa y miniaturas, índices por snapshot y
 ventana+margen2; a escala pequeña mapas agrupados acotados. No recalibrar fauna,
 activar online ni tocar SQL por esta entrega. Verificar Original y ambos Inversos,
-guardados/traslados, combos simultáneos, cero puntos sin relleno y602 pruebas;
+guardados/traslados, combos simultáneos, cero puntos sin relleno y603 pruebas;
 pipeline completo Chromium/Firefox/WebKit emulados antes de Pages.

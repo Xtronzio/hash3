@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createLocal,localCommand} from '../src/local.js';
 import {INVERSE_PRESETS,saveInverseBoard} from '../src/inverse-boards.js';
 import {INVERSE_DRAWINGS,INVERSE_SCALES,scaledInverseBoard} from '../src/inverse-catalog.js';
-import {availableCells} from '../src/game.js';
+import {availableCells,figureWindows,prepareFigureIndex} from '../src/game.js';
 import {inverseBoundary,inverseBoundaryPath} from '../src/inverse-progress.js';
 import {saveLocalGame,loadLocalGames} from '../src/sessions.js';
 import {captureTransfer,validateTransfer} from '../src/local-transfer.js';
@@ -27,3 +27,5 @@ test('Contour includes outside and hole boundaries and stays identical after fil
 test('All 22 drawings have four strictly increasing valid sizes, with natural detail at high resolution',()=>{assert.equal(INVERSE_DRAWINGS.length,22);for(const d of INVERSE_DRAWINGS){const boards=INVERSE_SCALES.map(s=>scaledInverseBoard(d,s.id));for(let i=0;i<boards.length;i++){const b=boards[i];assert.ok(b.terrain.length>0&&b.terrain.length<=33333,d.id);assert.equal(new Set(b.terrain.map(c=>`${c.x},${c.y}`)).size,b.terrain.length);if(i)assert.ok(b.terrain.length>boards[i-1].terrain.length,d.id);}const large=boards[2],xs=new Set(large.terrain.map(c=>c.x));assert.ok(xs.size>30,d.id);}});
 test('Heart offers approximately32/320/3200/10000 cells without stretching a low-resolution bitmap',()=>{const heart=INVERSE_PRESETS[0],sizes=INVERSE_SCALES.map(s=>scaledInverseBoard(heart,s.id).terrain.length);assert.equal(sizes[0],32);assert.ok(sizes[1]>280&&sizes[1]<380);assert.ok(sizes[2]>2800&&sizes[2]<3800);assert.ok(sizes[3]>9000);});
 test('Holes remain empty in the expanded ring and gamepad; custom scaling preserves topology and is bounded',()=>{for(const name of ['ring','gamepad','skull']){const b=scaledInverseBoard(INVERSE_DRAWINGS.find(d=>d.id===name),'l');const set=new Set(b.terrain.map(c=>`${c.x},${c.y}`));if(name==='ring')assert.ok(!set.has('0,0'));assert.ok(b.terrain.length>3000);}const custom={id:'my-board',name:'Mío',terrain:[{x:0,y:0},{x:2,y:0}]};assert.equal(scaledInverseBoard(custom,'m').terrain.length,18);assert.equal(custom.terrain.length,2);const tooBig={id:'huge-own',terrain:Array.from({length:1000},(_,i)=>({x:i%100,y:Math.floor(i/100)}))};assert.throws(()=>scaledInverseBoard(tooBig,'l'));});
+
+test('Every small supplied drawing cell belongs to a legal basic combo, including tips and holes',()=>{for(const drawing of INVERSE_DRAWINGS){const board=scaledInverseBoard(drawing,'s'),cells=board.terrain.map(c=>({...c,symbol:'X'})),index=prepareFigureIndex(cells);for(const c of cells)assert.ok(figureWindows(cells,c.x,c.y,'X','normal',index).length,`${drawing.name}: ${c.x},${c.y}`);}});

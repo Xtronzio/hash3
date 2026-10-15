@@ -28,6 +28,16 @@ export const INVERSE_DRAWINGS=Object.freeze([
  {id:'snowflake',name:'Copo de nieve',mask:(x,y)=>[0,Math.PI/3,2*Math.PI/3].some(a=>{const u=x*Math.cos(a)+y*Math.sin(a),v=-x*Math.sin(a)+y*Math.cos(a);return Math.abs(u)<.91&&Math.abs(v)<.095||Math.abs(u)>.4&&Math.abs(u)<.75&&Math.abs(Math.abs(v)-(.75-Math.abs(u)))<.06;})},
  {id:'maze',name:'Laberinto',mask:(x,y)=>{const r=Math.max(Math.abs(x),Math.abs(y));return r<.9&&(r>.72&&!(x>.1&&y<-.72)||r<.57&&r>.39&&!(x<-.39&&y>.1)||r<.24);}}
 ]);
+// Remove only raster pixels that cannot belong to any normal three-cell figure.
+// Such pixels cannot be part of a valid larger normal figure either.
+function playableRaster(points){
+ const set=new Set(points.map(c=>`${c.x},${c.y}`)),has=(x,y)=>set.has(`${x},${y}`),sides=[[1,0],[-1,0],[0,1],[0,-1]];
+ return points.filter(c=>{
+  for(const [dx,dy]of [[1,0],[0,1],[1,1],[1,-1]])for(let anchor=0;anchor<3;anchor++)if([0,1,2].every(i=>has(c.x+(i-anchor)*dx,c.y+(i-anchor)*dy)))return true;
+  for(const [dx,dy]of sides){if(has(c.x+dx,c.y+dy)&&(has(c.x+dx-dy,c.y+dy+dx)||has(c.x+dx+dy,c.y+dy-dx)||has(c.x-dy,c.y+dx)||has(c.x+dy,c.y-dx)))return true;}
+  return false;
+ });
+}
 const cache=new Map();
 function raster(recipe,width){const terrain=[];for(let y=0;y<width;y++)for(let x=0;x<width;x++)if(recipe.mask((x+.5)/width*2-1,(y+.5)/width*2-1))terrain.push({x:x-Math.floor(width/2),y:y-Math.floor(width/2)});return terrain;}
 export function scaledInverseBoard(board,scaleId='m'){
@@ -37,7 +47,7 @@ export function scaledInverseBoard(board,scaleId='m'){
  let terrain;
  if(recipe){
   if(scale.id==='s'&&(INVERSE_PRESETS.find(b=>b.id===board.id)?.terrain||board.terrain)?.length)terrain=INVERSE_PRESETS.find(b=>b.id===board.id)?.terrain||board.terrain;
-  else{let low=3,high=333,best=null,difference=Infinity;while(low<=high){const width=Math.floor((low+high)/2),points=raster(recipe,width),d=Math.abs(points.length-scale.target);if(points.length<=MAX_INVERSE_CELLS&&d<difference){best=points;difference=d;}if(points.length<scale.target)low=width+1;else high=width-1;}terrain=best;}
+  else{let low=3,high=333,best=null,difference=Infinity;while(low<=high){const width=Math.floor((low+high)/2),points=raster(recipe,width),d=Math.abs(points.length-scale.target);if(points.length<=MAX_INVERSE_CELLS&&d<difference){best=points;difference=d;}if(points.length<scale.target)low=width+1;else high=width-1;}terrain=playableRaster(best);}
  }else{
   const factor=scale.factor,points=board.terrain;if(points.length*factor*factor>MAX_INVERSE_CELLS)throw new Error('Este tamaño supera 33.333 celdas.');const minX=Math.min(...points.map(c=>c.x)),minY=Math.min(...points.map(c=>c.y));terrain=points.flatMap(c=>Array.from({length:factor*factor},(_,i)=>({x:(c.x-minX)*factor+i%factor,y:(c.y-minY)*factor+Math.floor(i/factor)})));
   if(terrain.length>MAX_INVERSE_CELLS)throw new Error('Este tamaño supera 33.333 celdas.');const maxX=Math.max(...terrain.map(c=>c.x)),maxY=Math.max(...terrain.map(c=>c.y));if(maxX>=333||maxY>=333)throw new Error('Este tamaño supera la cuadrícula de 333 × 333.');terrain=terrain.map(c=>({x:c.x-Math.floor(maxX/2),y:c.y-Math.floor(maxY/2)}));
