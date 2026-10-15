@@ -1,6 +1,6 @@
 import {ecologyIcon,ecologyNames,ecologyCardStatus} from './ecology-navigation.js';
 const fauna=(what,frequency)=>`${what} Preaviso de tres turnos. Intento base cada ${frequency} turnos en su zona; escala con el territorio y exige sitio, alimento y población disponibles. Alterna aparición individual y plaga después de un nacimiento efectivo.`;
-const natural=(what,impact)=>`${what} ${impact} Pertenece a la bolsa de ocho fenómenos: un intento cada 33 turnos completos, sin repetir hasta recorrer la bolsa. Requiere 33 figuras entre ambos y una zona válida. Aviso de tres turnos; fauna y habitantes esperan durante el fenómeno y tres turnos de recuperación.`;
+const natural=(what,impact)=>`${what} ${impact} Pertenece a la bolsa de diez fenómenos: un intento cada 33 turnos completos, sin repetir hasta recorrer la bolsa. Requiere 33 figuras entre ambos y una zona válida. Aviso de tres turnos; fauna y habitantes esperan durante el aviso y la recuperación de tres turnos.`;
 export const TERRITORY_GUIDE=Object.freeze([
  ['rodent',fauna('Un ratón visita tres celdas: come una ficha por turno, se oculta entre visitas y desaparece tras la tercera. Conserva el terreno.',66)],
  ['rodent-plague',fauna('Tres ratones realizan tres visitas cada uno; hasta nueve celdas comidas. Conservan el terreno.',66)],
