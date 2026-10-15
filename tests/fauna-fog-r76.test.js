@@ -1,3 +1,4 @@
+import {nuclearOptions,nuclearBlast} from '../src/nuclear-tool.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand,LOCAL_RULE_VERSION} from '../src/local.js';
@@ -84,4 +85,10 @@ test('Migration is idempotent and full transfer preserves snake progress, histor
 test('A live anaconda follows new legal continuations and detours around later walls without teleporting or revisiting',()=>{
  const r=snakeRoom(4);delete r.anacondas[0].warningTurns;advanceAnacondas(r,now,new Set(['snake']));assert.equal(r.anacondas[0].cursor,3);r.terrain.push({x:3,y:1},{x:3,y:2});advanceAnacondas(r,now,new Set(['snake']));assert.equal(r.anacondas[0].cursor,6);assert.equal(r.anacondas[0].y,2);assert.equal(new Set(r.anacondas[0].route.slice(0,6).map(c=>key(c.x,c.y))).size,6);
  const d=snakeRoom(8);delete d.anacondas[0].warningTurns;d.terrain.push({x:0,y:1},{x:1,y:1},{x:2,y:1});d.frontiers=[{id:'late',cells:[{x:1,y:0}]}];advanceAnacondas(d,now,new Set(['snake']),null,()=>0);assert.equal(d.anacondas[0].cursor,3);assert.deepEqual(d.anacondas[0].route.slice(0,3),[{x:0,y:0},{x:0,y:1},{x:1,y:1}]);
+});
+
+test('Every machine level and nuclear targeting respect the full live anaconda body, not just its head',()=>{
+ const r=fresh(3);r.cells=[piece(0,0,'X'),piece(1,0,'X')];r.anacondas=[{id:'body',kind:'anaconda',x:0,y:2,route:[{x:2,y:0},{x:2,y:1},{x:1,y:1},{x:0,y:1},{x:0,y:2}],cursor:5,body:[{x:2,y:0},{x:2,y:1},{x:1,y:1},{x:0,y:1},{x:0,y:2}]}];
+ for(const difficulty of ['basic','medium','high','pro']){const choice=chooseMachineMove({...r,difficulty},rng(33),{maxNodes:1000,maxTimeMs:50});assert.ok(availableCells(r,r.pairs[0]).some(c=>c.x===choice.payload.x&&c.y===choice.payload.y));}
+ const body=new Set(r.anacondas[0].body.map(c=>key(c.x,c.y)));assert.ok(nuclearOptions(r).every(c=>!body.has(key(c.x,c.y))));assert.ok(nuclearBlast(r,{x:1,y:0}).every(c=>!body.has(key(c.x,c.y))));
 });

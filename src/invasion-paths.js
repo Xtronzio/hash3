@@ -70,7 +70,7 @@ export function seedInvasions(room,region,kind){
 // Prepared for one command/snapshot; navigation only queries the resulting index.
 function growthContext(room,now){
  const known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),occupied=new Map(room.cells.map(c=>[key(c.x,c.y),c])),protectedKeys=protectedTerritoryKeys(room,now),edges=new Set(frontierSegments(room).map(edgeKey));
- const blocked=new Set([...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
+ const blocked=new Set([...habitatReservations(room),...[...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>w.body||[]),...(room.frontiers||[]).flatMap(f=>f.cells||[])].map(c=>key(c.x,c.y)));
  const shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell)),alive=new Map();
  for(const [k,c] of occupied){if(shields.has(c.id))protectedKeys.add(k);if(c.symbol==='*'&&c.invasionId){if(!alive.has(c.invasionId))alive.set(c.invasionId,[]);alive.get(c.invasionId).push(c);}}
  return {known,occupied,protectedKeys,edges,blocked,alive};
