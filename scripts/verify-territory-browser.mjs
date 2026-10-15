@@ -239,7 +239,7 @@ try{
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
   await page.locator('#local-goal-type').selectOption('time');
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
-  assert.equal(await page.locator('.ecology-choice-icons svg').count(),16);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),19);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
