@@ -16,7 +16,7 @@ export function archiveTerritoryResult(storage,game){
  if(game.status!=='finished'||!['board-limit','time-limit','move-limit','inverse-empty'].includes(game.finalResult?.kind))return;
  storage.setItem(archiveKey,JSON.stringify(loadTerritoryResults(storage,[game])));
 }
-export const territoryComparisonKey=r=>JSON.stringify([r.variant||'original',r.goalType||'cells',r.target||r.limit,r.mode,r.level,r.timeMode,r.difficulty,r.playerInventory!==false,r.machineInventory,r.faunaEnabled,r.territoryEnabled,r.ruleVersion,r.declaredGoal]);
+export const territoryComparisonKey=r=>JSON.stringify([r.variant||'original',r.inverseVersion||null,r.goalType||'cells',r.target||r.limit,r.mode,r.level,r.timeMode,r.difficulty,r.playerInventory!==false,r.machineInventory,r.faunaEnabled,r.territoryEnabled,r.ruleVersion,r.declaredGoal]);
 const number=n=>n==null?'—':Number(n).toLocaleString('es-ES');
 const goalType=r=>r.goalType||({'time-limit':'time','move-limit':'moves'}[r.kind]||'cells');
 const goalTarget=r=>r.target||r.limit;

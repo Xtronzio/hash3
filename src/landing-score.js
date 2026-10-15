@@ -1,3 +1,4 @@
+import {filledInverse,payingInverseFigures} from './inverse-progress.js';
 import {localLiving} from './living-balance.js';
 import {key,figureWindows,prepareFigureIndex} from './game.js';
 import {earnFreeExpansion} from './free-expansion.js';
@@ -8,6 +9,7 @@ export function pruneBrokenForms(room){
  room.forms=(room.forms||[]).filter(f=>f.slice(f.lastIndexOf(':')+1).split(';').every(k=>symbols.get(k)===f[0]||localLiving(room)&&symbols.get(k)==='#'));
 }
 export function awardFigures(room,scorer,figures){
+ figures=payingInverseFigures(room,figures);
  room.forms.push(...figures.map(f=>f.id));
  if(localLiving(room)&&figures.length){const used=new Set(figures.flatMap(f=>f.points.map(([x,y])=>key(x,y))));for(const c of room.cells)if(c.symbol==='#'&&used.has(key(c.x,c.y)))c.wildcardSymbol=scorer.symbol;}
  const bonus=3*(Math.floor((scorer.figures+figures.length)/3)-Math.floor(scorer.figures/3));
@@ -31,7 +33,7 @@ export function scoreLandings(room,before,affected,{kind='tornado',actor=null}={
   const figures=[...found.values()].filter(f=>f.id[0]===scorer.symbol);if(!figures.length)continue;
   const result=awardFigures(room,scorer,figures);
   recordCombo(scorer,{...result,automatic:actor!==scorer.id,moveId:null});
-  scores.push({player:scorer.id,symbol:scorer.symbol,...result});
+  scores.push({player:scorer.id,symbol:scorer.symbol,...result,...(filledInverse(room)?{resolvedFigures:figures}:{})});
  }
  if(scores.length)room.landingEvent={id:crypto.randomUUID(),kind,actor,scores};
  return scores;

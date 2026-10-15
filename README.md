@@ -511,3 +511,13 @@ ambos colores. Los dibujos personales se guardan en este navegador; el traslado
 de una partida incluye su tablero completo, sin sincronizar la colección del editor.
 Las partidas Original permanecen con sus reglas y guardados. Detalles y pendientes
 en [design/inverse-r77.md](design/inverse-r77.md).
+
+
+### Inverso con relleno · R0.21.78
+
+Las nuevas partidas empiezan sin X/O, con relleno pendiente en la silueta.
+Solo puntúan las figuras que quitan relleno. Las zonas vaciadas siguen siendo
+jugables y el contorno permanece fijo. Termina al quedar relleno0.
+Catálogo de22dibujos con tamaños S/M/L/XL y selección por miniaturas/iconos.
+Los guardados R77 conservan su versión, identificados como Inverso anterior.
+Detalles: [design/inverse-fill-r78.md](design/inverse-fill-r78.md).

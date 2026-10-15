@@ -1,3 +1,4 @@
+import {inverseBoundaryPath} from './inverse-progress.js';
 import {briefIcons} from './brief-ecology.js';
 import {targetColors} from './watch-targets.js';
 import {invaderIcon,invasionBombIcon} from './invader-mark.js';
@@ -23,15 +24,16 @@ export function mapFrameMarkup(model){
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){
- return {detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[]),dead:cellIndex(model.deadCells||[])};
+ return {inverseBoundary:cellIndex(model.inverseBoundary||[]),inverseCoarse:overviewGrid((model.inverseBoundary||[]).map(c=>({...c,fill:'#b6bfcc'})),model.bounds),detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[]),dead:cellIndex(model.deadCells||[])};
 }
 export function mapWindowMarkup(model,index,box,scale){
+ const outline=!model.inverseBoundary?.length?'':box.width*box.height<=MAP_DETAIL_LIMIT?`<path class="inverse-map-outline" fill="none" stroke="#f1f3f6" stroke-width="1.5" vector-effect="non-scaling-stroke" d="${inverseBoundaryPath(index.inverseBoundary.query(box))}"/>`:`<g class="inverse-map-outline">${overviewCells(index.inverseCoarse.query(box))}</g>`;
  const detail=box.width*box.height<=MAP_DETAIL_LIMIT,cells=detail?index.detail.query(box):index.coarse.query(box);
  const walls=detail?frontierMarkup({frontiers:[{cells:index.barriers.query(box)}]}):frontierMarkup({frontiers:[{cells:index.coarseBarriers.query(box)}]});
  const worms=detail?`<g class="worm-map-trail" fill="none" stroke="var(--yellow)" stroke-width=".07" stroke-linecap="round">${wormTrailMarkup(index.worms.query(box))}</g>`:'';
  const growth=detail?invasionGrowthMarkup(index.growth.query(box)):'';
  const threats=threatMarkup(index.threats?.query(box)||[],{compact:!detail});
- return overviewCells(cells)+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+threats+deadMarkup(index.dead?.query(box)||[])+mapFrameMarkup(model);
+ return overviewCells(cells)+outline+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+threats+deadMarkup(index.dead?.query(box)||[])+mapFrameMarkup(model);
 }
 
 export function invasionGrowthMarkup(points){

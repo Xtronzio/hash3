@@ -50,6 +50,7 @@ on:
       - release/local-player-overlay-r75
       - release/local-fauna-fog-r76
       - release/local-inverse-r77
+      - release/local-inverse-fill-r78
   workflow_dispatch:
 permissions:
   contents: write
@@ -74,6 +75,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-inverse-fill-r78.mjs
       - run: node scripts/verify-inverse-r77.mjs
       - run: node scripts/verify-fauna-fog-r76.mjs
       - run: node scripts/verify-drawers-r69.mjs
