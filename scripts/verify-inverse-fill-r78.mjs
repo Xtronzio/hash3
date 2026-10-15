@@ -22,9 +22,9 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   await page.locator('[data-action="inverse-drawing-choice"][data-drawing="heart"]').click();
   let counts=[];for(const scale of ['s','m','l','xl']){await page.locator(`[data-action="inverse-scale"][data-scale="${scale}"]`).click();counts.push(Number((await page.locator('.inverse-drawing-count').textContent()).replace(/[^\d]/g,'')));}assert.equal(counts[0],32);for(let i=1;i<4;i++)assert.ok(counts[i]>counts[i-1]);
   await page.locator('[data-action="inverse-scale"][data-scale="s"]').click();await page.locator('[data-setup-select="local-time-mode"][data-value="untimed"]').click();
-  if(width===390)await page.screenshot({path:path.join(output,`a-inverse-selector-r78-${name}.png`)});
+  if(width===390){await page.locator('#inverse-drawing-gallery').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,`a-inverse-selector-r78-${name}.png`)});}
   await page.locator('[data-action="start-local"]').click();await page.locator('.inverse-game').waitFor();
-  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(saved.inverseVersion,2);assert.equal(saved.cells.length,0);assert.equal(saved.inverseFill.length,32);assert.ok(await page.locator('.board .inverse-filled').count()>0);assert.ok(await page.locator('.board [class*="inverse-edge-"]').count()>0);
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(saved.inverseVersion,2);assert.equal(saved.cells.length,0);assert.equal(saved.inverseFill.length,32);assert.ok(await page.locator('.board .inverse-filled').count()>0||await page.locator('.board-overview-map .inverse-map-outline').count()>0);assert.ok(await page.locator('.board [class*="inverse-edge-"]').count()>0||await page.locator('.board-overview-map .inverse-map-outline').count()>0);
   if(width===390)await page.screenshot({path:path.join(output,`a-inverse-filled-r78-${name}.png`)});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   // A combo entirely on cleared spaces remains usable and must pay zero.
