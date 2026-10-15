@@ -148,7 +148,7 @@ try{
   r.players[0].navigationLastMove={x:0,y:0};
   return r;
  })());
- assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),10);
+ assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),12);
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt] .ecology-clock').count(),0);
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].is-inactive:not(.has-forecast)').first().evaluate(el=>getComputedStyle(el).opacity),'0.4');
  assert.equal(await visual.locator('.board-territory-status [data-ecology-attempt].has-forecast').first().evaluate(el=>getComputedStyle(el).opacity),'0.85');
@@ -157,7 +157,7 @@ try{
  await visual.screenshot({path:path.join(output,'shared-live-map.png')});
  await visual.locator('[data-action="close-map"]').tap();
  await visual.locator('[data-action="pause"]').tap();await visual.locator('.inspection-canvas').waitFor();await frame(visual);
- assert.equal(await visual.locator('.ecology-controls [data-ecology-attempt].is-inactive:disabled').count(),10);
+ assert.equal(await visual.locator('.ecology-controls [data-ecology-attempt].is-inactive:disabled').count(),12);
  assert.equal(await visual.locator('.inspection-terrain').innerHTML(),liveMap);
  await visual.screenshot({path:path.join(output,'shared-paused-map.png')});
  await visual.locator('[data-action="resume"]').tap();await visual.locator('.game .viewport').waitFor();
@@ -267,7 +267,7 @@ try{
   assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
-  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:16,setupChecksAligned:true,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:19,setupChecksAligned:true,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
  }
  // Exercise the real Worker: the former winning target is a worm body.
  for(const difficulty of ['basic','medium','high','pro']){
