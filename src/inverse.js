@@ -4,7 +4,7 @@ import {validateInverseBoard,INVERSE_PRESETS} from './inverse-boards.js';
 import {availableCells,figureWindows,key,prepareFigureIndex} from './game.js';
 import {practiceTurn,placementSymbol,canUsePracticeTool,toolCells,moveDestination,spendCard,completeInventoryTurn,recordInventoryCombo} from './practice-tools.js';
 import {awardFigures,scoreLandings,pruneBrokenForms} from './landing-score.js';
-import {buyCard} from './inventory-economy.js';
+import {buyCard,tradeAvailability} from './inventory-economy.js';
 import {recordCombo} from './records.js';
 import {recordMax} from './max.js';
 import {applyAreaTool} from './area-tools.js';
@@ -100,6 +100,7 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
 export function inverseMachineChoice(room,random=Math.random,{automatic=false}={}){
  const pair=room.pairs[0],actor=room.players.find(p=>p.symbol===pair.turn),symbol=placementSymbol(room,actor.id);
  const ranked=rankInverseMoves(room,symbol,333);
+ const tactical=room.cells.length<=9?inverseTacticalChoice(room,actor,ranked[0]?.gain||0):null;if(tactical)return tactical;
  if(ranked.length){
   if(room.difficulty==='basic'&&random()<.35)return {action:'move',payload:ranked[Math.floor(random()*ranked.length)].point};
   if(['high','pro'].includes(room.difficulty)){
@@ -121,6 +122,7 @@ export function inverseMachineChoice(room,random=Math.random,{automatic=false}={
    for(const b of choices){const payload={tool,playerId:actor.id,x:a.x,y:a.y,...(b?{toX:b.x,toY:b.y}:{})};try{const next=inverseCommand(room,'inventory',payload,room.clockNow,()=>.4);if(next.cells.length<room.cells.length)return {action:'inventory',payload};}catch{}}
   }
  }
+ if(tradeAvailability(room,actor.id,'erase',room.clockNow).allowed)return {action:'trade',payload:{playerId:actor.id,tool:'erase'}};
  return null;
 }
 
@@ -135,4 +137,26 @@ function rankInverseMoves(room,symbol,limit){
   const actor=room.players.find(p=>p.symbol===room.pairs[0].turn),own=symbol===actor.symbol;
   return {point,gain,adjacent,value:(own?gain:-gain)+adjacent*.2};
  }).sort((a,b)=>b.value-a.value);
+}
+
+function inverseTacticalChoice(room,actor,currentGain){
+ if(room.cells.length===1&&canUsePracticeTool(room,actor.id,'erase',room.clockNow))return {action:'inventory',payload:{tool:'erase',playerId:actor.id,x:room.cells[0].x,y:room.cells[0].y}};
+ if(currentGain>0)return null;
+ const free=availableCells(room,room.pairs[0]),near=new Set();for(const c of room.cells)for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)near.add(key(c.x+dx,c.y+dy));
+ const destinations=free.filter(c=>near.has(key(c.x,c.y))).slice(0,48);
+ let best=null,value=0;
+ for(const tool of ['opposite','shift','swap','bomb'])if(canUsePracticeTool(room,actor.id,tool,room.clockNow)){
+  const sources=toolCells(room,actor.id,tool).slice(0,12);
+  for(const source of sources){const targets=tool==='shift'?destinations:tool==='swap'?sources.filter(c=>c.id!==source.id):[null];
+   for(const target of targets){const payload={playerId:actor.id,tool,x:source.x,y:source.y,...(target?{toX:target.x,toY:target.y}:{})};try{
+    const next=inverseCommand(room,'inventory',payload,room.clockNow,()=>.4),gain=next.players.find(p=>p.id===actor.id).score-actor.score;
+    const future=rankInverseMoves(next,placementSymbol(next,actor.id),96)[0]?.gain||0;
+    const score=(next.status==='finished'?10000:0)+gain+future*.8;
+    if(score>value){value=score;best={action:'inventory',payload};}
+   }catch{}}
+  }
+ }
+ if(best)return best;
+ if(room.cells.length===1&&tradeAvailability(room,actor.id,'erase',room.clockNow).allowed)return {action:'trade',payload:{playerId:actor.id,tool:'erase'}};
+ return null;
 }
