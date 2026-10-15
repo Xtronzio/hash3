@@ -536,3 +536,7 @@ Jorge pide expresamente que, si una propuesta suya presenta un problema de dise�
 Jorge corrige la redistribución R74: al aparecer un aviso, TU TURNO conserva exactamente su posición y tamaño junto al #33. El aviso se superpone al texto del turno y, al terminar/cancelar, vuelve a verse en el mismo sitio. El logo y los relojes siguen visibles y las acciones del aviso accesibles. Reservar la altura necesaria del aviso para evitar tapar las mochilas y botones inferiores; ninguna traslación del texto bajo el logo. Misma geometría con/sin aviso en seis tamaños, tablero y mapa, con/sin reloj y ambos signos. Comprobar selección, cancelación y vencimiento real de un aviso. Brillo estático/pulso solo al cambiar, cartas entre mochilas y recargas unificadas intactos.
 
 Solo presentación; conservar reglas23, guardados, puntos, stocks, preferencias y online desactivado. Autorización de implementación/publicación vigente; pipeline completo Chromium/Firefox/WebKit antes de integrar/publicar y comprobar R75/r286 público.
+
+## Bloque siguiente aprobado · Fauna, rutas y niebla
+
+Jorge autorizó el 15/10/2026 implementar Anaconda (tres celdas por turno hasta quedarse sin continuación), trayectorias sin repetición/monotonía y fenómenos Nubes/Niebla. Especificación y criterios de conservación en PLAN_FAUNA_NIEBLA_R76.md. El velo debe sugerir niebla y dejar claramente visible el punto de colocación de celdas libres. Plan preparado para continuar en chat nuevo con Sol6.1 Alto; todavía no implementado. La versión publicada de referencia sigue siendo R0.21.75/r286.
