@@ -50,6 +50,7 @@ on:
       - release/local-player-overlay-r75
       - release/local-fauna-fog-r76
       - release/local-inverse-r77
+      - release/local-inverse-fill-r78
   workflow_dispatch:
 permissions:
   contents: write
@@ -74,7 +75,10 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-inverse-fill-r78.mjs
       - run: node scripts/verify-inverse-r77.mjs
+      - run: npm run verify:browser
+      - run: npm run verify:transfer
       - run: node scripts/verify-fauna-fog-r76.mjs
       - run: node scripts/verify-drawers-r69.mjs
       - run: node scripts/verify-feedback-r71.mjs
@@ -89,8 +93,6 @@ jobs:
       - run: node scripts/verify-paused-machine-r64.mjs
       - run: node scripts/verify-territory-presentation-r65.mjs
       - run: npm run verify:brand-trade
-      - run: npm run verify:browser
-      - run: npm run verify:transfer
       - uses: actions/upload-artifact@v4
         if: always()
         with:

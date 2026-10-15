@@ -8,7 +8,7 @@ import {INVERSE_PRESETS} from '../src/inverse-boards.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const at=Date.now(),original=createLocal('local','Original','Rival',at,'normal','untimed');original.status='paused';
-const make=(cells)=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],initialCards:['erase','shift','opposite'],secondInitialCards:['erase','shift','opposite']});if(cells)g.cells=cells;return g;};
+const make=(cells)=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],initialCards:['erase','shift','opposite'],secondInitialCards:['erase','shift','opposite']});if(cells){g.cells=cells;g.inverseVersion=1;delete g.inverseFill;}return g;};
 const tile=(x,y,symbol='X')=>({id:`${symbol}:${x},${y}`,x,y,symbol,owner:symbol==='X'?'local-x':'local-o'});
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let lastPage;
@@ -28,7 +28,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   const bounds=await page.locator('.inverse-editor').boundingBox();assert.ok(bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=height+1,JSON.stringify({name,width,bounds}));
   if(width===390)await page.screenshot({path:path.join(output,`a-inverse-editor-r77-${name}.png`)});
   await page.locator('[data-editor-save]').click();assert.equal(await page.locator('#inverse-drawing option:checked').textContent(),'Mi dibujo de prueba · 6 celdas · mío');
-  await page.locator('#local-time-mode').selectOption('untimed');await page.locator('[data-action="start-local"]').click();await page.locator('.game.inverse-game .viewport').waitFor();
+  await page.locator('[data-setup-select="local-time-mode"][data-value="untimed"]').click();await page.locator('[data-action="start-local"]').click();await page.locator('.game.inverse-game .viewport').waitFor();
   const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(saved.variant,'inverse');assert.equal(saved.terrain.length,6);assert.equal(saved.inverseBoard.name,'Mi dibujo de prueba');assert.equal(saved.faunaEnabled,false);assert.equal(saved.territoryEnabled,false);
   assert.equal(await page.locator('.board-territory-status').isVisible(),false);assert.equal(await page.locator('.game [data-tool="activate"]').count(),0);assert.equal(await page.locator('.game [data-tool="nuclear"]').count(),0);
   if(width===390)await page.screenshot({path:path.join(output,`a-inverse-game-r77-${name}.png`)});

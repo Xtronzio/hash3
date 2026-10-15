@@ -236,14 +236,14 @@ try{
   if(mode==='solo')await page.screenshot({path:path.join(output,'hall-local-diagnosis.png')});
   await page.locator(`.hall-mode[data-mode="${mode}"]`).tap();
   if(mode==='offline')await page.locator('[data-action="setup-local"]').tap();
-  await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
-  await page.locator('#local-goal-type').selectOption('time');
+  await page.locator('#local-name').fill('Diagnóstico');await page.locator('[data-setup-select="local-time-mode"][data-value="untimed"]').click();
+  await page.locator('[data-setup-select="local-goal-type"][data-value="time"]').click();
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
   assert.equal(await page.locator('.ecology-choice-icons svg').count(),19);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
-  for(const target of ['33','180','360','540'])await page.locator('#local-goal-target').selectOption(target);
-  await page.locator('#local-goal-target').selectOption(mode==='solo'?'33':'540');
+  for(const target of ['33','180','360','540'])await page.locator(`[data-setup-select="local-goal-target"][data-value="${target}"]`).click();
+  await page.locator(`[data-setup-select="local-goal-target"][data-value="${mode==='solo'?'33':'540'}"]`).click();
   assert.equal(await page.locator('#player-inventory').isChecked(),true);
   await page.locator('#player-inventory').uncheck();
   await page.locator('.ecology-choices').scrollIntoViewIfNeeded();
@@ -256,7 +256,7 @@ try{
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   }
   await page.screenshot({path:path.join(output,'setup-'+mode+'-duration-icons.png')});
-  await page.locator('#local-goal-target').scrollIntoViewIfNeeded();
+  await page.locator('[data-setup-choices="local-goal-target"]').scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(output,'setup-'+mode+'-total-time.png')});
   await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();await frame(page);
   assert.equal(await page.locator('.inventory-dock-button,.board-inventory-status [data-tool],.floating-immunity').count(),0);

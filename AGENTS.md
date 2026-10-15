@@ -570,3 +570,28 @@ recalibrar frecuencias24. Fuentes de inventario y árbitro comparten lista permi
 Resultados/traslados distinguen Inverso; dibujos personales independientes de juegos.
 No activar Duelos/Mundo/SQL por inferencia. QA y pipeline completo antes de Pages;
 emulación Chromium/Firefox/WebKit no equivale a dispositivos físicos.
+
+
+## R0.21.78 · Relleno, contorno, escalas y selección visual de Inverso
+
+Jorge corrige y autoriza el15/10: nueva partida con X/O vacías, relleno en toda la
+figura y contorno fijo. Cada combo retira fichas y relleno alcanzado. Cada figura
+individual cobra puntos completos/bonus solo si toca al menos una celda todavía
+rellena en el estado previo al impacto; figuras solo sobre zonas vaciadas limpian
+fichas pero suman0 y no dan figura/bonus/recarga. Todas las posiciones originales
+siguen utilizables para resolver restos; el relleno jamás reaparece. Termina con
+relleno0 aunque queden fichas. Borrar/Bomba no quitan relleno: solo los combos.
+
+Datos separados inverseVersion2/inverseFill; guardados1 y Original conservan reglas
+y datos, sin migración inventada de progreso. Copia pre-R78 en rama
+backup/pre-inverso-fill-r77-20261015, commit665f775. Referencia design/inverse-fill-r78.md.
+
+22 dibujos, tamaños S/M/L/XL, cifras reales. Prediseñados se rasterizan a más
+resolución, no amplían píxeles gruesos; respetar huecos. Editor propio conservado.
+Selección por miniaturas y botones de tamaño, figuras, reloj y objetivo; radios
+de dificultad/símbolo e iconos de ecología vigentes, cartas iniciales plegables.
+Contorno/relleno en tablero, mapa, pausa y miniaturas, índices por snapshot y
+ventana+margen2; a escala pequeña mapas agrupados acotados. No recalibrar fauna,
+activar online ni tocar SQL por esta entrega. Verificar Original y ambos Inversos,
+guardados/traslados, combos simultáneos, cero puntos sin relleno y603 pruebas;
+pipeline completo Chromium/Firefox/WebKit emulados antes de Pages.
