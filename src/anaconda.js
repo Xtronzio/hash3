@@ -1,4 +1,4 @@
-import {key,terrainOf,availableCells,expansionOptions} from './game.js';
+import {key,terrainOf,availableCells,isBlockedCell} from './game.js';
 import {frontierSegments,edgeKey} from './frontiers.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {faunaProtection,clearBriefCells} from './brief-ecology.js';
@@ -28,22 +28,22 @@ export function advanceAnacondas(room,now,ids,latest=null,random=Math.random){
  const actions=[],terrain=terrainOf(room),known=new Map(terrain.map(c=>[key(c.x,c.y),c])),safe=faunaProtection(room),edges=new Set(frontierSegments(room).map(edgeKey));
  room.anacondas=(room.anacondas||[]).filter(w=>{
   if(!ids.has(w.id)||w.warningTurns!=null)return true;
-  let done=false;const visited=new Set(w.route.slice(0,w.cursor).map(c=>key(c.x,c.y))),probe={...room,anacondas:room.anacondas.filter(e=>e.id!==w.id)};
+  let done=false;const visited=new Set(w.route.slice(0,w.cursor).map(c=>key(c.x,c.y))),probe={...room,anacondas:room.anacondas.filter(e=>e.id!==w.id)},free=new Set(availableCells(probe,room.pairs[0]).map(c=>key(c.x,c.y))),actor=room.pairs[0][room.pairs[0].turn.toLowerCase()];
   const legal=(c,prev)=>c&&known.has(key(c.x,c.y))&&!visited.has(key(c.x,c.y))&&!safe.has(key(c.x,c.y))&&!habitatBlocked(probe,c.x,c.y)&&!(latest&&latest.x===c.x&&latest.y===c.y)&&(!prev||Math.abs(prev.x-c.x)+Math.abs(prev.y-c.y)===1&&!edges.has(edgeKey({a:prev,b:c})));
   const options=()=>{const prev=w.cursor?w.route[w.cursor-1]:null,next=w.route[w.cursor],choices=[];if(legal(next,prev))choices.push(next);if(prev){const adjacent=four.map(([dx,dy])=>known.get(key(prev.x+dx,prev.y+dy))).filter(c=>legal(c,prev)&&(!next||c.x!==next.x||c.y!==next.y));while(adjacent.length){const c=pick(adjacent,random);choices.push(c);adjacent.splice(adjacent.indexOf(c),1);}}return choices;};
   for(let i=0;i<3;i++){
    let chosen=null,body=null;
    for(const c of options()){
-    const tail=[...w.body,c].slice(-ANACONDA_BODY),blockedProbe={...probe,anacondas:[...(probe.anacondas||[]),{...w,body:tail}]};
-    // Never close the last playable hole or the only expansion exit.
-    if(!availableCells(blockedProbe,room.pairs[0]).length&&availableCells(probe,room.pairs[0]).length)continue;
-    if(!expansionOptions(terrain,room.pairs[0].terrainAnchor||room.pairs[0].active,blockedProbe).length)continue;
+    const tail=[...w.body,c].slice(-ANACONDA_BODY);
+    // The body only reserves built cells: it cannot change expansion geometry.
+    // Count free holes against its nine-cell footprint without rescanning N.
+    if(free.size&&tail.filter(p=>free.has(key(p.x,p.y))).length===free.size)continue;
     chosen=c;body=tail;break;
    }
    if(!chosen){done=true;break;}
    const expected=w.route[w.cursor];
    if(!expected||expected.x!==chosen.x||expected.y!==chosen.y){w.route=[...w.route.slice(0,w.cursor),{x:chosen.x,y:chosen.y}];const trace=room.faunaRouteHistory?.[w.historyIndex];if(trace?.kind==='anaconda')trace.runs=compactRoute(w.route);}
-   clearBriefCells(room,[chosen]);visited.add(key(chosen.x,chosen.y));w.cursor++;w.x=chosen.x;w.y=chosen.y;w.body=body.map(p=>({x:p.x,y:p.y}));actions.push({x:chosen.x,y:chosen.y,kind:'anaconda'});
+   clearBriefCells(room,[chosen]);if(!isBlockedCell(probe,actor,chosen.x,chosen.y))free.add(key(chosen.x,chosen.y));visited.add(key(chosen.x,chosen.y));w.cursor++;w.x=chosen.x;w.y=chosen.y;w.body=body.map(p=>({x:p.x,y:p.y}));actions.push({x:chosen.x,y:chosen.y,kind:'anaconda'});
   }
   return !done&&options().length>0;
  });
