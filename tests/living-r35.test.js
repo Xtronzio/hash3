@@ -98,8 +98,8 @@ test('Adopting historic active or paused counters cannot produce retrospective b
 });
 test('Each event bag survives save/reload without repeating a viable kind before the family is exhausted',()=>{
  let r=board();const seen=[];
- for(let i=0;i<8;i++){const choice=pickEventKind(r,'natural',()=>.3),kind=choice.order[0];seen.push(kind);confirmEventKind(r,choice,kind);r=JSON.parse(JSON.stringify(r));}
- assert.equal(new Set(seen).size,8);assert.deepEqual([...seen].sort(),[...LOCAL_NATURAL_ROTATION].sort());
+ for(let i=0;i<10;i++){const choice=pickEventKind(r,'natural',()=>.3),kind=choice.order[0];seen.push(kind);confirmEventKind(r,choice,kind);r=JSON.parse(JSON.stringify(r));}
+ assert.equal(new Set(seen).size,10);assert.deepEqual([...seen].sort(),[...LOCAL_NATURAL_ROTATION,'clouds','fog'].sort());
 });
 test('A timed match can announce turn-driven warnings while it is still running',()=>{
  const r=board();r.territoryEnabled=true;r.players[0].figures=33;r.territoryNextInvasion=0;r.endsAt=new Date(33000).toISOString();
@@ -159,6 +159,6 @@ test('Separated black-hole cores have bounded individual halos rather than one e
 test('Pandemic, black hole, tornado rain and hurricane have distinct icons and all thirteen ecology glyphs appear in setup',()=>{
  assert.equal(new Set([...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION].map(k=>territoryIcons[k])).size,9);
  const markup=ecologyChoicesMarkup({faunaEnabled:true,territoryEnabled:true,machine:true,machineInventory:true},'');
- assert.equal((markup.match(/<svg/g)||[]).length,16);
+ assert.equal((markup.match(/<svg/g)||[]).length,19);
  for(const kind of NATURAL_EVENT_ROTATION)assert.ok(markup.includes('data-ecology-kind="'+kind+'"'));
 });

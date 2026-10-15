@@ -1,3 +1,4 @@
+import {perceivedRoom} from './fog.js';
 import {tradeAvailability} from './inventory-economy.js';
 import {nuclearContext,nuclearOptions,nuclearBlast} from './nuclear-tool.js';
 import {scoreLandings} from './landing-score.js';
@@ -10,6 +11,7 @@ import {availableCells,figureWindows,key,isBlockedCell} from './game.js';
 // Card decisions stay in the Worker alongside search. The same referee and
 // stock rules validate bot and human actions; no hidden cards or privileges.
 export function chooseMachineCard(room,now=Date.now()){
+  room=perceivedRoom(room);
   if(room.mode!=='solo'||room.machineInventory!==true||room.pairs[0].pending)return null;
   const pair=room.pairs[0],actor=pair[pair.turn.toLowerCase()],human=room.humanId||pair.x;
   if(actor===human)return null;

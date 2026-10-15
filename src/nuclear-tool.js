@@ -13,7 +13,7 @@ export const nuclearIcon='<g data-icon="nuclear" data-symbol="radiation"><circle
 export function nuclearContext(room){
  const protectedKeys=protectedTerritoryKeys(room),blocked=new Set(protectedKeys);
  for(const p of room.pairs){const a=p.terrainAnchor||p.active;blocked.add(key(a.x,a.y));}
- for(const c of [...habitatReservations(room),...habitatLocations(room),...(room.worms||[]).flatMap(w=>w.body||[])])blocked.add(key(c.x,c.y));
+ for(const c of [...habitatReservations(room),...habitatLocations(room),...[...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>w.body||[])])blocked.add(key(c.x,c.y));
  const shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));
  for(const c of room.cells)if(shields.has(c.id))blocked.add(key(c.x,c.y));
  // A normal bomb can break whole barriers. Nuclear uses the same convention,

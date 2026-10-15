@@ -1,3 +1,4 @@
+import {fogIcon,cloudIcon} from './fog.js';
 import {briefEcology,initializeBriefEcology,deathRegion,DEATH_INTERVAL,briefIcons} from './brief-ecology.js';
 import {isDeadCell} from './dead-cells.js';
 import {planBombWave} from './bomb-wave.js';
@@ -37,7 +38,7 @@ export const territoryIcons={
 };
 territoryIcons['invader-rain']=`<g transform="scale(.5)">${invasionBombIcon}</g>`;
 territoryIcons['invader-colony']=`<g transform="scale(.5)">${invaderIcon}</g>`;
-territoryIcons.death=briefIcons.death;
+territoryIcons.death=briefIcons.death;territoryIcons.clouds=cloudIcon;territoryIcons.fog=fogIcon;
 territoryIcons.contagion='<circle cx="9" cy="12" r="5"/><path d="M9 4v3m0 10v3M1 12h3m10 0h3M3 6l3 3m6 6 3 3M3 18l3-3m6-6 3-3M20 12h9m-4-4 4 4-4 4"/><circle cx="24" cy="24" r="3"/>';territoryIcons.tornado='<path d="M3 5h26M6 10h20M9 15h14M12 20h9M15 25h7l-4 4"/>';
 export function initializeTerritory(room,random=Math.random){
  initializeBriefEcology(room);
@@ -179,9 +180,9 @@ export function advanceTerritory(room,now=Date.now()){
   const survivors=new Map(room.cells.map(c=>[c.id,c]));
   const mixes=['shuffle','blackhole'].includes(eventRule(event.kind)?.effect)||localLiving(room)&&['contagion','pandemic'].includes(event.kind);
   if(mixes)pruneBrokenForms(room);
-  else room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
+  else if(eventRule(event.kind)?.effect!=='conceal')room.forms=(room.forms||[]).filter(f=>!f.slice(f.lastIndexOf(':')+1).split(';').some(k=>hit.has(k)));
   for(const p of room.players)if(p.lastMove){const moved=survivors.get(p.lastMove.id);if(moved&&moved.owner===p.id)p.lastMove={...moved};else delete p.lastMove;}
-  room.eatenCells=(room.eatenCells||[]).filter(c=>!hit.has(key(c.x,c.y)));
+  if(eventRule(event.kind)?.effect!=='conceal')room.eatenCells=(room.eatenCells||[]).filter(c=>!hit.has(key(c.x,c.y)));
   if(['vacate','blackhole'].includes(eventRule(event.kind)?.effect)){
    const cleared=event.kind==='blackhole'?event.region:changes;
    const remaining=new Set(room.cells.map(c=>key(c.x,c.y)));
@@ -195,7 +196,7 @@ export function advanceTerritory(room,now=Date.now()){
    room.bombs=(room.bombs||[]).filter(b=>!(b.blast||[]).some(c=>hit.has(key(c.x,c.y))));
    room.rodentRaids=(room.rodentRaids||[]).filter(r=>!hit.has(key(r.x,r.y)));
   }
-  if(room.inventoryEffects){
+  if(room.inventoryEffects&&eventRule(event.kind)?.effect!=='conceal'){
    room.inventoryEffects.shields=(room.inventoryEffects.shields||[]).filter(s=>!removed.has(s.cell));
    room.inventoryEffects.blocks=(room.inventoryEffects.blocks||[]).filter(c=>!hit.has(key(c.x,c.y)));
   }

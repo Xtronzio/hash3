@@ -1,3 +1,4 @@
+import {initializeRouteHistory,routeHistoryIndex,routeNovelty,rememberRoute,routeOrientation} from './fauna-routes.js';
 import {isDeadCell} from './dead-cells.js';
 import {key,terrainOf,availableCells,expansionOptions} from './game.js';
 import {habitatBlocked,habitatReservations} from './habitat-tools.js';
@@ -5,7 +6,7 @@ import {frontierSegments,edgeKey} from './frontiers.js';
 import {protectedTerritoryKeys} from './immunity.js';
 
 export const briefEcology=room=>['solo','local'].includes(room?.mode)&&room.status!=='finished'&&(room.ruleVersion||0)>=22;
-export const BRIEF_FREQUENCIES=Object.freeze({rhino:99,beaver:132});
+export const BRIEF_FREQUENCIES=Object.freeze({rhino:99,beaver:132,anaconda:165});
 export const DEATH_INTERVAL=333,BEAVER_LIFE=9;
 
 export const briefIcons={
@@ -16,6 +17,7 @@ export const briefIcons={
 };
 export function initializeBriefEcology(room){
  if(!briefEcology(room))return;
+ if((room.ruleVersion||0)>=24){initializeRouteHistory(room);room.anacondas||=[];room.fogEffects||=[];}
  room.faunaEvents||=[];room.deadCells||=[];room.territoryNextDeathTurn??=(room.ecologyTurns||0)+DEATH_INTERVAL;
  if(room.briefEcologyVersion!==1){
   room.invasions=[]; // Keep occupied stars, retire their former automatic expansion.
@@ -47,7 +49,7 @@ const crosses=(a,b,edges)=>{
  return [{a,b:mid1},{a:mid1,b},{a,b:mid2},{a:mid2,b}].some(e=>edges.has(edgeKey(e)));
 };
 // Enumerate maximal runs, not every suffix: O(4N) command work, independent of viewport.
-export function rhinoRoutes(room,count=1){
+export function rhinoRoutes(room,count=1,random=Math.random){
  const barriers=new Set((room.frontiers||[]).flatMap(f=>f.cells||[]).map(c=>key(c.x,c.y))),dead=new Set((room.deadCells||[]).map(c=>key(c.x,c.y)));
  const known=new Map(terrainOf(room).filter(c=>!dead.has(key(c.x,c.y))&&!barriers.has(key(c.x,c.y))).map(c=>[key(c.x,c.y),c])),edges=new Set(frontierSegments(room).map(edgeKey)),routes=[];
  for(const [dx,dy]of dirs)for(const a of known.values()){
@@ -58,7 +60,21 @@ export function rhinoRoutes(room,count=1){
  }
  routes.sort((a,b)=>b.length-a.length||a[0].y-b[0].y||a[0].x-b[0].x);
  if(!routes.length)return [];
- return Array.from({length:count},(_,i)=>routes[i%routes.length]);
+ if((room.ruleVersion||0)<24)return Array.from({length:count},(_,i)=>routes[i%routes.length]);
+ const history=routeHistoryIndex(room,'rhino'),selected=[];
+ for(let i=0;i<count;i++){
+  const viable=routes.map(path=>({path,novelty:routeNovelty(path,history)})).filter(e=>e.novelty>=0);
+  if(!viable.length)break;
+  // Sample among longer careers, with novel terrain and different directions
+  // winning over repeatedly traversed corridors. No deterministic prefix.
+  const max=viable.reduce((n,e)=>Math.max(n,e.path.length),0),long=viable.filter(e=>e.path.length>=Math.max(1,max*.66));
+  const minimum=long.reduce((n,e)=>Math.min(n,history.orientations.get(routeOrientation(e.path))||0),Infinity),pool=long.filter(e=>(history.orientations.get(routeOrientation(e.path))||0)===minimum);
+  const weights=pool.map(e=>Math.max(.001,e.novelty*e.novelty)*e.path.length),total=weights.reduce((n,w)=>n+w,0);let ticket=Math.max(0,Math.min(.999999,random()))*total,index=0;
+  while(index<pool.length-1&&ticket>=weights[index])ticket-=weights[index++];
+  const path=random()<.5?[...pool[index].path].reverse():pool[index].path;
+  selected.push(path);history.add(path);
+ }
+ return selected;
 }
 export function wormRoute(room,start,used=new Set()){
  const safe=faunaProtection(room),known=new Map(terrainOf(room).filter(c=>!safe.has(key(c.x,c.y))&&!used.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)).map(c=>[key(c.x,c.y),c])),occupied=new Set(room.cells.map(c=>key(c.x,c.y))),edges=new Set(frontierSegments(room).map(edgeKey));
@@ -92,9 +108,10 @@ export function beaverSites(room,count=1){
  }
  return sites.length===count?sites:[];
 }
-export function announceBriefFauna(room,kind,zone,now){
- const large=(zone.birthScale?.[kind]||0)%2===1,count=large?3:1,paths=kind==='rhino'?rhinoRoutes(room,count):beaverSites(room,count);
+export function announceBriefFauna(room,kind,zone,now,random=Math.random){
+ const large=(zone.birthScale?.[kind]||0)%2===1,count=large?3:1,paths=kind==='rhino'?rhinoRoutes(room,count,random):beaverSites(room,count);
  if(paths.length!==count)return false;
+ if(kind==='rhino'&&(room.ruleVersion||0)>=24)for(const path of paths)rememberRoute(room,'rhino',path);
  const region=paths.flat(),id=crypto.randomUUID();room.faunaEvents.push({id,kind:large?kind+'-plague':kind,region,paths,x:region[0].x,y:region[0].y,turnsRemaining:3,announcedTurn:room.ecologyTurns||0,at:now});
  zone.birthScale||={};zone.birthScale[kind]=(zone.birthScale[kind]||0)+1;return true;
 }

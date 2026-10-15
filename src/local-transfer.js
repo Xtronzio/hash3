@@ -34,8 +34,11 @@ export function validateTransfer(data){
   if(g.players.find(p=>p.id===pair.x).symbol!=='X'||g.players.find(p=>p.id===pair.o).symbol!=='O'||g.mode==='solo'&&!players.has(g.humanId||pair.x))fail();
   for(const p of [...g.terrain,...g.cells])if(!Number.isSafeInteger(p?.x)||!Number.isSafeInteger(p?.y)||Math.abs(p.x)>1000000||Math.abs(p.y)>1000000)fail();
   for(const c of g.cells)if(!text(c.id)||!['X','O','*','#'].includes(c.symbol))fail();
-  for(const field of ['worms','works','bombs','rodentRaids','territoryEvents','frontiers','invasions','watchTargets'])if(g[field]!=null&&!array(g[field]))fail();
+  for(const field of ['worms','anacondas','faunaRouteHistory','fogEffects','works','bombs','rodentRaids','territoryEvents','frontiers','invasions','watchTargets'])if(g[field]!=null&&!array(g[field]))fail();
   if(g.inventoryEffects){for(const field of ['blocks','shields','forced','immunities'])if(g.inventoryEffects[field]!=null&&!array(g.inventoryEffects[field]))fail();}
+  for(const w of g.anacondas||[])if(!point(w)||!text(w.id)||!points(w.body||[])||!points(w.route)||!Number.isSafeInteger(w.cursor)||w.cursor<0||w.cursor>w.route.length)fail();
+  for(const e of g.fogEffects||[])if(!text(e.id)||!['clouds','fog'].includes(e.kind)||!points(e.region)||!Number.isSafeInteger(e.turnsRemaining)||e.turnsRemaining<1||e.turnsRemaining>3)fail();
+  for(const r of g.faunaRouteHistory||[])if(!['rhino','anaconda'].includes(r.kind)||!array(r.runs)||r.runs.some(s=>!point(s.from)||!point(s.to)))fail();
   for(const w of g.worms||[])if(!point(w)||!text(w.id)||!points(w.body||[]))fail();
   for(const w of g.works||[])if(!text(w.id)||!points(w.build||[])||!points(w.destroy||[])||!Number.isFinite(w.done))fail();
   for(const f of g.frontiers||[])if(!text(f.id)||f.cells!=null&&!points(f.cells)||f.edges!=null&&(!array(f.edges)||f.edges.some(e=>!point(e.a)||!point(e.b))))fail();

@@ -1,5 +1,5 @@
 export function wormTrailParts(room){
- return (room.worms||[]).flatMap(w=>{
+ return [...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>{
   const body=w.body||[];
   return body.map((p,i)=>({x:p.x,y:p.y,to:i+1<body.length?body[i+1]:null,id:w.id+':'+i,head:p.x===w.x&&p.y===w.y}));
  });

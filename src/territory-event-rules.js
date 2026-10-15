@@ -33,13 +33,14 @@ export const EVENT_BALANCE=Object.freeze({
   recoveryMs:33000,
   recoveryMoves:3
 });
-export const LOCAL_EVENT_RULES=Object.freeze({death:{label:'Celda muerta',family:'death',effect:'death',distribution:'local',basis:'fixed'},tornado:{label:'Tornado',family:'natural',effect:'shuffle',distribution:'local',basis:'fixed'},contagion:{label:'Contagio',family:'natural',effect:'vacate',distribution:'local',basis:'pieces'}});
+export const LOCAL_EVENT_RULES=Object.freeze({clouds:{label:'Nubes',family:'natural',effect:'conceal',distribution:'dispersed',basis:'fixed'},fog:{label:'Niebla',family:'natural',effect:'conceal',distribution:'local',basis:'fixed'},death:{label:'Celda muerta',family:'death',effect:'death',distribution:'local',basis:'fixed'},tornado:{label:'Tornado',family:'natural',effect:'shuffle',distribution:'local',basis:'fixed'},contagion:{label:'Contagio',family:'natural',effect:'vacate',distribution:'local',basis:'pieces'}});
 export const LOCAL_NATURAL_ROTATION=Object.freeze(['meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo']);
 export const eventRule=kind=>LOCAL_EVENT_RULES[kind]||TERRITORY_EVENT_RULES[kind]||null;
 export const territoryAttemptInterval=(size,family='natural')=>3*Math.ceil(EVENT_BALANCE[family==='invaders'?'invaderPlacementsPerAttempt':'placementsPerAttempt']*Math.max(EVENT_BALANCE.placementScaleReference,size)/(3*EVENT_BALANCE.placementScaleReference));
 export const eventLabel=kind=>({'invader-colony':'Colonia invasora',earthquake:'Cataclismo',meteorites:'Meteoritos',contagion:'Contagio',tornado:'Tornado'})[kind]||eventRule(kind)?.label||kind;
 export const isTimedTerritoryKind=kind=>!!eventRule(kind);
 export function impactCount(room,kind){
+ if(kind==='clouds')return 9;if(kind==='fog')return 33;
  const r=eventRule(kind),b=EVENT_BALANCE;
  if(!r)return 0;
  if(localLiving(room)&&r.family!=='legacy')return livingImpact(room,kind,r);
@@ -59,10 +60,11 @@ export function pickEventKind(room,family='natural',random=Math.random){
   room.territoryInvasionIndex=0;
   room.territoryBag=[];
  }
- const rotation=family==='invaders'?((room.ruleVersion||0)>=22&&localLiving(room)?['invader-rain']:INVADER_EVENT_ROTATION):localLiving(room)?LOCAL_NATURAL_ROTATION:NATURAL_EVENT_ROTATION;
+ const rotation=family==='invaders'?((room.ruleVersion||0)>=22&&localLiving(room)?['invader-rain']:INVADER_EVENT_ROTATION):localLiving(room)?[...LOCAL_NATURAL_ROTATION,...((room.ruleVersion||0)>=24?['clouds','fog']:[])]:NATURAL_EVENT_ROTATION;
  if(localLiving(room)){
   room.livingBags||={};
   if(room.localEventCatalogue!==3){room.livingBags.natural=[];room.localEventCatalogue=3;}
+  if((room.ruleVersion||0)>=24&&room.fogCatalogueVersion!==1){const bag=room.livingBags.natural;if(bag?.length)for(const kind of ['clouds','fog'])if(!bag.includes(kind))bag.push(kind);room.fogCatalogueVersion=1;}
   let bag=room.livingBags[family];
   if(!bag?.length){bag=[...rotation];for(let i=bag.length-1;i>0;i--){const j=Math.min(i,Math.floor(Math.max(0,random())*(i+1)));[bag[i],bag[j]]=[bag[j],bag[i]];}room.livingBags[family]=bag;}
   return {family,order:[...bag],index:family==='invaders'?'territoryInvasionIndex':'territoryNaturalIndex',living:true};

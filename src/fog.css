@@ -1,0 +1,13 @@
+/* Bruma neutra: el punto libre permanece encima del velo y recibe el toque. */
+.cell.fog-covered{color:#cbd0d6;background:#262c33;isolation:isolate}
+.cell.fog-covered.fog-occupied{background:#4a515a}
+.cell.fog-covered .fog-cell-mark{position:absolute;inset:10%;width:80%;height:80%;fill:none;stroke:#b8c0c9;stroke-width:1.8;stroke-linecap:round;opacity:.9;pointer-events:none;z-index:2}
+.cell.fog-covered .fog-placement-point{fill:#fff;stroke:#101216;stroke-width:2;opacity:1}
+.cell.fog-covered.available::after{display:none}
+.cell.fog-covered.glyph-covered .fog-cell-mark{opacity:.65}
+.habitat-anaconda svg{stroke-width:2.6}
+.board-action-anaconda{animation:worm-burrow 900ms ease-out both}
+.board-action-clouds,.board-action-fog{color:#b8c0c9;animation:fog-arrival 900ms ease-out both}
+@keyframes fog-arrival{from{opacity:0;transform:translateX(-15%) scale(.8)}to{opacity:.65;transform:translateX(10%) scale(1.1)}}
+@media(prefers-reduced-motion:reduce){.board-action-anaconda,.board-action-clouds,.board-action-fog{animation:none}}
+.is-paused .board-action-anaconda,.is-paused .board-action-clouds,.is-paused .board-action-fog{animation-play-state:paused}

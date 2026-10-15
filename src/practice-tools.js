@@ -1,3 +1,4 @@
+import {fogKeys} from './fog.js';
 import {initializeWildcardUsage} from './wildcard-usage.js';
 import {nuclearOptions} from './nuclear-tool.js';
 import {microLength,microSelectionOptions} from './micro-expansion.js';
@@ -93,7 +94,10 @@ export function toolAllowance(game,playerId){
 }
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
-export function toolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
+export function toolCells(game,playerId,tool,options={}){
+ const hidden=fogKeys(game);return rawToolCells(game,playerId,tool,options).filter(c=>!hidden.has(key(c.x,c.y))||['bomb','tornado','nuclear','destroy','activate','block','border','frontier','expand-2','expand-3','antidote','sapper'].includes(tool));
+}
+function rawToolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
   const p=game?.pairs?.[0];if(!p)return [];
   if(['expand-2','expand-3'].includes(tool))return microSelectionOptions(game,microLength(tool),selected);
   if(['ambush','reconquest'].includes(tool))return game.cells.filter(c=>c.symbol==='*'&&!habitatBlocked(game,c.x,c.y));

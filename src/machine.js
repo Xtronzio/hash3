@@ -1,3 +1,4 @@
+import {perceivedRoom} from './fog.js';
 import {localLiving} from './living-balance.js';
 import {key,terrainOf,playableTerrain,expansionOptions,shapeTemplates,availableCells} from './game.js';
 import {habitatReservations} from './habitat-tools.js';
@@ -41,7 +42,7 @@ class Position {
     this.wildcards=localLiving(room);
     this.board=new Uint8Array(this.cells.length);
     for(const c of room.cells){const i=this.index.get(key(c.x,c.y));if(i!==undefined)this.board[i]=this.wildcards&&c.symbol==='#'?4:symbolNumber(c.symbol);}
-    const reserved=new Set([...frontierCells(room).filter(c=>!c.borderSide),...habitatReservations(room),...(room.worms||[]).flatMap(w=>w.body||[]),...(room.deadCells||[])].map(c=>key(c.x,c.y)));
+    const reserved=new Set([...frontierCells(room).filter(c=>!c.borderSide),...habitatReservations(room),...[...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>w.body||[]),...(room.deadCells||[])].map(c=>key(c.x,c.y)));
     this.habitatBlocks=new Set(this.cells.map((c,i)=>reserved.has(key(c.x,c.y))?i:-1).filter(i=>i>=0));
     this.free=this.cells.slice(0,this.legalSize).map((_,i)=>i).filter(i=>!this.board[i]&&!this.habitatBlocks.has(i));
     this.figures=[0,...['X','O'].map(s=>room.players.find(p=>p.symbol===s)?.figures||0)];
@@ -127,6 +128,7 @@ class Position {
 
 // Also used to verify that speculative scoring agrees with the game referee.
 export function machineMoveScore(room,point,symbol=room.pairs[0].turn){
+  room=perceivedRoom(room);
   const position=new Position(room),i=position.index.get(key(point.x,point.y));
   if(i===undefined||!position.moves(symbolNumber(room.pairs[0].turn)).some(m=>m.i===i))throw new Error('La máquina solo puede analizar celdas vacías legales.');
   const actor=room.pairs[0][room.pairs[0].turn.toLowerCase()],forced=room.inventoryEffects?.forced?.find(e=>e.player===actor);
@@ -265,6 +267,7 @@ function chooseExpansion(room,level,random,config,budget){
 }
 
 export function chooseMachineMove(room,random=Math.random,options={}){
+  room=perceivedRoom(room);
   const level=settings[room.difficulty]?room.difficulty:'medium',config=settings[level],start=performance.now();
   const budget={nodes:0,maxNodes:options.maxNodes??config.nodes,deadline:start+(options.maxTimeMs??config.time)};
   const pair=room.pairs[0];let choice,depth=0,continuation=0;
