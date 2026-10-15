@@ -47,6 +47,7 @@ on:
       - release/local-frames-settings-r72
       - release/local-player-glow-r73
       - release/local-player-layout-r74
+      - release/local-player-overlay-r75
   workflow_dispatch:
 permissions:
   contents: write

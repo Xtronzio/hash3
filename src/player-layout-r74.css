@@ -5,10 +5,13 @@
 .player-cards-slot .dock-used-cards:first-child{margin-left:auto}
 .player-cards-slot .dock-used-cards:last-child{margin-right:auto}
 .inventory-counter-pair:has(.player-cards-slot){gap:4px}
-/* Messages share the top row with the turn heading, including in the map. */
-.turn-feedback-bar.has-player-notices{flex-direction:row;align-items:center;gap:6px}
-.game .turn-feedback-bar.has-player-notices>.compact-turnbar{flex:0 1 auto;max-width:38%;border-bottom:0}
-.turn-feedback-bar.has-player-notices>.player-feedback-row{flex:1;min-width:0;padding:2px 0}
+/* R75: the notice covers the turn label without rearranging the header. */
+.turn-feedback-bar{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;column-gap:10px;align-items:start}
+.game .turn-feedback-bar>.compact-turnbar{display:grid;grid-template-columns:subgrid;grid-column:1/-1;grid-row:1;column-gap:inherit;align-items:center;align-self:start;width:100%;min-width:0;max-width:none}
+.compact-turnbar>.brand{grid-column:1;grid-row:1}
+.compact-turnbar>.turn-state{grid-column:2;grid-row:1;justify-self:start;max-width:100%}
+.compact-turnbar>.turn-clocks{grid-column:3;grid-row:1}
+.turn-feedback-bar>.player-feedback-row{grid-column:2;grid-row:1;align-self:stretch;position:relative;z-index:2;min-width:0;padding:2px 0;background:#08090b;isolation:isolate}
 .player-feedback-notices [data-action="cancel-tool-selection"]{display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;padding:9px}
 .player-feedback-notices [data-action="cancel-tool-selection"] svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 @media(max-width:360px){
@@ -17,10 +20,6 @@
  .player-cards-slot .dock-card-choice>b{left:auto;right:0}
 }
 @media(max-width:600px) and (orientation:portrait){
- .game .turn-feedback-bar.has-player-notices>.compact-turnbar{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:3px;max-width:38%;padding:2px 0}
- .has-player-notices .compact-turnbar>.brand{grid-column:1;grid-row:1;justify-self:start}
- .game .has-player-notices .compact-turnbar>.turn-state{grid-column:1;grid-row:2;font-size:14px;padding:3px 5px}
- .has-player-notices .compact-turnbar>.turn-clocks{grid-column:2;grid-row:1/3;margin:0;align-self:center}
  .player-feedback-notices>.practice-banner,.player-feedback-notices>.expansion-controls{font-size:12px}
  .player-feedback-notices>.practice-banner>span,.player-feedback-notices>.expansion-controls>span{max-height:78px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
  .player-feedback-notices>.practice-banner:has(>button+button){display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:4px}
