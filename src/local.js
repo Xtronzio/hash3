@@ -1,3 +1,5 @@
+import {isInverse} from './inverse-rules.js';
+import {configureInverse,inverseCommand} from './inverse.js';
 import {buyCard} from './inventory-economy.js';
 import {applyNuclearTool} from './nuclear-tool.js';
 import {applyTerritoryDefense} from './territory-defense.js';
@@ -40,7 +42,8 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(CELL_TARGETS.includes(ecology.cellTarget))room.cellTarget=ecology.cellTarget;
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
-  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
+  if(ecology.variant==='inverse'){room.variant='inverse';room.faunaEnabled=false;room.territoryEnabled=false;ecology={...ecology,initialCards:ecology.initialCards||['erase','shift','opposite'],secondInitialCards:ecology.secondInitialCards||['erase','shift','opposite']};}
+  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});if(isInverse(room))return configureInverse(room,ecology,ecology.random||Math.random);initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {
   if(finishAtMatchGoal(room,now))return;
@@ -54,13 +57,14 @@ function normalize(room,now) {
 }
 // Recover older saves that entered expansion while another built island had holes.
 export function reconcileLocalBoard(original,now=Date.now()) {
-  if(!['solo','local'].includes(original.mode)||original.status!=='playing')return original;
+  if(isInverse(original)||!['solo','local'].includes(original.mode)||original.status!=='playing')return original;
   const room={...original,pairs:original.pairs.map(p=>({...p}))};
   normalize(room,now);
   if(room.status===original.status&&JSON.stringify(room.pairs)===JSON.stringify(original.pairs))return original;
   return {...room,version:room.version+1,updatedAt:new Date(now).toISOString()};
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
+  if(isInverse(original))return inverseCommand(original,action,payload,now,random);
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];

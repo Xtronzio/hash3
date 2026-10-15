@@ -24,6 +24,7 @@ const fourNeighbors=p=>[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:p.x+dx,y:p
 const choose=(all,random)=>all.length?all[Math.min(all.length-1,Math.floor(Math.max(0,random())*all.length))]:null;
 const uuid=()=>crypto.randomUUID();
 export function initializeHabitats(room,now=Date.now(),random=Math.random){
+ if(room.variant==='inverse')return;
  initializeTerritory(room,random);room.habitatZones||=[];
  room.rodents||=[];room.worms||=[];room.works||=[];room.bombs||=[];room.eatenCells||=[];room.rodentRaids||=[];
  initializeTurnWorms(room);
@@ -341,6 +342,7 @@ function activeAt(room,point){
  return room.pairs.some(pair=>area.has(key((pair.terrainAnchor||pair.active).x,(pair.terrainAnchor||pair.active).y))&&room.players.some(p=>(p.id===pair.x||p.id===pair.o)&&p.active!==false&&!p.bot));
 }
 export function freezeHabitats(room,now=Date.now()){
+ if(room.variant==='inverse')return;
  initializeHabitats(room,now);if(turnEcology(room))return;freezeLiving(room,now);
  for(const e of [...room.worms.filter(w=>!isTurnWorm(w)),...room.works,...room.bombs,...room.territoryEvents])e.remainingMs=e.remainingMs??Math.max(0,(e.nextAt||now+HABITAT_INTERVAL)-now);
  if(room.ecologyRecovery)room.ecologyRecovery.remainingMs=room.ecologyRecovery.remainingMs??Math.max(0,room.ecologyRecovery.until-now);

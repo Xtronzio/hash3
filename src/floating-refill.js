@@ -1,3 +1,4 @@
+import {inverseToolAllowed} from './inverse-rules.js';
 import {CARD_PRICES,tradeAvailability} from './inventory-economy.js';
 import {inventoryEnabled} from './inventory-enabled.js';
 import {practiceTools,immunityTools,toolStock,MAX_CARDS} from './practice-tools.js';
@@ -18,7 +19,7 @@ export function floatingRefillMarkup(game,playerId){
 export function bindRefillHold(root,onOpen){return bindHoldGesture(root,{selector:'[data-action="refill-hold"]',duration:REFILL_HOLD_MS,onComplete:button=>onOpen(button.dataset.player)});}
 export function refillSelectorMarkup(game,playerId,{remaining=3,exchange=false,replace=null}={}){
  const player=game.players.find(p=>p.id===playerId);
- const cards=[...practiceTools,...(exchange?[]:immunityTools)].sort((a,b)=>CARD_PRICES[a.id]-CARD_PRICES[b.id]).map(t=>{
+ const cards=[...practiceTools,...(exchange?[]:immunityTools)].filter(t=>inverseToolAllowed(game,t.id)).sort((a,b)=>CARD_PRICES[a.id]-CARD_PRICES[b.id]).map(t=>{
   const price=CARD_PRICES[t.id];
   const stock=toolStock(game,playerId,t.id),choosing=exchange&&!replace,state=choosing?{allowed:stock>0,reason:'No tienes esta carta'}:tradeAvailability(game,playerId,t.id,Date.now(),{replace:exchange?replace:null});
   if(choosing&&!stock)return '';

@@ -1,3 +1,4 @@
+import {isInverse,inverseToolAllowed} from './inverse-rules.js';
 import {fogKeys} from './fog.js';
 import {initializeWildcardUsage} from './wildcard-usage.js';
 import {nuclearOptions} from './nuclear-tool.js';
@@ -98,7 +99,8 @@ export function toolCells(game,playerId,tool,options={}){
  const hidden=fogKeys(game);return rawToolCells(game,playerId,tool,options).filter(c=>!hidden.has(key(c.x,c.y))||['bomb','tornado','nuclear','destroy','activate','block','border','frontier','expand-2','expand-3','antidote','sapper'].includes(tool));
 }
 function rawToolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
-  const p=game?.pairs?.[0];if(!p)return [];
+  const p=game?.pairs?.[0];if(!p||!inverseToolAllowed(game,tool))return [];
+  if(isInverse(game)&&['erase','shift'].includes(tool))return game.cells.filter(c=>['X','O'].includes(c.symbol));
   if(['expand-2','expand-3'].includes(tool))return microSelectionOptions(game,microLength(tool),selected);
   if(['ambush','reconquest'].includes(tool))return game.cells.filter(c=>c.symbol==='*'&&!habitatBlocked(game,c.x,c.y));
   if(tool==='sapper')return [...pendingInvasionBombs(game),...activeInvasionBombs(game)];
@@ -130,6 +132,7 @@ function rawToolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}=
 }
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   const p=game?.pairs?.[0];
+  if(!inverseToolAllowed(game,tool))return false;
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p)return false;
   if(!inventoryEnabled(game,playerId))return false;
   if(tool==='immunity')return toolStock(game,playerId,tool)>0&&!isImmune(game,playerId,now)&&game.players.some(v=>v.id===playerId);
@@ -189,7 +192,7 @@ export function drawComboCard(game,playerId,random=Math.random){
   if(!inventoryEnabled(game,playerId))return false;
   const inv=game.players.find(p=>p.id===playerId)?.inventory;if(!inv?.comboPending)return false;
   const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
-  const eligible=practiceTools.filter(t=>!((game.ruleVersion||0)>=22&&t.id==='shield')&&inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
+  const eligible=practiceTools.filter(t=>inverseToolAllowed(game,t.id)&&!((game.ruleVersion||0)>=22&&t.id==='shield')&&inv.cards[t.id]<MAX_PER_CARD&&(heldTypes<MAX_CARD_TYPES||inv.cards[t.id]>0));
   if(Object.values(inv.cards).reduce((a,b)=>a+b,0)>=MAX_CARDS||heldTypes>MAX_CARD_TYPES||!eligible.length)return false;
   const tickets=eligible.flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));
   const draw=tickets[Math.min(tickets.length-1,Math.floor(Math.max(0,random())*tickets.length))];

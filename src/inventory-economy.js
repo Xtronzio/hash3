@@ -1,3 +1,4 @@
+import {inverseToolAllowed} from './inverse-rules.js';
 import {practiceTools,immunityTools,MAX_CARDS,MAX_PER_CARD} from './practice-tools.js';
 import {inventoryEnabled} from './inventory-enabled.js';
 // 3333 is reserved for a future power: current cards do not justify that tier.
@@ -6,6 +7,7 @@ export const CARD_PRICES=Object.freeze({immunity:333,hint:3,destroy:3,frontier:3
  'expand-2':33,'expand-3':33,border:33,ambush:33,antidote:33,sapper:33,
  bomb:33,tornado:33,combo:33,'hint-expand':33,'super-hint':33,reconquest:333,nuclear:333});
 export function tradeAvailability(game,playerId,tool,now=Date.now(),{replace=null}={}){
+ if(!inverseToolAllowed(game,tool))return {allowed:false,price:CARD_PRICES[tool],reason:'Esta carta modifica el territorio y no pertenece a Inverso'};
  const price=CARD_PRICES[tool],player=game?.players?.find(p=>p.id===playerId),pair=game?.pairs?.[0],inv=player?.inventory;
  if(!price||!([...practiceTools,...immunityTools]).some(t=>t.id===tool)||!inv)return {allowed:false,price,reason:'Carta no disponible'};
  if(!['solo','local'].includes(game.mode)||game.status!=='playing'||!inventoryEnabled(game,playerId))return {allowed:false,price,reason:'Inventario no disponible'};

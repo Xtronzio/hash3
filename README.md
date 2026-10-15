@@ -497,3 +497,17 @@ La Anaconda recorre tres celdas contiguas por turno completo, tras tres turnos d
 Nubes ocultan tres grupos separados de tres celdas; Niebla, una región compacta de33. Aviso y efecto duran tres turnos cada uno. Se distingue libre/ocupado, con punto blanco para colocar, pero no signo/propietario. Se sigue puntuando con el tablero real. Máquina y ayudas usan memoria anterior; las cartas que identifican una ficha no permiten seleccionarla mientras esté oculta. Pausa, mapas y traslado conservan el efecto. Los fenómenos que convierten/reordenan siguen cobrando únicamente figuras nuevas al aterrizar, con bonus, sin restar puntos previos ni recargar inventario.
 
 Validación específica: `node --test tests/fauna-fog-r76.test.js`, `node scripts/simulate-fauna-r76.mjs` y `node scripts/verify-fauna-fog-r76.mjs` (tres motores emulados en CI). No cambia Duelo/Mundo ni servicios remotos.
+
+
+### Inverso · R0.21.77
+
+VS máquina o Sin conexión → Original/Inverso → dibujo y opciones → Jugar.
+Inverso conserva la forma del tablero y vacía fichas mediante combos. No tiene
+fauna, fenómenos ni inventario del territorio. Incluye dibujos prediseñados y
+editor para crear siluetas con celdas vacías, guardarlas y elegirlas. Al iniciar
+se reparte contenido X/O con huecos; al vaciarlo gana la mayor puntuación.
+El inventario modifica fichas y nunca terreno. Borrar/Desplazar sirven para
+ambos colores. Los dibujos personales se guardan en este navegador; el traslado
+de una partida incluye su tablero completo, sin sincronizar la colección del editor.
+Las partidas Original permanecen con sus reglas y guardados. Detalles y pendientes
+en [design/inverse-r77.md](design/inverse-r77.md).

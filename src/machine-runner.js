@@ -1,9 +1,12 @@
+import {isInverse} from './inverse-rules.js';
+import {inverseMachineChoice} from './inverse.js';
 import {machineTurnKey} from './machine-turn.js';
 import {availableCells,expansionOptions,terrainOf} from './game.js';
 
 // An emergency choice uses the referee's current legal cells, not an old
 // speculative board. It never spends a card, invents a pass or skips a turn.
 export function legalMachineFallback(room){
+ if(isInverse(room)){const choice=inverseMachineChoice(room);if(choice)return choice;throw new Error('Dibujo lleno: el rival necesita una carta para continuar. Puedes pausar y conservar la partida.');}
  const pair=room.pairs[0];
  if(pair.pending){
   const point=expansionOptions(terrainOf(room),pair.terrainAnchor||pair.active,room)[0];

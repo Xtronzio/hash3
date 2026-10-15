@@ -46,7 +46,7 @@ export function validateTransfer(data){
   for(const e of g.watchTargets||[])if(!point(e)||!text(e.id))fail();
   for(const e of g.rodentRaids||[])if(!text(e.id)||!array(e.members||[])||!points(e.visited||[]))fail();
  }
- for(const r of data.results)if(!text(r?.game)||!['solo','local'].includes(r.mode)||!['board-limit','time-limit','move-limit'].includes(r.kind)||!Number.isFinite(r.limit)||!array(r.players,2)||r.players.some(p=>!Number.isFinite(p.score)||p.score<0))fail();
+ for(const r of data.results)if(!text(r?.game)||!['solo','local'].includes(r.mode)||!['board-limit','time-limit','move-limit','inverse-empty'].includes(r.kind)||!Number.isFinite(r.limit)||!array(r.players,2)||r.players.some(p=>!Number.isFinite(p.score)||p.score<0))fail();
  for(const pin of data.pins)if(!text(pin)||!ids.has(pin))fail();
  return data;
 }

@@ -30,6 +30,7 @@ export function availableCells(room,pair,{ignoreBlocks=false}={}) {
   return playableTerrain(room,pair).filter(c=>!occupied.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y)&&(ignoreBlocks||!isBlockedCell(room,playerId,c.x,c.y)));
 }
 export function expansionOptions(terrain,active,room) {
+  if(room?.variant==='inverse')return [];
   if(!terrain.length)return [{x:active.x,y:active.y}];
   const connected=['solo','local'].includes(room?.mode)?terrain:connectedTerrain(terrain,active),known=new Set(terrain.map(c=>key(c.x,c.y))),candidates=new Map();
   // Any block adding terrain touches a boundary (including holes), so interior cells need no candidates.

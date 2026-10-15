@@ -1,3 +1,5 @@
+import {isInverse} from './inverse-rules.js';
+import {inverseMachineChoice} from './inverse.js';
 import {perceivedRoom} from './fog.js';
 import {localLiving} from './living-balance.js';
 import {key,terrainOf,playableTerrain,expansionOptions,shapeTemplates,availableCells} from './game.js';
@@ -267,6 +269,7 @@ function chooseExpansion(room,level,random,config,budget){
 }
 
 export function chooseMachineMove(room,random=Math.random,options={}){
+ if(isInverse(room))return inverseMachineChoice(room,random);
   room=perceivedRoom(room);
   const level=settings[room.difficulty]?room.difficulty:'medium',config=settings[level],start=performance.now();
   const budget={nodes:0,maxNodes:options.maxNodes??config.nodes,deadline:start+(options.maxTimeMs??config.time)};

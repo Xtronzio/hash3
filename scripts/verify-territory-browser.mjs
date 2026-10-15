@@ -234,7 +234,7 @@ try{
   await page.goto(origin+'?sala=OLDROOM1&pareja=OLDPAIR1');
   for(const id of ['duel','world'])assert.equal(await page.locator(`.hall-mode[data-mode="${id}"]`).isDisabled(),true);
   if(mode==='solo')await page.screenshot({path:path.join(output,'hall-local-diagnosis.png')});
-  await page.locator(`.hall-mode[data-mode="${mode}"]`).tap();await page.locator('[data-action="hall-play"]').tap();
+  await page.locator(`.hall-mode[data-mode="${mode}"]`).tap();
   if(mode==='offline')await page.locator('[data-action="setup-local"]').tap();
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('#local-time-mode').selectOption('untimed');
   await page.locator('#local-goal-type').selectOption('time');
