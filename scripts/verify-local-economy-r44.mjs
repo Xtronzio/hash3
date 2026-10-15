@@ -47,6 +47,7 @@ export async function verifyLocalEconomy({context,load,output,results}){
  assert.equal(await a.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await a.evaluate(el=>getComputedStyle(el).webkitTapHighlightColor),'rgba(0, 0, 0, 0)');
  assert.notEqual(await a.evaluate(el=>getComputedStyle(el).backgroundColor),await b.evaluate(el=>getComputedStyle(el).backgroundColor));await page.screenshot({path:path.join(output,'hall-independent-r45.png')});
  await page.locator('[data-action="setup-solo"]').tap();await page.locator('#local-name').fill('Jorge');await page.locator('#player-inventory').check();await page.locator('#machine-inventory').check();
+ await page.locator('.setup-starters > summary').tap();
  const picker=page.locator('[data-starter-player="0"].starting-inventory-picker');assert.equal(await picker.locator('[aria-pressed="true"]').count(),3);
  await picker.locator('[data-tool="double"]').tap();await picker.locator('[data-tool="antidote"]').evaluate(el=>el.scrollIntoView());await picker.locator('[data-tool="antidote"]').tap();assert.equal(await picker.locator('[aria-pressed="true"]').count(),3);
  await page.locator('[data-action="start-local"]').tap();await page.locator('.game .viewport').waitFor();const created=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals')).find(g=>g.mode==='solo'));
