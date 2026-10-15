@@ -130,7 +130,7 @@ try{
   const active=page.locator(`.board-territory-status button[data-ecology-kind="${kind}"]`);
   assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-announced').count(),1);
   // The occupied * keeps the static-invasion card navigable as well as this warning.
-  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),kind==='invader-colony'?10:9,kind);
+  assert.equal(await page.locator('.board-territory-status [data-ecology-attempt].is-inactive:disabled').count(),kind==='invader-colony'?12:11,kind);
   assert.equal(await page.locator('.board-territory-status [data-ecology-kind="invader-colony"]').isEnabled(),true);
   assert.equal(await active.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await active.evaluate(el=>getComputedStyle(el).animationName),'ecologyActivate');
