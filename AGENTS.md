@@ -550,3 +550,23 @@ Rinocerontes mantienen rectas/diagonales y dirección fija, con selección aleat
 Nubes: tres tríos separados, nueve celdas; Niebla: región compacta33. Rotación local de diez naturales, conservando candidato reservado y restos de bolsa al migrar. Aviso3 y duración3 turnos completos, sin cambios de signos/propiedad/puntos. Bruma neutra, ocupado/libre distinguibles y punto blanco libre claramente visible; tablero, mapas, pausa y miniaturas comparten ocultamiento. Máquina y ayudas evalúan memoria previa, no signos nuevos ocultos. Cartas dirigidas que identifican fichas no ofrecen esas celdas mientras están ocultas; las acciones de área y colocaciones siguen disponibles. Súper Ayuda señala incertidumbre y su cierre informa ganancia real. Conservar controles R75 y aislamiento online.
 
 scoreLandings existente conserva pagos únicos y bonus de conversiones/mezclas, incluidos tres Tornados territoriales, Tornado manual, Huracán, Agujero negro, Permutar y Desplazar. No reescribir vías ya correctas ni generar recargas pasivas. Validar integración, conservación, ayuda/memoria, guardados/traslado, rendimiento33333 y pipeline completo Chromium/Firefox/WebKit emulado antes de publicar. No afirmar QA físico.
+
+
+## R0.21.77 · Inverso y editor de dibujos
+
+Jorge autoriza crear y publicar Inverso después de conservar la versión estable.
+Referencia durable: design/inverse-r77.md. Respaldo remoto backup/pre-inverso-r76-20261015
+en 306a27a. Hall sin Jugar central, acceso directo a la configuración desde cada
+modo; Original/Inverso dentro. Misma pantalla de juego y navegación; Inverso sin
+barra territorial, fauna/eventos ni herramientas que cambien el terreno. Solo
+fichas: combos cobran y vacían su unión simultáneamente, sin eliminar celdas.
+Mover/Borrar admiten ambos colores. Final al vaciar contenido, victoria por puntos,
+con empate explícito. Editor de siluetas con celdas vacías, guardar/elegir dibujos,
+prediseñados editados como copia. Reparto X/O+huecos inicial sin puntos anunciado
+a Jorge; no presentar el editor como prueba de resolubilidad. Conservar todo
+guardado Original, puntos/inventarios/pins/preferencias y resultados históricos.
+Inverso tiene bandera explícita variant e inverseVersion1; no migrar Original ni
+recalibrar frecuencias24. Fuentes de inventario y árbitro comparten lista permitida.
+Resultados/traslados distinguen Inverso; dibujos personales independientes de juegos.
+No activar Duelos/Mundo/SQL por inferencia. QA y pipeline completo antes de Pages;
+emulación Chromium/Firefox/WebKit no equivale a dispositivos físicos.
