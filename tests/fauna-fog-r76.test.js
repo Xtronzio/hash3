@@ -92,3 +92,7 @@ test('Every machine level and nuclear targeting respect the full live anaconda b
  for(const difficulty of ['basic','medium','high','pro']){const choice=chooseMachineMove({...r,difficulty},rng(33),{maxNodes:1000,maxTimeMs:50});assert.ok(availableCells(r,r.pairs[0]).some(c=>c.x===choice.payload.x&&c.y===choice.payload.y));}
  const body=new Set(r.anacondas[0].body.map(c=>key(c.x,c.y)));assert.ok(nuclearOptions(r).every(c=>!body.has(key(c.x,c.y))));assert.ok(nuclearBlast(r,{x:1,y:0}).every(c=>!body.has(key(c.x,c.y))));
 });
+
+test('Concealment preserves active inventory blocks and eaten-cell markers without consuming or clearing them',()=>{
+ const r=fresh(9);r.inventoryEffects.blocks=[{x:5,y:0,by:'local-x',remaining:3,fresh:true}];r.eatenCells=[{x:6,y:0}];r.territoryEvents=[{id:'cloud',kind:'clouds',region:points(9),turnsRemaining:0}];const effects=structuredClone(r.inventoryEffects),eaten=structuredClone(r.eatenCells);advanceTerritory(r,now);assert.deepEqual(r.inventoryEffects,effects);assert.deepEqual(r.eatenCells,eaten);
+});
