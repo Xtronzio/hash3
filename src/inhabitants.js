@@ -264,7 +264,7 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
  advanceFog(room);
  advanceHabitats(room,now,random,{completedTurn:true});
  if(!faunaSuspended(room,now)){
-  advanceAnacondas(room,now,ids,latest);
+  advanceAnacondas(room,now,ids,latest,random);
   for(const w of room.worms||[])if(w.brief&&w.warningTurns==null){const actions=clearBriefCells(room,w.route||[]).map(c=>({...c,kind:'worm'}));if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};}
   room.worms=room.worms.filter(w=>!w.brief||w.warningTurns!=null);
   for(const e of [...room.faunaEvents||[]])if(e.turnsRemaining===0)resolveBriefFauna(room,e,now);

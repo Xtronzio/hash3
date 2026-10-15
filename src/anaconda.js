@@ -2,7 +2,7 @@ import {key,terrainOf,availableCells,expansionOptions} from './game.js';
 import {frontierSegments,edgeKey} from './frontiers.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {faunaProtection,clearBriefCells} from './brief-ecology.js';
-import {initializeRouteHistory,routeHistoryIndex,routeNovelty,rememberRoute} from './fauna-routes.js';
+import {initializeRouteHistory,routeHistoryIndex,routeNovelty,rememberRoute,compactRoute} from './fauna-routes.js';
 export const ANACONDA_BODY=9,ANACONDA_INTERVAL=165;
 export const anacondaIcon='<path d="M4 27c-3-8 5-13 11-8s13 1 10-5c-2-4-10-1-10-6 0-6 13-7 14 0v5m-5-5h.01M3 27h7m7-8-3 5m10-8 3 4" stroke-width="2.6"/>';
 const four=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -22,27 +22,30 @@ export function anacondaRoute(room,random=Math.random){
 export function announceAnaconda(room,now,random=Math.random){
  if(room.anacondas?.length)return false;
  initializeRouteHistory(room);const route=anacondaRoute(room,random);if(!route.length)return false;
- room.anacondas||=[];room.anacondas.push({id:crypto.randomUUID(),kind:'anaconda',...route[0],route,cursor:0,body:[],warningTurns:3,announcedTurn:room.ecologyTurns||0,at:now});rememberRoute(room,'anaconda',route);return true;
+ room.anacondas||=[];room.anacondas.push({id:crypto.randomUUID(),kind:'anaconda',...route[0],route,cursor:0,body:[],warningTurns:3,announcedTurn:room.ecologyTurns||0,at:now,historyIndex:(room.faunaRouteHistory||[]).length});rememberRoute(room,'anaconda',route);return true;
 }
-export function advanceAnacondas(room,now,ids,latest=null){
- const actions=[],terrain=new Set(terrainOf(room).map(c=>key(c.x,c.y))),safe=faunaProtection(room),edges=new Set(frontierSegments(room).map(edgeKey));
+export function advanceAnacondas(room,now,ids,latest=null,random=Math.random){
+ const actions=[],terrain=terrainOf(room),known=new Map(terrain.map(c=>[key(c.x,c.y),c])),safe=faunaProtection(room),edges=new Set(frontierSegments(room).map(edgeKey));
  room.anacondas=(room.anacondas||[]).filter(w=>{
   if(!ids.has(w.id)||w.warningTurns!=null)return true;
-  let done=false;
+  let done=false;const visited=new Set(w.route.slice(0,w.cursor).map(c=>key(c.x,c.y))),probe={...room,anacondas:room.anacondas.filter(e=>e.id!==w.id)};
+  const legal=(c,prev)=>c&&known.has(key(c.x,c.y))&&!visited.has(key(c.x,c.y))&&!safe.has(key(c.x,c.y))&&!habitatBlocked(probe,c.x,c.y)&&!(latest&&latest.x===c.x&&latest.y===c.y)&&(!prev||Math.abs(prev.x-c.x)+Math.abs(prev.y-c.y)===1&&!edges.has(edgeKey({a:prev,b:c})));
+  const options=()=>{const prev=w.cursor?w.route[w.cursor-1]:null,next=w.route[w.cursor],choices=[];if(legal(next,prev))choices.push(next);if(prev){const adjacent=four.map(([dx,dy])=>known.get(key(prev.x+dx,prev.y+dy))).filter(c=>legal(c,prev)&&(!next||c.x!==next.x||c.y!==next.y));while(adjacent.length){const c=pick(adjacent,random);choices.push(c);adjacent.splice(adjacent.indexOf(c),1);}}return choices;};
   for(let i=0;i<3;i++){
-   const c=w.route[w.cursor],prev=w.cursor?w.route[w.cursor-1]:null;if(!c){done=true;break;}
-   const probe={...room,anacondas:room.anacondas.filter(e=>e.id!==w.id)};
-   if(latest&&latest.x===c.x&&latest.y===c.y){done=true;break;}
-   if(!terrain.has(key(c.x,c.y))||safe.has(key(c.x,c.y))||habitatBlocked(probe,c.x,c.y)||prev&&edges.has(edgeKey({a:prev,b:c}))){done=true;break;}
-   const body=[...w.body,c].slice(-ANACONDA_BODY),blockedProbe={...probe,anacondas:[...(probe.anacondas||[]),{...w,body}]};
-   // Never block the last playable move or the only expansion exit.
-   const remaining=availableCells(blockedProbe,room.pairs[0]);
-   if(!remaining.length&&availableCells(probe,room.pairs[0]).length){done=true;break;}
-   if(!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,blockedProbe).length){done=true;break;}
-   clearBriefCells(room,[c]);w.cursor++;w.x=c.x;w.y=c.y;w.body=body.map(p=>({...p}));actions.push({...c,kind:'anaconda'});
-   if(w.cursor>=w.route.length){done=true;break;}
+   let chosen=null,body=null;
+   for(const c of options()){
+    const tail=[...w.body,c].slice(-ANACONDA_BODY),blockedProbe={...probe,anacondas:[...(probe.anacondas||[]),{...w,body:tail}]};
+    // Never close the last playable hole or the only expansion exit.
+    if(!availableCells(blockedProbe,room.pairs[0]).length&&availableCells(probe,room.pairs[0]).length)continue;
+    if(!expansionOptions(terrain,room.pairs[0].terrainAnchor||room.pairs[0].active,blockedProbe).length)continue;
+    chosen=c;body=tail;break;
+   }
+   if(!chosen){done=true;break;}
+   const expected=w.route[w.cursor];
+   if(!expected||expected.x!==chosen.x||expected.y!==chosen.y){w.route=[...w.route.slice(0,w.cursor),{x:chosen.x,y:chosen.y}];const trace=room.faunaRouteHistory?.[w.historyIndex];if(trace?.kind==='anaconda')trace.runs=compactRoute(w.route);}
+   clearBriefCells(room,[chosen]);visited.add(key(chosen.x,chosen.y));w.cursor++;w.x=chosen.x;w.y=chosen.y;w.body=body.map(p=>({x:p.x,y:p.y}));actions.push({x:chosen.x,y:chosen.y,kind:'anaconda'});
   }
-  return !done;
+  return !done&&options().length>0;
  });
  if(actions.length)room.habitatEvent={id:crypto.randomUUID(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};
 }
