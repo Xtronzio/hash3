@@ -6,7 +6,7 @@
 .cell.fog-covered.available::after{display:none}
 .cell.fog-covered.glyph-covered .fog-cell-mark{opacity:.65}
 .habitat-anaconda svg{stroke-width:2.6}
-.board-action-anaconda{animation:worm-traverse 900ms ease-out both}
+.board-action-anaconda{animation:worm-burrow 900ms ease-out both}
 .board-action-clouds,.board-action-fog{color:#b8c0c9;animation:fog-arrival 900ms ease-out both}
 @keyframes fog-arrival{from{opacity:0;transform:translateX(-15%) scale(.8)}to{opacity:.65;transform:translateX(10%) scale(1.1)}}
 @media(prefers-reduced-motion:reduce){.board-action-anaconda,.board-action-clouds,.board-action-fog{animation:none}}
