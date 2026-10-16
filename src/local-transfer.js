@@ -4,6 +4,7 @@ import {loadTerritoryResults} from './achievements.js';
 import {freezeHabitats} from './inhabitants.js';
 import {freezeImmunities} from './immunity.js';
 import {VERSION_LABEL} from './version.js';
+import {validInverseBees} from './inverse-bees.js';
 
 export const MAX_TRANSFER_BYTES=16*1024*1024,MAX_TRANSFER_PACKED=8*1024*1024,MAX_TRANSFER_URL=1900000;
 const PREFIX='h33t1',RECEIPTS='hash3_transfer_receipts',RESULTS='hash3_completed_territories';
@@ -23,6 +24,7 @@ export function validateTransfer(data){
  if(!data||data.format!=='hash33-local-transfer'||data.version!==1||!text(data.id,100)||!text(data.createdAt,40)||!Number.isFinite(Date.parse(data.createdAt))||!array(data.games,333)||!array(data.results,33333)||!array(data.pins,333)||typeof data.name!=='string'||data.name.length>18)fail();
  safeTree(data);const ids=new Set();
  for(const g of data.games){
+  if(!validInverseBees(g))fail();
   if(!text(g.id)||ids.has(g.id)||!['solo','local'].includes(g.mode)||!['paused','finished'].includes(g.status)||!array(g.players,2)||g.players.length!==2||!array(g.pairs,1)||g.pairs.length!==1||!array(g.terrain)||!g.terrain.length||!array(g.cells)||!array(g.forms)||!Number.isFinite(g.version)||g.version<0)fail();
   if(g.variant==='inverse'){if(g.inverseClaimVersion!=null&&![1,2].includes(g.inverseClaimVersion))fail();if(![1,2,3].includes(g.inverseVersion))fail();if(g.inverseVersion>=2){if(!array(g.inverseFill,33333)||new Set(g.inverseFill).size!==g.inverseFill.length)fail();const keys=new Set(g.terrain.map(c=>`${c.x},${c.y}`));if(g.inverseFill.some(k=>typeof k!=='string'||!keys.has(k)))fail();if(g.inverseVersion===3&&(!Number.isSafeInteger(g.inverseMoves)||g.inverseMoves<0||!Number.isSafeInteger(g.inverseWildNext)||g.inverseWildNext<=g.inverseMoves))fail();}}
   ids.add(g.id);const players=new Set();

@@ -533,3 +533,6 @@ diagonales y todas sus figuras válidas. Vista previa automática del combo y bo
 con figura mayor como referencia. Corrige también los próximos cobros de partidas
 R79 sin reiniciarlas ni recalcular puntos anteriores. Detalles y validación en
 design/inverse-combos-r80.md.
+# R0.21.81 · Abejas de Inverso
+
+Presión individual tras9/12/15turnos propios sin cobrar con puntos, con aviso de tres turnos. El enjambre redistribuye las fichas del jugador dentro del dibujo, manteniendo contorno, relleno, puntos, rival y#. Cobro voluntario, IA/ayudas, pausa, guardado y traslado integrados; Original y versiones automáticas conservados. Contrato: [design/inverse-bees-r81.md](design/inverse-bees-r81.md). Respaldo: backup/pre-inverso-bees-r80-20261016 (5c2a1e8). Publicación solo tras pipeline completo y verificación R81/r292.

@@ -53,6 +53,7 @@ on:
       - release/local-inverse-fill-r78
       - release/local-inverse-claims-r79
       - release/local-inverse-combos-r80
+      - release/local-inverse-bees-r81
   workflow_dispatch:
 permissions:
   contents: write
@@ -77,6 +78,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-inverse-bees-r81.mjs
       - run: node scripts/verify-inverse-claims-r79.mjs
       - run: node scripts/verify-inverse-fill-r78.mjs
       - run: node scripts/verify-inverse-r77.mjs
