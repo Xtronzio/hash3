@@ -1,3 +1,4 @@
+import {faunaKindEnabled} from './fauna-selection.js';
 import {key,terrainOf,availableCells,isBlockedCell} from './game.js';
 import {frontierSegments,edgeKey} from './frontiers.js';
 import {habitatBlocked} from './habitat-tools.js';
@@ -20,7 +21,7 @@ export function anacondaRoute(room,random=Math.random){
  return best;
 }
 export function announceAnaconda(room,now,random=Math.random){
- if(room.anacondas?.length)return false;
+ if(!faunaKindEnabled(room,'anaconda')||room.anacondas?.length)return false;
  initializeRouteHistory(room);const route=anacondaRoute(room,random);if(!route.length)return false;
  room.anacondas||=[];room.anacondas.push({id:crypto.randomUUID(),kind:'anaconda',...route[0],route,cursor:0,body:[],warningTurns:3,announcedTurn:room.ecologyTurns||0,at:now,historyIndex:(room.faunaRouteHistory||[]).length});rememberRoute(room,'anaconda',route);return true;
 }

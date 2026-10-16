@@ -542,3 +542,5 @@ R0.21.82: cuenta de abejas ampliada y Cobrar con icono de recogida, configurable
 R0.21.83: Cobrar grande y flotante por defecto; ambas cuentas de abejas visibles, plazos independientes de 3 a 33 turnos propios. Contrato: design/inverse-visible-r83.md.
 
 R0.21.84: hormigas de 3/plaga33 en Original, selección de fenómenos por iconos y cobro directo en Inverso. Contrato: design/ants-phenomena-r84.md.
+
+R0.21.85: selección individual de fauna/habitantes y sus plagas con Todos/Ninguno, guardada con la partida y los resultados. Contrato: design/fauna-selection-r85.md.
