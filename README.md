@@ -540,3 +540,5 @@ Presión individual tras9/12/15turnos propios sin cobrar con puntos, con aviso d
 R0.21.82: cuenta de abejas ampliada y Cobrar con icono de recogida, configurable como control flotante también sin inventario. Contrato y validación: [design/inverse-controls-r82.md](design/inverse-controls-r82.md). Respaldo R81: backup/pre-inverso-controls-r81-20261016 (b8ca4d0).
 
 R0.21.83: Cobrar grande y flotante por defecto; ambas cuentas de abejas visibles, plazos independientes de 3 a 33 turnos propios. Contrato: design/inverse-visible-r83.md.
+
+R0.21.84: hormigas de 3/plaga33 en Original, selección de fenómenos por iconos y cobro directo en Inverso. Contrato: design/ants-phenomena-r84.md.

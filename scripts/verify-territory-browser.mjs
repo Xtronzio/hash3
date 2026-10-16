@@ -239,7 +239,8 @@ try{
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('[data-setup-select="local-time-mode"][data-value="untimed"]').click();
   await page.locator('[data-setup-select="local-goal-type"][data-value="time"]').click();
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
-  assert.equal(await page.locator('.ecology-choice-icons svg').count(),19);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),20);
+  assert.equal(await page.locator('.ecology-choice-icons [data-icon="ant"]').count(),1);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
   for(const target of ['33','180','360','540'])await page.locator(`[data-setup-select="local-goal-target"][data-value="${target}"]`).click();
@@ -267,7 +268,7 @@ try{
   assert.deepEqual(local.matchGoal,{type:'time',target:mode==='solo'?33:540});assert.equal(Date.parse(local.endsAt)-Date.parse(local.createdAt),local.matchGoal.target*1000);
   const rejected=await page.evaluate(async()=>{const api=await import('/src/api.js');try{await api.command('world');return false;}catch(e){return e.message.includes('En construcción');}});assert.equal(rejected,true);
   await page.locator('[data-action="pause"]').tap();await page.locator('[data-action="resume"]').waitFor();
-  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:19,setupChecksAligned:true,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
+  assert.deepEqual(errors,[]);results.push({localStart:mode,moves:local.cells.length,matchDurationSeconds:local.matchGoal.target,setupEcologyIcons:20,setupChecksAligned:true,networkOffline:true,noSupabaseRequests:true,passed:true});await isolated.close();
  }
  // Exercise the real Worker: the former winning target is a worm body.
  for(const difficulty of ['basic','medium','high','pro']){

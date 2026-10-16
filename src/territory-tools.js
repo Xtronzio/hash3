@@ -1,3 +1,4 @@
+import {phenomenonEnabled,phenomenonFamilyEnabled} from './phenomena-selection.js';
 import {fogIcon,cloudIcon} from './fog.js';
 import {briefEcology,initializeBriefEcology,deathRegion,DEATH_INTERVAL,briefIcons} from './brief-ecology.js';
 import {isDeadCell} from './dead-cells.js';
@@ -129,7 +130,9 @@ function announceTerritory(room,now,random,trigger,family,increment=0){
  const choice=pickEventKind(room,family,random),reserved=room.territoryPlans?.[family];
  if(reserved&&choice.order.includes(reserved))choice.order=[reserved,...choice.order.filter(k=>k!==reserved)];
  const reserveNext=()=>{if(plannedEcology(room))room.territoryPlans[family]=pickEventKind(room,family,random).order[0];};
+ if(!phenomenonEnabled(room,choice.order[0])){confirmEventKind(room,choice);reserveNext();return false;}
  for(const kind of choice.order){
+  if(!phenomenonEnabled(room,kind))continue;
   const planned=briefEcology(room)&&kind==='invader-rain'?planBombWave(room,impactCount(room,kind),random):kind==='ufo'?territoryRegion(room,'ufo',random,impactCount(room,kind)):
    kind==='earthquake'?territoryRegion(room,'cataclysm',random,impactCount(room,kind)):
    plannedEventRegion(room,kind,random,now);
@@ -157,16 +160,16 @@ export function recordTerritoryGrowth(room,added,now=Date.now(),random=Math.rand
 export function territoryPlacementDue(room,now=Date.now(),increment=0,{naturalOnly=false}={}){
  return territoryEnabled(room)&&territoryReady(room)&&!room.territoryEvents?.length&&!faunaSuspended(room,now)&&
   (turnEcology(room)||!localLiving(room)||!room.endsAt||Date.parse(room.endsAt)-now>=EVENT_BALANCE.warningMs)&&
-  (briefEcology(room)&&territoryProgress(room)+increment>=room.territoryNextDeathTurn||territoryProgress(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&(territoryProgress(room)+increment>=room.territoryNextInvasion||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextInvaderAt));
+  (briefEcology(room)&&phenomenonEnabled(room,'death')&&territoryProgress(room)+increment>=room.territoryNextDeathTurn||phenomenonFamilyEnabled(room,'natural')&&territoryProgress(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt||!naturalOnly&&phenomenonFamilyEnabled(room,'invaders')&&(territoryProgress(room)+increment>=room.territoryNextInvasion||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextInvaderAt));
 }
 export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random,{increment=0}={}){
  initializeTerritory(room,random);
  if(briefEcology(room)&&room.territoryEnabled!==false&&!room.territoryEvents.length&&!faunaSuspended(room,now)&&territoryProgress(room)+increment>=room.territoryNextDeathTurn){
-  room.territoryNextDeathTurn=territoryProgress(room)+increment+DEATH_INTERVAL;const region=deathRegion(room);
+  room.territoryNextDeathTurn=territoryProgress(room)+increment+DEATH_INTERVAL;const region=phenomenonEnabled(room,'death')?deathRegion(room):[];
   if(region.length){room.territoryEvents.push({id:crypto.randomUUID(),kind:'death',region,x:region[0].x,y:region[0].y,turnsRemaining:3,announcedTurn:room.ecologyTurns||0});return true;}
  }
  if(!territoryPlacementDue(room,now,increment))return false;
- const family=territoryProgress(room)+increment>=room.territoryNextPlacement||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt?'natural':'invaders';
+ const family=phenomenonFamilyEnabled(room,'natural')&&(territoryProgress(room)+increment>=room.territoryNextPlacement)||localLiving(room)&&!turnEcology(room)&&now>=room.territoryNextNaturalAt?'natural':'invaders';
  return announceTerritory(room,now,random,plannedEcology(room)?'turns':'placements',family,increment);
 }
 export function advanceTerritory(room,now=Date.now()){

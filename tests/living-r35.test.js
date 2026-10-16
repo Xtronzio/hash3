@@ -156,9 +156,10 @@ test('Separated black-hole cores have bounded individual halos rather than one e
  const result=applyPlannedEvent(r,{id:'holes',kind:'blackhole',...plan},1000);
  assert.ok(result.hit.size<=3*81);assert.equal(r.cells.length,3333-27);assert.equal(r.terrain.length,3333);
 });
-test('Pandemic, black hole, tornado rain and hurricane have distinct icons and all thirteen ecology glyphs appear in setup',()=>{
+test('Pandemic, black hole, tornado rain and hurricane have distinct icons and the fauna catalogue including ants appears in setup',()=>{
  assert.equal(new Set([...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION].map(k=>territoryIcons[k])).size,9);
  const markup=ecologyChoicesMarkup({faunaEnabled:true,territoryEnabled:true,machine:true,machineInventory:true},'');
- assert.equal((markup.match(/<svg/g)||[]).length,19);
+ assert.equal((markup.match(/<svg/g)||[]).length,20);
+ assert.match(markup,/data-ecology-kind="ants"/);
  for(const kind of NATURAL_EVENT_ROTATION)assert.ok(markup.includes('data-ecology-kind="'+kind+'"'));
 });

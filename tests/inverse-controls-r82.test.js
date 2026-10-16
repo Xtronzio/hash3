@@ -15,9 +15,9 @@ test('Floating claim preferences retain position without changing the card catal
  const p=prefs();assert.deepEqual(p.order,INVENTORY_ORDER);assert.ok(!p.order.includes('inverse-claim'));assert.deepEqual(p.floating,['inverse-claim']);assert.deepEqual(p.positions['inverse-claim'],{x:.4,y:.6});assert.equal(normalizeInventoryPreferences().floating.length,0);
 });
 test('Cobrar is a separate configurable control, with the same collection icon in the editor and game',()=>{
- const g=fresh(),html=inventoryEditorMarkup(prefs(),'inverse-claim',g);assert.match(html,/Controles/);assert.match(html,/Devolver Cobrar a la barra/);assert.match(html,/data-edit-tool="inverse-claim"/);assert.match(html,/data-icon="collect-figures"/);assert.match(html,/No consume cartas/);
+ const g=fresh(),html=inventoryEditorMarkup(prefs(),'inverse-claim',g);assert.match(html,/Controles/);assert.match(html,/Devolver Cobrar a la barra/);assert.match(html,/data-edit-tool="inverse-claim"/);assert.match(html,/data-icon="claim-trophy"/);assert.match(html,/No consume cartas/);
  assert.ok([...html.matchAll(/<button[^>]+data-action="inventory-order-step"[^>]*>/g)].every(m=>m[0].includes('disabled')));
- assert.match(inverseClaimControl(g,'local-x'),/data-icon="collect-figures"/);assert.doesNotMatch(inverseClaimControl(g,'local-x'),/M5 8h22v17/);
+ assert.match(inverseClaimControl(g,'local-x'),/data-icon="claim-trophy"/);assert.doesNotMatch(inverseClaimControl(g,'local-x'),/M5 8h22v17/);
  for(const version of [1,2]){const old={...g,inverseVersion:version};assert.doesNotMatch(inventoryEditorMarkup(prefs(),'inverse-claim',old),/data-edit-tool="inverse-claim"/);assert.equal(inverseClaimControl(old,'local-x'),'');assert.equal(floatingInventoryMarkup(old,'local-x',prefs()),'');}
  const original={...g,variant:undefined};assert.doesNotMatch(inventoryEditorMarkup(prefs(),'inverse-claim',original),/data-edit-tool="inverse-claim"/);assert.equal(floatingInventoryMarkup(original,'local-x',prefs()),'');
 });

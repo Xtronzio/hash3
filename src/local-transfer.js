@@ -1,3 +1,4 @@
+import {SELECTABLE_PHENOMENA} from './phenomena-selection.js';
 import {gzipSync,Gunzip,strToU8,strFromU8} from 'fflate';
 import {loadLocalGames} from './sessions.js';
 import {loadTerritoryResults} from './achievements.js';
@@ -25,6 +26,10 @@ export function validateTransfer(data){
  safeTree(data);const ids=new Set();
  for(const g of data.games){
   if(!validInverseBees(g))fail();
+  if(g.phenomena!=null&&(!array(g.phenomena,SELECTABLE_PHENOMENA.length)||new Set(g.phenomena).size!==g.phenomena.length||g.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();
+  if(g.antVersion!=null&&g.antVersion!==1)fail();
+  if(g.faunaEvents!=null&&!array(g.faunaEvents))fail();
+  for(const e of g.faunaEvents||[])if(['ants','ants-plague'].includes(e.kind)&&(!text(e.id)||!point(e)||!points(e.region)||!array(e.transports,33)||e.transports.length!==(e.kind==='ants'?3:33)||e.transports.some(t=>!point(t.from)||!text(t.from.id)||!point(t.to))||new Set(e.transports.map(t=>t.from.id)).size!==e.transports.length||new Set(e.transports.map(t=>t.to.x+','+t.to.y)).size!==e.transports.length||!Number.isSafeInteger(e.turnsRemaining)||e.turnsRemaining<0||e.turnsRemaining>3))fail();
   if(!text(g.id)||ids.has(g.id)||!['solo','local'].includes(g.mode)||!['paused','finished'].includes(g.status)||!array(g.players,2)||g.players.length!==2||!array(g.pairs,1)||g.pairs.length!==1||!array(g.terrain)||!g.terrain.length||!array(g.cells)||!array(g.forms)||!Number.isFinite(g.version)||g.version<0)fail();
   if(g.variant==='inverse'){if(g.inverseClaimVersion!=null&&![1,2].includes(g.inverseClaimVersion))fail();if(![1,2,3].includes(g.inverseVersion))fail();if(g.inverseVersion>=2){if(!array(g.inverseFill,33333)||new Set(g.inverseFill).size!==g.inverseFill.length)fail();const keys=new Set(g.terrain.map(c=>`${c.x},${c.y}`));if(g.inverseFill.some(k=>typeof k!=='string'||!keys.has(k)))fail();if(g.inverseVersion===3&&(!Number.isSafeInteger(g.inverseMoves)||g.inverseMoves<0||!Number.isSafeInteger(g.inverseWildNext)||g.inverseWildNext<=g.inverseMoves))fail();}}
   ids.add(g.id);const players=new Set();
@@ -49,7 +54,7 @@ export function validateTransfer(data){
   for(const e of g.watchTargets||[])if(!point(e)||!text(e.id))fail();
   for(const e of g.rodentRaids||[])if(!text(e.id)||!array(e.members||[])||!points(e.visited||[]))fail();
  }
- for(const r of data.results)if(!text(r?.game)||!['solo','local'].includes(r.mode)||!['board-limit','time-limit','move-limit','inverse-empty'].includes(r.kind)||!Number.isFinite(r.limit)||!array(r.players,2)||r.players.some(p=>!Number.isFinite(p.score)||p.score<0))fail();
+ for(const r of data.results){if(r.phenomena!=null&&(!array(r.phenomena,SELECTABLE_PHENOMENA.length)||new Set(r.phenomena).size!==r.phenomena.length||r.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();if(r.antVersion!=null&&r.antVersion!==1)fail();if(!text(r?.game)||!['solo','local'].includes(r.mode)||!['board-limit','time-limit','move-limit','inverse-empty'].includes(r.kind)||!Number.isFinite(r.limit)||!array(r.players,2)||r.players.some(p=>!Number.isFinite(p.score)||p.score<0))fail();}
  for(const pin of data.pins)if(!text(pin)||!ids.has(pin))fail();
  return data;
 }

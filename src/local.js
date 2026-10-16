@@ -1,3 +1,4 @@
+import {normalizePhenomena} from './phenomena-selection.js';
 import {isInverse} from './inverse-rules.js';
 import {configureInverse,inverseCommand} from './inverse.js';
 import {buyCard} from './inventory-economy.js';
@@ -39,6 +40,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
     players:[{id:x,name:playerSymbol==='X'?name:rivalName,symbol:'X',pair:0,order:1,score:0,figures:0},{id:o,name:playerSymbol==='O'?name:rivalName,symbol:'O',pair:0,order:2,score:0,figures:0}],
     pairs:[{id:0,x,o,turn:'X',active:{x:0,y:0},credits:0,pending:0,expander:null,deadline:timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString()}],
     blocks:[{x:0,y:0}],terrain:Array.from({length:9},(_,i)=>({x:i%3,y:Math.floor(i/3)})),cells:[],forms:[],lines:[]};
+  if(ecology.phenomena!=null){room.phenomena=normalizePhenomena(ecology.phenomena);if(!room.phenomena.length)room.territoryEnabled=false;}
   if(CELL_TARGETS.includes(ecology.cellTarget))room.cellTarget=ecology.cellTarget;
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}

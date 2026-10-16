@@ -13,6 +13,7 @@ export function recordTerritoryImpact(room,event,before,hit,now,scores=[]){
 }
 export function territoryImpactText(event){
  const label=event.kind==='cataclysm'?'Cataclismo':eventLabel(event.kind),effect=eventRule(event.kind)?.effect;
+ if(['ants','ants-plague'].includes(event.kind))return `${label} ha trasladado ${event.transported} fichas a ${event.constructed} celdas nuevas${(event.scores||[]).map(s=>' · '+s.symbol+' +'+s.points).join('')}`;
  if(effect==='conceal')return `${label} oculta ${event.affected?.length||0} celdas durante tres turnos`;
  if(event.kind==='death')return 'Celda muerta · esta casilla queda inalterable';
  if(event.bombPhase==='bomb')return `Bombardeo ha liberado ${event.freed} fichas · invasores en un turno`;
