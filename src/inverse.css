@@ -15,3 +15,18 @@
 
 /* R82: the imminent own-turn count is a primary signal. */
 .inverse-bee-badge{gap:3px;line-height:26px;font-size:22px;min-height:26px}.inverse-bee-badge svg{width:25px;height:25px}.inverse-bee-count{font-size:24px;line-height:26px;font-weight:800;min-width:16px;text-align:center}.inverse-bee-calm{font-size:18px;color:#b5a272}.inverse-aux-clocks{gap:0}.inverse-bee-notice .inverse-bee-turns{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;color:#ffe088}.inverse-bee-turns strong{font-size:24px;line-height:1.1;font-weight:800}.inverse-bee-notice>svg{width:28px;height:28px;flex-basis:28px}.inverse-control-customization{display:flex;gap:4px;padding-top:4px}.inverse-control-customization button{width:44px;height:44px;padding:10px;color:#00e5ff}.inverse-control-customization svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}.floating-inventory-card .inverse-claim-floating small{display:block;right:0;left:0;text-align:center;font-size:10px}.inventory-editor-controls{flex:none;border-top:1px solid #40505d;padding:8px 0}.inventory-editor-controls h3{margin:0 0 6px;font-size:15px}.inventory-editor-controls .inventory-edit-card{display:inline-flex;width:90px;min-height:62px}.inventory-editor-controls .inventory-edit-card button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;min-height:60px}.inventory-editor-controls svg{width:27px;height:27px;fill:none;stroke:currentColor}.inventory-editor-controls p{display:inline-block;margin:0 0 0 10px;max-width:210px;font-size:12px;color:#b6c8d8;vertical-align:middle}@media(max-height:480px){.inventory-editor-controls{padding:4px 0}.inventory-editor-controls h3{display:none}.inventory-editor-controls .inventory-edit-card{min-height:44px}.inventory-editor-controls .inventory-edit-card button{min-height:44px;flex-direction:row}.inventory-editor-controls p{font-size:11px}}
+
+/* R83: a prominent claim control and both full countdowns, outside collapsible cards. */
+.floating-inventory-card.floating-inverse-claim{width:78px;border-color:#00e5ff;border-width:2px;border-radius:14px;background:#102129ed;box-shadow:0 0 12px #00e5ff24,0 3px 12px #0008}
+.floating-inventory-card.floating-inverse-claim .inverse-claim-floating{width:74px;height:74px;min-height:74px;padding:6px 8px 20px;background:transparent}
+.floating-inverse-claim .inverse-claim-floating svg{width:42px;height:42px}
+.floating-inverse-claim .inverse-claim-floating small{font-size:14px;font-weight:700;bottom:3px;background:transparent}
+.inverse-bee-clocks{display:flex;align-items:center;justify-content:center;gap:14px;min-height:36px;flex:none;width:100%;padding:1px 4px;color:#e6be62}
+.inverse-bee-clocks>svg{width:28px;height:28px;flex:none}
+.inverse-bee-player{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.inverse-bee-player>small{font-size:11px;color:#b8c4d0}
+.inverse-bee-badge{gap:5px}
+.inverse-bee-symbol{font-size:18px;font-weight:800}
+.inverse-bee-symbol.x{color:#ff4b61}.inverse-bee-symbol.o{color:#20ce96}
+.inverse-bee-count{min-width:30px;font-variant-numeric:tabular-nums}
+@media(max-height:480px){.inverse-bee-clocks{min-height:30px;padding-block:0}.inverse-bee-clocks>svg{width:24px;height:24px}}

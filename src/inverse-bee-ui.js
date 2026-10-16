@@ -1,10 +1,15 @@
-import {inverseBeeWarning} from './inverse-bees.js';
+import {inverseBeeWarning,inverseBeeRemaining} from './inverse-bees.js';
 export const inverseBeeIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 12C2 10 5 1 12 7l4 7M19 12C29 10 27 1 20 7l-4 7"/><ellipse cx="16" cy="20" rx="9" ry="7"/><path d="M12 14v12M19 14v12M24 18l4-3M24 23l4 2M8 18l-4-3M8 23l-4 2"/></g></svg>';
 export function inverseBeeBadge(room,playerId){
  if(room.variant!=='inverse'||room.inverseVersion!==3)return '';
- const warning=inverseBeeWarning(room,playerId),symbol=room.players.find(p=>p.id===playerId)?.symbol;
- const label=warning?`Abejas ${symbol}: quedan ${warning} turnos propios para cobrar con puntos`:`Abejas ${symbol}: en calma. Plazo variable de 9, 12 o 15 turnos propios; aviso de tres turnos`;
- return `<span class="inverse-bee-badge ${warning?'is-warning':''}" role="img" aria-label="${label}" title="${label}">${inverseBeeIcon}${warning?`<strong class="inverse-bee-count" data-inverse-bee-count>${warning}</strong>`:'<span class="inverse-bee-calm" aria-hidden="true">—</span>'}</span>`;
+ const remaining=inverseBeeRemaining(room,playerId),symbol=room.players.find(p=>p.id===playerId)?.symbol;
+ const label=remaining!==null?`Abejas ${symbol}: quedan ${remaining} turnos propios para cobrar con puntos`:`Abejas ${symbol}: cuenta pendiente de iniciar en la próxima acción`;
+ return `<span class="inverse-bee-badge ${remaining!==null&&remaining<=3?'is-warning':''}" data-bee-symbol="${symbol}" role="img" aria-label="${label}" title="${label}"><b class="inverse-bee-symbol ${symbol.toLowerCase()}">${symbol}</b>${remaining!==null?`<strong class="inverse-bee-count" data-inverse-bee-count>${remaining}</strong>`:'<span class="inverse-bee-calm" aria-hidden="true">—</span>'}</span>`;
+}
+export function inverseBeeClocks(room,playerId,{paused=false}={}){
+ if(room.variant!=='inverse'||room.inverseVersion!==3)return '';
+ const own=room.players.find(p=>p.id===playerId),rival=room.players.find(p=>p.id!==playerId);
+ return `<div class="inverse-bee-clocks" role="group" aria-label="Abejas: cuenta atrás de ambos jugadores${paused?' · Pausa: cuenta detenida':''}">${inverseBeeIcon}${[own,rival].filter(Boolean).map((p,i)=>`<span class="inverse-bee-player"><small>${i?'Rival':'Tú'}</small>${inverseBeeBadge(room,p.id)}</span>`).join('')}</div>`;
 }
 export function inverseBeeNotices(room,{paused=false}={}){
  if(room.variant!=='inverse'||room.inverseVersion!==3)return '';

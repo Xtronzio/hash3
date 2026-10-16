@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocal,localCommand,machineChoice} from '../src/local.js';
 import {inverseClaimsAt} from '../src/inverse-claims.js';
-import {initializeInverseBees,completeInverseBeeTurn,inverseBeeWarning,validInverseBees} from '../src/inverse-bees.js';
+import {initializeInverseBees,completeInverseBeeTurn,inverseBeeWarning,inverseBeeRemaining,validInverseBees,INVERSE_BEE_LIMITS} from '../src/inverse-bees.js';
 import {inverseBeeBadge,inverseBeeNotices} from '../src/inverse-bee-ui.js';
 import {territoryComparisonKey} from '../src/achievements.js';
 import {captureTransfer,encodeTransfer,decodeTransfer,validateTransfer} from '../src/local-transfer.js';
@@ -16,9 +16,9 @@ const command=(g,action,payload={},now=NOW)=>localCommand(g,action,payload,now,(
 const move=g=>command(g,'move',availableCells(g,g.pairs[0])[0]);
 const claim=g=>{const f=inverseClaimsAt(g,'local-x',g.cells.find(c=>c.symbol==='X'))[0];return command(g,'claim',{x:f.points[0][0],y:f.points[0][1],figureId:f.id});};
 const due=(g,s='X',left=1)=>{Object.assign(state(g,s),{turns:9-left,since:9-left,limit:9});return g;};
-test('Bee deadlines use 9/12/15 own turns and publish only the last three',()=>{
- for(const [random,limit]of [[0,9],[.45,12],[.99,15]]){const g=fresh({random:()=>random});assert.equal(state(g).limit,limit);assert.equal(inverseBeeWarning(g,'local-x'),null);Object.assign(state(g),{turns:limit-3,since:limit-3});assert.equal(inverseBeeWarning(g,'local-x'),3);}
- const g=fresh();Object.assign(state(g),{turns:5,since:5});let n=move(g);assert.equal(inverseBeeWarning(n,'local-x'),3);n=move(n);assert.equal(inverseBeeWarning(n,'local-x'),3);assert.equal(state(n,'O').since,1);
+test('Bee deadlines cover every integer from 3 through 33; only the final three are urgent',()=>{
+ for(let limit=3;limit<=33;limit++){const g=fresh({random:()=>(limit-3+.1)/31});assert.equal(state(g).limit,limit);assert.equal(inverseBeeRemaining(g,'local-x'),limit);assert.equal(inverseBeeWarning(g,'local-x'),limit===3?3:null);Object.assign(state(g),{turns:limit-3,since:limit-3});assert.equal(inverseBeeWarning(g,'local-x'),3);}
+ const g=fresh({random:()=>.2});Object.assign(state(g),{turns:5,since:5});let n=move(g);assert.equal(inverseBeeWarning(n,'local-x'),3);n=move(n);assert.equal(inverseBeeWarning(n,'local-x'),3);assert.equal(state(n,'O').since,1);
 });
 test('A full turn counts once; Doble, cards, preview and trade never accelerate it',()=>{
  const g=due(fresh(), 'X',2);g.players[0].inventory.cards.double=1;
@@ -28,7 +28,7 @@ test('A full turn counts once; Doble, cards, preview and trade never accelerate 
 });
 test('A paid claim cancels the claimant warning, leaves the opponent deadline and resets without historical points',()=>{
  const g=due(fresh());g.cells=[tile(0,0),tile(1,0),tile(0,1),tile(1,1)];g.players[0].score=33;due(g,'O',2);const opponent=structuredClone(state(g,'O'));
- const n=claim(g);assert.equal(n.players[0].score,52);assert.equal(state(n).since,0);assert.equal(state(n).turns,9);assert.ok([9,12,15].includes(state(n).limit));assert.deepEqual(state(n,'O'),opponent);assert.equal(n.inverseBeeEvent,undefined);assert.equal(n.inverseFill.length,32);
+ const n=claim(g);assert.equal(n.players[0].score,52);assert.equal(state(n).since,0);assert.equal(state(n).turns,9);assert.ok(INVERSE_BEE_LIMITS.includes(state(n).limit));assert.deepEqual(state(n,'O'),opponent);assert.equal(n.inverseBeeEvent,undefined);assert.equal(n.inverseFill.length,32);
 });
 test('A zero-point claim does not evade bees or clear pending fill',()=>{
  const g=due(fresh());g.cells=[tile(0,0),tile(1,0),tile(2,0),tile(4,4)];g.inverseFill=['5,5'];g.players[0].score=99;
@@ -46,7 +46,7 @@ test('Relocation includes cleared positions while preserving holes and disconnec
 });
 test('A trapped single sign and a player without signs resolve safely, keeping count and points',()=>{
  const g=due(fresh());g.terrain=[{x:0,y:0},{x:1,y:0}];g.cells=[tile(0,0),tile(1,0,'O')];completeInverseBeeTurn(g,'local-x',0,()=>0);assert.equal(g.inverseBeeEvent.moved,0);assert.equal(g.inverseBeeEvent.count,1);assert.deepEqual(g.cells,[tile(0,0),tile(1,0,'O')]);
- const h=due(fresh());h.cells=[];completeInverseBeeTurn(h,'local-x',0,()=>0);assert.equal(h.inverseBeeEvent.count,0);assert.equal(state(h).cycles,1);assert.equal(inverseBeeNotices(h),'');
+ const h=due(fresh());h.cells=[];completeInverseBeeTurn(h,'local-x',0,()=>0);assert.equal(h.inverseBeeEvent.count,0);assert.equal(state(h).cycles,1);assert.doesNotMatch(inverseBeeNotices(h),/Enjambre/);
 });
 test('Pause/resume, elapsed real time and read-only clocks preserve the exact warning and random deadline',()=>{
  const g=due(fresh(), 'X',2),before=structuredClone(g.inverseBees);let n=command(g,'pause');assert.deepEqual(n.inverseBees,before);assert.equal(command(n,'tick',{},NOW+999999),n);n=command(n,'resume',{},NOW+999999);assert.deepEqual(n.inverseBees,before);assert.equal(command(n,'tick',{},NOW+1999999),n);assert.equal(inverseBeeWarning(n,'local-x'),2);
@@ -61,18 +61,18 @@ test('Alto/PRO and automatic turns collect a real paying combo before their immi
  for(const difficulty of ['high','pro']){const g=due(fresh());g.difficulty=difficulty;g.cells=[tile(0,0),tile(1,0),tile(2,0)];const c=machineChoice(g,()=>.4,{cards:false,maxTimeMs:30});assert.equal(c.action,'claim');const n=command(g,c.action,c.payload);assert.equal(n.players[0].score,3);assert.equal(n.inverseBeeEvent,undefined);assert.equal(state(n).since,0);}
  const g=due(fresh());g.timeMode='timed';g.pairs[0].deadline=new Date(NOW-1).toISOString();g.cells=[tile(0,0),tile(1,0),tile(2,0)];const n=command(g,'tick');assert.equal(n.lastEvent.kind,'claim');assert.equal(n.players[0].score,3);assert.equal(state(n).since,0);
 });
-test('AI cannot distinguish hidden calm deadlines and visible warnings survive read-only UI renders',()=>{
+test('AI accepts both public calm deadlines and UI renders preserve referee state',()=>{
  const a=fresh();a.difficulty='pro';a.cells=[tile(0,0),tile(1,0)];const b=structuredClone(a);state(a).limit=9;state(b).limit=15;
- assert.deepEqual(machineChoice(a,()=>.4,{cards:false,maxNodes:1,maxTimeMs:1000}),machineChoice(b,()=>.4,{cards:false,maxNodes:1,maxTimeMs:1000}));
+ const beforeA=JSON.stringify(a),beforeB=JSON.stringify(b);for(const g of [a,b])assert.ok(machineChoice(g,()=>.4,{cards:false,maxNodes:1,maxTimeMs:1000}));assert.equal(JSON.stringify(a),beforeA);assert.equal(JSON.stringify(b),beforeB);assert.equal(inverseBeeRemaining(a,'local-x'),9);assert.equal(inverseBeeRemaining(b,'local-x'),15);
  due(a,'X',3);const raw=JSON.stringify(a);assert.match(inverseBeeBadge(a,'local-x'),/quedan 3 turnos propios/);assert.match(inverseBeeNotices(a,{paused:true}),/Pausa: cuenta detenida/);assert.equal(JSON.stringify(a),raw);
 });
 test('A bee result compares separately from historical results without rewriting them',()=>{
- const g=fresh();g.cells=[tile(0,0),tile(1,0),tile(2,0)];g.inverseFill=['0,0'];const n=claim(g);assert.equal(n.status,'finished');assert.equal(n.finalResult.inverseBeeVersion,1);const old={...n.finalResult};delete old.inverseBeeVersion;assert.notEqual(territoryComparisonKey(old),territoryComparisonKey(n.finalResult));assert.equal(old.inverseBeeVersion,undefined);
+ const g=fresh();g.cells=[tile(0,0),tile(1,0),tile(2,0)];g.inverseFill=['0,0'];const n=claim(g);assert.equal(n.status,'finished');assert.equal(n.finalResult.inverseBeeVersion,2);const old={...n.finalResult};delete old.inverseBeeVersion;assert.notEqual(territoryComparisonKey(old),territoryComparisonKey(n.finalResult));assert.equal(old.inverseBeeVersion,undefined);
 });
 test('Transfer preserves countdowns and swarm history exactly, and rejects malformed bee snapshots',async()=>{
  const source=command(due(fresh()),'move',{x:0,y:0});Object.assign(state(source),{turns:16,since:7,limit:9});const g=command(source,'pause'),values=new Map([['hash3_locals',JSON.stringify([g])],['hash3_local',JSON.stringify({id:g.id})],['hash3_name','A']]);const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
  const data=captureTransfer(storage,{now:NOW,id:'bees-copy'}),decoded=await decodeTransfer(await encodeTransfer(data));assert.deepEqual(decoded.data.games[0].inverseBees,g.inverseBees);assert.deepEqual(decoded.data.games[0].inverseBeeEvent,g.inverseBeeEvent);assert.equal(validInverseBees(g),true);
- for(const change of [p=>p.limit=10,p=>p.since=9,p=>p.turns=-1,p=>p.cycles=1.5]){const bad=structuredClone(data);change(state(bad.games[0]));assert.throws(()=>validateTransfer(bad),/no es válida/);}
+ for(const change of [p=>p.limit=34,p=>p.since=9,p=>p.turns=-1,p=>p.cycles=1.5]){const bad=structuredClone(data);change(state(bad.games[0]));assert.throws(()=>validateTransfer(bad),/no es válida/);}
  for(const patch of [{symbol:'<b>X</b>'},{moved:99999},{cycle:99},{player:'unknown'}]){const bad=structuredClone(data);Object.assign(bad.games[0].inverseBeeEvent,patch);assert.throws(()=>validateTransfer(bad),/no es válida/);}
 });
 test('A 33333-sign swarm moves every piece and persists only a compact event',()=>{

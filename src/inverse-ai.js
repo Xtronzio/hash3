@@ -95,8 +95,7 @@ function closeWinningFill(room,acquire){
  return null;
 }
 export function chooseInverseAction(room,random=Math.random,options={}){
- // Search knows the announced warning, never the hidden random calm deadline.
- if(room.inverseBees)room={...room,inverseBees:{...room.inverseBees,players:Object.fromEntries(room.players.map(p=>{const state=room.inverseBees.players[p.symbol];return [p.symbol,inverseBeeWarning(room,p.id)?state:{...state,since:0,limit:15}];}))}};
+ // Both saved countdowns are public; search uses the same information as the player.
  if(options.automatic&&room.timeMode!=='untimed')room={...room,timeMode:'untimed'};
  const level=room.difficulty||'medium',pro=level==='pro',strong=pro||level==='high',start=performance.now(),deadline=start+(options.maxTimeMs??(options.automatic?100:pro?1800:level==='high'?450:80)),maxNodes=options.maxNodes??(pro?8000:1200);
  if(strong&&!options.automatic&&options.cards!==false){const close=closeWinningFill(room,true);if(close)return close;}

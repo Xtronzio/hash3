@@ -22,8 +22,11 @@ const name=id=>id==='inverse-claim'?'Cobrar':id==='target'?'Diana':[...practiceT
 const icon=id=>id==='inverse-claim'?inverseClaimIcon:id==='target'?`<svg viewBox="0 0 24 24" aria-hidden="true">${targetIcon}</svg>`:toolIcon(id);
 const preferenceKey=(game,actor)=>`hash3_inventory_preferences:${game.mode}:${game?.mode==='solo'?'colono':actor}`;
 export function inventoryPreferences(game,actor,storage){
- const own=game.inventoryPreferences?.[actor];if(own)return normalizeInventoryPreferences(own);
- try{return normalizeInventoryPreferences(JSON.parse(storage?.getItem(preferenceKey(game,actor))||'{}'));}catch{return normalizeInventoryPreferences();}
+ let value=game.inventoryPreferences?.[actor];
+ if(!value)try{value=JSON.parse(storage?.getItem(preferenceKey(game,actor))||'{}');}catch{}
+ const preferences=normalizeInventoryPreferences(value);
+ if(manualInverse(game)&&!preferences.inverseClaimDocked&&!preferences.floating.includes('inverse-claim'))preferences.floating.push('inverse-claim');
+ return preferences;
 }
 export function storeInventoryPreferences(game,actor,preferences,storage){
  const normalized=normalizeInventoryPreferences(preferences);
@@ -33,11 +36,11 @@ export function storeInventoryPreferences(game,actor,preferences,storage){
  try{storage?.setItem(preferenceKey(game,actor),JSON.stringify(normalized));}catch{}
  return next;
 }
-export function inventoryBandMarkup(content,game,actor,preferences,{access='',navigation=''}={}){
- if(!inventoryEnabled(game,actor)){const edit=manualInverse(game)?`<div class="inverse-control-customization"><button data-action="edit-inventory-layout" aria-label="Personalizar controles" title="Sacar Cobrar al tablero">${editIcon}</button></div>`:'';return (navigation?`<div class="player-tools">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:'')+edit+content;}
+export function inventoryBandMarkup(content,game,actor,preferences,{access='',navigation='',status=''}={}){
+ if(!inventoryEnabled(game,actor)){const edit=manualInverse(game)?`<div class="inverse-control-customization"><button data-action="edit-inventory-layout" aria-label="Personalizar controles" title="Personalizar Cobrar">${editIcon}</button></div>`:'';return (navigation?`<div class="player-tools">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:'')+status+edit+content;}
  const folded=preferences.inventoryCollapsed,drawerCollapsed=preferences.inventoryDrawerCollapsed!==false;
  const actions=`<nav class="band-actions" aria-label="Personalizar y plegar inventario">${bandControls(folded,drawerCollapsed,false)}<div class="band-auxiliary" ${drawerCollapsed?'hidden':''}><button data-action="edit-inventory-layout" aria-label="Personalizar inventario" title="Ordenar cartas y sacarlas al tablero">${editIcon}</button></div></nav>`;
- return `<div class="custom-inventory-band has-drawer ${navigation?'has-toolbar ':''}${folded?'is-collapsed ':''}${drawerCollapsed?'is-drawer-collapsed':''}">${navigation?`<div class="band-toolbar">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:''}<div class="band-body">${actions}<div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div></div>`;
+ return `<div class="custom-inventory-band has-drawer ${navigation?'has-toolbar ':''}${folded?'is-collapsed ':''}${drawerCollapsed?'is-drawer-collapsed':''}">${navigation?`<div class="band-toolbar">${access}<nav class="band-navigation" aria-label="Controles del tablero">${navigation}</nav></div>`:''}${status}<div class="band-body">${actions}<div class="custom-band-content" ${folded?'hidden':''}>${content}</div></div></div>`;
 }
 export function territoryBandMarkup(content,preferences){
  const folded=preferences.territoryCollapsed,drawerCollapsed=preferences.territoryDrawerCollapsed!==false;
@@ -46,7 +49,7 @@ export function territoryBandMarkup(content,preferences){
 }
 export function floatingInventoryMarkup(game,actor,preferences,{claimSelected=false}={}){
  if(!['solo','local'].includes(game.mode)||!['playing','paused'].includes(game.status))return '';
- return preferences.floating.filter(id=>id==='inverse-claim'?manualInverse(game):inventoryEnabled(game,actor)&&(id==='target'||inverseToolAllowed(game,id))).map(id=>`<div class="floating-inventory-card" data-floating-tool="${id}" data-floating-player="${actor}"><span class="favorite-drag-handle" role="button" tabindex="0" aria-label="Mover ${name(id)}" title="Arrastra para mover ${name(id)}">⠿</span>${id==='inverse-claim'?inverseClaimControl(game,actor,{selected:claimSelected,floating:true}):inventoryShortcutMarkup(game,actor,id,{paused:game.status==='paused'})}</div>`).join('');
+ return preferences.floating.filter(id=>id==='inverse-claim'?manualInverse(game):inventoryEnabled(game,actor)&&(id==='target'||inverseToolAllowed(game,id))).map(id=>`<div class="floating-inventory-card ${id==='inverse-claim'?'floating-inverse-claim':''}" data-floating-tool="${id}" data-floating-player="${actor}"><span class="favorite-drag-handle" role="button" tabindex="0" aria-label="Mover ${name(id)}" title="Arrastra para mover ${name(id)}">⠿</span>${id==='inverse-claim'?inverseClaimControl(game,actor,{selected:claimSelected,floating:true}):inventoryShortcutMarkup(game,actor,id,{paused:game.status==='paused'})}</div>`).join('');
 }
 export function inventoryEditorMarkup(preferences,selected,game){
  if(isInverse(game))preferences={...preferences,order:preferences.order.filter(id=>id==='target'||inverseToolAllowed(game,id))};
