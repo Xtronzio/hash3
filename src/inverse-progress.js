@@ -1,4 +1,4 @@
-export const filledInverse=room=>room?.variant==='inverse'&&room.inverseVersion===2;
+export const filledInverse=room=>room?.variant==='inverse'&&[2,3].includes(room.inverseVersion);
 export const fillKey=(x,y)=>`${x},${y}`;
 export const inverseFillSet=room=>new Set(filledInverse(room)?room.inverseFill:[]);
 export function payingInverseFigures(room,figures,remaining=inverseFillSet(room)){

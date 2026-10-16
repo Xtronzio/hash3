@@ -1,3 +1,5 @@
+import {manualInverse,canClaimInverse,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
+import {chooseInverseAction} from './inverse-ai.js';
 import {filledInverse,clearInverseFill,payingInverseFigures,inverseFillSet} from './inverse-progress.js';
 import {toggleWatchTarget,removeWatchTarget} from './watch-targets.js';
 import {isInverse,inverseToolAllowed} from './inverse-rules.js';
@@ -12,7 +14,7 @@ import {applyAreaTool} from './area-tools.js';
 const id=()=>crypto.randomUUID();
 export function configureInverse(room,options={},random=Math.random){
  const board=validateInverseBoard(options.board||INVERSE_PRESETS[0]);
- room.variant='inverse';room.inverseVersion=2;room.inverseBoard={id:board.id,name:board.name,...(options.board?.scale?{scale:options.board.scale}:{})};room.faunaEnabled=false;room.territoryEnabled=false;
+ room.variant='inverse';room.inverseVersion=3;room.inverseMoves=0;room.inverseWildNext=INVERSE_WILD_INTERVAL;room.inverseBoard={id:board.id,name:board.name,...(options.board?.scale?{scale:options.board.scale}:{})};room.faunaEnabled=false;room.territoryEnabled=false;
  delete room.cellTarget;delete room.matchGoal;delete room.endsAt;
  room.terrain=board.terrain;room.blocks=[];room.cells=[];room.forms=[];
  room.pairs[0].active={...board.terrain[0]};room.pairs[0].terrainAnchor={...board.terrain[0]};
@@ -38,7 +40,7 @@ function finishIfEmpty(room,now){
  room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
 }
 export function inverseCommand(original,action,payload={},now=Date.now(),random=Math.random){
- if(!isInverse(original)||![1,2].includes(original.inverseVersion))throw new Error('Versión de Inverso no compatible. Se conserva el guardado.');
+ if(!isInverse(original)||![1,2,3].includes(original.inverseVersion))throw new Error('Versión de Inverso no compatible. Se conserva el guardado.');
  const room=structuredClone(original),pair=room.pairs[0];room.clockNow=now;
  const done=()=>{finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
  if(action==='finish'){room.status='finished';room.finishReason='manual';room.finishedAt=new Date(now).toISOString();pair.deadline=null;return done();}
@@ -51,6 +53,18 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  if(automatic){const choice=inverseMachineChoice(room,random,{automatic:true});if(!choice)return original;action=choice.action;payload=choice.payload;}
  const actor=room.players.find(p=>p.symbol===pair.turn);
  if(!automatic&&room.timeMode!=='untimed'&&Date.parse(pair.deadline)<=now)throw new Error('Tiempo agotado: se jugará automáticamente.');
+ if(action==='claim'){
+  if(!canClaimInverse(room,actor.id))throw new Error('Elige colocar o cobrar; termina Doble antes de cobrar.');
+  const figure=inverseClaimsAt(room,actor.id,{x:payload.x,y:payload.y}).find(f=>f.id===payload.figureId);
+  if(!figure)throw new Error('La figura ya no está disponible. Elige una figura propia válida.');
+  const result=awardFigures(room,actor,[figure]),cleared=clearPaid(room,[figure]);
+  recordCombo(actor,{...result,automatic});recordMax(actor,result.points-result.bonus,result.figures,automatic);
+  recordInventoryCombo(room,actor.id,result.points,{automatic,scorer:actor.id,random});
+  completeInventoryTurn(room,actor.id,{automatic,placed:false,random});delete room.practiceTurn;
+  pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();
+  room.lastEvent={id:id(),kind:'claim',player:actor.id,actor:actor.id,...result,cleared,automatic,move:{x:payload.x,y:payload.y,symbol:actor.symbol}};
+  delete room.practiceHint;return done();
+ }
  if(action==='trade'){buyCard(room,payload.playerId,payload.tool,now,{replace:payload.replace});room.lastEvent={id:id(),kind:'trade',player:payload.playerId,tool:payload.tool};return done();}
  if(action==='inventory'){
   const {tool,playerId}=payload;
@@ -89,15 +103,18 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  const state=practiceTurn(room,actor.id),symbol=placementSymbol(room,actor.id),scorer=room.players.find(p=>p.symbol===symbol);
  const cell={id:id(),requestId:payload.requestId||id(),x:payload.x,y:payload.y,symbol,owner:actor.id};room.cells.push(cell);
  room.inventoryEffects.forced=room.inventoryEffects.forced.filter(e=>e.player!==actor.id);
- const found=figureWindows(room.cells,cell.x,cell.y,symbol,room.level).filter(f=>!room.forms.includes(f.id)),result=awardFigures(room,scorer,found);
+ const found=manualInverse(room)?[]:figureWindows(room.cells,cell.x,cell.y,symbol,room.level).filter(f=>!room.forms.includes(f.id)),result=awardFigures(room,scorer,found);
  const cleared=clearPaid(room,found);actor.lastMove=room.cells.some(c=>c.id===cell.id)?cell:null;actor.navigationLastMove={x:cell.x,y:cell.y,id:cell.id};
  recordCombo(scorer,{...result,automatic,moveId:cell.id});recordMax(actor,scorer===actor?result.points-result.bonus:0,scorer===actor?result.figures:0,automatic);recordInventoryCombo(room,actor.id,result.points,{automatic,scorer:scorer.id,random});
  actor.placements=(actor.placements||0)+1;
+ if(manualInverse(room))advanceInverseWild(room,random);
  if(!automatic&&state.remaining>1&&availableCells(room,pair).length){room.practiceTurn={...state,remaining:state.remaining-1};}
  else{completeInventoryTurn(room,actor.id,{automatic,random});delete room.practiceTurn;pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();}
  room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:actor.id,...result,cleared,automatic,continuation:false};delete room.practiceHint;return done();
 }
-export function inverseMachineChoice(room,random=Math.random,{automatic=false}={}){
+export function inverseMachineChoice(room,random=Math.random,options={}){
+ if(manualInverse(room)||room.inverseVersion===2&&['high','pro'].includes(room.difficulty))return chooseInverseAction(room,random,options);
+ const {automatic=false}=options;
  const pair=room.pairs[0],actor=room.players.find(p=>p.symbol===pair.turn),symbol=placementSymbol(room,actor.id);
  const ranked=rankInverseMoves(room,symbol,333);
  const tactical=room.cells.length<=9&&room.cells.length>0?inverseTacticalChoice(room,actor,ranked[0]?.gain||0):null;if(tactical)return tactical;

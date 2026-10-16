@@ -521,3 +521,9 @@ jugables y el contorno permanece fijo. Termina al quedar relleno0.
 Catálogo de22dibujos con tamaños S/M/L/XL y selección por miniaturas/iconos.
 Los guardados R77 conservan su versión, identificados como Inverso anterior.
 Detalles: [design/inverse-fill-r78.md](design/inverse-fill-r78.md).
+
+R0.21.79: nuevas partidas Inverso con cobro voluntario de una figura por turno,
+comodín neutral cada nueve colocaciones compartidas (máximo tres) e inventario
+que prepara sin cobrar automáticamente. Alto/PRO de Inverso revisados; búsqueda
+de Doble corregida en Original. Guardados anteriores conservados. Contrato y
+hallazgos en design/inverse-claims-r79.md.

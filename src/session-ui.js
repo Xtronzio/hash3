@@ -33,7 +33,7 @@ export function gamesMarkup({local=[],online=[],loading=false,error='',pins=[],u
  const pinned=all.filter(g=>pins.includes(gamePinKey(g,uid))),remaining=all.filter(g=>!pins.includes(gamePinKey(g,uid)));
  const closed=remaining.filter(g=>g.status==='finished'),paused=remaining.filter(g=>g.status==='paused'),open=remaining.filter(g=>!['finished','paused'].includes(g.status));
  const cards=games=>games.map(g=>{
- const title=g.local?((g.variant==='inverse'?(g.inverseVersion===1?'Inverso anterior · ':'Inverso · '):'')+(g.mode==='solo'?'VS máquina':'Sin conexión')):g.commonWorld?'Mundo':g.kind==='duel'?'Duelo':'Sala libre';
+ const title=g.local?((g.variant==='inverse'?(g.inverseVersion<3?'Inverso anterior · ':'Inverso · '):'')+(g.mode==='solo'?'VS máquina':'Sin conexión')):g.commonWorld?'Mundo':g.kind==='duel'?'Duelo':'Sala libre';
  const names=g.local?g.players.map(p=>p.name).join(' · '):(g.players||[]).slice(0,3).join(' · ');
  const label=g.status==='finished'?'Consultar':g.status==='paused'?'Ver y retomar':g.commonWorld&&!g.active?'Volver a Mundo':'Abrir partida';
  const isPinned=pins.includes(gamePinKey(g,uid));

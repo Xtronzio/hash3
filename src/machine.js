@@ -47,6 +47,7 @@ class Position {
     const reserved=new Set([...frontierCells(room).filter(c=>!c.borderSide),...habitatReservations(room),...[...(room.worms||[]),...(room.anacondas||[])].flatMap(w=>w.body||[]),...(room.deadCells||[])].map(c=>key(c.x,c.y)));
     this.habitatBlocks=new Set(this.cells.map((c,i)=>reserved.has(key(c.x,c.y))?i:-1).filter(i=>i>=0));
     this.free=this.cells.slice(0,this.legalSize).map((_,i)=>i).filter(i=>!this.board[i]&&!this.habitatBlocks.has(i));
+    this.remaining=room.practiceTurn?.player===room.pairs[0][room.pairs[0].turn.toLowerCase()]?Math.max(1,room.practiceTurn.remaining||1):1;
     this.figures=[0,...['X','O'].map(s=>room.players.find(p=>p.symbol===s)?.figures||0)];
     this.diff=(room.players.find(p=>p.symbol==='X')?.score||0)-(room.players.find(p=>p.symbol==='O')?.score||0);
     this.advanced=room.level==='advanced';this.patterns=[];this.at=this.cells.map(()=>[]);
@@ -114,13 +115,13 @@ class Position {
   }
   play(i,actor,g){
     const s=this.forced[actor]||actor;
-    const previous={figures:this.figures[s],blocks:this.blocks,forced:this.forced,symbol:s};this.forced={...this.forced};delete this.forced[actor];this.figures[s]+=g.figures;this.diff+=(s===1?1:-1)*g.points;
+    const previous={figures:this.figures[s],blocks:this.blocks,forced:this.forced,symbol:s,remaining:this.remaining,nextTurn:this.nextTurn};this.forced={...this.forced};delete this.forced[actor];this.figures[s]+=g.figures;this.diff+=(s===1?1:-1)*g.points;
     this.advanceBlocks(actor);
     for(const p of this.at[i]){this.potential-=this.patternValue(p);if(s===1)p.x++;else p.o++;this.potential+=this.patternValue(p);}
-    this.board[i]=s;this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];return previous;
+    this.board[i]=s;this.nextTurn=this.remaining>1&&this.free.some(j=>!this.board[j])?actor:3-actor;this.remaining=this.nextTurn===actor?this.remaining-1:1;this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];return previous;
   }
   undo(i,actor,g,previous){
-    const s=previous.symbol;this.forced=previous.forced;
+    const s=previous.symbol;this.remaining=previous.remaining;this.nextTurn=previous.nextTurn;this.forced=previous.forced;
     this.board[i]=0;this.hash^=this.zobrist[i][s];this.hash2^=this.zobrist2[i][s];this.figures[s]=previous.figures;this.blocks=previous.blocks;this.diff-=(s===1?1:-1)*g.points;
     for(const p of this.at[i]){this.potential-=this.patternValue(p);if(s===1)p.x--;else p.o--;this.potential+=this.patternValue(p);}
   }
@@ -142,7 +143,7 @@ function searchPosition(position,turn,config,budget){
   const check=()=>{if(++budget.nodes>budget.maxNodes||(budget.nodes%32===0&&performance.now()>=budget.deadline))throw STOP;};
   function search(depth,s,alpha,beta,ply){
     check();
-    const k=`${extensionDepth}:${position.hash}:${position.hash2}:${position.extensionLayers}:${position.extensionKey}:${position.figures[1]%3}:${position.figures[2]%3}:${position.diff}:${s}:${JSON.stringify(position.forced)}:${position.blocks.map(b=>`${b.i},${b.by},${b.remaining},${+b.fresh}`).join(';')}`;
+    const k=`${extensionDepth}:${position.hash}:${position.hash2}:${position.extensionLayers}:${position.extensionKey}:${position.figures[1]%3}:${position.figures[2]%3}:${position.diff}:${position.remaining}:${s}:${JSON.stringify(position.forced)}:${position.blocks.map(b=>`${b.i},${b.by},${b.remaining},${+b.fresh}`).join(';')}`;
     const cached=table.get(k);
     if(cached&&cached.depth===depth){if(cached.bound==='exact')return cached.value;if(cached.bound==='lower')alpha=Math.max(alpha,cached.value);else beta=Math.min(beta,cached.value);if(alpha>=beta)return cached.value;}
     // Cache bounds must describe the window after a prior bound narrowed it.
@@ -186,7 +187,7 @@ function searchPosition(position,turn,config,budget){
     let value=s===1?-Infinity:Infinity,move=moves[0].i;
     for(const m of moves){
       const previous=position.play(m.i,s,m.g);let next;
-      try{next=search(depth-1,3-s,alpha,beta,ply+1);}finally{position.undo(m.i,s,m.g,previous);}
+      try{next=search(depth-1,position.nextTurn,alpha,beta,ply+1);}finally{position.undo(m.i,s,m.g,previous);}
       if(s===1?next>value:next<value){value=next;move=m.i;}
       if(s===1)alpha=Math.max(alpha,value);else beta=Math.min(beta,value);
       if(alpha>=beta)break;
@@ -206,7 +207,7 @@ function searchPosition(position,turn,config,budget){
     try{
       for(const m of ordered){
         const previous=position.play(m.i,turn,m.g);let next;
-        try{next=search(depth-1,3-turn,alpha,beta,1);}finally{position.undo(m.i,turn,m.g,previous);}
+        try{next=search(depth-1,position.nextTurn,alpha,beta,1);}finally{position.undo(m.i,turn,m.g,previous);}
         if(turn===1?next>value:next<value){value=next;move=m.i;}
         if(turn===1)alpha=Math.max(alpha,value);else beta=Math.min(beta,value);
       }
@@ -269,7 +270,7 @@ function chooseExpansion(room,level,random,config,budget){
 }
 
 export function chooseMachineMove(room,random=Math.random,options={}){
- if(isInverse(room))return inverseMachineChoice(room,random);
+ if(isInverse(room))return inverseMachineChoice(room,random,options);
   room=perceivedRoom(room);
   const level=settings[room.difficulty]?room.difficulty:'medium',config=settings[level],start=performance.now();
   const budget={nodes:0,maxNodes:options.maxNodes??config.nodes,deadline:start+(options.maxTimeMs??config.time)};

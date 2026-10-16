@@ -1,3 +1,4 @@
+import {manualInverse} from './inverse-claims.js';
 import {filledInverse,payingInverseFigures} from './inverse-progress.js';
 import {localLiving} from './living-balance.js';
 import {key,figureWindows,prepareFigureIndex} from './game.js';
@@ -21,6 +22,7 @@ export function awardFigures(room,scorer,figures){
 // Score the final arrangement once, including figures crossing the shuffled
 // region's edge. Identical figures already present before landing never pay.
 export function scoreLandings(room,before,affected,{kind='tornado',actor=null}={}){
+ if(manualInverse(room))return [];
  const old=new Map(before.map(c=>[key(c.x,c.y),c])),after=new Map(room.cells.map(c=>[key(c.x,c.y),c]));
  const changed=[...new Map(affected.map(c=>[key(c.x,c.y),c])).values()].filter(c=>old.get(key(c.x,c.y))?.symbol!==after.get(key(c.x,c.y))?.symbol);
  const wildcards=localLiving(room),beforeIndex=prepareFigureIndex(before,wildcards),afterIndex=prepareFigureIndex(room.cells,wildcards),existing=new Set();

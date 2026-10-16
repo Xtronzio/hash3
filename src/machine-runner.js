@@ -1,18 +1,25 @@
 import {isInverse} from './inverse-rules.js';
 import {inverseMachineChoice} from './inverse.js';
 import {machineTurnKey} from './machine-turn.js';
-import {availableCells,expansionOptions,terrainOf} from './game.js';
+import {availableCells,expansionOptions,terrainOf,prepareFigureIndex,figureWindows,key} from './game.js';
+import {perceivedRoom} from './fog.js';
+import {placementSymbol} from './practice-tools.js';
 
 // An emergency choice uses the referee's current legal cells, not an old
 // speculative board. It never spends a card, invents a pass or skips a turn.
 export function legalMachineFallback(room){
- if(isInverse(room)){const choice=inverseMachineChoice(room);if(choice)return choice;throw new Error('Dibujo lleno: el rival necesita una carta para continuar. Puedes pausar y conservar la partida.');}
+ if(isInverse(room)){const choice=inverseMachineChoice(room,Math.random,{maxTimeMs:80,cards:false});if(choice)return choice;throw new Error('Dibujo lleno: el rival necesita una carta para continuar. Puedes pausar y conservar la partida.');}
  const pair=room.pairs[0];
  if(pair.pending){
   const point=expansionOptions(terrainOf(room),pair.terrainAnchor||pair.active,room)[0];
   if(point)return {action:'expand',payload:point};
  }else{
-  const point=availableCells(room,pair)[0];
+  const free=availableCells(room,pair),visible=perceivedRoom(room),actor=room.players.find(p=>p.symbol===pair.turn),symbol=placementSymbol(room,actor.id),rival=actor.symbol==='X'?'O':'X',index=prepareFigureIndex(visible.cells,true),paid=new Set(room.forms),near=new Set();
+  for(const c of visible.cells)for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++)near.add(key(c.x+dx,c.y+dy));
+  const sampled=free.length<=256?free:[...free.filter(c=>near.has(key(c.x,c.y))).slice(0,192),...free.filter((_,i)=>i%Math.ceil(free.length/64)===0)];
+  const gain=(point,sign)=>{const k=key(point.x,point.y),set=index.occupied.get(sign),list=index.bySymbol.get(sign);set.add(k);list.push({...point,symbol:sign});index.groups.delete(sign);const found=figureWindows(visible.cells,point.x,point.y,sign,room.level,index,true).filter(f=>!paid.has(f.id));set.delete(k);list.pop();index.groups.delete(sign);return found.reduce((n,f)=>n+f.size,0);};
+  let point=free[0],best=-Infinity;for(const p of sampled){const value=gain(p,symbol)*(symbol===actor.symbol?2:-2)+gain(p,rival);if(value>best){best=value;point=p;}}
+
   if(point)return {action:'move',payload:point};
   if(availableCells(room,pair,{ignoreBlocks:true}).length)return {action:'pass',payload:{}};
  }
@@ -43,7 +50,7 @@ export function createMachineRunner({getRoom,isHidden=()=>false,isBusy=()=>false
    try{
     // Release before apply: accept() may immediately schedule a second move
     // (Doble), an expansion or the next card in this same machine turn.
-    if(!choice||!['move','expand','pass','inventory','trade'].includes(choice.action))throw new Error('Respuesta de máquina incompleta.');
+    if(!choice||!['move','expand','pass','inventory','trade','claim'].includes(choice.action))throw new Error('Respuesta de máquina incompleta.');
     stop();apply(choice);
     schedule();
    }catch(error){
