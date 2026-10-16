@@ -56,6 +56,7 @@ on:
       - release/local-inverse-bees-r81
       - release/local-inverse-controls-r82
       - release/local-inverse-visible-r83
+      - release/local-ants-phenomena-r84
   workflow_dispatch:
 permissions:
   contents: write
@@ -80,6 +81,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-ants-phenomena-r84.mjs
       - run: node scripts/verify-inverse-visible-r83.mjs
       - run: node scripts/verify-inverse-controls-r82.mjs
       - run: node scripts/verify-inverse-bees-r81.mjs

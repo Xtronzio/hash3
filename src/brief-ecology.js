@@ -6,7 +6,7 @@ import {frontierSegments,edgeKey} from './frontiers.js';
 import {protectedTerritoryKeys} from './immunity.js';
 
 export const briefEcology=room=>['solo','local'].includes(room?.mode)&&room.status!=='finished'&&(room.ruleVersion||0)>=22;
-export const BRIEF_FREQUENCIES=Object.freeze({rhino:99,beaver:132,anaconda:165});
+export const BRIEF_FREQUENCIES=Object.freeze({rhino:99,beaver:132,anaconda:165,ants:198});
 export const DEATH_INTERVAL=333,BEAVER_LIFE=9;
 
 export const briefIcons={
