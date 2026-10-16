@@ -49,7 +49,7 @@ function componentAt(ctx,point,symbol,level,figureCount){
  }
  const points=[...union.values()].sort((a,b)=>a[0]-b[0]||a[1]-b[1]),filled=points.filter(([x,y])=>ctx.fill.has(key(x,y))).length;
  const bonus=3*(Math.floor((figureCount+payingCount)/3)-Math.floor(figureCount/3));
- const combo=figureTotal?{id:`combo:${symbol}:${hash>>>0}:${hash2>>>0}:${figureTotal}`,kind:primary.kind,size:points.length,primary:{kind:primary.kind,size:figures[0].size},points,filled,payingCount,figureCount:figureTotal,pointsValue:basePoints+bonus,basePoints,bonus,figures,reportTruncated:figureTotal>figures.length,scoreGroups:[...groups.values()]}:null;
+ const combo=figureTotal?{id:`combo:${symbol}:${hash>>>0}:${hash2>>>0}:${figureTotal}`,kind:primary.kind,size:points.length,primary:{...primary},points,filled,payingCount,figureCount:figureTotal,pointsValue:basePoints+bonus,basePoints,bonus,figures,reportTruncated:figureTotal>figures.length,scoreGroups:[...groups.values()]}:null;
  for(const c of cells)ctx.components.set(key(c.x,c.y),combo);
  return combo;
 }
