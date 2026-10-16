@@ -52,6 +52,7 @@ on:
       - release/local-inverse-r77
       - release/local-inverse-fill-r78
       - release/local-inverse-claims-r79
+      - release/local-inverse-combos-r80
   workflow_dispatch:
 permissions:
   contents: write

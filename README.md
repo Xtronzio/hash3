@@ -527,3 +527,9 @@ comodín neutral cada nueve colocaciones compartidas (máximo tres) e inventario
 que prepara sin cobrar automáticamente. Alto/PRO de Inverso revisados; búsqueda
 de Doble corregida en Original. Guardados anteriores conservados. Contrato y
 hallazgos en design/inverse-claims-r79.md.
+
+R0.21.80: Cobrar detecta el conjunto completo de fichas propias/#, incluye ambas
+diagonales y todas sus figuras válidas. Vista previa automática del combo y bonus,
+con figura mayor como referencia. Corrige también los próximos cobros de partidas
+R79 sin reiniciarlas ni recalcular puntos anteriores. Detalles y validación en
+design/inverse-combos-r80.md.

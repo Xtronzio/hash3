@@ -1,3 +1,5 @@
+import {comboInverse} from './inverse-combos.js';
+import {earnFreeExpansion} from './free-expansion.js';
 import {manualInverse,canClaimInverse,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
 import {chooseInverseAction} from './inverse-ai.js';
 import {filledInverse,clearInverseFill,payingInverseFigures,inverseFillSet} from './inverse-progress.js';
@@ -14,7 +16,7 @@ import {applyAreaTool} from './area-tools.js';
 const id=()=>crypto.randomUUID();
 export function configureInverse(room,options={},random=Math.random){
  const board=validateInverseBoard(options.board||INVERSE_PRESETS[0]);
- room.variant='inverse';room.inverseVersion=3;room.inverseMoves=0;room.inverseWildNext=INVERSE_WILD_INTERVAL;room.inverseBoard={id:board.id,name:board.name,...(options.board?.scale?{scale:options.board.scale}:{})};room.faunaEnabled=false;room.territoryEnabled=false;
+ room.variant='inverse';room.inverseVersion=3;room.inverseClaimVersion=2;room.inverseMoves=0;room.inverseWildNext=INVERSE_WILD_INTERVAL;room.inverseBoard={id:board.id,name:board.name,...(options.board?.scale?{scale:options.board.scale}:{})};room.faunaEnabled=false;room.territoryEnabled=false;
  delete room.cellTarget;delete room.matchGoal;delete room.endsAt;
  room.terrain=board.terrain;room.blocks=[];room.cells=[];room.forms=[];
  room.pairs[0].active={...board.terrain[0]};room.pairs[0].terrainAnchor={...board.terrain[0]};
@@ -37,11 +39,12 @@ function finishIfEmpty(room,now){
  room.status='finished';room.finishReason='inverse-empty';room.finishedAt=new Date(now).toISOString();
  for(const p of room.pairs){p.pending=0;p.expander=null;p.deadline=null;}
  delete room.practiceTurn;delete room.practiceHint;
- room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
+ room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
 }
 export function inverseCommand(original,action,payload={},now=Date.now(),random=Math.random){
  if(!isInverse(original)||![1,2,3].includes(original.inverseVersion))throw new Error('Versión de Inverso no compatible. Se conserva el guardado.');
  const room=structuredClone(original),pair=room.pairs[0];room.clockNow=now;
+ if(comboInverse(room))room.inverseClaimVersion=2;
  const done=()=>{finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
  if(action==='finish'){room.status='finished';room.finishReason='manual';room.finishedAt=new Date(now).toISOString();pair.deadline=null;return done();}
  if(action==='pause'){if(room.status==='paused')return original;if(room.status!=='playing')throw new Error('La partida no está en curso.');room.pauseRemainingMs=room.timeMode==='untimed'?null:Math.max(0,Date.parse(pair.deadline)-now);room.pausedAt=new Date(now).toISOString();room.status='paused';pair.deadline=null;return done();}
@@ -57,12 +60,18 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
   if(!canClaimInverse(room,actor.id))throw new Error('Elige colocar o cobrar; termina Doble antes de cobrar.');
   const figure=inverseClaimsAt(room,actor.id,{x:payload.x,y:payload.y}).find(f=>f.id===payload.figureId);
   if(!figure)throw new Error('La figura ya no está disponible. Elige una figura propia válida.');
-  const result=awardFigures(room,actor,[figure]),cleared=clearPaid(room,[figure]);
+  let result,scoreGroups;
+  if(comboInverse(room)){
+   actor.score+=figure.pointsValue;actor.figures+=figure.payingCount;earnFreeExpansion(actor);
+   const fill=new Set(room.inverseFill),paid=figure.figures.filter(f=>f.points.some(([x,y])=>fill.has(key(x,y))));
+   result={points:figure.pointsValue,figures:figure.payingCount,bonus:figure.bonus,paidFigures:!figure.reportTruncated&&paid.length<=128?paid:[{id:figure.id,kind:'combo',size:figure.size,points:figure.points}]};scoreGroups=figure.scoreGroups;
+  }else result=awardFigures(room,actor,[figure]);
+  const cleared=clearPaid(room,[figure]);
   recordCombo(actor,{...result,automatic});recordMax(actor,result.points-result.bonus,result.figures,automatic);
   recordInventoryCombo(room,actor.id,result.points,{automatic,scorer:actor.id,random});
   completeInventoryTurn(room,actor.id,{automatic,placed:false,random});delete room.practiceTurn;
   pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();
-  room.lastEvent={id:id(),kind:'claim',player:actor.id,actor:actor.id,...result,cleared,automatic,move:{x:payload.x,y:payload.y,symbol:actor.symbol}};
+  room.lastEvent={id:id(),kind:'claim',player:actor.id,actor:actor.id,...result,...(scoreGroups?{scoreGroups}:{}),cleared,automatic,move:{x:payload.x,y:payload.y,symbol:actor.symbol}};
   delete room.practiceHint;return done();
  }
  if(action==='trade'){buyCard(room,payload.playerId,payload.tool,now,{replace:payload.replace});room.lastEvent={id:id(),kind:'trade',player:payload.playerId,tool:payload.tool};return done();}

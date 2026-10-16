@@ -17,7 +17,7 @@ export function scoreFeedback(previous,next) {
     if(!groups.has(groupKey))groups.set(groupKey,{kind:f.kind,size:f.size,count:0,points:0});
     const group=groups.get(groupKey);group.count++;group.points+=f.size;
   }
-  return {id:ev.id,player:ev.player,name:player.name,symbol:scoredMove.symbol,move:scoredMove,figures,cells:[...cells.values()],groups:[...groups.values()],points:ev.points,bonus:ev.bonus||0,automatic:!!ev.automatic};
+  return {id:ev.id,player:ev.player,name:player.name,symbol:scoredMove.symbol,move:scoredMove,figures,cells:[...cells.values()],groups:ev.scoreGroups||[...groups.values()],points:ev.points,bonus:ev.bonus||0,automatic:!!ev.automatic};
 }
 export function scoreBreakdown(feedback) {
   const names={'línea':['Línea','Líneas'],L:['L','L'],cuadrado:['Cuadrado','Cuadrados'],cruz:['Cruz','Cruces'],grupo:['Figura compleja','Figuras complejas']};

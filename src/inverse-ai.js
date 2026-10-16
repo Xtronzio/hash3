@@ -1,3 +1,4 @@
+import {comboInverse} from './inverse-combos.js';
 import {inverseCommand} from './inverse.js';
 import {inverseClaims,canClaimInverse} from './inverse-claims.js';
 import {availableCells,key,figureWindows,prepareFigureIndex} from './game.js';
@@ -37,7 +38,7 @@ function candidates(room,info,{cards=true,maximum=10}={}){
  const rootBest=info.claims[actor.symbol][0]?.pointsValue||0,rivalIndex=prepareFigureIndex(room.cells,true),rival=other(actor.symbol),rs=rivalIndex.bySymbol.get(rival),ro=rivalIndex.occupied.get(rival);
  for(const point of points){
   const k=key(point.x,point.y);occupied.add(k);signs.push({...point,symbol});index.groups.delete(symbol);
-  const figures=figureWindows(room.cells,point.x,point.y,symbol,room.level,index,true),best=Math.max(0,...figures.filter(f=>f.points.some(([x,y])=>info.filled.has(key(x,y)))).map(f=>f.size+(signed(room,symbol).figures%3===2?3:0)));
+  const figures=figureWindows(room.cells,point.x,point.y,symbol,room.level,index,true),paying=figures.filter(f=>f.points.some(([x,y])=>info.filled.has(key(x,y)))),best=comboInverse(room)?paying.reduce((n,f)=>n+f.size,0)+3*(Math.floor((signed(room,symbol).figures+paying.length)/3)-Math.floor(signed(room,symbol).figures/3)):Math.max(0,...paying.map(f=>f.size+(signed(room,symbol).figures%3===2?3:0)));
   occupied.delete(k);signs.pop();index.groups.delete(symbol);
   const own=symbol===actor.symbol,neighbor=[[1,0],[-1,0],[0,1],[0,-1]].reduce((n,[dx,dy])=>n+Number(occupied.has(key(point.x+dx,point.y+dy))),0);
   // Also retain blocking moves at the opponent's exact completion points.
@@ -95,15 +96,16 @@ export function chooseInverseAction(room,random=Math.random,options={}){
  if(options.automatic&&room.timeMode!=='untimed')room={...room,timeMode:'untimed'};
  const level=room.difficulty||'medium',pro=level==='pro',strong=pro||level==='high',start=performance.now(),deadline=start+(options.maxTimeMs??(options.automatic?100:pro?1800:level==='high'?450:80)),maxNodes=options.maxNodes??(pro?8000:1200);
  if(strong&&!options.automatic&&options.cards!==false){const close=closeWinningFill(room,true);if(close)return close;}
- let nodes=0,depthDone=0;const memo=new Map(),rootInfo=analysis(room),root=candidates(room,rootInfo,{cards:!options.automatic&&options.cards!==false&&level!=='basic',maximum:pro?12:8});
+ let nodes=0,depthDone=0;const memo=new Map(),rootInfo=analysis(room);
+ const finalClaim=rootInfo.claims[room.pairs[0].turn].find(f=>f.filled===room.inverseFill.length&&signed(room,room.pairs[0].turn).score+f.pointsValue>signed(room,other(room.pairs[0].turn)).score);
+ if(finalClaim&&canClaimInverse(room,signed(room,room.pairs[0].turn).id))return {action:'claim',payload:{x:finalClaim.points[0][0],y:finalClaim.points[0][1],figureId:finalClaim.id}};
+ const root=candidates(room,rootInfo,{cards:!options.automatic&&options.cards!==false&&level!=='basic',maximum:pro?12:8});
  if(!root.length){
   const actor=signed(room,room.pairs[0].turn);
   for(const tool of ['erase','bomb'])if(canUsePracticeTool(room,actor.id,tool,room.clockNow))for(const point of toolCells(room,actor.id,tool).slice(0,12)){const choice={action:'inventory',payload:{tool,playerId:actor.id,x:point.x,y:point.y}};try{inverseCommand(room,choice.action,choice.payload,room.clockNow,()=>.41);return choice;}catch{}}
   if(tradeAvailability(room,actor.id,'erase',room.clockNow).allowed)return {action:'trade',payload:{playerId:actor.id,tool:'erase'}};
   return null;
  }
- const finalClaim=rootInfo.claims[room.pairs[0].turn].find(f=>f.filled===room.inverseFill.length&&signed(room,room.pairs[0].turn).score+f.pointsValue>signed(room,other(room.pairs[0].turn)).score);
- if(finalClaim&&canClaimInverse(room,signed(room,room.pairs[0].turn).id))return {action:'claim',payload:{x:finalClaim.points[0][0],y:finalClaim.points[0][1],figureId:finalClaim.id}};
  const sign=room.pairs[0].turn==='X'?1:-1;
  let best=root[0],bestValue=-Infinity;
  const evaluate=r=>{const a=analysis(r);if(r.status==='finished'){const d=signed(r,'X').score-signed(r,'O').score;return d===0?0:Math.sign(d)*100000+d;}return a.value;};

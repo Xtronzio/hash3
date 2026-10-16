@@ -1,3 +1,4 @@
+import {comboInverse,inverseComboAt,inverseCombos} from './inverse-combos.js';
 import {key,figureWindows,prepareFigureIndex,availableCells} from './game.js';
 import {practiceTurn} from './practice-tools.js';
 export const manualInverse=room=>room?.variant==='inverse'&&room.inverseVersion===3;
@@ -7,7 +8,9 @@ export function canClaimInverse(room,playerId){
  const p=room?.pairs?.[0],state=practiceTurn(room,playerId);
  return manualInverse(room)&&room.status==='playing'&&p[p.turn.toLowerCase()]===playerId&&state.remaining===1&&!state.used.includes('double');
 }
-export function inverseClaimsAt(room,playerId,point,index=prepareFigureIndex(room.cells,true)){
+export function inverseClaimsAt(room,playerId,point,index=null){
+ if(comboInverse(room)){const combo=inverseComboAt(room,playerId,point);return combo?[combo]:[];}
+ index||=prepareFigureIndex(room.cells,true);
  const player=room.players.find(p=>p.id===playerId);if(!player)return [];
  index.inverseCells||=new Map(room.cells.map(c=>[key(c.x,c.y),c]));const c=index.inverseCells.get(key(point.x,point.y));if(!c||![player.symbol,'#'].includes(c.symbol))return [];
  index.inverseOwn||=new Map();if(!index.inverseOwn.has(player.symbol))index.inverseOwn.set(player.symbol,new Set(room.cells.filter(c=>c.symbol===player.symbol).map(c=>key(c.x,c.y))));
@@ -18,6 +21,7 @@ export function inverseClaimsAt(room,playerId,point,index=prepareFigureIndex(roo
  }).sort((a,b)=>b.pointsValue-a.pointsValue||b.size-a.size||a.id.localeCompare(b.id));
 }
 export function inverseClaims(room,playerId,limit=Infinity){
+ if(comboInverse(room))return inverseCombos(room,playerId,limit);
  const player=room.players.find(p=>p.id===playerId),index=prepareFigureIndex(room.cells,true),found=new Map();if(!player)return [];
  for(const c of room.cells)if(c.symbol===player.symbol){for(const f of inverseClaimsAt(room,playerId,c,index))found.set(f.id,f);if(found.size>=limit)break;}
  return [...found.values()].sort((a,b)=>b.pointsValue-a.pointsValue||b.filled-a.filled||a.id.localeCompare(b.id));
