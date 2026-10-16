@@ -1,5 +1,6 @@
 // Inverso pressure advances only when a player's complete turn ends.
-export const INVERSE_BEE_LIMITS=[9,12,15];
+export const INVERSE_BEE_LIMITS=Object.freeze(Array.from({length:31},(_,i)=>i+3));
+const LEGACY_LIMITS=[9,12,15];
 export const INVERSE_BEE_WARNING=3;
 const enabled=r=>r?.variant==='inverse'&&r.inverseVersion===3;
 const key=c=>`${c.x},${c.y}`;
@@ -8,19 +9,24 @@ const draw=random=>{const n=Number(random());return Number.isFinite(n)?Math.max(
 const interval=random=>INVERSE_BEE_LIMITS[Math.floor(draw(random)*INVERSE_BEE_LIMITS.length)];
 export function validInverseBees(room){
  const b=room?.inverseBees;if(b==null)return room?.inverseBeeEvent==null;
- if(!enabled(room)||b.version!==1||!b.players||!['X','O'].every(s=>{const p=b.players[s];return p&&integer(p.turns)&&integer(p.since)&&p.since<=p.turns&&INVERSE_BEE_LIMITS.includes(p.limit)&&p.since<p.limit&&integer(p.cycles);}))return false;
+ if(!enabled(room)||![1,2].includes(b.version)||!b.players||!['X','O'].every(s=>{const p=b.players[s];return p&&integer(p.turns)&&integer(p.since)&&p.since<=p.turns&&(b.version===1?LEGACY_LIMITS:INVERSE_BEE_LIMITS).includes(p.limit)&&p.since<p.limit&&integer(p.cycles);}))return false;
  const e=room.inverseBeeEvent;if(e==null)return true;
  return typeof e.id==='string'&&e.id.length>0&&e.id.length<=100&&['X','O'].includes(e.symbol)&&room.players?.some(p=>p.symbol===e.symbol&&p.id===e.player)&&integer(e.turn)&&integer(e.cycle)&&e.cycle>0&&integer(e.count)&&e.count<=33333&&integer(e.moved)&&e.moved<=e.count&&e.turn<=b.players[e.symbol].turns&&e.cycle<=b.players[e.symbol].cycles;
 }
 export function initializeInverseBees(room,random=Math.random){
  if(!enabled(room)||!['playing','paused'].includes(room.status))return;
  if(!validInverseBees(room))throw Error('El estado de las abejas no es compatible. Se conserva el guardado.');
- if(!room.inverseBees)room.inverseBees={version:1,players:Object.fromEntries(['X','O'].map(s=>[s,{turns:0,since:0,limit:interval(random),cycles:0}]))};
+ if(!room.inverseBees)room.inverseBees={version:2,players:Object.fromEntries(['X','O'].map(s=>[s,{turns:0,since:0,limit:interval(random),cycles:0}]))};
+ else room.inverseBees.version=2; // Preserve the current cycle; draw 3–33 only at its next reset.
 }
-// The random calm interval is not exposed by the UI or used by the AI.
+// Both players see the saved deadline from the beginning of every cycle.
+export function inverseBeeRemaining(room,playerId){
+ const symbol=room?.players?.find(p=>p.id===playerId)?.symbol,p=enabled(room)&&room.inverseBees?.players?.[symbol];
+ return p?Math.max(0,p.limit-p.since):null;
+}
 export function inverseBeeWarning(room,playerId){
- const symbol=room.players?.find(p=>p.id===playerId)?.symbol,p=enabled(room)&&room.inverseBees?.players?.[symbol];
- return p&&p.limit-p.since<=INVERSE_BEE_WARNING?p.limit-p.since:null;
+ const remaining=inverseBeeRemaining(room,playerId);
+ return remaining!==null&&remaining<=INVERSE_BEE_WARNING?remaining:null;
 }
 function relocate(room,symbol,random){
  const pieces=room.cells.filter(c=>c.symbol===symbol);if(!pieces.length)return {count:0,moved:0};
@@ -38,6 +44,7 @@ function relocate(room,symbol,random){
 }
 export function completeInverseBeeTurn(room,playerId,points=0,random=Math.random){
  if(!enabled(room)||!room.inverseBees)return;
+ room.inverseBees.version=2;
  const player=room.players.find(p=>p.id===playerId),p=room.inverseBees.players[player.symbol];
  p.turns++;
  if(points>0){p.since=0;p.limit=interval(random);return;}

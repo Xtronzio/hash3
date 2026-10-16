@@ -7,7 +7,7 @@ import {createLocal} from '../src/local.js';
 import {INVERSE_PRESETS} from '../src/inverse-boards.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
-const make=(inventory=true)=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],random:()=>0,playerInventory:inventory});g.cells=[[0,0],[1,0],[0,1],[1,1]].map(([x,y])=>({id:`X:${x},${y}`,x,y,symbol:'X',owner:'local-x'}));g.inventoryPreferences={'local-x':{inventoryDrawerCollapsed:false}};Object.assign(g.inverseBees.players.X,{turns:6,since:6});return g;};
+const make=(inventory=true)=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],random:()=>0,playerInventory:inventory});g.cells=[[0,0],[1,0],[0,1],[1,1]].map(([x,y])=>({id:`X:${x},${y}`,x,y,symbol:'X',owner:'local-x'}));g.inventoryPreferences={'local-x':{inventoryDrawerCollapsed:false,inverseClaimDocked:true}};Object.assign(g.inverseBees.players.X,{turns:6,since:6,limit:9});return g;};
 const withoutPreferences=g=>{const n=structuredClone(g);delete n.inventoryPreferences;return n;};
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
@@ -21,7 +21,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const floating=()=>page.locator('.map-wrap > [data-floating-tool="inverse-claim"]');
  for(const [width,height]of [[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]]){
   await page.setViewportSize({width,height});let g=make();await load(g);let before=await stored();
-  assert.equal(await page.locator('.inverse-bee-count').textContent(),'3');assert.ok(await page.locator('.inverse-bee-count').evaluate(n=>parseFloat(getComputedStyle(n).fontSize)>=24));assert.equal(await page.locator('.board-inventory-status [data-icon="collect-figures"]').count(),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  assert.equal(await page.locator('.inverse-bee-clocks [data-bee-symbol="X"] .inverse-bee-count').textContent(),'3');assert.ok(await page.locator('.inverse-bee-clocks [data-bee-symbol="X"] .inverse-bee-count').evaluate(n=>parseFloat(getComputedStyle(n).fontSize)>=24));assert.equal(await page.locator('.board-inventory-status [data-icon="collect-figures"]').count(),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await openEditor();await page.locator('[data-edit-tool="inverse-claim"] [data-action="inventory-edit-select"]').click();assert.match(await toggle().getAttribute('aria-label'),/Sacar Cobrar/);assert.ok(await page.locator('[data-action="inventory-order-step"]').evaluateAll(ns=>ns.every(n=>n.disabled)));await toggle().click();assert.match(await toggle().getAttribute('aria-label'),/Devolver Cobrar/);
   if(width===390)await page.screenshot({path:path.join(output,`a-inverse-controls-editor-r82-${name}.png`)});
   await page.locator('[data-action="close-inventory-layout"]').click();await frame();assert.equal(await floating().count(),1);assert.equal(await page.locator('.board-inventory-status [data-action="inverse-claim-toggle"]').count(),0);assert.deepEqual(withoutPreferences(await stored()),withoutPreferences(before));
