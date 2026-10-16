@@ -1,4 +1,5 @@
 import {comboInverse} from './inverse-combos.js';
+import {inverseBeeWarning} from './inverse-bees.js';
 import {inverseCommand} from './inverse.js';
 import {inverseClaims,canClaimInverse} from './inverse-claims.js';
 import {availableCells,key,figureWindows,prepareFigureIndex} from './game.js';
@@ -9,7 +10,7 @@ const STOP=Symbol('inverse-search-budget');
 const analysisMemo=new WeakMap();
 const other=s=>s==='X'?'O':'X';
 const signed=(r,s)=>r.players.find(p=>p.symbol===s);
-const stateKey=r=>JSON.stringify([r.pairs[0].turn,r.practiceTurn,r.inventoryEffects?.forced,r.inverseMoves,r.inverseWildNext,r.players.map(p=>[p.symbol,p.score,p.figures,p.inventory.cards]),r.cells.map(c=>[c.x,c.y,c.symbol]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]),r.inverseFill]);
+const stateKey=r=>JSON.stringify([r.pairs[0].turn,r.practiceTurn,r.inventoryEffects?.forced,r.inverseMoves,r.inverseWildNext,r.inverseBees,r.players.map(p=>[p.symbol,p.score,p.figures,p.inventory.cards]),r.cells.map(c=>[c.x,c.y,c.symbol]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]),r.inverseFill]);
 function analysis(room){
  if(analysisMemo.has(room))return analysisMemo.get(room);
  const filled=new Set(room.inverseFill),fillPoints=filled.size<=33?[...filled].map(k=>k.split(',').map(Number)):[],cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),claims={};
@@ -23,7 +24,8 @@ function analysis(room){
    if(filled.has(key(c.x,c.y)))growth+=.05;
    if(filled.size<=33){for(const [x,y]of fillPoints){const d=Math.abs(c.x-x)+Math.abs(c.y-y);if(d<=2)growth+=(3-d)*.12/Math.max(1,filled.size);}}
   }
-  return p.score+prepared+Math.min(growth,8);
+  const warning=inverseBeeWarning(room,p.id);
+  return p.score+prepared*(warning===1?.55:warning===2?.75:warning===3?.85:1)+Math.min(growth,8);
  };
  const result={claims,cells,filled,value:value('X')-value('O')};analysisMemo.set(room,result);return result;
 }
@@ -93,12 +95,16 @@ function closeWinningFill(room,acquire){
  return null;
 }
 export function chooseInverseAction(room,random=Math.random,options={}){
+ // Search knows the announced warning, never the hidden random calm deadline.
+ if(room.inverseBees)room={...room,inverseBees:{...room.inverseBees,players:Object.fromEntries(room.players.map(p=>{const state=room.inverseBees.players[p.symbol];return [p.symbol,inverseBeeWarning(room,p.id)?state:{...state,since:0,limit:15}];}))}};
  if(options.automatic&&room.timeMode!=='untimed')room={...room,timeMode:'untimed'};
  const level=room.difficulty||'medium',pro=level==='pro',strong=pro||level==='high',start=performance.now(),deadline=start+(options.maxTimeMs??(options.automatic?100:pro?1800:level==='high'?450:80)),maxNodes=options.maxNodes??(pro?8000:1200);
  if(strong&&!options.automatic&&options.cards!==false){const close=closeWinningFill(room,true);if(close)return close;}
  let nodes=0,depthDone=0;const memo=new Map(),rootInfo=analysis(room);
  const finalClaim=rootInfo.claims[room.pairs[0].turn].find(f=>f.filled===room.inverseFill.length&&signed(room,room.pairs[0].turn).score+f.pointsValue>signed(room,other(room.pairs[0].turn)).score);
  if(finalClaim&&canClaimInverse(room,signed(room,room.pairs[0].turn).id))return {action:'claim',payload:{x:finalClaim.points[0][0],y:finalClaim.points[0][1],figureId:finalClaim.id}};
+ const actor=signed(room,room.pairs[0].turn),urgent=rootInfo.claims[actor.symbol].find(f=>f.pointsValue>0);
+ if(inverseBeeWarning(room,actor.id)===1&&urgent&&canClaimInverse(room,actor.id))return {action:'claim',payload:{x:urgent.points[0][0],y:urgent.points[0][1],figureId:urgent.id}};
  const root=candidates(room,rootInfo,{cards:!options.automatic&&options.cards!==false&&level!=='basic',maximum:pro?12:8});
  if(!root.length){
   const actor=signed(room,room.pairs[0].turn);

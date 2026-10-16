@@ -1,4 +1,5 @@
 import {comboInverse} from './inverse-combos.js';
+import {initializeInverseBees,completeInverseBeeTurn} from './inverse-bees.js';
 import {earnFreeExpansion} from './free-expansion.js';
 import {manualInverse,canClaimInverse,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
 import {chooseInverseAction} from './inverse-ai.js';
@@ -22,7 +23,7 @@ export function configureInverse(room,options={},random=Math.random){
  room.pairs[0].active={...board.terrain[0]};room.pairs[0].terrainAnchor={...board.terrain[0]};
  room.inverseFill=room.terrain.map(c=>key(c.x,c.y));room.inverseInitialCount=room.terrain.length;room.inverseCleared=0;
  for(const p of room.players)for(const tool of Object.keys(p.inventory.cards))if(!inverseToolAllowed(room,tool))p.inventory.cards[tool]=0;
- return room;
+ initializeInverseBees(room,random);return room;
 }
 function clearPaid(room,figures){
  const cleared=new Set(figures.flatMap(f=>f.points.map(([x,y])=>key(x,y))));
@@ -39,19 +40,20 @@ function finishIfEmpty(room,now){
  room.status='finished';room.finishReason='inverse-empty';room.finishedAt=new Date(now).toISOString();
  for(const p of room.pairs){p.pending=0;p.expander=null;p.deadline=null;}
  delete room.practiceTurn;delete room.practiceHint;
- room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
+ room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1,...(room.inverseBees?{inverseBeeVersion:room.inverseBees.version}:{})}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
 }
 export function inverseCommand(original,action,payload={},now=Date.now(),random=Math.random){
  if(!isInverse(original)||![1,2,3].includes(original.inverseVersion))throw new Error('Versión de Inverso no compatible. Se conserva el guardado.');
  const room=structuredClone(original),pair=room.pairs[0];room.clockNow=now;
  if(comboInverse(room))room.inverseClaimVersion=2;
- const done=()=>{finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
+ const done=()=>{initializeInverseBees(room,random);finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
  if(action==='finish'){room.status='finished';room.finishReason='manual';room.finishedAt=new Date(now).toISOString();pair.deadline=null;return done();}
  if(action==='pause'){if(room.status==='paused')return original;if(room.status!=='playing')throw new Error('La partida no está en curso.');room.pauseRemainingMs=room.timeMode==='untimed'?null:Math.max(0,Date.parse(pair.deadline)-now);room.pausedAt=new Date(now).toISOString();room.status='paused';pair.deadline=null;return done();}
  if(action==='resume'){if(room.status!=='paused')throw new Error('La partida no está pausada.');room.status='playing';pair.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??33000)).toISOString();delete room.pauseRemainingMs;delete room.pausedAt;return done();}
  if(action==='watch-target'||action==='remove-target'){if(!['playing','paused'].includes(room.status))throw new Error('Partida no disponible.');if(action==='watch-target')toggleWatchTarget(room,payload);else removeWatchTarget(room,payload.id);return done();}
  if(action==='tick'&&(room.status!=='playing'||room.timeMode==='untimed'||Date.parse(pair.deadline)>now))return original;
  if(room.status!=='playing')throw new Error('La partida no está activa.');
+ initializeInverseBees(room,random);
  const automatic=action==='tick';
  if(automatic){const choice=inverseMachineChoice(room,random,{automatic:true});if(!choice)return original;action=choice.action;payload=choice.payload;}
  const actor=room.players.find(p=>p.symbol===pair.turn);
@@ -72,6 +74,7 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
   completeInventoryTurn(room,actor.id,{automatic,placed:false,random});delete room.practiceTurn;
   pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();
   room.lastEvent={id:id(),kind:'claim',player:actor.id,actor:actor.id,...result,...(scoreGroups?{scoreGroups}:{}),cleared,automatic,move:{x:payload.x,y:payload.y,symbol:actor.symbol}};
+  completeInverseBeeTurn(room,actor.id,result.points,random);
   delete room.practiceHint;return done();
  }
  if(action==='trade'){buyCard(room,payload.playerId,payload.tool,now,{replace:payload.replace});room.lastEvent={id:id(),kind:'trade',player:payload.playerId,tool:payload.tool};return done();}
@@ -118,7 +121,7 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  actor.placements=(actor.placements||0)+1;
  if(manualInverse(room))advanceInverseWild(room,random);
  if(!automatic&&state.remaining>1&&availableCells(room,pair).length){room.practiceTurn={...state,remaining:state.remaining-1};}
- else{completeInventoryTurn(room,actor.id,{automatic,random});delete room.practiceTurn;pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();}
+ else{completeInventoryTurn(room,actor.id,{automatic,random});delete room.practiceTurn;pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();completeInverseBeeTurn(room,actor.id,0,random);}
  room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:actor.id,...result,cleared,automatic,continuation:false};delete room.practiceHint;return done();
 }
 export function inverseMachineChoice(room,random=Math.random,options={}){
