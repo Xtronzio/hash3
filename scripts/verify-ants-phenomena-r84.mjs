@@ -18,7 +18,14 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const load=async game=>{await page.goto(origin);await page.evaluate(game=>{localStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([game]));localStorage.setItem('hash3_local',JSON.stringify({id:game.id}));sessionStorage.setItem('hash3_restore_local','1');},game);await page.reload();await page.locator('.game .viewport').waitFor();};
  const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
  const settle=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
- const cell=async(action,x,y,double=false)=>{await settle();if(x===0&&y===0){await page.locator('.game .viewport').evaluate(n=>{n.scrollLeft=0;n.scrollTop=0;});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));}const c=page.locator(`.board [data-action="${action}"][data-x="${x}"][data-y="${y}"]`);await c.evaluate(n=>n.scrollIntoView({block:'start',inline:'start'}));await settle();if(double)await c.dblclick({position:{x:5,y:5}});else await c.click({position:{x:5,y:5}});};
+ const cell=async(action,x,y,double=false)=>{
+  await settle();
+  // Derive the board coordinates from an existing tile. Padding follows the
+  // viewport width, so scrolling to zero can hide all tiles in landscape.
+  await page.locator('.game .viewport').evaluate((v,{x,y})=>{const a=v.querySelector('.terrain-cell[data-x][data-y]');if(!a)throw Error('No rendered tile to navigate from');const size=parseFloat(a.style.width);v.scrollLeft=parseFloat(a.style.left)+(x-Number(a.dataset.x)+.5)*size-v.clientWidth/2;v.scrollTop=parseFloat(a.style.top)+(y-Number(a.dataset.y)+.5)*size-v.clientHeight/2;},{x,y});
+  await settle();const c=page.locator(`.board [data-action="${action}"][data-x="${x}"][data-y="${y}"]`);
+  if(double)await c.dblclick({position:{x:5,y:5}});else await c.click({position:{x:5,y:5}});
+ };
  for(const [width,height]of [[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]]){
   await page.setViewportSize({width,height});await clear();await page.locator('[data-action="hall-mode"][data-mode="solo"]').click();await page.locator('.local-dialog').waitFor();await page.locator('.phenomena-picker summary').click();assert.equal(await page.locator('[data-phenomenon]').count(),13);await page.locator('[data-phenomena-preset="none"]').click();assert.equal(await page.locator('#territory-enabled').isChecked(),false);await page.locator('[data-phenomenon="clouds"]').check();await page.locator('[data-phenomenon="fog"]').check();assert.equal(await page.locator('.phenomena-picker output').textContent(),'2/13');assert.equal(await page.locator('#territory-enabled').isChecked(),true);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   if(width===390)await page.screenshot({path:path.join(output,`a-phenomena-picker-r84-${name}.png`)});
