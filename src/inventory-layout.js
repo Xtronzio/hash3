@@ -3,10 +3,11 @@ export const INVENTORY_ROWS=Object.freeze([
  ['reconquest','target','frontier','border','activate','expand-2','expand-3','destroy','hint','hint-expand','super-hint','antidote','sapper']
 ]);
 export const INVENTORY_ORDER=Object.freeze([...INVENTORY_ROWS.flat(),'immunity']);
+export const INVENTORY_CONTROLS=Object.freeze(['inverse-claim']);
 export function normalizeInventoryPreferences(value={}){
  const order=[...new Set((Array.isArray(value?.order)?value.order:[]).filter(id=>INVENTORY_ORDER.includes(id)))];
  order.push(...INVENTORY_ORDER.filter(id=>!order.includes(id)));
- const floating=[...new Set((Array.isArray(value?.floating)?value.floating:[]).filter(id=>INVENTORY_ORDER.includes(id)))];
+ const floating=[...new Set((Array.isArray(value?.floating)?value.floating:[]).filter(id=>INVENTORY_ORDER.includes(id)||INVENTORY_CONTROLS.includes(id)))];
  const positions={};for(const id of floating){const p=value?.positions?.[id];if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y))positions[id]={x:Math.min(1,Math.max(0,p.x)),y:Math.min(1,Math.max(0,p.y))};}
  return {order,floating,positions,inventoryCollapsed:value?.inventoryCollapsed===true,territoryCollapsed:value?.territoryCollapsed===true,inventoryDrawerCollapsed:value?.inventoryDrawerCollapsed!==false,territoryDrawerCollapsed:value?.territoryDrawerCollapsed!==false};
 }

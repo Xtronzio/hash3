@@ -1,4 +1,9 @@
-export const inverseClaimIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 8h22v17H5zM10 4v8M22 4v8M10 19l4 4 9-10" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+import {canClaimInverse,manualInverse} from './inverse-claims.js';
+export const inverseClaimIcon='<svg data-icon="collect-figures" viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="7" height="7" rx="1"/><rect x="13" y="3" width="7" height="7" rx="1"/><rect x="4" y="12" width="7" height="7" rx="1"/><path d="M22 12v9m-5-5 5 5 5-5M4 23v6h24v-6M10 25h12"/></g></svg>';
+export function inverseClaimControl(room,playerId,{selected=false,floating=false}={}){
+ if(!manualInverse(room))return '';
+ return `<button class="inverse-claim-toggle ${floating?'inventory-shortcut inverse-claim-floating':''}" data-action="inverse-claim-toggle" aria-label="Previsualizar el mejor combo para cobrar" title="Cobrar mejor combo" aria-pressed="${selected}" ${canClaimInverse(room,playerId)?'':'disabled'}>${inverseClaimIcon}<small>Cobrar</small></button>`;
+}
 const label=f=>f.kind==='grupo'?'Grupo':f.kind==='línea'?'Línea':f.kind==='cuadrado'?'Cuadrado':f.kind==='cruz'?'Cruz':f.kind;
 export function inverseClaimPanel(selection,figures){
  if(!selection)return '';

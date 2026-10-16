@@ -536,3 +536,5 @@ design/inverse-combos-r80.md.
 # R0.21.81 · Abejas de Inverso
 
 Presión individual tras9/12/15turnos propios sin cobrar con puntos, con aviso de tres turnos. El enjambre redistribuye las fichas del jugador dentro del dibujo, manteniendo contorno, relleno, puntos, rival y#. Cobro voluntario, IA/ayudas, pausa, guardado y traslado integrados; Original y versiones automáticas conservados. Contrato: [design/inverse-bees-r81.md](design/inverse-bees-r81.md). Respaldo: backup/pre-inverso-bees-r80-20261016 (5c2a1e8). Publicación solo tras pipeline completo y verificación R81/r292.
+
+R0.21.82: cuenta de abejas ampliada y Cobrar con icono de recogida, configurable como control flotante también sin inventario. Contrato y validación: [design/inverse-controls-r82.md](design/inverse-controls-r82.md). Respaldo R81: backup/pre-inverso-controls-r81-20261016 (b8ca4d0).
