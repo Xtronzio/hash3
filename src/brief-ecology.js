@@ -1,3 +1,4 @@
+import {faunaKindEnabled} from './fauna-selection.js';
 import {initializeRouteHistory,routeHistoryIndex,routeNovelty,rememberRoute,routeOrientation} from './fauna-routes.js';
 import {isDeadCell} from './dead-cells.js';
 import {key,terrainOf,availableCells,expansionOptions} from './game.js';
@@ -109,6 +110,7 @@ export function beaverSites(room,count=1){
  return sites.length===count?sites:[];
 }
 export function announceBriefFauna(room,kind,zone,now,random=Math.random){
+ if(!faunaKindEnabled(room,(zone.birthScale?.[kind]||0)%2?kind+'-plague':kind))return false;
  const large=(zone.birthScale?.[kind]||0)%2===1,count=large?3:1,paths=kind==='rhino'?rhinoRoutes(room,count,random):beaverSites(room,count);
  if(paths.length!==count)return false;
  if(kind==='rhino'&&(room.ruleVersion||0)>=24)for(const path of paths)rememberRoute(room,'rhino',path);

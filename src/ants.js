@@ -1,3 +1,4 @@
+import {faunaKindEnabled} from './fauna-selection.js';
 import {key,terrainOf} from './game.js';
 import {frontierSegments,edgeKey} from './frontiers.js';
 import {habitatBlocked} from './habitat-tools.js';
@@ -12,6 +13,7 @@ const shuffle=(items,random)=>{for(let i=items.length-1;i>0;i--){const j=Math.fl
 const safeKeys=room=>{const keys=protectedTerritoryKeys(room),shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell));for(const c of room.cells)if(shields.has(c.id))keys.add(key(c.x,c.y));return keys;};
 export function announceAnts(room,zone,now,random=Math.random,latest=null,area=terrainOf(room)){
  if(room.variant==='inverse'||room.faunaEnabled===false||!['solo','local'].includes(room.mode)||room.faunaEvents?.some(e=>e.kind==='ants'||e.kind==='ants-plague'))return false;
+ if(!faunaKindEnabled(room,(zone.birthScale?.ants||0)%2?'ants-plague':'ants'))return false;
  const count=(zone.birthScale?.ants||0)%2?33:3,known=new Set(terrainOf(room).map(c=>key(c.x,c.y))),safe=safeKeys(room);
  if(known.size+count>boardCellLimit(room))return false;
  const allowed=new Set(area.map(c=>key(c.x,c.y))),edges=new Set(frontierSegments(room).map(edgeKey));

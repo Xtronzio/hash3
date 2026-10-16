@@ -1,3 +1,4 @@
+import {faunaComparison,faunaDescription} from './fauna-selection.js';
 import {phenomenaComparison,phenomenaDescription} from './phenomena-selection.js';
 import {backpackIcon} from './backpack-icon.js';
 import {rodentIcon} from './rodents.js';
@@ -13,7 +14,7 @@ export function savedGameSettings(game){
  const machine=game.mode==='solo',settings=[
   {id:'player-inventory',label:'Inventario propio',enabled:game.playerInventory!==false,icon:backpackIcon(),owner:'human',color:'cyan'},
   {id:machine?'machine-inventory':'other-inventory',label:machine?'Inventario de la máquina':'Inventario del otro colono',enabled:machine?game.machineInventory===true:game.playerInventory!==false,icon:backpackIcon(),owner:machine?'robot':'human',color:'cyan'},
-  {id:'fauna',label:'Fauna y habitantes',enabled:game.faunaEnabled!==false,icon:svg(rodentIcon),color:'yellow'},
+  {id:'fauna',label:'Fauna y habitantes'+(faunaComparison(game)!==null?' · selección: '+faunaDescription(game):''),enabled:game.faunaEnabled!==false,icon:svg(rodentIcon),color:'yellow'},
   {id:'territory',label:'Fenómenos del territorio'+(phenomenaComparison(game)!==null?' · selección: '+phenomenaDescription(game):''),enabled:game.territoryEnabled!==false,icon:svg(territoryIcons.hurricane),color:'yellow'},
   {id:'figures',label:'Figuras '+(game.level==='advanced'?'avanzadas':'normales'),value:game.level==='advanced'?'advanced':'normal',icon:svg(game.level==='advanced'?'<path d="m16 2 4 9 10 1-8 7 3 11-9-6-9 6 3-11-8-7 10-1 4-9Z"/>':'<rect x="3" y="3" width="26" height="26" rx="2"/><path d="M12 3v26M20 3v26M3 12h26M3 20h26"/>'),color:'white'}
  ];

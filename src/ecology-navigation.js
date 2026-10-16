@@ -1,3 +1,4 @@
+import {SELECTABLE_FAUNA,faunaKindEnabled} from './fauna-selection.js';
 import {phenomenonEnabled} from './phenomena-selection.js';
 import {fogKeys} from './fog.js';
 import {briefEcology,BRIEF_FREQUENCIES} from './brief-ecology.js';
@@ -70,6 +71,7 @@ export function ecologyClockEvents(room,kind){
 export function ecologyCardStatus(room,kind,playerId,{events=ecologyClockEvents(room,kind),targets=ecologyTargets(room,kind,playerId)}={}){
  if(['build','destroy'].includes(kind))events=events.filter(e=>e[kind]?.slice(e.done||0).length);
  const announced=events.filter(e=>e.warningTurns!=null||e.turnsRemaining!=null);
+ if([...SELECTABLE_FAUNA,'beaver-barrier'].includes(kind)&&!faunaKindEnabled(room,kind)&&!events.length&&!targets.length)return {badge:'—',text:'Desactivado en la configuración de esta partida.',state:'disabled'};
  if((isTimedTerritoryKind(kind)||kind==='neutral')&&!phenomenonEnabled(room,kind)&&!events.length&&!targets.length)return {badge:'—',text:'Desactivado en la configuración de esta partida.',state:'disabled'};
  if(kind==='barriers')return {badge:'×'+targets.length,text:targets.length+' muros y fronteras colocados. Permanecen hasta que se destruyen.',state:'quantity'};
  if(kind==='beaver-barrier')return targets.length?{badge:'−'+Math.min(...targets.map(e=>e.turnsRemaining)),text:'Turnos completos hasta que desaparezca la primera barrera de castor.',state:'duration'}:{badge:'—',text:'No hay barreras de castor colocadas.',state:'absent'};
@@ -106,7 +108,7 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
  }));
  const ordered=room.turnEcologyVersion===1?['rodent','rodent-plague','worm','worm-plague',...(briefEcology(room)?['rhino','rhino-plague','beaver','beaver-plague','anaconda','ants','ants-plague']:[]),'build','destroy','meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo','clouds','fog','invader-colony','invader-rain',...(briefEcology(room)?['death','beaver-barrier']:[]),'barriers','neutral',...kinds.filter(k=>!['rodent','worm','build','destroy',...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION,'neutral'].includes(k))]:kinds;
  const columns=room.turnEcologyVersion===1;
- const visible=ordered.filter((kind,i,a)=>a.indexOf(kind)===i).filter(kind=>!['build','destroy','rodent','rodent-plague','worm','worm-plague','rhino','rhino-plague','beaver','beaver-plague','anaconda','ants','ants-plague','beaver-barrier'].includes(kind)||room.faunaEnabled!==false).filter(kind=>(!isTimedTerritoryKind(kind)&&kind!=='neutral'||phenomenonEnabled(room,kind))||ecologyTargets(room,kind,playerId).length>0);
+ const visible=ordered.filter((kind,i,a)=>a.indexOf(kind)===i).filter(kind=>![...SELECTABLE_FAUNA,'beaver-barrier'].includes(kind)||faunaKindEnabled(room,kind)||ecologyTargets(room,kind,playerId).length>0).filter(kind=>(!isTimedTerritoryKind(kind)&&kind!=='neutral'||phenomenonEnabled(room,kind))||ecologyTargets(room,kind,playerId).length>0);
  const renderButton=kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind).filter(e=>!columns||!['build','destroy'].includes(kind)||(e[kind]?.slice(e.done||0).length||0)>0),color=ecologyColors[kind]||'var(--yellow)',frozen=room.status==='paused'||events.some(e=>e.remainingMs!=null);
   const birthKind=['build','destroy'].includes(kind)?'work':kind==='rodent-plague'?'rodent':kind==='worm-plague'?'worm':kind.replace('-plague',''),frequency=['rodent','worm','work','rhino','beaver','anaconda','ants'].includes(birthKind)?(localLiving(room)?{...LIVING_FREQUENCIES,...BRIEF_FREQUENCIES}:HABITAT_FREQUENCIES)[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;

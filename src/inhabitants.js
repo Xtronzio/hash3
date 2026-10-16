@@ -1,3 +1,4 @@
+import {faunaKindEnabled,skipFaunaBirth} from './fauna-selection.js';
 import {announceAnts,resolveAnts,antIcon} from './ants.js';
 import {phenomenonEnabled} from './phenomena-selection.js';
 import {announceAnaconda,advanceAnacondas,anacondaIcon} from './anaconda.js';
@@ -111,13 +112,13 @@ function automaticBlast(room,point,random){
 function reclaimProject(room,area,player,random,now){
  const terrain=terrainOf(room),known=new Set(terrain.map(c=>key(c.x,c.y))),reserved=new Set(habitatReservations(room).map(c=>key(c.x,c.y))),protectedKeys=protectedTerritoryKeys(room,now);
  const shields=new Set((room.inventoryEffects?.shields||[]).filter(e=>e.remaining>0).map(e=>e.cell)),edges=new Set(frontierSegments(room).map(edgeKey));
- const pool=room.cells.filter(c=>c.symbol==='*'&&known.has(key(c.x,c.y))&&!reserved.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!shields.has(c.id)&&!habitatBlocked(room,c.x,c.y));
+ const pool=room.cells.filter(c=>faunaKindEnabled(room,'destroy')&&c.symbol==='*'&&known.has(key(c.x,c.y))&&!reserved.has(key(c.x,c.y))&&!protectedKeys.has(key(c.x,c.y))&&!shields.has(c.id)&&!habitatBlocked(room,c.x,c.y));
  const destroy=[];
  while(pool.length&&destroy.length<9){const c=pool.splice(Math.min(pool.length-1,Math.floor(Math.max(0,random())*pool.length)),1)[0];destroy.push({x:c.x,y:c.y});}
  const build=[],boundary=new Map();
  const offer=c=>{for(const p of fourNeighbors(c)){const k=key(p.x,p.y);if(!known.has(k)&&!reserved.has(k)&&!habitatBlocked(room,p.x,p.y)&&!edges.has(edgeKey({a:c,b:p})))boundary.set(k,p);}};
  for(const c of area)offer(c);
- const capacity=Math.max(0,Math.min(9,boardCellLimit(room)-terrain.length));
+ const capacity=Math.max(0,Math.min(faunaKindEnabled(room,'build')?9:0,boardCellLimit(room)-terrain.length));
  while(boundary.size&&build.length<capacity){const c=choose([...boundary.values()],random),k=key(c.x,c.y);boundary.delete(k);known.add(k);build.push(c);}
  if(!build.length&&!destroy.length)return false;
  for(let i=0;i<3;i++){
@@ -210,6 +211,8 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
   if(zone.placements<zone.next[kind]&&(turnEcology(room)||!localLiving(room)||now<zone.clockNext[kind]))continue;
   zone.next[kind]=zone.placements+(localLiving(room)?livingInterval(frequency,area.length):habitatInterval(frequency,area.length));
   if(localLiving(room)&&!turnEcology(room))zone.clockNext[kind]=now+livingClock(kind,area.length);
+  if(['rodent','worm','rhino','beaver','ants'].includes(kind)&&turnEcology(room)&&skipFaunaBirth(room,kind,zone))continue;
+  if(['work','anaconda'].includes(kind)&&!faunaKindEnabled(room,kind))continue;
   if(kind==='ants'){announceAnts(room,zone,now,random,point,area);continue;}
   if(kind==='anaconda'){if((room.ruleVersion||0)>=24)announceAnaconda(room,now,random);continue;}
   if(briefEcology(room)&&['rhino','beaver'].includes(kind)){announceBriefFauna(room,kind,zone,now,random);continue;}
