@@ -24,7 +24,7 @@ export function validateTransfer(data){
  safeTree(data);const ids=new Set();
  for(const g of data.games){
   if(!text(g.id)||ids.has(g.id)||!['solo','local'].includes(g.mode)||!['paused','finished'].includes(g.status)||!array(g.players,2)||g.players.length!==2||!array(g.pairs,1)||g.pairs.length!==1||!array(g.terrain)||!g.terrain.length||!array(g.cells)||!array(g.forms)||!Number.isFinite(g.version)||g.version<0)fail();
-  if(g.variant==='inverse'){if(![1,2,3].includes(g.inverseVersion))fail();if(g.inverseVersion>=2){if(!array(g.inverseFill,33333)||new Set(g.inverseFill).size!==g.inverseFill.length)fail();const keys=new Set(g.terrain.map(c=>`${c.x},${c.y}`));if(g.inverseFill.some(k=>typeof k!=='string'||!keys.has(k)))fail();if(g.inverseVersion===3&&(!Number.isSafeInteger(g.inverseMoves)||g.inverseMoves<0||!Number.isSafeInteger(g.inverseWildNext)||g.inverseWildNext<=g.inverseMoves))fail();}}
+  if(g.variant==='inverse'){if(g.inverseClaimVersion!=null&&![1,2].includes(g.inverseClaimVersion))fail();if(![1,2,3].includes(g.inverseVersion))fail();if(g.inverseVersion>=2){if(!array(g.inverseFill,33333)||new Set(g.inverseFill).size!==g.inverseFill.length)fail();const keys=new Set(g.terrain.map(c=>`${c.x},${c.y}`));if(g.inverseFill.some(k=>typeof k!=='string'||!keys.has(k)))fail();if(g.inverseVersion===3&&(!Number.isSafeInteger(g.inverseMoves)||g.inverseMoves<0||!Number.isSafeInteger(g.inverseWildNext)||g.inverseWildNext<=g.inverseMoves))fail();}}
   ids.add(g.id);const players=new Set();
   for(const p of g.players){
    if(!text(p.id,100)||players.has(p.id)||!text(p.name,100)||!['X','O'].includes(p.symbol)||!Number.isFinite(p.score)||p.score<0||!Number.isFinite(p.figures)||p.figures<0||!p.inventory||!p.inventory.cards)fail();
