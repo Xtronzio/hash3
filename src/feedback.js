@@ -4,7 +4,7 @@ import {key,figureWindows} from './game.js';
 // Render only the geometries actually paid by the authoritative engine.
 export function scoreFeedback(previous,next) {
   const ev=next.lastEvent;
-  if(!previous||previous.id!==next.id||ev?.kind!=='move'||!(ev.points>0)||previous.lastEvent?.id===ev.id)return null;
+  if(!previous||previous.id!==next.id||!['move','claim'].includes(ev?.kind)||!(ev.points>0)||previous.lastEvent?.id===ev.id)return null;
   const move=next.cells.find(c=>c.id===ev.id),player=next.players.find(p=>p.id===ev.player);
   if(!player)return null;
   const scoredMove=move||ev.move;if(!scoredMove)return null;

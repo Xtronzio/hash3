@@ -9,7 +9,7 @@ import {scaledInverseBoard,INVERSE_DRAWINGS} from '../src/inverse-catalog.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const cell=(x,y,symbol='X')=>({id:`${symbol}:${x},${y}`,x,y,symbol,owner:symbol==='X'?'local-x':'local-o'});
-const fixture=()=>createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3]});
+const fixture=()=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3]});g.inverseVersion=2;return g;};
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
  try{const context=await browser.newContext({serviceWorkers:'block'});page=await context.newPage();const errors=[],online=[];
@@ -24,7 +24,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   await page.locator('[data-action="inverse-scale"][data-scale="s"]').click();await page.locator('[data-setup-select="local-time-mode"][data-value="untimed"]').click();
   if(width===390){await page.locator('#inverse-drawing-gallery').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,`a-inverse-selector-r78-${name}.png`)});}
   await page.locator('[data-action="start-local"]').click();await page.locator('.inverse-game').waitFor();
-  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(saved.inverseVersion,2);assert.equal(saved.cells.length,0);assert.equal(saved.inverseFill.length,32);assert.ok(await page.locator('.board .inverse-filled').count()>0||await page.locator('.board-overview-map .inverse-map-outline').count()>0);assert.ok(await page.locator('.board [class*="inverse-edge-"]').count()>0||await page.locator('.board-overview-map .inverse-map-outline').count()>0);
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);assert.equal(saved.inverseVersion,3);assert.equal(saved.cells.length,0);assert.equal(saved.inverseFill.length,32);assert.ok(await page.locator('.board .inverse-filled').count()>0||await page.locator('.board-overview-map .inverse-map-outline').count()>0);assert.ok(await page.locator('.board [class*="inverse-edge-"]').count()>0||await page.locator('.board-overview-map .inverse-map-outline').count()>0);
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   if(await page.locator('.board .inverse-filled').count()){
    const fit=await page.evaluate(()=>{const v=document.querySelector('.viewport').getBoundingClientRect();return [...document.querySelectorAll('.board .inverse-filled')].every(el=>{const r=el.getBoundingClientRect();return r.left>=v.left-1&&r.right<=v.right+1&&r.top>=v.top-1&&r.bottom<=v.bottom+1;});});

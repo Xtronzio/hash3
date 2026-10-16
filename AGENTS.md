@@ -595,3 +595,9 @@ ventana+margen2; a escala pequeña mapas agrupados acotados. No recalibrar fauna
 activar online ni tocar SQL por esta entrega. Verificar Original y ambos Inversos,
 guardados/traslados, combos simultáneos, cero puntos sin relleno y603 pruebas;
 pipeline completo Chromium/Firefox/WebKit emulados antes de Pages.
+
+## R0.21.79 · Cobro voluntario y Alto/PRO
+
+Jorge16/10 autoriza Inverso con cobro a demanda, # periódicos e inventario; exige revisar Alto/PRO en ambos modos. Contrato y auditoría en design/inverse-claims-r79.md. Respaldo remoto R78 en backup/pre-inverso-claims-r78-20261016 (286beaf). Nuevas inverseVersion3, guardados1/2 conservados. Elegir colocar o cobrar una figura propia concreta; cobrar acaba el turno, quita fichas/# y relleno alcanzado. Solo figuras con relleno puntúan; retirar sin relleno gasta turno por0sin bonus/recarga. Doble debe terminar antes de cobrar. Cartas preparan figuras, sin cobros automáticos. Cada9colocaciones compartidas aparece un #neutral dentro de la silueta, máximo3; dejar colocación libre, no reponer relleno. Pausa/cobro/cartas no avanzan contador. Mantener contorno/posiciones y final por relleno, victoria por puntos. Ayudas, mapas, guardado/traslado y logros respetan versión.
+
+Original: corregir búsqueda de Doble que alternaba prematuramente al rival; no alterar reglas/stock/puntos de guardados. Inverso Alto/PRO valoran cobros, preparación e inventario con búsqueda distinta y acotada; misma legalidad y recursos que humano. No prometer invencibilidad. Mantener ventana+margen2 e índices por snapshot, inspección de figura concreta y previsualización sin gasto. Hormigas(Original), Nubes6/Niebla9 y auditoría de frecuencias quedan pendientes por alcance explícito de este bloque. No activar Duelos/Mundo ni SQL remoto. Publicar tras pipeline completo y versión/assets públicos comprobados; no afirmar QA físico.

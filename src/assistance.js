@@ -1,3 +1,4 @@
+import {manualInverse} from './inverse-claims.js';
 import {perceivedRoom} from './fog.js';
 import {borderChains} from './area-tools.js';
 import {microLength,microExpansionChains} from './micro-expansion.js';
@@ -43,10 +44,10 @@ function cardCandidates(room,player,now){
 }
 function finishTurn(room,player,steps,now){
  let next=room,sequence=[...steps];
- for(let i=0;i<2;i++){
+ for(let i=0;i<(manualInverse(room)?5:2);i++){
   const pair=next.pairs[0];if(pair.pending||pair[pair.turn.toLowerCase()]!==player)break;
-  const choice=machineChoice({...next,difficulty:'medium'},()=>0,{futureWeight:0});
-  if(choice.action!=='move')break;
+  const choice=machineChoice({...next,difficulty:manualInverse(next)?'high':'medium'},()=>0,{futureWeight:0,maxTimeMs:120});
+  if(!choice||!['move',...(manualInverse(next)?['claim','inventory']:[])].includes(choice.action))break;
   sequence.push(choice);next=localCommand(next,choice.action,choice.payload,now,()=>.5);
  }
  return {room:next,steps:sequence};
@@ -78,7 +79,7 @@ export function planSuperHelp(original,playerId,now=Date.now(),{maxTimeMs=1400}=
   }
   beam=next.sort((a,b)=>b.rating-a.rating).slice(0,5);
  }
- if(!best.steps.some(s=>s.action==='move'))throw new Error('No hay una secuencia de colocación disponible.');
+ if(!best.steps.some(s=>['move',...(manualInverse(original)?['claim']:[])].includes(s.action)))throw new Error('No hay una secuencia de colocación disponible.');
  return {roomId:original.id,version:original.version,uncertain:!!original.fogEffects?.length,player:playerId,steps:best.steps,points:best.room.players.find(p=>p.id===playerId).score-before.score};
 }
 export function executeSuperHelp(original,plan,now=Date.now()){
@@ -87,7 +88,7 @@ export function executeSuperHelp(original,plan,now=Date.now()){
  for(const step of plan.steps){
   const pair=game.pairs[0];
   if(pair.pending||pair[pair.turn.toLowerCase()]!==plan.player||step.action==='inventory'&&step.payload.playerId!==plan.player)throw new Error('Súper Ayuda no puede jugar turnos ajenos.');
-  if(!['inventory','move'].includes(step.action))throw new Error('Acción de ayuda no permitida.');
+  if(!['inventory','move',...(manualInverse(game)?['claim']:[])].includes(step.action))throw new Error('Acción de ayuda no permitida.');
   game=localCommand(game,step.action,step.payload,now,step.seed?seededRandom(step.seed):()=>.5);
  }
  return game;
