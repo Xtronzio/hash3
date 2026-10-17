@@ -920,8 +920,8 @@ app.addEventListener('click',async e=>{
   if(action==='select-all-games'){
     if(busy)return;
     gameSelection=new Set();
-    for(const row of document.querySelectorAll('.saved-game')){
-      const game=savedGameFromRow(row);if(!game)continue;
+    const games=[...localGames().map(g=>({...g,local:true})),...(myGames.online||[]).map(g=>({...g,local:false}))];
+    for(const game of games){
       try{assertGameDeletionAllowed(localStorage,game,uid);gameSelection.add(gamePinKey(game,uid));}catch{/* Protected saves stay unselected. */}
     }
     renderHallDialog();document.querySelector('[data-action="delete-selected-games"]')?.focus({preventScroll:true});return;

@@ -15,9 +15,10 @@ export function bindGestures(root,{setRankingOpen,onSelectGame,isSelecting=()=>f
   toggle?.setAttribute('aria-expanded',String(open));
  };
  root.addEventListener('pointerdown',e=>{
-  if(e.pointerType==='mouse'||!e.isPrimary)return;
+  if(!e.isPrimary){cancelHold();gesture=null;return;}
+  if(e.pointerType==='mouse')return;
   const handle=e.target.closest('.ranking-toggle'),row=e.target.closest('.saved-game');
-  cancelHold();if(!handle&&!row||e.target.closest('.delete-game-button,.pin-game-button')||row&&isSelecting())return;
+  cancelHold();gesture=null;if(!handle&&!row||e.target.closest('.delete-game-button,.pin-game-button')||row&&isSelecting())return;
   gesture={id:e.pointerId,x:e.clientX,y:e.clientY,handle,row,locked:false,held:false};
   if(row&&onSelectGame&&!row.classList.contains('is-pinned')&&e.target.closest('.saved-game-open')){
    holdTimer=setTimeout(()=>{if(!gesture||gesture.locked)return;gesture.held=true;suppressUntil=Date.now()+800;onSelectGame(row);},550);
