@@ -544,3 +544,5 @@ R0.21.83: Cobrar grande y flotante por defecto; ambas cuentas de abejas visibles
 R0.21.84: hormigas de 3/plaga33 en Original, selección de fenómenos por iconos y cobro directo en Inverso. Contrato: design/ants-phenomena-r84.md.
 
 R0.21.85: selección individual de fauna/habitantes y sus plagas con Todos/Ninguno, guardada con la partida y los resultados. Contrato: design/fauna-selection-r85.md.
+
+R0.21.86: Mis partidas permite mantener pulsado o seleccionar varias, seleccionar todas y borrar en bloque sin salir de la lista. Las ancladas siguen protegidas y los resultados completados permanecen en Logros. Contrato: design/bulk-delete-r86.md.

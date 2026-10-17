@@ -51,13 +51,18 @@ export function voteCounts(vote){
  return {total,required:Math.floor(total/2)+1,yes:values.filter(x=>x===true).length,no:values.filter(x=>x===false).length};
 }
 
-export function deleteLocalGame(storage,gameId){
- assertGameDeletionAllowed(storage,{id:gameId,local:true});
- const games=loadLocalGames(storage);if(!games.some(g=>g.id===gameId))throw new Error('Esta partida ya no está guardada.');
- archiveTerritoryResult(storage,games.find(g=>g.id===gameId));
- const remaining=games.filter(g=>g.id!==gameId);
+export function deleteLocalGames(storage,gameIds){
+ const ids=new Set(gameIds);if(!ids.size)return loadLocalGames(storage);
+ for(const id of ids)assertGameDeletionAllowed(storage,{id,local:true});
+ const games=loadLocalGames(storage),targets=games.filter(g=>ids.has(g.id));
+ if(targets.length!==ids.size)throw new Error('Una partida ya no está guardada. Revisa la selección.');
+ // Archive every finished result before committing a single collection write.
+ for(const game of targets)archiveTerritoryResult(storage,game);
+ for(const id of ids)assertGameDeletionAllowed(storage,{id,local:true});
+ const remaining=games.filter(g=>!ids.has(g.id));
  storage.setItem('hash3_locals',JSON.stringify(remaining));
- // The collection is authoritative; a failed legacy pointer write cannot resurrect a save.
- try{const old=JSON.parse(storage.getItem('hash3_local'));if(old?.id===gameId)storage.setItem('hash3_local',JSON.stringify(remaining[0]?{id:remaining[0].id}:null));}catch{}
+ // The canonical collection prevents a failed legacy pointer write resurrecting a save.
+ try{const old=JSON.parse(storage.getItem('hash3_local'));if(ids.has(old?.id))storage.setItem('hash3_local',JSON.stringify(remaining[0]?{id:remaining[0].id}:null));}catch{}
  return remaining;
 }
+export function deleteLocalGame(storage,gameId){return deleteLocalGames(storage,[gameId]);}
