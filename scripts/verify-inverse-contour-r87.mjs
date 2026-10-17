@@ -3,8 +3,8 @@ import {chromium,firefox,webkit} from 'playwright';import {preview} from 'vite';
 import {createLocal} from '../src/local.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
-const create=(w,h)=>createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',false,{variant:'inverse',board:{id:'qa-r87',name:'Prueba',terrain:Array.from({length:w*h},(_,i)=>({x:i%w,y:Math.floor(i/w)}))},random:()=>.99});
-const large=()=>{const g=create(181,184);g.inverseFill=['0,0','1,0','2,0','80,80','81,80','80,81','180,183','179,183','180,182'];g.inverseCleared=g.terrain.length-g.inverseFill.length;return g;};
+const create=(w,h)=>createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',false,{variant:'inverse',board:{id:'qa-r87',name:'Prueba',terrain:Array.from({length:w*h},(_,i)=>({x:i%w-(w>166?Math.floor(w/2):0),y:Math.floor(i/w)-(h>166?Math.floor(h/2):0)}))},random:()=>.99});
+const large=()=>{const g=create(181,184);g.inverseFill=['-89,-90','-88,-90','-89,-89','0,0','1,0','0,1','89,90','90,90','90,91'];g.inverseCleared=g.terrain.length-g.inverseFill.length;return g;};
 const warning=()=>{const g=create(9,9);g.cells=[0,1,2].map(x=>({x,y:0,id:'x'+x,symbol:'X',owner:'local-x'}));g.inverseFill=['0,0','1,0','2,0','6,6','7,6','8,6','6,7','7,7','8,7'];g.inverseCleared=g.terrain.length-9;g.players[0].score=5;g.players[1].score=9;Object.assign(g.inverseContour,{turns:30,next:33,targets:['0,0','1,0','2,0']});return g;};
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
