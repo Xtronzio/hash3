@@ -1,3 +1,4 @@
+import {contourThreatensClaim} from './inverse-contour.js';
 import {comboInverse} from './inverse-combos.js';
 import {inverseBeeWarning} from './inverse-bees.js';
 import {inverseCommand} from './inverse.js';
@@ -10,7 +11,7 @@ const STOP=Symbol('inverse-search-budget');
 const analysisMemo=new WeakMap();
 const other=s=>s==='X'?'O':'X';
 const signed=(r,s)=>r.players.find(p=>p.symbol===s);
-const stateKey=r=>JSON.stringify([r.pairs[0].turn,r.practiceTurn,r.inventoryEffects?.forced,r.inverseMoves,r.inverseWildNext,r.inverseBees,r.players.map(p=>[p.symbol,p.score,p.figures,p.inventory.cards]),r.cells.map(c=>[c.x,c.y,c.symbol]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]),r.inverseFill]);
+const stateKey=r=>JSON.stringify([r.pairs[0].turn,r.practiceTurn,r.inventoryEffects?.forced,r.inverseMoves,r.inverseWildNext,r.inverseBees,r.inverseContour,r.players.map(p=>[p.symbol,p.score,p.figures,p.inventory.cards]),r.cells.map(c=>[c.x,c.y,c.symbol]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]),r.inverseFill]);
 function analysis(room){
  if(analysisMemo.has(room))return analysisMemo.get(room);
  const filled=new Set(room.inverseFill),fillPoints=filled.size<=33?[...filled].map(k=>k.split(',').map(Number)):[],cells=new Map(room.cells.map(c=>[key(c.x,c.y),c])),claims={};
@@ -103,6 +104,8 @@ export function chooseInverseAction(room,random=Math.random,options={}){
  const finalClaim=rootInfo.claims[room.pairs[0].turn].find(f=>f.filled===room.inverseFill.length&&signed(room,room.pairs[0].turn).score+f.pointsValue>signed(room,other(room.pairs[0].turn)).score);
  if(finalClaim&&canClaimInverse(room,signed(room,room.pairs[0].turn).id))return {action:'claim',payload:{x:finalClaim.points[0][0],y:finalClaim.points[0][1],figureId:finalClaim.id}};
  const actor=signed(room,room.pairs[0].turn),urgent=rootInfo.claims[actor.symbol].find(f=>f.pointsValue>0);
+ const threatened=rootInfo.claims[actor.symbol].find(f=>f.pointsValue>0&&contourThreatensClaim(room,f));
+ if(threatened&&canClaimInverse(room,actor.id))return {action:'claim',payload:{x:threatened.points[0][0],y:threatened.points[0][1],figureId:threatened.id}};
  if(inverseBeeWarning(room,actor.id)===1&&urgent&&canClaimInverse(room,actor.id))return {action:'claim',payload:{x:urgent.points[0][0],y:urgent.points[0][1],figureId:urgent.id}};
  const root=candidates(room,rootInfo,{cards:!options.automatic&&options.cards!==false&&level!=='basic',maximum:pro?12:8});
  if(!root.length){

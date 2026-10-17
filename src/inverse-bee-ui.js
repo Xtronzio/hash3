@@ -1,3 +1,4 @@
+import {inverseContourClock} from './inverse-contour-ui.js';
 import {inverseBeeWarning,inverseBeeRemaining} from './inverse-bees.js';
 export const inverseBeeIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 12C2 10 5 1 12 7l4 7M19 12C29 10 27 1 20 7l-4 7"/><ellipse cx="16" cy="20" rx="9" ry="7"/><path d="M12 14v12M19 14v12M24 18l4-3M24 23l4 2M8 18l-4-3M8 23l-4 2"/></g></svg>';
 export function inverseBeeBadge(room,playerId){
@@ -9,7 +10,7 @@ export function inverseBeeBadge(room,playerId){
 export function inverseBeeClocks(room,playerId,{paused=false}={}){
  if(room.variant!=='inverse'||room.inverseVersion!==3)return '';
  const own=room.players.find(p=>p.id===playerId),rival=room.players.find(p=>p.id!==playerId);
- return `<div class="inverse-bee-clocks" role="group" aria-label="Abejas: cuenta atrás de ambos jugadores${paused?' · Pausa: cuenta detenida':''}">${inverseBeeIcon}${[own,rival].filter(Boolean).map((p,i)=>`<span class="inverse-bee-player"><small>${i?'Rival':'Tú'}</small>${inverseBeeBadge(room,p.id)}</span>`).join('')}</div>`;
+ return `<div class="inverse-bee-clocks" role="group" aria-label="Abejas y contorno: cuenta atrás de ambos jugadores y presión compartida${paused?' · Pausa: cuenta detenida':''}">${inverseBeeIcon}${[own,rival].filter(Boolean).map((p,i)=>`<span class="inverse-bee-player"><small>${i?'Rival':'Tú'}</small>${inverseBeeBadge(room,p.id)}</span>`).join('')}${inverseContourClock(room)}</div>`;
 }
 export function inverseBeeNotices(room,{paused=false}={}){
  if(room.variant!=='inverse'||room.inverseVersion!==3)return '';

@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';import fs from 'node:fs/promises';import path from 'node:path';
+import {chromium,firefox,webkit} from 'playwright';import {preview} from 'vite';
+import {createLocal} from '../src/local.js';
+const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
+const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
+const create=(w,h)=>createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',false,{variant:'inverse',board:{id:'qa-r87',name:'Prueba',terrain:Array.from({length:w*h},(_,i)=>({x:i%w,y:Math.floor(i/w)}))},random:()=>.99});
+const large=()=>{const g=create(181,184);g.inverseFill=['0,0','1,0','2,0','80,80','81,80','80,81','180,183','179,183','180,182'];g.inverseCleared=g.terrain.length-g.inverseFill.length;return g;};
+const warning=()=>{const g=create(9,9);g.cells=[0,1,2].map(x=>({x,y:0,id:'x'+x,symbol:'X',owner:'local-x'}));g.inverseFill=['0,0','1,0','2,0','6,6','7,6','8,6','6,7','7,7','8,7'];g.inverseCleared=g.terrain.length-9;g.players[0].score=5;g.players[1].score=9;Object.assign(g.inverseContour,{turns:30,next:33,targets:['0,0','1,0','2,0']});return g;};
+try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
+ const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
+ try{const context=await browser.newContext({serviceWorkers:'block'});page=await context.newPage();const errors=[],online=[];page.on('pageerror',e=>errors.push(e.message));context.on('request',r=>{if(new URL(r.url()).hostname.endsWith('.supabase.co'))online.push(r.url());});await context.route('**/*.supabase.co/**',r=>r.abort());await context.route('**/version.json*',r=>r.fulfill({status:404,body:''}));await context.route('https://fonts.googleapis.com/**',r=>r.abort());await context.route('https://fonts.gstatic.com/**',r=>r.abort());
+ const settle=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))),stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
+ const load=async g=>{await page.goto(origin);await page.evaluate(g=>{localStorage.clear();sessionStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([g]));localStorage.setItem('hash3_local',JSON.stringify({id:g.id}));sessionStorage.setItem('hash3_restore_local','1');},g);await page.reload();await page.locator('.game .viewport').waitFor();await settle();};
+ const move=async(x,y)=>{await page.locator('.viewport').evaluate((v,p)=>{const c=v.querySelector('.terrain-cell[data-x][data-y]'),size=parseFloat(c.style.width);v.scrollLeft=parseFloat(c.style.left)+(p.x-Number(c.dataset.x)+.5)*size-v.clientWidth/2;v.scrollTop=parseFloat(c.style.top)+(p.y-Number(c.dataset.y)+.5)*size-v.clientHeight/2;},{x,y});await settle();await page.locator(`.board [data-action="move"][data-x="${x}"][data-y="${y}"]`).click({position:{x:5,y:5}});await settle();};
+ for(const [width,height]of [[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]]){
+  await page.setViewportSize({width,height});await load(large());const before=await stored(),centres=[];
+  for(let i=0;i<3;i++){
+   await page.locator('[data-action="locate-inverse-fill"]').click();await settle();const highlighted=await page.locator('.inverse-fill-focus').evaluateAll(es=>es.map(e=>({x:Number(e.dataset.x),y:Number(e.dataset.y),rect:{w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height}})));assert.ok(highlighted.length>0&&highlighted.length<=3);assert.ok(highlighted.every(p=>p.rect.w>=20&&p.rect.h>=20));centres.push([Math.min(...highlighted.map(p=>p.x)),Math.min(...highlighted.map(p=>p.y))].join(','));assert.ok(await page.locator('.terrain-cell').count()<2000);
+  }
+  assert.equal(new Set(centres).size,3);assert.deepEqual(await stored(),before);if(width===390)await page.screenshot({path:path.join(output,`a-inverse-focus-r87-${name}.png`)});
+  // Panning only queries visible indices; no fill iterator is used by the draw loop.
+  await page.locator('.viewport').evaluate(v=>{v.scrollLeft-=15;v.scrollTop-=15;});await settle();assert.deepEqual(await stored(),before);
+  await load(warning());assert.equal(await page.locator('.inverse-contour-clock strong').textContent(),'3');await page.locator('.inverse-contour-clock').click();await settle();assert.equal(await page.locator('.inverse-contour-target').count(),3);if(width===390)await page.screenshot({path:path.join(output,`a-inverse-contour-r87-${name}.png`)});
+  await move(4,3);assert.equal((await stored()).inverseContour.turns,31);await move(4,4);await move(4,5);let g=await stored();assert.equal(g.inverseContour.lost,3);assert.equal(g.inverseFill.length,6);assert.equal(g.cells.length,6);assert.deepEqual(g.players.map(p=>p.score),[5,9]);assert.equal(g.terrain.length,81);assert.equal(await page.locator('.inverse-progress').textContent(),'6 por vaciar');assert.match(await page.locator('.inverse-contour-notice').textContent(),/3 celdas vaciadas sin puntos/);
+  await page.locator('.inverse-contour-notice [data-action="locate-inverse-contour"]').click();await settle();assert.equal(await page.locator('.inverse-contour-hit').count(),3);
+  const pressure=structuredClone(g.inverseContour);await page.locator('[data-action="pause"]').click();await page.evaluate(()=>sessionStorage.setItem('hash3_restore_local','1'));await page.reload();await page.locator('.paused-game').waitFor();assert.deepEqual((await stored()).inverseContour,pressure);assert.equal(await page.locator('.inverse-contour-clock strong').textContent(),'33');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  results.push({name,width,height,largeBoard33304:true,threeZones:true,readableZoom:true,noActionsConsumed:true,virtualized:true,warning:true,impact:true,zeroPointsLost:true,piecesRetained:true,impactLocator:true,pauseSaved:true});
+ }
+ assert.deepEqual(errors,[]);assert.deepEqual(online,[]);await context.close();
+ }catch(error){await page?.screenshot({path:path.join(output,`inverse-contour-failure-${name}.png`)}).catch(()=>{});throw error;}finally{await browser.close();}
+}}finally{await server.close();await fs.writeFile(path.join(output,'inverse-contour-r87.json'),JSON.stringify(results,null,2));}
+console.log(`R87: ${results.length} engine/viewport cases, locating sparse large-board fill, warning, contour impact and paused restore passed`);
