@@ -8,7 +8,7 @@ import {INVERSE_PRESETS} from '../src/inverse-boards.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const at=Date.now(),original=createLocal('local','Original','Rival',at,'normal','untimed');original.status='paused';
-const make=(cells)=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],initialCards:['erase','shift','opposite'],secondInitialCards:['erase','shift','opposite']});if(cells){g.cells=cells;g.inverseVersion=1;delete g.inverseFill;}return g;};
+const make=(cells)=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],initialCards:['erase','shift','opposite'],secondInitialCards:['erase','shift','opposite']});if(cells){g.cells=cells;g.inverseVersion=1;delete g.inverseContour;delete g.inverseFill;}return g;};
 const tile=(x,y,symbol='X')=>({id:`${symbol}:${x},${y}`,x,y,symbol,owner:symbol==='X'?'local-x':'local-o'});
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let lastPage;

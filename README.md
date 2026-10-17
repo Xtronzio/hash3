@@ -546,3 +546,5 @@ R0.21.84: hormigas de 3/plaga33 en Original, selección de fenómenos por iconos
 R0.21.85: selección individual de fauna/habitantes y sus plagas con Todos/Ninguno, guardada con la partida y los resultados. Contrato: design/fauna-selection-r85.md.
 
 R0.21.86: Mis partidas permite mantener pulsado o seleccionar varias, seleccionar todas y borrar en bloque sin salir de la lista. Las ancladas siguen protegidas y los resultados completados permanecen en Logros. Contrato: design/bulk-delete-r86.md.
+
+R0.21.87: contador de Inverso localiza relleno pendiente con zoom; # sobre relleno y presión anunciada del contorno sin quitar fichas ni puntos. Reglas: design/inverse-contour-r87.md.

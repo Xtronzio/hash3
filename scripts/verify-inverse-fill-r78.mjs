@@ -9,7 +9,7 @@ import {scaledInverseBoard,INVERSE_DRAWINGS} from '../src/inverse-catalog.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const cell=(x,y,symbol='X')=>({id:`${symbol}:${x},${y}`,x,y,symbol,owner:symbol==='X'?'local-x':'local-o'});
-const fixture=()=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3]});g.inverseVersion=2;return g;};
+const fixture=()=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3]});g.inverseVersion=2;delete g.inverseContour;return g;};
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
  try{const context=await browser.newContext({serviceWorkers:'block'});page=await context.newPage();const errors=[],online=[];

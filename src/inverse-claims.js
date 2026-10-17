@@ -34,7 +34,8 @@ export function advanceInverseWild(room,random=Math.random){
  const free=availableCells(room,room.pairs[0]);
  // Leave a legal placement when a second Doble placement is still pending.
  if(free.length<=1)return;
- const point=free[Math.min(free.length-1,Math.floor(Math.max(0,random())*free.length))];
+ const fill=new Set(room.inverseFill),pending=free.filter(p=>fill.has(key(p.x,p.y)));if(!pending.length)return;
+ const point=pending[Math.min(pending.length-1,Math.floor(Math.max(0,random())*pending.length))];
  room.cells.push({...point,id:crypto.randomUUID(),symbol:'#',owner:null});
  room.inverseWildEvent={id:crypto.randomUUID(),x:point.x,y:point.y,move:room.inverseMoves};
 }
