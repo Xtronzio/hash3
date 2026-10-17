@@ -4,7 +4,7 @@ import {savedMapModel,thumbnailMarkup,inspectionCells,bindInspection} from '../s
 import {loadGamePins,toggleGamePin,saveLocalGame,loadLocalGames,deleteLocalGame,assertGameDeletionAllowed} from '../src/sessions.js';
 import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
 import {localCommand} from '../src/local.js';
-import {gamesMarkup} from '../src/session-ui.js';
+import {gamesMarkup,gamesSelectionActions} from '../src/session-ui.js';
 
 const memory=()=>{const values=new Map();return {getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};};
 test('Saved superior stays blue and outlined even after its last piece disappears',()=>{
@@ -106,4 +106,15 @@ test('Colonias invasoras aparecen como asteriscos amarillos en mapa y pausa',()=
  assert.equal(cell.fill,'var(--yellow)');
  assert.match(inspectionCells(model),/data-symbol="\*"/);
  assert.match(thumbnailMarkup(r),/var\(--yellow\)/);
+});
+
+
+test('Mail selection gives checkboxes to all rows but never selects pinned saves or opens boards',()=>{
+ const g=createLocal('local','A','B'),closed={...g,id:'closed',status:'finished'};
+ const selection=new Set([`local:${g.id}`,'local:closed']);
+ const html=gamesMarkup({local:[g,closed],pins:['local:closed'],selection});
+ assert.equal((html.match(/role="checkbox"/g)||[]).length,2);
+ assert.equal((html.match(/aria-checked="true"/g)||[]).length,1);assert.doesNotMatch(html,/data-action="load-game"/);
+ assert.match(html,/aria-checked="false"[^>]*disabled/);assert.match(gamesSelectionActions(selection),/Borrar \(2\)/);
+ assert.match(gamesSelectionActions(new Set()),/data-action="delete-selected-games" disabled/);
 });

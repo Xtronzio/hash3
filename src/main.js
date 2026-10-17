@@ -67,10 +67,10 @@ import {boardActionFeedback} from './rodent-feedback.js';
 import {habitatMark,habitatIcons} from './inhabitants.js';
 import {habitatLocations,habitatReservations,habitatTargets,rodentTurnsRemaining} from './habitat-tools.js';
 import {rodentMark,rodentSleeping,rodentIcon,rodentLabel} from './rodents.js';
-import {loadLocalGames,saveLocalGame,deleteLocalGame,selectExpansion,loadGamePins,toggleGamePin,assertGameDeletionAllowed} from './sessions.js';
+import {loadLocalGames,saveLocalGame,deleteLocalGames,gamePinKey,selectExpansion,loadGamePins,toggleGamePin,assertGameDeletionAllowed} from './sessions.js';
 import {savedMapModel,thumbnailMarkup,bindInspection} from './saved-map.js';
 import {createSnapshotQueue} from './snapshot-queue.js';
-import {gamesMarkup,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
+import {gamesMarkup,gamesSelectionActions,worldRankMarkup,voteMarkup,periods} from './session-ui.js';
 import './sessions.css';
 import './mobile-game.css';
 import './map-overview.css';
@@ -161,7 +161,7 @@ function updateInverseBeeEffect(previous,next){
  inverseBeeTimer=setTimeout(()=>{inverseBeeEffect=null;document.querySelector('.inverse-bee-swarm')?.remove();scheduleBoard(true);},1800);
 }
 let inverseClaimSelection=null;
-let hallHistory=[],localReturnDialog=null,pendingDelete=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
+let hallHistory=[],localReturnDialog=null,pendingDelete=null,gameSelection=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
 const inventoryDescriptionsOpen=new Set(),hallDescriptionsOpen=new Set();
 let setupVariant='original',setupDrawing='heart',setupScale='m';
 const inverseRecommended=['erase','shift','opposite'];
@@ -198,7 +198,27 @@ function pinSavedGame(row){
  const local=row.dataset.local==='true',game=local?localGames().find(g=>g.id===row.dataset.id):myGames.online?.find(g=>g.id===row.dataset.id);if(!game)return;
  try{const pinned=toggleGamePin(localStorage,{...game,local},uid);renderHallDialog();document.querySelector(`.saved-game[data-id="${CSS.escape(game.id)}"] [data-action="toggle-game-menu"]`)?.focus({preventScroll:true});notify(pinned?'Partida anclada.':'Partida desanclada.');}catch{notify('No se ha podido guardar el anclaje en este navegador.');}
 }
-bindGestures(app,{setRankingOpen});
+function savedGameFromRow(row){
+ if(!row)return null;
+ const local=row.dataset.local==='true',game=(local?localGames():myGames.online||[]).find(g=>g.id===row.dataset.id);
+ return game?{...game,local}:null;
+}
+function selectSavedGame(row){
+ if(busy||pendingDelete||hallDialog!=='games')return;
+ const game=savedGameFromRow(row);if(!game)return;
+ try{assertGameDeletionAllowed(localStorage,game,uid);}catch(error){notify(error.message);return;}
+ gameSelection??=new Set();const key=gamePinKey(game,uid);
+ if(gameSelection.has(key))gameSelection.delete(key);else gameSelection.add(key);
+ renderHallDialog();document.querySelector(`.saved-game[data-local="${game.local}"][data-id="${CSS.escape(game.id)}"] .saved-game-select`)?.focus({preventScroll:true});
+}
+function selectedSavedGames(){
+ return [...localGames().map(g=>({...g,local:true})),...(myGames.online||[]).map(g=>({...g,local:false}))].filter(g=>gameSelection?.has(gamePinKey(g,uid)));
+}
+function cancelGameDeletion(){
+ pendingDelete=null;document.querySelector('.delete-dialog')?.remove();
+ document.querySelector(gameSelection?'[data-action="delete-selected-games"]':'[data-action="start-game-selection"]')?.focus({preventScroll:true});
+}
+bindGestures(app,{setRankingOpen,onSelectGame:selectSavedGame,isSelecting:()=>gameSelection!==null});
 const mark = (symbol,{activeBomb=false,disarm=false}={}) => symbol==='*'?`<svg class="invader-asterisk" viewBox="0 0 64 64" ${disarm?'style="color:var(--red)"':''} ${activeBomb?'data-invasion-bomb="active"':''} role="img" aria-label="${activeBomb?'Bomba invasora activa':'Ocupación invasora *'}">${activeBomb?invasionBombIcon:invaderIcon}${disarm?bombDisarmCross:''}</svg>`:symbol==='#'?`<svg viewBox="0 0 64 64" aria-hidden="true">${neutralIcon}</svg>`:symbol==='X' ? '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 14 50 50M50 14 14 50"/></svg>' : '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/></svg>';
 function notify(message,{inventory=false}={}) {
   const n=document.querySelector('#notice'); n.classList.remove('score-notice','landing-score-notice');n.classList.toggle('inventory-notice',inventory);n.textContent=message; n.classList.add('visible');
@@ -551,7 +571,7 @@ function renderHome() {
   updateOfflineStatus();
 }
 function closeHallDialog(restoreFocus=true) {
-  hallDialog=hallHistory.pop()||null;document.querySelector('.hall-dialog')?.remove();
+  if(pendingDelete)return;gameSelection=null;hallDialog=hallHistory.pop()||null;document.querySelector('.hall-dialog')?.remove();
   if(hallDialog){renderHallDialog();return;}
   if(restoreFocus)document.querySelector(`[data-action="${hallReturnAction}"]`)?.focus();
 }
@@ -565,20 +585,24 @@ function rankingRows(players,byMax=false) {
   return `<ol class="hall-ranking-list">${rankedPlayers(players.filter(p=>!p.bot),byMax).map((p,i)=>`<li><span class="rank-position ${['gold','silver','bronze'][i]||''}">${i+1}</span><span>${escape(p.name)}<small>${p.figures} figuras · ${p.symbol||'—'}</small></span><strong class="mono">${byMax?maxLabel(p)+' #MAX':p.score}</strong></li>`).join('')}</ol>`;
 }
 function renderHallDialog() {
+  const previous=document.querySelector('.hall-dialog .dialog'),scroll=hallDialog==='games'?previous?.scrollTop||0:0,closedOpen=previous?.querySelector('.closed-games')?.open||false;
   document.querySelector('.hall-dialog')?.remove();
   const local=savedLocal();let markup;
   if(hallDialog==='help')markup=hallDialogFrame('Cómo se juega',rulesMarkup);
   else if(hallDialog==='achievements')markup=hallDialogFrame('Logros',achievementsMarkup(loadTerritoryResults(localStorage,localGames()),achievementView||{}),{home:true});
   else if(hallDialog==='inventory')markup=hallDialogFrame('Inventario',`<div class="inventory-catalog">${inventoryMarkup(null,null,{showShortcuts:false,openTools:hallDescriptionsOpen})}</div>`,{home:true,actions:inventoryShortcutsMarkup()});
   else if(hallDialog==='ranking'){markup=hallDialogFrame('Ranking y métricas',`${metricsModePicker(metricView==='personal'?metricMode:null)}<div class="metrics-classification"><button class="mode-green" data-action="metrics-view" data-view="world" aria-pressed="${metricView==='world'}" ${modeAvailable('world')?'':'disabled title="En construcción"'}>${hallIcon('world')}Clasificación Mundo${modeAvailable('world')?'':' · En construcción'}</button></div>${metricView==='world'?worldRankMarkup(hallRanking,uid):metricsMarkup({...metricState,entries:[...localMetrics(localGames()),...metricState.entries],mode:metricMode,showModes:false})}`,{home:true});
-  }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid}),{home:true});
+  }else if(hallDialog==='games'){markup=hallDialogFrame('Mis partidas',gamesMarkup({...myGames,local:localGames(),pins:loadGamePins(localStorage),uid,selection:gameSelection}),{home:true,actions:gamesSelectionActions(gameSelection)});
   }else markup=hallDialogMarkup(hallDialog,{name:read('hash3_name')||'',mode:hallMode,code:urlCode,friendInvite:!!urlRival,local,hasPrevious:hallHistory.length>0});
   app.insertAdjacentHTML('beforeend',markup);
   if(hallDialog==='profile'){
    hydrateProfileAccess();
    if(!ONLINE_ENABLED)bindLocalTransfer(document.querySelector('.profile-screen'),{storage:localStorage,base:location.href,incoming:incomingTransfer,onCancelled:()=>{incomingTransfer=null;},onImported:()=>{incomingTransfer=null;notify('Copia recuperada. Tus partidas están en Mis partidas.');void openMyGames();}});
   }
-  if(hallDialog==='games')bindOnlineThumbnails();
+  if(hallDialog==='games'){
+   const dialog=document.querySelector('.hall-dialog .dialog');dialog.classList.add('saved-games-dialog');
+   dialog.querySelector('.closed-games').open=closedOpen;dialog.scrollTop=scroll;bindOnlineThumbnails();
+  }
   document.querySelector('#rank-date')?.addEventListener('change',async e=>{hallRanking.date=e.target.value||madridNow;hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#rank-hour')?.addEventListener('change',async e=>{hallRanking.hour=Number(e.target.value);hallRanking.offset=0;await refreshWorldRank();});
   document.querySelector('#achievement-rules')?.addEventListener('change',e=>{achievementView={...achievementView,comparison:e.target.value};renderHallDialog();});
@@ -620,7 +644,7 @@ function renderHallDialog() {
     finally{busy=false;if(submit?.isConnected)submit.disabled=false;}
   });
   const dialog=document.querySelector('.hall-dialog');
-  dialog.addEventListener('click',e=>{if(e.target===dialog)closeHallDialog();});
+  dialog.addEventListener('click',e=>{if(e.target===dialog&&!busy&&!pendingDelete)closeHallDialog();});
   // Focusing the nickname automatically on iOS opens the keyboard and moves
   // the visual viewport before the modal can be sized. Preserve keyboard
   // focus for desktop, but focus a non-editable control on touch devices.
@@ -700,7 +724,7 @@ async function goToGames(){
  if(timed)notify('La sala sigue jugando. En Mundo no hay pausa; en Duelo puedes solicitarla por votación.');
 }
 async function openMyGames(){
- const request=++gamesRequest;myGames={online:[],loading:ONLINE_ENABLED&&navigator.onLine,error:''};
+ gameSelection=null;const request=++gamesRequest;myGames={online:[],loading:ONLINE_ENABLED&&navigator.onLine,error:''};
  openHallDialog('games','hall-games');
  if(!ONLINE_ENABLED){myGames.error='Duelo y Mundo · En construcción. Aquí están tus partidas locales.';renderHallDialog();return;}
  if(!navigator.onLine){myGames.error='Sin conexión: puedes abrir tus partidas locales. Las salas online se mostrarán al reconectar.';renderHallDialog();return;}
@@ -890,19 +914,49 @@ app.addEventListener('click',async e=>{
   }
   if(action==='pin-game'){pinSavedGame(b.closest('.saved-game'));return;}
   if(action==='invalid-cell'){if(!busy&&room?.status==='playing'&&ownPair()?.turn===ownPlayer()?.symbol&&!ownPair()?.pending){b.classList.remove('invalid-flash');void b.offsetWidth;b.classList.add('invalid-flash');setTimeout(()=>b.classList.remove('invalid-flash'),360);}return;}
-  if(action==='delete-game'){
-    const local=b.dataset.local==='true',game=local?localGames().find(g=>g.id===b.dataset.id):myGames.online?.find(g=>g.id===b.dataset.id);
-    if(!game)return;try{assertGameDeletionAllowed(localStorage,{...game,local},uid);}catch(error){notify(error.message);return;}pendingDelete={...game,local};renderDeleteGame();return;
+  if(action==='start-game-selection'){gameSelection=new Set();renderHallDialog();document.querySelector('[data-action="select-all-games"]')?.focus({preventScroll:true});return;}
+  if(action==='cancel-game-selection'){gameSelection=null;renderHallDialog();document.querySelector('[data-action="start-game-selection"]')?.focus({preventScroll:true});return;}
+  if(action==='select-game'){selectSavedGame(b.closest('.saved-game'));return;}
+  if(action==='select-all-games'){
+    if(busy)return;
+    gameSelection=new Set();
+    const games=[...localGames().map(g=>({...g,local:true})),...(myGames.online||[]).map(g=>({...g,local:false}))];
+    for(const game of games){
+      try{assertGameDeletionAllowed(localStorage,game,uid);gameSelection.add(gamePinKey(game,uid));}catch{/* Protected saves stay unselected. */}
+    }
+    renderHallDialog();document.querySelector('[data-action="delete-selected-games"]')?.focus({preventScroll:true});return;
   }
-  if(action==='cancel-delete'){pendingDelete=null;document.querySelector('.delete-dialog')?.remove();return;}
+  if(action==='delete-game'||action==='delete-selected-games'){
+    if(busy)return;
+    const targets=action==='delete-game'?[savedGameFromRow(b.closest('.saved-game'))].filter(Boolean):selectedSavedGames();
+    if(!targets.length)return;
+    try{for(const game of targets)assertGameDeletionAllowed(localStorage,game,uid);}catch(error){notify(error.message);return;}
+    pendingDelete={targets};renderDeleteGame();return;
+  }
+  if(action==='cancel-delete'){if(!busy)cancelGameDeletion();return;}
   if(action==='confirm-delete'){
-    const target=pendingDelete;if(!target)return;
-    await run(async()=>{
-      assertGameDeletionAllowed(localStorage,target,uid);
-      if(target.local)deleteLocalGame(localStorage,target.id);
-      else {uid=await ensurePlayer();await previewRequests.get(`${uid}:${target.id}`)?.catch(()=>{});assertGameDeletionAllowed(localStorage,target,uid);await command('remove_game',{code:target.code});myGames.online=myGames.online?.filter(g=>g.id!==target.id)||[];}
-      pendingDelete=null;document.querySelector('.delete-dialog')?.remove();renderHallDialog();
-    });return;
+    if(busy||!pendingDelete)return;e.preventDefault();e.stopPropagation();
+    const targets=pendingDelete.targets,removed=new Set();let failure=null;busy=true;
+    const buttons=[...app.querySelectorAll('button')].map(button=>[button,button.disabled]);buttons.forEach(([button])=>button.disabled=true);
+    try{
+      for(const target of targets)assertGameDeletionAllowed(localStorage,target,uid);
+      const locals=targets.filter(g=>g.local);
+      if(locals.length){deleteLocalGames(localStorage,locals.map(g=>g.id));for(const g of locals)removed.add(gamePinKey(g,uid));}
+      for(const target of targets.filter(g=>!g.local)){
+        uid=await ensurePlayer();await previewRequests.get(`${uid}:${target.id}`)?.catch(()=>{});
+        assertGameDeletionAllowed(localStorage,target,uid);await command('remove_game',{code:target.code});
+        myGames.online=myGames.online?.filter(g=>g.id!==target.id)||[];removed.add(gamePinKey(target,uid));
+      }
+    }catch(error){failure=error;}
+    finally{
+      busy=false;for(const [button,disabled]of buttons)if(button.isConnected)button.disabled=disabled;
+      if(gameSelection)for(const key of removed)gameSelection.delete(key);
+      pendingDelete=null;document.querySelector('.delete-dialog')?.remove();
+      if(room&&targets.some(g=>removed.has(gamePinKey(g,uid))&&g.id===room.id)){clearGameView();hallDialog='games';renderHome();}
+      else renderHallDialog();
+      document.querySelector(gameSelection?'[data-action="select-all-games"]':'[data-action="start-game-selection"]')?.focus({preventScroll:true});
+    }
+    notify(failure?`${removed.size?removed.size+' partidas eliminadas. ':''}${failure.message||'No se ha podido completar el borrado. Las restantes se conservan.'}`:removed.size===1?'Partida eliminada.':`${removed.size} partidas eliminadas.`);return;
   }
   if(action==='hall-achievements'){achievementView=achievementSelection(loadTerritoryResults(localStorage,localGames()),achievementView||{});openHallDialog('achievements','hall-achievements');return;}
   if(action==='hall-inventory'){openHallDialog('inventory','hall-inventory');return;}
@@ -1236,12 +1290,13 @@ document.addEventListener('keydown',e=>{
   }
   if(e.key==='Escape'&&document.querySelector('.saved-game-menu:not([hidden])')){e.preventDefault();const menu=document.querySelector('.saved-game-menu:not([hidden])');menu.hidden=true;const toggle=menu.parentElement.querySelector('[data-action="toggle-game-menu"]');toggle.setAttribute('aria-expanded','false');toggle.focus();return;}
   if(pendingDelete){
-    if(e.key==='Escape'){e.preventDefault();if(pendingDelete){pendingDelete=null;document.querySelector('.delete-dialog')?.remove();}else{inventoryOpen=false;document.querySelector('.inventory-dialog')?.remove();}return;}
+    if(e.key==='Escape'){e.preventDefault();if(pendingDelete){if(!busy)cancelGameDeletion();}else{inventoryOpen=false;document.querySelector('.inventory-dialog')?.remove();}return;}
     if(e.key==='Tab'){const selector=pendingDelete?'.delete-dialog':'.inventory-dialog',nodes=[...document.querySelectorAll(selector+' button:not(:disabled)')],first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
     return;
   }
   if(e.key==='Escape'&&rankOpen){e.preventDefault();setRankingOpen(false);return;}
   if(!hallDialog)return;
+  if(e.key==='Escape'&&hallDialog==='games'&&gameSelection){e.preventDefault();gameSelection=null;renderHallDialog();return;}
   if(e.key==='Escape'){e.preventDefault();closeHallDialog();return;}
   if(e.key==='Tab'){
     const nodes=[...document.querySelectorAll('.hall-dialog button:not(:disabled),.hall-dialog input,.hall-dialog select')];
@@ -1501,7 +1556,7 @@ function renderInventory(){
 }
 function renderDeleteGame(){
  document.querySelector('.delete-dialog')?.remove();if(!pendingDelete)return;
- const g=pendingDelete,active=!g.local&&g.status!=='finished'&&g.active!==false;
- app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop delete-dialog"><section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"><h2 class="heading" id="delete-title">${g.local?'¿Borrar esta partida?':'¿Quitar esta sala de Mis partidas?'}</h2><p>${g.local?'Se borrará el guardado de este navegador, con su tablero y puntuación. Esta acción no se puede deshacer.':active?'También saldrás de la sala. Los demás podrán seguir jugando. Tus puntos de Mundo se conservan.':'La sala deja de aparecer en tu lista. El tablero y el resultado compartidos se conservan.'}</p>${!g.local?'<p class="muted">Si vuelves a abrirla con su código, aparecerá de nuevo en Mis partidas.</p>':''}<div class="row"><button data-action="cancel-delete">Cancelar</button><button class="danger" data-action="confirm-delete">${g.local?'Borrar partida':active?'Salir y quitar':'Quitar de mi lista'}</button></div></section></div>`);
+ const targets=pendingDelete.targets,g=targets[0],multiple=targets.length>1,allLocal=targets.every(t=>t.local),active=!g.local&&g.status!=='finished'&&g.active!==false;
+ app.insertAdjacentHTML('beforeend',`<div class="dialog-backdrop delete-dialog"><section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"><h2 class="heading" id="delete-title">${multiple?`¿Eliminar ${targets.length} partidas?`:g.local?'¿Borrar esta partida?':'¿Quitar esta sala de Mis partidas?'}</h2><p>${multiple&&allLocal?'Se borrarán los guardados seleccionados de este navegador. Los resultados completados se conservan en Logros. Esta acción no se puede deshacer.':multiple?'Se borrarán los guardados locales seleccionados. Sus resultados completados se conservan en Logros. Las salas compartidas solo se quitan de tu lista y sales de las que sigan activas; los demás podrán seguir jugando. Esta acción no se puede deshacer.':g.local?'Se borrará el guardado de este navegador, con su tablero y puntuación. Esta acción no se puede deshacer.':active?'También saldrás de la sala. Los demás podrán seguir jugando. Tus puntos de Mundo se conservan.':'La sala deja de aparecer en tu lista. El tablero y el resultado compartidos se conservan.'}</p>${!g.local?'<p class="muted">Si vuelves a abrirla con su código, aparecerá de nuevo en Mis partidas.</p>':''}<div class="row"><button data-action="cancel-delete">Cancelar</button><button class="danger" data-action="confirm-delete">${multiple?`Eliminar ${targets.length}`:g.local?'Borrar partida':active?'Salir y quitar':'Quitar de mi lista'}</button></div></section></div>`);
  document.querySelector('[data-action="cancel-delete"]')?.focus();
 }

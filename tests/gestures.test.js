@@ -1,19 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bindGestures,swipeDirection} from '../src/gestures.js';
-function harness(){
- const listeners=new Map(),open=new Set(),attributes={},ranking=[],pins=[];
+function harness({select=false}={}){
+ const listeners=new Map(),open=new Set(),attributes={},ranking=[],pins=[],selected=[];
  const toggle={setAttribute:(key,value)=>attributes[key]=value};
  const row={classList:{toggle:(key,on)=>on?open.add(key):open.delete(key),contains:key=>open.has(key)},querySelector:()=>toggle,setPointerCapture:()=>{}};
  const handle={setPointerCapture:()=>{}};
  const root={addEventListener:(name,listener,capture)=>{const list=listeners.get(name)||[];list.push({listener,capture:capture===true});listeners.set(name,list);},querySelectorAll:()=>open.has('is-revealed')?[row]:[]};
- bindGestures(root,{setRankingOpen:value=>ranking.push(value),togglePinned:row=>pins.push(row)});
+ bindGestures(root,{setRankingOpen:value=>ranking.push(value),togglePinned:row=>pins.push(row),onSelectGame:select?row=>selected.push(row):undefined});
  let prevented=false,stopped=false;
- const send=(name,x,y,{target='row',type='touch'}={})=>{
-  const e={pointerId:1,pointerType:type,isPrimary:true,clientX:x,clientY:y,target:{closest:selector=>selector==='.ranking-toggle'&&target==='handle'?handle:selector==='.saved-game'&&target==='row'?row:null},preventDefault:()=>prevented=true,stopImmediatePropagation:()=>stopped=true};
+ const send=(name,x,y,{target='row',type='touch',primary=true}={})=>{
+  const e={pointerId:1,pointerType:type,isPrimary:primary,clientX:x,clientY:y,target:{closest:selector=>selector==='.ranking-toggle'&&target==='handle'?handle:(selector==='.saved-game'||selector==='.saved-game-open')&&target==='row'?row:null},preventDefault:()=>prevented=true,stopImmediatePropagation:()=>stopped=true};
   for(const {listener} of (listeners.get(name)||[]).sort((a,b)=>Number(b.capture)-Number(a.capture)))listener(e);
  };
- return {send,open,attributes,ranking,pins,get prevented(){return prevented;},get stopped(){return stopped;}};
+ return {send,open,attributes,ranking,pins,selected,get prevented(){return prevented;},get stopped(){return stopped;}};
 }
 test('Swipe axis locking leaves vertical list scrolling and small or diagonal taps alone',()=>{
  assert.equal(swipeDirection(-80,5,'x'),-1);assert.equal(swipeDirection(80,5,'x'),1);
@@ -45,4 +45,13 @@ test('Ranking header supports down to open and up to close without toggle clicks
 test('Pinned rows never reveal deletion; right swipe still allows unpinning',()=>{
  const h=harness();h.open.add('is-pinned');h.send('pointerdown',140,100);h.send('pointermove',50,100);h.send('pointerup',50,100);assert.ok(!h.open.has('is-revealed'));
  h.send('pointerdown',50,100);h.send('pointermove',140,100);h.send('pointerup',140,100);assert.ok(h.open.has('is-pin-revealed'));
+});
+
+
+test('Long press selects once and suppresses release click; scrolling and a second finger cancel it',t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
+ const h=harness({select:true});h.send('pointerdown',100,100);t.mock.timers.tick(550);assert.equal(h.selected.length,1);h.send('pointerup',100,100);h.send('click',100,100);assert.ok(h.stopped);assert.equal(h.open.size,0);
+ const scrolling=harness({select:true});scrolling.send('pointerdown',100,100);scrolling.send('pointermove',100,120);t.mock.timers.tick(600);assert.equal(scrolling.selected.length,0);
+ const multiple=harness({select:true});multiple.send('pointerdown',100,100);multiple.send('pointerdown',120,100,{primary:false});t.mock.timers.tick(600);assert.equal(multiple.selected.length,0);
+ const pinned=harness({select:true});pinned.open.add('is-pinned');pinned.send('pointerdown',100,100);t.mock.timers.tick(600);assert.equal(pinned.selected.length,0);
 });

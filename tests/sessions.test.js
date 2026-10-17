@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLegacyLocal as createLocal} from './helpers/legacy-inventory.js';
 import {localCommand} from '../src/local.js';
-import {loadLocalGames,saveLocalGame,selectExpansion,voteCounts} from '../src/sessions.js';
+import {loadLocalGames,saveLocalGame,deleteLocalGames,toggleGamePin,selectExpansion,voteCounts} from '../src/sessions.js';
 import {expansionOptions,terrainOf} from '../src/game.js';
 const now=1700000000000;
 const memory=()=>{const values=new Map();return {getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};};
@@ -48,4 +48,30 @@ test('Existing timed saves retain their pending deadline and paused remaining ti
 test('Legacy pointer references the canonical game without duplicating its board',()=>{
  const storage=memory(),g=createLocal('solo','A','B',now);saveLocalGame(storage,g,now);
  assert.deepEqual(JSON.parse(storage.getItem('hash3_local')),{id:g.id});assert.equal(loadLocalGames(storage)[0].id,g.id);
+});
+
+
+test('Bulk deletion writes one collection, deduplicates IDs and preserves unselected saves',()=>{
+ const storage=memory(),games=[0,1,2].map(i=>createLocal('local','A'+i,'B',now+i));
+ for(const game of games)saveLocalGame(storage,game,now);
+ let writes=0;const counted={getItem:storage.getItem,setItem:(k,v)=>{if(k==='hash3_locals')writes++;storage.setItem(k,v);}};
+ deleteLocalGames(counted,[games[0].id,games[2].id,games[0].id]);
+ assert.equal(writes,1);assert.deepEqual(loadLocalGames(storage).map(g=>g.id),[games[1].id]);
+ assert.deepEqual(JSON.parse(storage.getItem('hash3_local')),{id:games[1].id});
+});
+test('A pin added after selection or unreadable pins prevents the entire local batch',()=>{
+ const storage=memory(),games=[0,1].map(i=>createLocal('local','A'+i,'B',now+i));
+ for(const game of games)saveLocalGame(storage,game,now);
+ const before=storage.getItem('hash3_locals');toggleGamePin(storage,games[1]);
+ assert.throws(()=>deleteLocalGames(storage,games.map(g=>g.id)),/anclada/);assert.equal(storage.getItem('hash3_locals'),before);
+ storage.setItem('hash3_game_pins','broken');assert.throws(()=>deleteLocalGames(storage,[games[0].id]),/verificar/);assert.equal(storage.getItem('hash3_locals'),before);
+});
+test('A failed batch collection write preserves all boards and the legacy pointer',()=>{
+ const storage=memory(),games=[0,1].map(i=>createLocal('local','A'+i,'B',now+i));
+ for(const game of games)saveLocalGame(storage,game,now);
+ const before=storage.getItem('hash3_locals'),pointer=storage.getItem('hash3_local');
+ const limited={getItem:storage.getItem,setItem:(k,v)=>{if(k==='hash3_locals')throw Error('quota');storage.setItem(k,v);}};
+ assert.throws(()=>deleteLocalGames(limited,games.map(g=>g.id)),/quota/);
+ assert.equal(storage.getItem('hash3_locals'),before);assert.equal(storage.getItem('hash3_local'),pointer);
+ assert.throws(()=>deleteLocalGames(storage,[games[0].id,'missing']),/selección/);assert.equal(storage.getItem('hash3_locals'),before);
 });
