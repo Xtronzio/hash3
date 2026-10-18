@@ -12,8 +12,8 @@ export function inverseContourNotice(room){
  const fill=new Set(room.inverseFill),n=c.targets.filter(k=>fill.has(k)).length,e=room.inverseContourEvent,recent=e&&c.turns-e.turn<=1;
  const r=c.renewal,re=room.inverseRenewalEvent,rRecent=re&&c.turns-re.turn<=1;
  const renewal=r?.targets.length?`Contorno + · ${r.targets.length} celdas recuperarán relleno en ${r.next-c.turns} turnos compartidos`:rRecent?`Contorno + · ${re.restored.length} celdas recuperadas`:'';
- const plus=renewal?`<div class="practice-banner inverse-contour-notice inverse-renewal-notice" role="status"><span>${renewal}</span><button class="small" data-action="locate-inverse-restore" aria-label="Localizar sumas del contorno">${inverseContourIcon}</button></div>`:'';
+ const plus=renewal?`<div class="practice-banner inverse-contour-notice inverse-renewal-notice" role="status"><span>${renewal}</span><button class="small" data-action="locate-inverse-restore" aria-label="${renewal}. Localizar sumas del contorno" title="${renewal}">${inverseContourIcon}<b aria-hidden="true">+${r?.targets.length||re.restored.length}</b></button></div>`:'';
  if(!n&&!recent)return plus;
  const text=n?`Contorno · ${n} celdas sin puntos en ${c.next-c.turns} turnos compartidos`:`Contorno · ${e.cleared.length} celdas vaciadas sin puntos`;
- return `<div class="practice-banner inverse-contour-notice" role="status"><span>${text}</span><button class="small" data-action="locate-inverse-contour" aria-label="${n?'Localizar celdas amenazadas por el contorno':'Localizar última zona vaciada por el contorno'}">${inverseContourIcon}</button></div>${plus}`;
+ return `<div class="practice-banner inverse-contour-notice" role="status"><span>${text}</span><button class="small" data-action="locate-inverse-contour" aria-label="${text}. ${n?'Localizar celdas amenazadas por el contorno':'Localizar última zona vaciada por el contorno'}" title="${text}">${inverseContourIcon}<b aria-hidden="true">−${n||e.cleared.length}</b></button></div>${plus}`;
 }

@@ -17,7 +17,7 @@ La geometría original es inmutable. Reponer significa devolver relleno a celdas
 
 Dianas: #, relleno, restas y sumas, además de referencias/posiciones guardadas existentes. Tablero usa parches ajustados a la altura y hasta33celdas; mapas usan grupos3×3 para mantener detalle. Cada tipo conserva su recorrido durante la sesión. No gastan acciones ni cartas, también sin inventario. «Por vaciar» conserva acceso directo.
 
-Avisos: marco SVG doble, base oscura y guiones gruesos, oro−/menta+, icono que distingue sin depender del color. Fichas y punto central libres. Eliminación: anillo y fragmentos que salen; creación: convergencia y pulso+; comodín: pulso#. Diferenciar contorno oro y cobro cian. Efectos decorativos no bloquean entrada y duran1,3s. Movimiento reducido usa resalte estático. Solo deltas nuevos de snapshots aceptados; no repetir al cargar, enfocar o desplazar.
+Avisos: marco SVG doble, base oscura y guiones gruesos, oro−/menta+, icono que distingue sin depender del color. Fichas y punto central libres. Eliminación: anillo y fragmentos que salen; creación: convergencia y pulso+; comodín: pulso#. Diferenciar contorno oro y cobro cian. Efectos decorativos no bloquean entrada y duran1,8s. Movimiento reducido usa resalte estático. Solo deltas nuevos de snapshots aceptados; no repetir al cargar, enfocar o desplazar.
 
 Preparar índices de efectos, relleno y navegación por snapshot/acción. Dibujar únicamente ventana+2; efectos grandes limitados a500visibles y33en zoom general. Desfase negativo conserva fase al entrar en la ventana, sin reiniciar la duración durante pan/zoom. No añadir recorridos globales al reloj o scroll.
 

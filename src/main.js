@@ -163,14 +163,14 @@ function updateInverseBeeEffect(previous,next){
  clearTimeout(inverseBeeTimer);inverseBeeEffect={symbol:event.symbol,until:performance.now()+1800};
  inverseBeeTimer=setTimeout(()=>{inverseBeeEffect=null;document.querySelector('.inverse-bee-swarm')?.remove();scheduleBoard(true);},1800);
 }
-let inverseClaimSelection=null,inverseFocus=null,inverseFocusStep=0,contourFocusStep=0,inverseFocusGame=null;
+let inverseClaimSelection=null,inverseFocus=null;
 const inverseNavigationSteps={};
 let inverseCellEffect=null,inverseCellTimer;
 function updateInverseCellEffect(previous,next){
  if(previous?.id!==next.id||next.status==='paused'){clearTimeout(inverseCellTimer);inverseCellEffect=null;return;}
  const changes=inverseCellChanges(previous,next);if(!changes.length)return;
- clearTimeout(inverseCellTimer);inverseCellEffect={until:performance.now()+1300,index:cellIndex(changes)};
- inverseCellTimer=setTimeout(()=>{inverseCellEffect=null;scheduleBoard(true);},1300);
+ clearTimeout(inverseCellTimer);inverseCellEffect={until:performance.now()+1800,index:cellIndex(changes)};
+ inverseCellTimer=setTimeout(()=>{inverseCellEffect=null;scheduleBoard(true);},1800);
 }
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,gameSelection=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
 const inventoryDescriptionsOpen=new Set(),hallDescriptionsOpen=new Set();
@@ -504,7 +504,7 @@ function drawBoard(canExpand,ready,target) {
    return markup;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
-  const inverseEffectEntries=(window,compact=false)=>inverseCellEffect?.until>performance.now()?inverseCellEffect.index.query(window).slice(0,compact?33:500).map(p=>({id:`inverse-effect:${p.kind}:${key(p.x,p.y)}`,markup:`<span class="cell inverse-cell-effect inverse-effect-${p.kind}" data-inverse-effect="${p.kind}" style="${style(p)}${compact?';width:26px;height:26px':''};--inverse-delay:${Math.min(0,inverseCellEffect.until-performance.now()-1300)}ms" aria-hidden="true">${inverseEffectMarkup(p.kind)}</span>`})):[];
+  const inverseEffectEntries=(window,compact=false)=>inverseCellEffect?.until>performance.now()?inverseCellEffect.index.query(window).slice(0,compact?33:500).map(p=>({id:`inverse-effect:${p.kind}:${key(p.x,p.y)}`,markup:`<span class="cell inverse-cell-effect inverse-effect-${p.kind}" data-inverse-effect="${p.kind}" style="${style(p)}${compact?';width:26px;height:26px':''};--inverse-delay:${Math.min(0,inverseCellEffect.until-performance.now()-1800)}ms" aria-hidden="true">${inverseEffectMarkup(p.kind)}</span>`})):[];
   const glyphEntries=(window,compact=false)=>glyphIndex.query(window).filter(e=>!(tornadoEffect?.until>performance.now()&&tornadoEffect.positions.has(key(e.x,e.y)))&&!(rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(e.x,e.y)))&&!(['shift','sapper'].includes(selection?.tool)&&bombIndex.query(window).some(b=>b.x===e.x&&b.y===e.y))).map(e=>({id:'glyph:'+key(e.x,e.y),markup:`<span class="cell static-cell-card ${e.type==='event'?'phenomenon-marker':''}" data-cell-glyph="${e.kind}" data-glyph-x="${e.x}" data-glyph-y="${e.y}" style="${style(e)}${compact?';width:32px;height:32px':''}" role="img" aria-label="${glyphLabel(e)}">${glyphMarkup(e)}</span>`}));
   const density=size<24?snapshotMemo(room,'board-density:'+uid+':'+target?.id,()=>{const model=overviewModel(room,own,target,{includeFrontiers:false});return {model,index:prepareMapRendering(model)};}):null;
   const animationEntries=(window,compact=false)=>rodentEffect?.until>performance.now()?rodentEffect.index.query(window).slice(0,compact?33:Infinity).map(visit=>{const id='board-action:'+key(visit.x,visit.y);return {id,markup:nodes.get(id)?.markup||`<span class="cell board-action ${visit.inventory?'inventory-action':''} board-action-${visit.kind}" data-animation-kind="${visit.kind}" data-animation-x="${visit.x}" data-animation-y="${visit.y}" style="${style(visit)}${compact?';width:32px;height:32px':''};--visit-delay:${Math.min(0,rodentEffect.until-performance.now()-900)+Math.min(600,(visit.group||0)*60)}ms" aria-hidden="true">${visit.inventory?toolIcon(visit.kind):ecologyIcon(visit.kind)}</span>`};}):[];
@@ -735,7 +735,7 @@ function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
-function clearGameView(){clearTimeout(inverseCellTimer);inverseCellEffect=null;for(const k of Object.keys(inverseNavigationSteps))delete inverseNavigationSteps[k];clearTimeout(inverseBeeTimer);inverseBeeEffect=null;inverseClaimSelection=null;inverseFocus=null;inverseFocusStep=0;contourFocusStep=0;inverseFocusGame=null;clearTimeout(impactFocusTimer);impactFocus=null;refillPlayer=null;targetMarking=false;clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;eventsOpen=false;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+function clearGameView(){clearTimeout(inverseCellTimer);inverseCellEffect=null;for(const k of Object.keys(inverseNavigationSteps))delete inverseNavigationSteps[k];clearTimeout(inverseBeeTimer);inverseBeeEffect=null;inverseClaimSelection=null;inverseFocus=null;clearTimeout(impactFocusTimer);impactFocus=null;refillPlayer=null;targetMarking=false;clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;eventsOpen=false;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
 function goToHall(){
  if(room?.status!=='paused')throw new Error('Pausa la partida antes de volver al hall.');
  if(isLocal())persistLocal(room);
