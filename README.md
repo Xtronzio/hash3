@@ -1,5 +1,9 @@
 # #3 — R0.21.35 · Territorio vivo local
 
+## R0.21.88 · Contorno vivo de Inverso
+
+El contorno combina comodines, restas y reposiciones limitadas de relleno dentro de la silueta. Las dianas recorren #, celdas pendientes y zonas de resta/suma también en mapas y pausa. Marcos discontinuos de alto contraste y nuevos efectos de eliminación, creación y comodín, con movimiento reducido. Reserva finita y sin reposiciones en las últimas nueve celdas. Reglas y validación en [el contrato R88](design/inverse-renewal-r88.md).
+
 ## Territorio vivo · #3_11
 
 Mapas activos, pausa y tablero alejado comparten representación. Los nueve iconos de fenómenos e invasores quedan sombreados mientras están inactivos; solo el aviso real se ilumina, con un pulso breve y sus segundos restantes. La previsión por familia continúa en las etiquetas y Próximos eventos. Dos celdas a cada lado de la mochila muestran el inventario usado por X (rojo) y O (verde).

@@ -1,5 +1,9 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.88 · Sumas internas y dianas de Inverso
+
+Contrato `design/inverse-renewal-r88.md`; respaldo R87 `backup/pre-inverse-renewal-r87-20261018` (6c507bc). Sumas recuperan relleno en celdas originales vaciadas/libres, nunca geometría ni fichas. Presupuesto3×ceil(N inicial/3333), tope33; intervalo doble del ciclo de restas, aviso3 y reserva vitalicia3×floor(N inicial/27), máximo N/9. No reponer con nueve pendientes o menos ni impedir final. Destinos públicos no reemplazados si se ocupan; enjambre efectivo pospone1. Mantener restas/#/puntos cobrados. Guardar reserva/objetivos/impacto versionados y migrar solo a futuro; separar resultados por inverseRenewalVersion. Dianas recorren #/relleno/restas/sumas en tablero/mapa/pausa, sin gastar turno ni inventario. Avisos SVG discontinuos de contraste doble y efectos de creación/eliminación/#, sin bloquear ni repetirse al navegar/cargar; respetar movimiento reducido, ventana+2 e índices por snapshot. Validar pipeline completo, tres motores/seis tamaños y HTTP R88/r299 antes de avisar publicación. No alterar Original/online/SQL ni prometer pruebas físicas.
+
 Agrupar los iconos de navegación y acción en la misma línea siempre que el espacio disponible lo permita. La casa para volver al inicio debe compartir esa fila y quedar alineada en su extremo derecho. Evitar crear una segunda fila solo para la casa. Permitir el salto de línea únicamente cuando sea necesario para conservar el tamaño táctil y evitar desbordamientos.
 
 Mantener este criterio durante todo el desarrollo y al crear o revisar pantallas, diálogos y botoneras.

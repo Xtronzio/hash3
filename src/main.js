@@ -1,4 +1,5 @@
-import {inverseFocusGroups} from './inverse-focus.js';
+import {inverseFocusGroups,inverseNavigationKeys} from './inverse-focus.js';
+import {inverseCellChanges,inverseWarningMarkup,inverseEffectMarkup} from './inverse-cell-effects.js';
 import {inverseContourNotice} from './inverse-contour-ui.js';
 import {phenomenaPickerMarkup,bindPhenomenaPicker,readPhenomenaPicker,faunaPickerMarkup,bindFaunaPicker,readFaunaPicker} from './phenomena-ui.js';
 import {manualInverse,canClaimInverse,inverseClaimsAt} from './inverse-claims.js';
@@ -163,6 +164,14 @@ function updateInverseBeeEffect(previous,next){
  inverseBeeTimer=setTimeout(()=>{inverseBeeEffect=null;document.querySelector('.inverse-bee-swarm')?.remove();scheduleBoard(true);},1800);
 }
 let inverseClaimSelection=null,inverseFocus=null,inverseFocusStep=0,contourFocusStep=0,inverseFocusGame=null;
+const inverseNavigationSteps={};
+let inverseCellEffect=null,inverseCellTimer;
+function updateInverseCellEffect(previous,next){
+ if(previous?.id!==next.id||next.status==='paused'){clearTimeout(inverseCellTimer);inverseCellEffect=null;return;}
+ const changes=inverseCellChanges(previous,next);if(!changes.length)return;
+ clearTimeout(inverseCellTimer);inverseCellEffect={until:performance.now()+1300,index:cellIndex(changes)};
+ inverseCellTimer=setTimeout(()=>{inverseCellEffect=null;scheduleBoard(true);},1300);
+}
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,gameSelection=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
 const inventoryDescriptionsOpen=new Set(),hallDescriptionsOpen=new Set();
 let setupVariant='original',setupDrawing='heart',setupScale='m';
@@ -262,6 +271,7 @@ function accept(next) {
   const previousRoom=room,landing=landingFeedback(room,next),feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
   updateInverseBeeEffect(previousRoom,next);
+  updateInverseCellEffect(previousRoom,next);
   if(changed){for(const k of Object.keys(ecologyFocus))delete ecologyFocus[k];resetInventoryFeedback();startRodentEffect(null);}
   if(changed){clearTimeout(impactFocusTimer);impactFocus=null;inventorySection='player';inventoryEditorOpen=false;inventoryEditorActor=null;disposeInventoryEditor?.();disposeInventoryEditor=null;refillPlayer=null;targetMarking=false;eventsOpen=false;pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};previousTarget=null;activeKey=null;figureEffect=null;landingEffect=null;clearTimeout(landingGlowTimer);clearTimeout(landingFloatTimer);clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
@@ -459,7 +469,7 @@ function drawBoard(canExpand,ready,target) {
   const bombIndex=snapshotMemo(room,'pending-invasion-bombs',()=>cellIndex(pendingInvasionBombs(room)));
   const reservedKeys=new Set((room.inventoryEffects?.blocks||[]).filter(e=>e.by===uid&&e.remaining>0).map(e=>key(e.x,e.y)));
   let nodes=new Map();
-  const cellMarkup=pos=>{
+  const cellMarkupBase=pos=>{
     if(deadKeys.has(key(pos.x,pos.y)))return `<span class="cell terrain-cell dead-cell ${rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(pos.x,pos.y))?'glyph-covered':''}" style="${style(pos)}" role="img" aria-label="Celda muerta inalterable ${pos.x}, ${pos.y}"><svg viewBox="0 0 32 32" aria-hidden="true">${briefIcons.death}</svg></span>`;
     const {x,y}=pos,c=cells.get(key(x,y)),rodent=roders.get(key(x,y)),active=linked.has(key(x,y));
     const obscured=hidden.has(key(x,y));
@@ -485,7 +495,16 @@ function drawBoard(canExpand,ready,target) {
     const label=obscured?`Niebla · celda ${c?'ocupada, signo oculto':'libre'}, ${x}, ${y}${blocked?', bloqueada':''}`:removable?`${source?(selection.tool==='swap'?'Segunda ficha de Permutar':'Destino de Desplazar'):toolLabel} ${c?c.symbol+' de '+owner:'celda vacía'}, celda ${x}, ${y}`:select?`Situar ampliación en ${x}, ${y}`:c?`${c.symbol==='#'?'Comodín # compartido'+(c.wildcardSymbol?' · usado por '+c.wildcardSymbol:' · sin usar'):c.symbol+' de '+owner}, celda ${x}, ${y}${isTarget?', objetivo inmediato':''}${c&&shields.has(c.id)?', protegida por escudo':''}`:`Celda vacía ${x}, ${y}${active?', tu territorio':''}${blocked?', bloqueada':''}${reserved?', reservada por ti':''}`;
     return `<button class="cell terrain-cell ${focusKeys.has(key(x,y))?(inversePaint.fill.has(key(x,y))?'inverse-fill-focus':inverseFocus?.impact?'inverse-contour-hit':''):''} ${contourKeys.has(key(x,y))&&inversePaint.fill.has(key(x,y))?'inverse-contour-target':''} ${beeMoved?'inverse-bee-moved':''} ${claimKeys.has(key(x,y))?'inverse-claim-highlight':''} ${filledInverse(room)?`inverse-tile ${inversePaint.fill.has(key(x,y))?'inverse-filled':'inverse-cleared'} ${(inversePaint.edges.get(key(x,y))||[]).map(side=>'inverse-edge-'+side).join(' ')}`:''} ${(glyphs.has(key(x,y))||rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(x,y)))?'glyph-covered':''} ${nuclearKeys.has(key(x,y))?'nuclear-preview':''} ${growthKeys.has(key(x,y))?'invasion-growth':''} ${project?'project-'+project.kind:''} ${body?'worm-body':''} ${rodent&&!rodentSleeping(rodent)?'rodent-eating':''} ${!c&&eaten.has(key(x,y))?'rodent-cleared':''} ${swirling?'tornado-zone':''} ${moving?'tornado-destination':''} ${glowing?'figure-glow':''} ${active?'connected':''} ${playable?'available':''} ${removable&&selection.tool!=='tornado'?'tool-target':''} ${removable&&selection.tool!=='tornado'&&!c&&!habitat&&!project&&!body?'tool-destination':''} ${chosen?'tool-source':''} ${blocked&&!c?'blocked':''} ${reserved&&!blocked?'reserved':''} ${c&&shields.has(c.id)?'shielded':''} ${hinted?'hint-point':''} ${select?'placement-anchor':''} ${color} ${last?'last':''} ${isTarget?'target':''} ${isTarget&&blinkId===c.id?'blink':''}" style="${style(pos)};${glowStyle}${swirlStyle}" data-action="${claimable?'inverse-claim-cell':targetMarking?'watch-target-cell':removable?'inventory-target':select?'select-expansion':playable?'move':'invalid-cell'}" data-x="${x}" data-y="${y}" ${!claimable&&!targetMarking&&!removable&&!select&&(targeting||!ready||blocked)?'disabled':''} aria-disabled="${!claimable&&!targetMarking&&!removable&&!select&&!playable}" aria-label="${escape((bombKeys.has(key(x,y))?'Bomba invasora activa · puede expandirse. ':growthKeys.has(key(x,y))?'Invasión · puede expandirse. ':body?'Gusano · cuerpo bloquea esta celda. ':rodent?`Roedor · ${rodent.eaten}/3 comidas · ${rodentSleeping(rodent)?'dormido':'comiendo'}. `:'')+label+(filledInverse(room)?(inversePaint.fill.has(key(x,y))?' · relleno pendiente':' · vaciada, utilizable'):'')+(hinted?', sugerencia de ayuda':''))}">${obscured?fogCellMarkup(!!c):c?mark(c.symbol,{activeBomb:bombKeys.has(key(x,y)),disarm:removable&&selection.tool==='sapper'}):''}</button>`;
   };
+  const restoreKeys=new Set(room.inverseContour?.renewal?.targets||[]);
+  const cellMarkup=pos=>{
+   const k=key(pos.x,pos.y),kind=restoreKeys.has(k)&&!inversePaint.fill.has(k)?'restore':contourKeys.has(k)&&inversePaint.fill.has(k)?'erode':null;
+   let markup=cellMarkupBase(pos);
+   if(focusKeys.has(k)&&inverseFocus?.kind==='wild')markup=markup.replace('cell terrain-cell','cell terrain-cell inverse-wild-focus');
+   if(kind)markup=markup.replace('cell terrain-cell',`cell terrain-cell inverse-warning-cell inverse-warning-${kind}`).replace('</button>',inverseWarningMarkup(kind)+'</button>');
+   return markup;
+  };
   const visibleCells=cachedCellWindow(index,cellMarkup);
+  const inverseEffectEntries=(window,compact=false)=>inverseCellEffect?.until>performance.now()?inverseCellEffect.index.query(window).slice(0,compact?33:500).map(p=>({id:`inverse-effect:${p.kind}:${key(p.x,p.y)}`,markup:`<span class="cell inverse-cell-effect inverse-effect-${p.kind}" data-inverse-effect="${p.kind}" style="${style(p)}${compact?';width:26px;height:26px':''};--inverse-delay:${Math.min(0,inverseCellEffect.until-performance.now()-1300)}ms" aria-hidden="true">${inverseEffectMarkup(p.kind)}</span>`})):[];
   const glyphEntries=(window,compact=false)=>glyphIndex.query(window).filter(e=>!(tornadoEffect?.until>performance.now()&&tornadoEffect.positions.has(key(e.x,e.y)))&&!(rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(e.x,e.y)))&&!(['shift','sapper'].includes(selection?.tool)&&bombIndex.query(window).some(b=>b.x===e.x&&b.y===e.y))).map(e=>({id:'glyph:'+key(e.x,e.y),markup:`<span class="cell static-cell-card ${e.type==='event'?'phenomenon-marker':''}" data-cell-glyph="${e.kind}" data-glyph-x="${e.x}" data-glyph-y="${e.y}" style="${style(e)}${compact?';width:32px;height:32px':''}" role="img" aria-label="${glyphLabel(e)}">${glyphMarkup(e)}</span>`}));
   const density=size<24?snapshotMemo(room,'board-density:'+uid+':'+target?.id,()=>{const model=overviewModel(room,own,target,{includeFrontiers:false});return {model,index:prepareMapRendering(model)};}):null;
   const animationEntries=(window,compact=false)=>rodentEffect?.until>performance.now()?rodentEffect.index.query(window).slice(0,compact?33:Infinity).map(visit=>{const id='board-action:'+key(visit.x,visit.y);return {id,markup:nodes.get(id)?.markup||`<span class="cell board-action ${visit.inventory?'inventory-action':''} board-action-${visit.kind}" data-animation-kind="${visit.kind}" data-animation-x="${visit.x}" data-animation-y="${visit.y}" style="${style(visit)}${compact?';width:32px;height:32px':''};--visit-delay:${Math.min(0,rodentEffect.until-performance.now()-900)+Math.min(600,(visit.group||0)*60)}ms" aria-hidden="true">${visit.inventory?toolIcon(visit.kind):ecologyIcon(visit.kind)}</span>`};}):[];
@@ -498,13 +517,15 @@ function drawBoard(canExpand,ready,target) {
     const entries=[{id:'board-map',markup:`<svg class="board-overview-map ${size>=MAP_SYMBOL_SCALE?'show-symbols':''}" data-action="board-overview" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" role="img" aria-label="Vista general del tablero; toca para acercarte">${mapWindowMarkup(density.model,density.index,window,size)}</svg>`}];
     entries.push(...glyphEntries(window,true).slice(0,33));
     entries.push(...animationEntries(window,true));entries.push(...impactFocusEntries(impactFocus,window,style,true));
+    entries.push(...inverseEffectEntries(window,true));
     nodes=reconcileCells(board,entries,nodes);return;
    }
    const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now||!!landingEffect&&landingEffect.until>now}:${swirling}:${visiting}`);
-   const extras=`${visiting}:${swirling}:${!!impactFocus&&impactFocus.until>performance.now()}:${!!figureEffect&&figureEffect.floatUntil>now||!!landingEffect&&landingEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
+   const extras=`${visiting}:${swirling}:${!!inverseCellEffect&&inverseCellEffect.until>now}:${!!impactFocus&&impactFocus.until>performance.now()}:${!!figureEffect&&figureEffect.floatUntil>now||!!landingEffect&&landingEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
    if(visible===lastEntries&&extras===lastExtras)return;
    lastEntries=visible;lastExtras=extras;
    const entries=[...visible];
+   entries.push(...inverseEffectEntries(window));
    entries.push({id:'worm-trail',markup:`<svg class="worm-trail-layer" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" aria-hidden="true">${wormTrailMarkup(wormTrailIndex.query(window),{})}</svg>`});
    entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
   if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Construir celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
@@ -714,7 +735,7 @@ function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
-function clearGameView(){clearTimeout(inverseBeeTimer);inverseBeeEffect=null;inverseClaimSelection=null;inverseFocus=null;inverseFocusStep=0;contourFocusStep=0;inverseFocusGame=null;clearTimeout(impactFocusTimer);impactFocus=null;refillPlayer=null;targetMarking=false;clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;eventsOpen=false;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+function clearGameView(){clearTimeout(inverseCellTimer);inverseCellEffect=null;for(const k of Object.keys(inverseNavigationSteps))delete inverseNavigationSteps[k];clearTimeout(inverseBeeTimer);inverseBeeEffect=null;inverseClaimSelection=null;inverseFocus=null;inverseFocusStep=0;contourFocusStep=0;inverseFocusGame=null;clearTimeout(impactFocusTimer);impactFocus=null;refillPlayer=null;targetMarking=false;clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;eventsOpen=false;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
 function goToHall(){
  if(room?.status!=='paused')throw new Error('Pausa la partida antes de volver al hall.');
  if(isLocal())persistLocal(room);
@@ -916,22 +937,23 @@ app.addEventListener('click',async e=>{
     menu.hidden=!open;b.setAttribute('aria-expanded',String(open));return;
   }
   if(action==='pin-game'){pinSavedGame(b.closest('.saved-game'));return;}
-  if(action==='locate-inverse-fill'||action==='locate-inverse-contour'){
+  if(['locate-inverse','locate-inverse-fill','locate-inverse-contour','locate-inverse-restore'].includes(action)){
     if(!filledInverse(room)||room.status!=='playing')return;
-    if(worldMapOpen){worldMapOpen=false;render();}
+    const kind=b.dataset.inverseKind||action.slice('locate-inverse-'.length);
+    b.closest('details')?.removeAttribute('open');
+    const map=b.closest('.world-map');
+    if(map){
+     const groups=snapshotMemo(room,'inverse-map-focus:'+kind,()=>inverseFocusGroups({inverseFill:inverseNavigationKeys(room,kind)},3)),cursor=`${room.id}:map:${kind}`,points=groups[(inverseNavigationSteps[cursor]||0)%groups.length];
+     inverseNavigationSteps[cursor]=(inverseNavigationSteps[cursor]||0)+1;
+     if(points?.length)map.dispatchEvent(new CustomEvent('map-focus',{detail:{x:(Math.min(...points.map(p=>p.x))+Math.max(...points.map(p=>p.x))+1)/2,y:(Math.min(...points.map(p=>p.y))+Math.max(...points.map(p=>p.y))+1)/2}}));return;
+    }
     const viewport=document.querySelector('.viewport');if(!viewport)return;
     const tile=Math.max(1,Math.min(9,Math.floor((viewport.clientHeight-40)/28)));
-    const groups=snapshotMemo(room,'inverse-focus:'+tile,()=>inverseFocusGroups(room,tile));
-    if(inverseFocusGame!==room.id){inverseFocusStep=0;contourFocusStep=0;inverseFocusGame=room.id;}
-    let points;
-    if(action==='locate-inverse-contour'){
-     const fill=new Set(room.inverseFill),keys=room.inverseContour?.targets.length?room.inverseContour.targets.filter(k=>fill.has(k)):room.inverseContourEvent?.cleared||[];
-     const threatened=snapshotMemo(room,'inverse-contour-focus:'+tile,()=>inverseFocusGroups({inverseFill:keys},tile));
-     points=threatened.length?threatened[contourFocusStep++%threatened.length]:[];
-    }
-    else points=groups.length?groups[inverseFocusStep++%groups.length]:[];
+    const groups=snapshotMemo(room,'inverse-focus:'+kind+':'+tile,()=>inverseFocusGroups({inverseFill:inverseNavigationKeys(room,kind)},tile));
+    const cursor=`${room.id}:${kind}`,points=groups[(inverseNavigationSteps[cursor]||0)%groups.length]||[];
+    inverseNavigationSteps[cursor]=(inverseNavigationSteps[cursor]||0)+1;
     if(!points.length)return;
-    inverseFocus={game:room.id,points,impact:action==='locate-inverse-contour'&&!room.inverseContour?.targets.length};const fit=extensionView(points,{width:viewport.clientWidth,height:viewport.clientHeight},innerWidth<=760?48:56);
+    inverseFocus={game:room.id,points,kind,impact:kind==='restore'||kind==='contour'&&!room.inverseContour?.targets.length};const fit=extensionView(points,{width:viewport.clientWidth,height:viewport.clientHeight},innerWidth<=760?48:56);
     worldMapOpen=false;rankOpen=false;zoom=fit?.zoom||1;render();center(fit.x,fit.y);document.querySelector(`[data-action="${action}"]`)?.focus({preventScroll:true});return;
   }
   if(action==='invalid-cell'){if(!busy&&room?.status==='playing'&&ownPair()?.turn===ownPlayer()?.symbol&&!ownPair()?.pending){b.classList.remove('invalid-flash');void b.offsetWidth;b.classList.add('invalid-flash');setTimeout(()=>b.classList.remove('invalid-flash'),360);}return;}
