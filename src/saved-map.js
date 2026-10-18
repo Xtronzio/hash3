@@ -1,4 +1,5 @@
 import {wildcardFill} from './wildcard-usage.js';
+import {inverseNavigationKeys,inverseFocusGroups} from './inverse-focus.js';
 import {ecologyPinTargets,ecologyTargets,nextEcologyTarget,ecologyMapPins} from './ecology-navigation.js';
 import {cellIndex} from './board-window.js';
 import {frontierCells} from './frontiers.js';
@@ -15,6 +16,7 @@ export function savedMapModel(room,own){
   // Use the same ranking as the live board; the leader has no blue reference.
   const target=own?immediateAbove((room.players||[]).filter(p=>['solo','local'].includes(room.mode)||!p.bot),own.id,!!room.commonWorld):null;
   const model=overviewModel(room,own,target);if(!model)return null;
+  model.inverseDestinations=Object.fromEntries(['wild','fill','contour','restore'].map(kind=>[kind,inverseFocusGroups({inverseFill:inverseNavigationKeys(room,kind)},3)]));
   const cells=new Map(room.cells.map(c=>[`${c.x},${c.y}`,c]));
   const glyphs=cellGlyphs(room,own?.id);
   return {...model,destinations:targetDestinations(room,own?.id),ecologyPins:model.ecologyPins,ecologyTargets:Object.fromEntries(['rodent','rodent-plague','worm','worm-plague','build','destroy','bomb',...new Set([...(room.territoryEvents||[]),...(room.invasions||[])].map(e=>e.kind)),'neutral','frontier','border','barriers'].map(kind=>[kind,ecologyTargets(room,kind,own?.id)])),frontierCells:model.frontierCells,terrain:model.terrain.map(p=>{const c=cells.get(`${p.x},${p.y}`),isTarget=model.target&&p.x===Math.floor(model.target.x)&&p.y===Math.floor(model.target.y);if(p.fog||p.inverseFilled!==undefined)return p;return {...p,symbol:c?.symbol,fill:p.rodent?'var(--yellow)':isTarget?'var(--blue)':c?.symbol==='X'?'var(--red)':c?.symbol==='O'?'var(--green)':c?.symbol==='#'?wildcardFill(c):c?.symbol==='*'?'var(--yellow)':'#343e4c'};})};
@@ -76,6 +78,11 @@ export function bindInspection(panel,model,state={},interacting=()=>{}){
   };
   listen(panel,'click',e=>{
     const control=e.target.closest('[data-inspect-action]'),action=control?.dataset.inspectAction;if(!action)return;
+    if(action==='inverse'){
+      const kind=control.dataset.inverseKind,groups=model.inverseDestinations?.[kind]||[],cursor='inverse-'+kind;
+      state[cursor]=(state[cursor]??-1)+1;const ps=groups[state[cursor]%groups.length];
+      control.closest('details')?.removeAttribute('open');if(ps?.length)focus({x:(Math.min(...ps.map(p=>p.x))+Math.max(...ps.map(p=>p.x))+1)/2,y:(Math.min(...ps.map(p=>p.y))+Math.max(...ps.map(p=>p.y))+1)/2});return;
+    }
     if(action==='target'){const p=model.watchTargets?.find(p=>p.id===control.dataset.id);control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
     if(action==='destination'){const p=model.destinations?.find(p=>p.id===control.dataset.destination)?.point;control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}
     if(action==='last-move'){const p=model.lastNavigationMove;control.closest('details')?.removeAttribute('open');if(p)focus({x:p.x+.5,y:p.y+.5});return;}

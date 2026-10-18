@@ -52,3 +52,47 @@
 .inverse-game .inverse-bee-clocks{gap:9px}
 
 .inverse-contour-hit{box-shadow:inset 0 0 0 2px #ffd65c!important}.inverse-contour-clock{min-height:44px;min-width:44px}
+
+/* R88: readable dashed frames, with a dark backing independent of the fill. */
+.inverse-game .inverse-warning-cell{outline:none!important}
+.inverse-game .cell>svg.inverse-cell-warning{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:none;stroke:currentColor;color:#ffd65c;z-index:2;overflow:visible}
+.inverse-game .cell>svg.inverse-warning-restore{color:#65efce}
+.inverse-cell-warning .warning-underlay{stroke:#061015;stroke-width:6;opacity:.95}
+.inverse-cell-warning .warning-dashes{stroke-width:3;stroke-dasharray:8 5;animation:inverse-warning-march 3s linear infinite}
+.inverse-cell-warning path{stroke-width:2.5;stroke-linecap:round;filter:drop-shadow(0 1px 1px #000)}
+@keyframes inverse-warning-march{to{stroke-dashoffset:-26}}
+.board .inverse-cell-effect{position:absolute;pointer-events:none!important;z-index:6;display:block;border:0!important;background:transparent!important;color:#68eaff;overflow:visible;animation:inverse-effect-envelope 1.8s ease-out both;animation-delay:var(--inverse-delay,0ms)}
+.board .inverse-cell-effect svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;overflow:visible;filter:drop-shadow(0 0 4px currentColor)}
+.inverse-cell-effect .effect-ring{transform-origin:24px 24px;animation:inverse-ring-out 1.8s ease-out both;animation-delay:var(--inverse-delay,0ms)}
+.inverse-cell-effect .effect-shards{transform-origin:24px 24px;animation:inverse-shards-out 1.8s ease-out both;animation-delay:var(--inverse-delay,0ms)}
+.inverse-cell-effect .effect-sign{stroke-width:3;stroke-linecap:round}
+.board .inverse-effect-erode{color:#ffd65c}
+.board .inverse-effect-create{color:#65efce;background:radial-gradient(circle,#65efce44,transparent 70%)!important}
+.inverse-effect-create .effect-ring{animation-name:inverse-ring-in}
+.inverse-effect-create .effect-shards{animation-name:inverse-shards-in}
+.board .inverse-effect-wild{color:#fff1a6}
+.inverse-effect-wild text{fill:currentColor;stroke:none;font:700 26px monospace}
+@keyframes inverse-effect-envelope{0%{opacity:0}12%,60%{opacity:1}100%{opacity:0}}
+@keyframes inverse-ring-out{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.3);opacity:0}}
+@keyframes inverse-shards-out{0%{transform:scale(.75) rotate(0deg)}100%{transform:scale(1.5) rotate(24deg);opacity:0}}
+@keyframes inverse-ring-in{0%{transform:scale(.25);opacity:0}40%{transform:scale(1.1);opacity:1}100%{transform:scale(.95);opacity:0}}
+@keyframes inverse-shards-in{0%{transform:scale(1.4) rotate(-24deg);opacity:0}45%{transform:scale(.85);opacity:1}100%{transform:scale(1);opacity:0}}
+.inverse-wild-focus{box-shadow:inset 0 0 0 3px #fff1a6!important}
+.inverse-targets{display:grid;grid-template-columns:44px 44px;gap:4px;padding-bottom:5px;border-bottom:1px solid #47505c}
+.inverse-targets button{position:relative}.inverse-targets small{position:absolute;right:0;bottom:0;font-weight:800;font-size:15px;line-height:18px;background:#101216;border-radius:4px;padding:0 3px}
+.inverse-target-wild{color:#fff1a6}.inverse-target-fill{color:#68eaff}.inverse-target-contour{color:#ffd65c}.inverse-target-restore{color:#65efce}
+.inverse-renewal-clock,.inverse-renewal-clock.is-warning,.inverse-renewal-notice,.inverse-renewal-notice button{color:#65efce}
+.inverse-renewal-notice{border-color:#65efce}
+.inverse-contour-clock small{font-size:16px;font-weight:800}.inverse-contour-clock{gap:2px;padding-inline:2px}
+@media(max-width:380px){.inverse-game .inverse-bee-clocks{gap:4px;padding-inline:0}.inverse-game .inverse-bee-player{gap:2px}.inverse-game .inverse-bee-player>small{font-size:10px}.inverse-game .inverse-bee-clocks>svg{width:23px}.inverse-game .inverse-contour-clock{font-size:18px}.inverse-game .inverse-contour-clock svg{width:20px}.inverse-game .inverse-bee-badge{gap:2px}}
+@media(prefers-reduced-motion:reduce){.inverse-cell-warning .warning-dashes,.inverse-cell-effect,.inverse-cell-effect .effect-ring,.inverse-cell-effect .effect-shards{animation:none!important}.board .inverse-cell-effect{opacity:.85}.inverse-cell-effect .effect-shards{display:none}}
+
+/* Two contour alerts share the existing header slot instead of wrapping sentences. */
+.inverse-game .player-feedback-notices:has(>.inverse-contour-notice){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:4px}
+.inverse-game .player-feedback-notices:has(>.inverse-contour-notice)>:not(.inverse-contour-notice){grid-column:1/-1}
+.inverse-game .player-feedback-notices>.inverse-contour-notice{position:relative;min-height:44px;padding:0;--feedback-color:#ffd65c}
+.inverse-game .player-feedback-notices>.inverse-renewal-notice{--feedback-color:#65efce}
+.inverse-game .player-feedback-notices>.inverse-contour-notice:only-child{grid-column:1/-1}
+.inverse-game .inverse-contour-notice>span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.inverse-game .player-feedback-notices>.inverse-contour-notice>button{width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:2px;padding:2px;border:0;background:transparent}
+.inverse-game .inverse-contour-notice button svg{width:18px;height:18px}.inverse-game .inverse-contour-notice button b{font-size:16px}

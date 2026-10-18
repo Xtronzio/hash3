@@ -1,19 +1,26 @@
+import {inverseRenewalLimit,advanceInverseRenewal} from './inverse-renewal.js';
 // Shared, public pressure: turns, never wall-clock time or hidden player information.
 export const INVERSE_CONTOUR_INTERVAL=33,INVERSE_CONTOUR_WARNING=3;
 const enabled=r=>r?.variant==='inverse'&&r.inverseVersion===3;
 const key=(x,y)=>`${x},${y}`,point=k=>{const [x,y]=k.split(',').map(Number);return {x,y};};
 const near=[[1,0],[-1,0],[0,1],[0,-1]],integer=n=>Number.isSafeInteger(n)&&n>=0;
 export function validInverseContour(room){
- const c=room?.inverseContour;if(c==null)return room?.inverseContourEvent==null;
- if(!enabled(room)||!Array.isArray(room.terrain)||c.version!==1||!integer(c.turns)||!integer(c.next)||c.next<=c.turns||c.next-c.turns>99||!integer(c.cycles)||!integer(c.lost)||c.lost>room.terrain.length||!Array.isArray(c.targets)||c.targets.length>33||new Set(c.targets).size!==c.targets.length)return false;
+ const c=room?.inverseContour;if(c==null)return room?.inverseContourEvent==null&&room?.inverseRenewalEvent==null;
+ if(!enabled(room)||!Array.isArray(room.terrain)||c.version!==1||!integer(c.turns)||!integer(c.next)||c.next<=c.turns||c.next-c.turns>99||!integer(c.cycles)||!integer(c.lost)||!Array.isArray(c.targets)||c.targets.length>33||new Set(c.targets).size!==c.targets.length)return false;
  const terrain=new Set(room.terrain.map(p=>key(p.x,p.y)));
  if(c.targets.some(k=>!terrain.has(k)))return false;
- const e=room.inverseContourEvent;return !e||typeof e.id==='string'&&e.id.length>0&&e.id.length<=100&&integer(e.turn)&&e.turn<=c.turns&&Array.isArray(e.cleared)&&e.cleared.length<=33&&new Set(e.cleared).size===e.cleared.length&&e.cleared.every(k=>terrain.has(k));
+ const list=items=>Array.isArray(items)&&items.length<=33&&new Set(items).size===items.length&&items.every(k=>terrain.has(k));
+ const r=c.renewal;
+ if(r!=null&&(r.version!==1||!integer(r.restored)||r.restored>inverseRenewalLimit(room)||!integer(r.next)||r.next<=c.turns||r.next-c.turns>198||!list(r.targets)))return false;
+ if(c.lost>room.terrain.length+(r?.restored||0))return false;
+ const event=(e,field)=>!e||typeof e.id==='string'&&e.id.length>0&&e.id.length<=100&&integer(e.turn)&&e.turn<=c.turns&&list(e[field]);
+ return event(room.inverseContourEvent,'cleared')&&(!room.inverseRenewalEvent||!!r&&event(room.inverseRenewalEvent,'restored'));
 }
 export function initializeInverseContour(room){
  if(!enabled(room)||!['playing','paused'].includes(room.status))return;
  if(!validInverseContour(room))throw Error('El estado del contorno no es compatible. Se conserva el guardado.');
  room.inverseContour??={version:1,turns:0,next:inverseContourInterval(room),cycles:0,lost:0,targets:[]};
+ room.inverseContour.renewal??={version:1,restored:0,next:room.inverseContour.turns+2*inverseContourInterval(room),targets:[]};
 }
 export function inverseContourBudget(room){
  const n=room.inverseFill.length;return Math.max(0,Math.min(33,3*Math.ceil(n/333),3*Math.floor((n-3)/3)));
@@ -38,6 +45,7 @@ export function planInverseContour(room){
 export function advanceInverseContour(room,{beeImpact=false}={}){
  if(!enabled(room)||!room.inverseContour)return;
  const c=room.inverseContour;c.turns++;
+ advanceInverseRenewal(room,inverseContourInterval,{beeImpact});
  if(c.turns===c.next-3)c.targets=planInverseContour(room);
  if(c.turns<c.next)return;
  if(beeImpact&&c.targets.length){c.next=c.turns+1;return;}
