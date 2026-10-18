@@ -1,6 +1,6 @@
 import {inverseFocusGroups,inverseNavigationKeys} from './inverse-focus.js';
 import {inverseCellChanges,inverseWarningMarkup,inverseEffectMarkup} from './inverse-cell-effects.js';
-import {inverseContourNotice} from './inverse-contour-ui.js';
+import {inverseContourNotice,attachPlayerNotice} from './inverse-contour-ui.js';
 import {phenomenaPickerMarkup,bindPhenomenaPicker,readPhenomenaPicker,faunaPickerMarkup,bindFaunaPicker,readFaunaPicker} from './phenomena-ui.js';
 import {manualInverse,canClaimInverse,inverseClaimsAt} from './inverse-claims.js';
 import {inverseBeeIcon,inverseBeeClocks,inverseBeeNotices} from './inverse-bee-ui.js';
@@ -359,7 +359,7 @@ function render() {
   const noticeText=[refillText,userText].filter((text,i,list)=>text&&list.indexOf(text)===i).map(text=>escape(text)).join(' · ');
   if(noticeText){
    const extra=`<small class="player-notice-extra ${refill?'inventory-refill-toast':''}" role="status">${noticeText}</small>`;
-   playerNotices=playerNotices?playerNotices.replace('</span>',extra+'</span>'):`<div class="practice-banner inventory-user-notice" role="status"><span>${extra}</span></div>`;
+   playerNotices=attachPlayerNotice(playerNotices,extra);
   }
   const claimFigures=inverseClaimSelection?.x!=null?inverseClaimsAt(room,uid,inverseClaimSelection):[];
   if(inverseClaimSelection&&claimFigures[0]?.figures)inverseClaimSelection.figureId=claimFigures[0].id;

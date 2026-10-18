@@ -1,5 +1,11 @@
 import {inverseContourInterval} from './inverse-contour.js';
 import {inverseRenewalLimit} from './inverse-renewal.js';
+export function attachPlayerNotice(notices,extra){
+ // A contour chip keeps its prose screen-reader-only. Never put an inventory
+ // error or purchase confirmation inside that hidden description.
+ if(notices&&!notices.startsWith('<div class="practice-banner inverse-contour-notice'))return notices.replace('</span>',extra+'</span>');
+ return `<div class="practice-banner inventory-user-notice" role="status"><span>${extra}</span></div>${notices}`;
+}
 export const inverseContourIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9V3h6m6 0h6v6m0 6v6h-6m-6 0H3v-6M8 8h8v8H8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 export function inverseContourClock(room){
  if(room.variant!=='inverse'||room.inverseVersion!==3)return '';

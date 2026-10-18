@@ -3,6 +3,7 @@ import {createLocal,localCommand} from '../src/local.js';
 import {initializeInverseContour,advanceInverseContour,validInverseContour,inverseContourInterval} from '../src/inverse-contour.js';
 import {inverseRenewalLimit,inverseRenewalBudget,planInverseRenewal} from '../src/inverse-renewal.js';
 import {inverseCellChanges,inverseWarningMarkup} from '../src/inverse-cell-effects.js';
+import {inverseContourNotice,attachPlayerNotice} from '../src/inverse-contour-ui.js';
 import {inverseNavigationKeys,inverseFocusGroups} from '../src/inverse-focus.js';
 import {targetNavigation} from '../src/watch-targets.js';import {savedMapModel} from '../src/saved-map.js';
 import {captureTransfer,validateTransfer} from '../src/local-transfer.js';import {territoryComparisonKey} from '../src/achievements.js';
@@ -10,6 +11,11 @@ import {inverseClaimsAt} from '../src/inverse-claims.js';
 const now=1800000000000;
 const fresh=(w=9,h=9)=>createLocal('local','A','B',now,'normal','untimed','pro','X',false,{variant:'inverse',board:{id:'test',name:'Test',terrain:Array.from({length:w*h},(_,i)=>({x:i%w-Math.floor(w/2),y:Math.floor(i/w)-Math.floor(h/2)}))},random:()=>.99});
 const partial=()=>{const g=fresh();g.inverseFill=g.inverseFill.filter(k=>!['0,0','1,0','2,0'].includes(k));g.inverseCleared=3;return g;};
+test('Inventory feedback stays visible outside the screen-reader-only contour description',()=>{
+ const g=partial();g.inverseContour.targets=['-4,-4'];const notices=inverseContourNotice(g),extra='<small class="player-notice-extra">Carta no disponible</small>',combined=attachPlayerNotice(notices,extra);
+ assert.ok(combined.startsWith('<div class="practice-banner inventory-user-notice"'));assert.ok(combined.indexOf(extra)<combined.indexOf('inverse-contour-notice'));assert.equal(combined.split(extra).length,2);
+ assert.equal(attachPlayerNotice('<div><span>A</span></div>',extra),`<div><span>A${extra}</span></div>`);assert.match(attachPlayerNotice('',extra),/inventory-user-notice/);
+});
 test('Renewal announces exact free original cells, then restores fill without modifying pieces, terrain or banked score',()=>{
  const g=partial();g.cells=[{x:1,y:0,id:'x',symbol:'X',owner:'local-x'}];g.players[0].score=99;
  Object.assign(g.inverseContour,{turns:62,next:99});g.inverseContour.renewal.next=66;
