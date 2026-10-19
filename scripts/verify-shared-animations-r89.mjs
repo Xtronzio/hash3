@@ -15,10 +15,10 @@ try{for(const [name,engine]of Object.entries(engines)){
  const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
  const load=async g=>{await page.goto(origin);await page.evaluate(g=>{localStorage.clear();sessionStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([g]));localStorage.setItem('hash3_local',JSON.stringify({id:g.id}));sessionStorage.setItem('hash3_restore_local','1');},g);await page.reload();await page.locator('.game .viewport').waitFor();await frame();assert.equal(await page.locator('.cell-effect').count(),0);};
- const clickCell=async(x,y)=>{const c=page.locator(`.board .terrain-cell[data-x="${x}"][data-y="${y}"]`);await c.evaluate(e=>e.click());await frame();};
+ const clickCell=async(x,y)=>{await page.locator('.viewport').evaluate((v,p)=>{const c=v.querySelector('.terrain-cell[data-x][data-y]'),size=parseFloat(c.style.width);v.scrollLeft=parseFloat(c.style.left)+(p.x-Number(c.dataset.x)+.5)*size-v.clientWidth/2;v.scrollTop=parseFloat(c.style.top)+(p.y-Number(c.dataset.y)+.5)*size-v.clientHeight/2;},{x,y});await frame();const c=page.locator(`.board .terrain-cell[data-x="${x}"][data-y="${y}"]`);await c.evaluate(e=>e.click());await frame();};
  const effect=()=>page.locator('.cell-effect').first();
  const profile=()=>effect().evaluate(e=>{const s=getComputedStyle(e);return {name:s.animationName,duration:s.animationDuration,pointer:s.pointerEvents,color:s.color,ring:getComputedStyle(e.querySelector('.effect-ring')).animationName};});
- for(const [width,height]of [[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]]){
+ for(const [width,height]of (process.env.HASH3_QA_QUICK?[[390,844]]:[[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]])){
   console.log(name,width,height);await page.setViewportSize({width,height});const profiles=[];
   for(const variant of ['original','inverse']){
    await load(fixture(variant));await clickCell(1,1);assert.equal(await page.locator('[data-cell-effect="place"]').count(),1);profiles.push(await profile());
