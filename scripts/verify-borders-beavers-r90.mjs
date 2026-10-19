@@ -18,6 +18,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
   const load=async g=>{await page.goto(origin);await page.evaluate(g=>{localStorage.clear();sessionStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([g]));localStorage.setItem('hash3_local',JSON.stringify({id:g.id}));sessionStorage.setItem('hash3_restore_local','1');},g);await page.reload();await page.locator('.game .viewport').waitFor();await frame();};
   const click=async locator=>{await locator.evaluate(el=>{const v=document.querySelector('.viewport'),r=el.getBoundingClientRect(),b=v.getBoundingClientRect();v.scrollLeft+=r.x+r.width/2-b.x-b.width/2;v.scrollTop+=r.y+r.height/2-b.y-b.height/2;});await frame();await locator.click();await frame();};
+  const move=async(x,y)=>{await page.locator('.viewport').evaluate((v,p)=>{const c=v.querySelector('.terrain-cell[data-x][data-y]'),size=parseFloat(c.style.width);v.scrollLeft=parseFloat(c.style.left)+(p.x-Number(c.dataset.x)+.5)*size-v.clientWidth/2;v.scrollTop=parseFloat(c.style.top)+(p.y-Number(c.dataset.y)+.5)*size-v.clientHeight/2;},{x,y});await frame();await click(page.locator(`.board .terrain-cell[data-x="${x}"][data-y="${y}"]`));};
   const tool=async id=>{await page.locator(`.board-inventory-status [data-action="practice-tool"][data-tool="${id}"]`).evaluate(e=>e.click());await frame();};
   for(const [width,height]of(process.env.HASH3_QA_QUICK?[[390,844]]:[[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]])){
    console.log(name,width,height);await page.setViewportSize({width,height});await load(fixture());const before=await stored();
@@ -36,7 +37,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
    const clocks=()=>page.locator('.board .beaver-barrier-turns').allTextContents();assert.deepEqual((await clocks()).map(Number).sort((a,b)=>a-b),[3,6,9]);
    await page.locator('[data-action="pause"]').click();const paused=await stored();assert.deepEqual(paused.frontiers,g.frontiers);assert.equal(await page.locator('.inspection-canvas .beaver-barrier').count(),3);await page.locator('[data-action="resume"]').click();
    const moves=[[0,1],[1,2],[2,1],[6,1],[7,2],[8,1],[0,6],[1,7],[2,6]];
-   for(let i=0;i<moves.length;i++){const [x,y]=moves[i];await click(page.locator(`.board .terrain-cell[data-x="${x}"][data-y="${y}"]`));if([2,5,8].includes(i))assert.equal((await stored()).frontiers.flatMap(f=>f.cells).length,2-Math.floor(i/3));}
+   for(let i=0;i<moves.length;i++){const [x,y]=moves[i];await move(x,y);if([2,5,8].includes(i))assert.equal((await stored()).frontiers.flatMap(f=>f.cells).length,2-Math.floor(i/3));}
    if(width===390)await page.screenshot({path:path.join(output,`borders-beavers-r90-${name}.png`)});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));results.push({name,width,height,singleBorder:true,ownerRemovalAndCancel:true,expansionWithoutBarriers:true,beaverPerCell369:true,pauseConservation:true});
   }
