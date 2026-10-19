@@ -34,7 +34,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
     for(const id of ['frontier','border'])assert.equal(await page.locator(`.board-inventory-status [data-tool="${id}"]`).first().getAttribute('disabled'),'');
    }
    const g=fixture();resolveBriefFauna(g,{id:'beaver',kind:'beaver',paths:[[{x:3,y:3},{x:4,y:3},{x:5,y:3}]]},Date.now(),()=>0);await load(g);
-   const clocks=()=>page.locator('.board .beaver-barrier-turns').allTextContents();assert.deepEqual((await clocks()).map(Number).sort((a,b)=>a-b),[3,6,9]);
+   const clocks=()=>page.locator('.board .beaver-barrier-turns').allTextContents();assert.deepEqual((await clocks()).map(Number).sort((a,b)=>a-b),[3,6,9]);assert.equal(await page.locator('.board-territory-status [data-ecology-kind="beaver-barrier"]').textContent(),'−3');
    await page.locator('[data-action="pause"]').click();const paused=await stored();assert.deepEqual(paused.frontiers,g.frontiers);assert.equal(await page.locator('.inspection-canvas .beaver-barrier').count(),3);await page.locator('[data-action="resume"]').click();
    const moves=[[0,1],[1,2],[2,1],[6,1],[7,2],[8,1],[0,6],[1,7],[2,6]];
    for(let i=0;i<moves.length;i++){const [x,y]=moves[i];await move(x,y);if([2,5,8].includes(i))assert.equal((await stored()).frontiers.flatMap(f=>f.cells).length,2-Math.floor(i/3));}

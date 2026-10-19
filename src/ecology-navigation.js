@@ -46,7 +46,7 @@ export function ecologyTargets(room,kind,playerId){
   const live=snapshotMemo(room,'invasion-heads',()=>{const heads=new Map();for(const c of room.cells||[])if(c.symbol==='*'&&c.invasionId&&!heads.has(c.invasionId))heads.set(c.invasionId,c);return heads;});
   return [...phenomenonTargets(room,kind),...(briefEcology(room)&&kind==='invader-colony'?(room.cells||[]).filter(c=>c.symbol==='*'&&!fogKeys(room).has(key(c.x,c.y))).map(c=>({...c,kind,id:c.id,sourceId:c.id,invasion:true})):[]),...(briefEcology(room)?[]:(room.invasions||[])).filter(c=>c.kind===kind).flatMap(c=>{const head=live.get(c.id);return head?[{...c,x:head.x,y:head.y,kind,sourceId:c.id,invasion:true}]:[];})];
  }
- if(kind==='beaver-barrier')return (room.frontiers||[]).filter(f=>f.type==='beaver').map(f=>({...f,...center(f.cells),kind}));
+ if(kind==='beaver-barrier')return (room.frontiers||[]).filter(f=>f.type==='beaver'&&f.cells?.length).map(f=>({...f,...center(f.cells),turnsRemaining:Math.min(...f.cells.map(c=>c.turnsRemaining??f.turnsRemaining)),kind}));
  if(['ants','ants-plague'].includes(kind))return habitatTargets(room,kind,playerId);
  if(['rhino','rhino-plague','beaver','beaver-plague'].includes(kind))return (room.faunaEvents||[]).filter(e=>e.kind===kind).map(e=>({...e,sourceId:e.id}));
  if(kind==='neutral')return (room.cells||[]).filter(c=>c.symbol==='#'&&!fogKeys(room).has(key(c.x,c.y))).map(c=>({...c,kind}));

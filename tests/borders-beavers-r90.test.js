@@ -11,6 +11,7 @@ import {nuclearBlast,applyNuclearTool} from '../src/nuclear-tool.js';
 import {advanceTerritory} from '../src/territory-tools.js';
 import {captureTransfer,encodeTransfer,decodeTransfer} from '../src/local-transfer.js';
 import {loadLocalGames} from '../src/sessions.js';
+import {ecologyCardStatus} from '../src/ecology-navigation.js';
 const now=1700000000000;
 const fresh=()=>{const r=createLocal('local','A','B',now,'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});r.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));r.players[0].inventory.cards.border=3;return r;};
 const place=(r,x=4,y=4)=>localCommand(r,'inventory',{tool:'border',playerId:'local-x',x,y},now,()=>0);
@@ -51,7 +52,7 @@ test('Mandatory and strategic expansion reject both barriers without consuming t
 });
 test('Each castor shuffles distinct 3/6/9 deadlines and releases exactly one cell at each deadline',()=>{
  const seen=new Set();for(const value of [0,.4,.99]){const r=fresh(),cells=[{x:3,y:3},{x:4,y:3},{x:5,y:3}];resolveBriefFauna(r,{id:'dam',kind:'beaver',paths:[cells]},now,()=>value);seen.add(r.frontiers[0].cells.map(c=>c.turnsRemaining).join(','));assert.deepEqual(r.frontiers[0].cells.map(c=>c.turnsRemaining).sort((a,b)=>a-b),[3,6,9]);}
- assert.ok(seen.size>1);const r=dam(fresh());turns(r,2);assert.equal(frontierCells(r).length,3);assert.deepEqual(frontierCells(r).map(c=>c.turnsRemaining).sort((a,b)=>a-b),[1,4,7]);turns(r,1);assert.equal(frontierCells(r).length,2);turns(r,3);assert.equal(frontierCells(r).length,1);turns(r,3);assert.equal(frontierCells(r).length,0);
+ assert.ok(seen.size>1);const r=dam(fresh());assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−3');turns(r,2);assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−1');assert.equal(frontierCells(r).length,3);assert.deepEqual(frontierCells(r).map(c=>c.turnsRemaining).sort((a,b)=>a-b),[1,4,7]);turns(r,1);assert.equal(frontierCells(r).length,2);assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−3');turns(r,3);assert.equal(frontierCells(r).length,1);turns(r,3);assert.equal(frontierCells(r).length,0);
 });
 test('Cards, views, pause, save and transfer preserve dam timers; Doble advances them only once',async()=>{
  let r=dam(fresh());r.players[0].inventory.cards.double=1;const original=structuredClone(r.frontiers);
