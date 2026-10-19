@@ -38,7 +38,7 @@ test('Nuclear uses price 333, normal caps and exchange value; saves start with z
  delete r.players[0].inventory.cards.nuclear;const before=structuredClone(r.players[0]);initializeInventory(r);assert.equal(r.players[0].inventory.cards.nuclear,0);delete r.players[0].inventory.cards.nuclear;delete r.players[0].inventory.received.nuclear;delete before.inventory.received.nuclear;assert.deepEqual(r.players[0],before);
 });
 test('Nuclear retires defeated invasion focus, breaks hit unprotected barriers and keeps protected barriers',()=>{
- const r=fixture();r.invasions=[{id:'inv',kind:'invader-rain',grown:1,failed:0,visited:[{x:4,y:4}]}];r.cells=[{...piece(4,4,'*'),invasionId:'inv'}];r.frontiers=[{id:'hit',by:'local-x',type:'border',cells:[{x:4,y:4},{x:5,y:4},{x:6,y:4}]},{id:'protected',by:'local-o',cells:[{x:3,y:4}]},{id:'far',by:'local-x',cells:[{x:99,y:99}]}];r.inventoryEffects.immunities=[{player:'local-o',expiresAt:now+33000}];
+ const r=fixture();r.invasions=[{id:'inv',kind:'invader-rain',grown:1,failed:0,visited:[{x:4,y:4}]}];r.cells=[{...piece(4,4,'*'),invasionId:'inv'}];r.frontiers=[{id:'hit',by:'local-x',cells:[{x:4,y:4},{x:5,y:4},{x:6,y:4}]},{id:'protected',by:'local-o',cells:[{x:3,y:4}]},{id:'far',by:'local-x',cells:[{x:99,y:99}]}];r.inventoryEffects.immunities=[{player:'local-o',expiresAt:now+33000}];
  applyNuclearTool(r,{x:4,y:4});assert.deepEqual(r.invasions,[]);assert.deepEqual(r.frontiers.map(f=>f.id),['protected','far']);assert.ok(r.terrain.some(c=>c.x===3&&c.y===4));
 });
 test('Bomb outline has no filled silhouette or black cutout and the small red cross leaves its perimeter readable',()=>{

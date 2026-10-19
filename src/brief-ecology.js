@@ -9,6 +9,7 @@ import {protectedTerritoryKeys} from './immunity.js';
 export const briefEcology=room=>['solo','local'].includes(room?.mode)&&room.status!=='finished'&&(room.ruleVersion||0)>=22;
 export const BRIEF_FREQUENCIES=Object.freeze({rhino:99,beaver:132,anaconda:165,ants:198});
 export const DEATH_INTERVAL=333,BEAVER_LIFE=9;
+export const BEAVER_LIFETIMES=Object.freeze([3,6,9]);
 
 export const briefIcons={
  rhino:'<path d="M3 21v-7l4-5h13l6 5 3-6 1 9-5 4H5m1 0v7h4v-7m9 0v7h4v-7M8 9l2-5 4 5"/><circle cx="23" cy="14" r="1" fill="currentColor"/>',
@@ -20,6 +21,13 @@ export function initializeBriefEcology(room){
  if(!briefEcology(room))return;
  if((room.ruleVersion||0)>=24){initializeRouteHistory(room);room.anacondas||=[];room.fogEffects||=[];}
  room.faunaEvents||=[];room.deadCells||=[];room.territoryNextDeathTurn??=(room.ecologyTurns||0)+DEATH_INTERVAL;
+ // Split old live dams without extending their remaining lifetime. Persisted
+ // per-cell counters survive saves, pauses and transfers unchanged.
+ for(const f of room.frontiers||[])if(f.type==='beaver'&&f.cells?.length&&f.cells.some(c=>c.turnsRemaining==null)){
+  const left=Math.max(1,Math.min(BEAVER_LIFE,f.turnsRemaining??BEAVER_LIFE));
+  f.cells=f.cells.map((c,i)=>({...c,turnsRemaining:c.turnsRemaining??Math.max(1,Math.ceil(left*(i+1)/f.cells.length))}));
+  f.turnsRemaining=Math.min(...f.cells.map(c=>c.turnsRemaining));
+ }
  if(room.briefEcologyVersion!==1){
   room.invasions=[]; // Keep occupied stars, retire their former automatic expansion.
   if(room.livingBags)room.livingBags.invaders=['invader-rain'];
@@ -117,7 +125,7 @@ export function announceBriefFauna(room,kind,zone,now,random=Math.random){
  const region=paths.flat(),id=crypto.randomUUID();room.faunaEvents.push({id,kind:large?kind+'-plague':kind,region,paths,x:region[0].x,y:region[0].y,turnsRemaining:3,announcedTurn:room.ecologyTurns||0,at:now});
  zone.birthScale||={};zone.birthScale[kind]=(zone.birthScale[kind]||0)+1;return true;
 }
-export function resolveBriefFauna(room,event,now){
+export function resolveBriefFauna(room,event,now,random=Math.random){
  const base=event.kind.split('-')[0],actions=[],visualRoutes=[];
  if(base==='rhino'){
   const terrain=new Set(terrainOf(room).map(c=>key(c.x,c.y))),edges=new Set(frontierSegments(room).map(edgeKey)),hit=new Map();
@@ -126,7 +134,9 @@ export function resolveBriefFauna(room,event,now){
  }else{
   for(const cells of event.paths){const protectedKeys=faunaProtection(room),legal=cells.filter(c=>!isDeadCell(room,c.x,c.y)&&!protectedKeys.has(key(c.x,c.y))&&!room.cells.some(p=>p.x===c.x&&p.y===c.y)&&!habitatBlocked(room,c.x,c.y));
    if(legal.length!==3)continue;
-   const barrier={id:crypto.randomUUID(),type:'beaver',cells:legal,turnsRemaining:BEAVER_LIFE,bornTurn:room.ecologyTurns||0},probe={...room,frontiers:[...(room.frontiers||[]),barrier]};
+   const lifetimes=[...BEAVER_LIFETIMES];
+   for(let i=lifetimes.length-1;i>0;i--){const j=Math.min(i,Math.floor(Math.max(0,random())*(i+1)));[lifetimes[i],lifetimes[j]]=[lifetimes[j],lifetimes[i]];}
+   const barrier={id:crypto.randomUUID(),type:'beaver',cells:legal.map((c,i)=>({...c,turnsRemaining:lifetimes[i]})),turnsRemaining:3,bornTurn:room.ecologyTurns||0},probe={...room,frontiers:[...(room.frontiers||[]),barrier]};
    if(!availableCells(probe,room.pairs[0]).length||!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,probe).length)continue;
    room.frontiers=probe.frontiers;actions.push(...legal.map(c=>({...c,kind:'beaver'})));
   }

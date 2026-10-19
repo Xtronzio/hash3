@@ -1,6 +1,6 @@
 import {isDeadCell} from './dead-cells.js';
 import {habitatBlocked} from './habitat-tools.js';
-import {terrainOf,playableTerrain,key,expansionOptions} from './game.js';
+import {terrainOf,playableTerrain,availableCells,key,expansionOptions} from './game.js';
 import {isImmune,protectedTerritoryKeys} from './immunity.js';
 import {scoreLandings,pruneBrokenForms} from './landing-score.js';
 import {frontierTiles,frontierEdges,frontierSegments,edgeKey,frontierDirections,frontierCells,nearbyFrontierCells,frontierHit} from './frontiers.js';
@@ -21,7 +21,7 @@ export function tornadoOptions(room){
  });
 }
 function bombContext(room){
- const terrain=area(room),barriers=nearbyFrontierCells(room,terrain);
+ const protectedKeys=protectedTerritoryKeys(room),terrain=area(room).filter(c=>!protectedKeys.has(key(c.x,c.y))),barriers=nearbyFrontierCells(room,terrain).filter(c=>!protectedKeys.has(key(c.x,c.y)));
  return {terrain:new Map([...terrain,...barriers].map(c=>[key(c.x,c.y),c])),cells:new Map(room.cells.map(c=>[key(c.x,c.y),c])),barriers:new Set(barriers.map(c=>key(c.x,c.y)))};
 }
 export function bombTargets(room,context=bombContext(room)){
@@ -53,29 +53,17 @@ export function frontierOptions(room,side='north',actor){
 }
 export function frontierAnchors(room,actor){return frontierOptions(room,'north',actor);}
 export function borderOptions(room,selected=[]){
- if(!Array.isArray(selected))selected=[];
- const terrain=area(room),protectedKeys=protectedTerritoryKeys(room),occupied=new Set(room.cells.map(c=>key(c.x,c.y))),pool=new Map();
- for(const c of terrain)for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){const p={x:c.x+dx,y:c.y+dy};pool.set(key(p.x,p.y),p);}
- for(const c of selected)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const p={x:c.x+dx,y:c.y+dy};pool.set(key(p.x,p.y),p);}
- const chosen=new Set(selected.map(c=>key(c.x,c.y)));
- return [...pool.values()].filter(p=>!occupied.has(key(p.x,p.y))&&!protectedKeys.has(key(p.x,p.y))&&!habitatBlocked(room,p.x,p.y)&&(chosen.has(key(p.x,p.y))||selected.length<3&&(!selected.length||selected.some(c=>Math.abs(c.x-p.x)+Math.abs(c.y-p.y)===1))));
+ const protectedKeys=protectedTerritoryKeys(room);
+ // A border covers one currently playable white dot, never unbuilt ground.
+ // Leave another move so that the card cannot force an expansion by itself.
+ const free=availableCells(room,room.pairs[0]);
+ return free.length<2?[]:free.filter(c=>!protectedKeys.has(key(c.x,c.y)));
 }
 export function validBorder(room,cells){
- if(!Array.isArray(cells)||cells.length!==3||new Set(cells.map(c=>key(c.x,c.y))).size!==3||cells.some(c=>!Number.isInteger(c.x)||!Number.isInteger(c.y)))return false;
- const known=new Set(area(room).map(c=>key(c.x,c.y))),ordered=[cells[0]],rest=cells.slice(1);
- if(!cells.some(c=>known.has(key(c.x,c.y))||[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>known.has(key(c.x+dx,c.y+dy)))))return false;
- while(rest.length){const i=rest.findIndex(c=>ordered.some(p=>Math.abs(p.x-c.x)+Math.abs(p.y-c.y)===1));if(i<0)return false;ordered.push(rest.splice(i,1)[0]);}
- return ordered.every((c,i)=>borderOptions(room,ordered.slice(0,i)).some(p=>p.x===c.x&&p.y===c.y));
+ return Array.isArray(cells)&&cells.length===1&&Number.isInteger(cells[0].x)&&Number.isInteger(cells[0].y)&&borderOptions(room).some(p=>p.x===cells[0].x&&p.y===cells[0].y);
 }
 export function borderChains(room,maximum=64){
- const chains=[];
- for(const a of borderOptions(room)){
-  for(const b of borderOptions(room,[a]).filter(p=>key(p.x,p.y)!==key(a.x,a.y))){
-   const c=borderOptions(room,[a,b]).find(p=>key(p.x,p.y)!==key(a.x,a.y)&&key(p.x,p.y)!==key(b.x,b.y));
-   if(c&&validBorder(room,[a,b,c]))chains.push([a,b,c]);if(chains.length>=maximum)return chains;
-  }
- }
- return chains;
+ return borderOptions(room).slice(0,maximum).map(c=>[{x:c.x,y:c.y}]);
 }
 export function applyAreaTool(room,actor,tool,point,random=Math.random){
  const old=room.cells,changed=[];
@@ -95,12 +83,13 @@ export function applyAreaTool(room,actor,tool,point,random=Math.random){
   const blast=bombBlast(room,point,random);if(blast.length!==3)throw new Error('La bomba necesita tres celdas adyacentes sin protección.');
   const hit=new Set(blast.map(c=>key(c.x,c.y)));room.cells=old.filter(c=>!hit.has(key(c.x,c.y)));changed.push(...blast);
   // One hit breaks the complete wall, including saved three-cell barriers; no other card removes it.
-  room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by)||!frontierHit(f,hit));
+  room.frontiers=(room.frontiers||[]).filter(f=>f.type==='border'||isImmune(room,f.by)||!frontierHit(f,hit));
   room.inventoryEffects.blocks=room.inventoryEffects.blocks.filter(e=>!hit.has(key(e.x,e.y)));
   for(const p of room.players)if(p.lastMove&&!room.cells.some(c=>c.id===p.lastMove.id))delete p.lastMove;
  }else if(tool==='border'){
-  if(!validBorder(room,point.cells))throw new Error('Elige tres casillas vacías contiguas por un lado; pueden formar una L.');
-  room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),type:'border',by:actor,cells:point.cells.map(c=>({x:c.x,y:c.y}))});
+  const cells=point.cells||[{x:point.x,y:point.y}];
+  if(!validBorder(room,cells))throw new Error('Elige una celda libre con punto y deja otra colocación disponible.');
+  room.frontiers||=[];room.frontiers.push({id:crypto.randomUUID(),type:'border',by:actor,cells:cells.map(c=>({x:c.x,y:c.y}))});
   if(!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,room).length)throw new Error('Esta frontera cerraría todas las salidas de ampliación. Elige otra posición.');
  }else if(tool==='frontier'){
   if(!frontierOptions(room,point.side,actor).some(p=>p.x===point.x&&p.y===point.y))throw new Error('El muro necesita un hueco sin construir, junto a tu territorio y sin otra barrera.');

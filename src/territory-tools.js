@@ -193,7 +193,7 @@ export function advanceTerritory(room,now=Date.now()){
   }
   if(demolish){
    room.terrain=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y)));
-   room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by,now)||!frontierHit(f,hit));
+   room.frontiers=(room.frontiers||[]).filter(f=>f.type==='border'||isImmune(room,f.by,now)||!frontierHit(f,hit));
    room.worms=(room.worms||[]).filter(w=>!(w.body||[]).some(c=>hit.has(key(c.x,c.y))));
    room.works=(room.works||[]).filter(w=>![...w.destroy.slice(w.done),...w.build.slice(w.done)].some(c=>hit.has(key(c.x,c.y))));
    room.bombs=(room.bombs||[]).filter(b=>!(b.blast||[]).some(c=>hit.has(key(c.x,c.y))));

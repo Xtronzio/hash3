@@ -44,10 +44,10 @@ test('Pausa conserva exactamente el tiempo restante y el reloj de vencimiento no
  const tickRoom={...r,terrain:null,cells:null};assert.equal(needsLocalTick(tickRoom,now+86426000),true);r=localCommand(r,'tick',{},now+86426000);assert.equal(immunitySeconds(r,'local-x'),0);
 });
 
-test('Frontera admite ampliación libre con huecos; la inmunidad rival se activa durante esa fase',()=>{
+test('La ampliación estratégica excluye barreras; la inmunidad rival conserva su acción independiente',()=>{
  let r=start();r.players[0].figures=333;r.players[0].inventory.cards['hint-expand']=1;r.players[0].inventory.cards.frontier=2;
  r=localCommand(r,'request-strategic-expansion',{},now);assert.equal(r.pairs[0].optionalExpansion,true);
- assert.equal(canUsePracticeTool(r,'local-x','frontier',now),true);r=localCommand(r,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0,side:'south'},now);
- assert.equal(r.frontiers.length,1);assert.equal(canUsePracticeTool(r,'local-x','frontier',now),false);
+ assert.equal(canUsePracticeTool(r,'local-x','frontier',now),false);assert.throws(()=>localCommand(r,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0,side:'south'},now));
+ assert.equal(r.frontiers.length,0);assert.equal(canUsePracticeTool(r,'local-x','border',now),false);
  const before=structuredClone(r.pairs);r=activate(r,'local-o');assert.deepEqual(r.pairs,before);assert.equal(immunitySeconds(r,'local-o'),33);
 });

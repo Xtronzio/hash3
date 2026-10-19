@@ -31,8 +31,8 @@ export const practiceTools=[
   {id:'tornado',label:'Tornado',description:'Selecciona una zona 3×3 como al ampliar. Mezcla sus fichas y huecos; las figuras nuevas al aterrizar puntúan para X y O. Conserva símbolos, propietarios y terreno. Respeta Escudo e Inmunidad. Después coloca tu ficha.',button:'Seleccionar zona 3×3'},
   {id:'bomb',label:'Bomba',description:'Elimina tres fichas adyacentes aleatorias, incluidas diagonales, sin usar plantillas de figuras ni quitar terreno. Junto a un muro también puede alcanzar huecos. Respeta Escudo e Inmunidad; rompe los muros alcanzados. Después coloca tu ficha.',button:'Elegir centro'},
   {id:'nuclear',label:'Bomba atómica',description:'Demuele hasta 33 celdas contiguas alrededor del centro elegido y elimina sus fichas X, O, invasores y comodines. Vista previa exacta antes de confirmar. Conserva puntos cobrados; respeta Inmunidad, Escudo, habitantes y anclajes. Rompe barreras alcanzadas sin protección. Cuesta 333 puntos por unidad. Después coloca tu ficha o amplía si no quedan huecos.',button:'Elegir zona de demolición'},
-  {id:'frontier',label:'Muro',description:'Coloca una casilla de muro en un hueco sin construir junto al territorio, durante tu turno y sin necesitar una ampliación. Cuenta como herramienta y después colocas tu ficha. La diagonal morada / bloquea construir o ampliar sobre esa casilla; solo Bomba lo rompe. También puedes colocarlo una vez antes de una ampliación pendiente que te corresponda.',button:'Elegir casilla de muro'},
-  {id:'border',label:'Frontera',description:'Toca tres casillas vacías contiguas por un lado; pueden formar una L. Se convierten en tres muros y contienen el avance invasor. No borra fichas. Bomba puede romperla. Después coloca tu ficha.',button:'Situar frontera de tres celdas'},
+  {id:'frontier',label:'Muro',description:'Coloca una casilla de muro en un hueco sin construir junto al territorio, durante tu turno de colocación. Cuenta como herramienta y después colocas tu ficha. La diagonal morada / bloquea construir o ampliar sobre esa casilla; Bomba lo rompe.',button:'Elegir casilla de muro'},
+  {id:'border',label:'Frontera',description:'Bloquea indefinidamente una celda libre con punto del tablero construido para ambos jugadores. Deja otra colocación disponible. Solo quien la coloca puede retirarla: púlsala y confirma, sin coste ni consumo de turno o herramienta. Bombas y fenómenos no la eliminan. Colocarla gasta una carta y una herramienta; después coloca tu ficha.',button:'Elegir celda libre'},
   {id:'hint-expand',group:'help',label:'Ampliación inteligente',description:'Propone un 3×3 favorable al quedarte sin movimientos. Desde 333 figuras cobradas en la partida también permite ampliar por estrategia aunque queden huecos. Tú confirmas o eliges otra; la ampliación voluntaria gasta la carta al colocarla.',button:'Sugerir ampliación'},
   {id:'super-hint',group:'help',label:'Súper Ayuda',description:'Analiza tu jugada y las cartas disponibles; propone una secuencia para este turno y la ejecuta tras tu confirmación. Gasta las cartas indicadas y respeta Combo y Doble.',button:'Analizar turno'},
   {id:'ambush',label:'Emboscada',description:'Expulsa hasta tres invasores cercanos a la celda elegida. Conserva terreno y puntos; no afecta X, O ni comodines. Después coloca tu ficha.',button:'Elegir invasor'},
@@ -139,8 +139,7 @@ export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
   if(p.pending){
     if(p.expander!==playerId||toolStock(game,playerId,tool)<=0||(game.timeMode!=='untimed'&&!(Date.parse(p.deadline)>now)))return false;
     if(tool==='nuclear')return toolAllowance(game,playerId).remaining>0&&!practiceTurn(game,playerId).used.includes(tool)&&toolCells(game,playerId,tool).length>0;
-    if(tool==='border')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&borderChains(game,1).length>0;
-    if(tool==='frontier')return !p.frontierUsed&&(p.optionalExpansion||!availableCells(game,p,{ignoreBlocks:true}).length)&&frontierOptions(game,'north',playerId).length>0;
+    if(['border','frontier'].includes(tool))return false;
     if(microLength(tool))return toolAllowance(game,playerId).remaining>0&&!practiceTurn(game,playerId).used.includes(tool)&&toolCells(game,playerId,tool).length>0;
     return tool==='hint-expand'&&game.practiceHint?.action!=='expand';
   }
@@ -174,7 +173,6 @@ export function spendCard(game,playerId,tool){
   if(inv.turnUse?.turn!==turn)inv.turnUse={turn,tools:[]};
   inv.turnUse.tools.push(tool);
   drawComboCard(game,playerId);
-  if(['frontier','border'].includes(tool)&&game.pairs[0].pending){game.pairs[0].frontierUsed=true;return;}
   const state=structuredClone(practiceTurn(game,playerId));state.used.push(tool);game.practiceTurn=state;
 }
 export function completeInventoryTurn(game,playerId,{automatic=false,placed=true,random=Math.random}={}){

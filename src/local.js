@@ -26,7 +26,7 @@ import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,r
 import {applyAreaTool} from './area-tools.js';
 import {awardFigures,scoreLandings} from './landing-score.js';
 export const TURN_SECONDS=33;
-export const LOCAL_RULE_VERSION=24;
+export const LOCAL_RULE_VERSION=25;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
 export const localMachineId=room=>{const p=room.pairs[0];return localHumanId(room)===p.x?p.o:p.x;};
@@ -46,7 +46,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(CELL_TARGETS.includes(ecology.cellTarget))room.cellTarget=ecology.cellTarget;
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
-  if(ecology.variant==='inverse'){room.variant='inverse';room.faunaEnabled=false;room.territoryEnabled=false;ecology={...ecology,initialCards:ecology.initialCards||['erase','shift','opposite'],secondInitialCards:ecology.secondInitialCards||['erase','shift','opposite']};}
+  if(ecology.variant==='inverse'){room.ruleVersion=24;room.variant='inverse';room.faunaEnabled=false;room.territoryEnabled=false;ecology={...ecology,initialCards:ecology.initialCards||['erase','shift','opposite'],secondInitialCards:ecology.secondInitialCards||['erase','shift','opposite']};}
   seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});if(isInverse(room))return configureInverse(room,ecology,ecology.random||Math.random);initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {
@@ -90,6 +90,16 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   }
   if(action==='watch-target'){if(!['playing','paused'].includes(room.status))throw new Error('La partida no está disponible.');toggleWatchTarget(room,payload);room.updatedAt=new Date(now).toISOString();room.version++;return room;}
   if(action==='remove-target'){if(!['playing','paused'].includes(room.status))throw new Error('La partida no está disponible.');removeWatchTarget(room,payload.id);room.updatedAt=new Date(now).toISOString();room.version++;return room;}
+  if(action==='remove-border'){
+    if(room.status!=='playing')throw new Error('Retoma la partida para retirar tu frontera.');
+    const border=(room.frontiers||[]).find(f=>f.id===payload.id&&f.type==='border');
+    if(!border||border.by!==payload.playerId||!room.players.some(v=>v.id===payload.playerId))throw new Error('Solo quien colocó esta frontera puede retirarla.');
+    room.frontiers=room.frontiers.filter(f=>f.id!==border.id);
+    // An owner action, including during the other player's turn: no card,
+    // allowance, clock reset, fauna tick, or turn is consumed.
+    room.lastEvent={id:id(),kind:'remove-border',player:payload.playerId};
+    room.updatedAt=new Date(now).toISOString();room.version++;return room;
+  }
   if(action==='tick'&&room.status!=='playing')return original;
   if(room.status!=='playing')throw new Error('La partida no está activa.');
   const grows=action==='expand'||action==='inventory'&&payload.tool==='activate'||action==='tick'&&p.pending&&room.timeMode!=='untimed'&&Date.parse(p.deadline)<=now;

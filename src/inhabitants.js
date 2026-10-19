@@ -274,12 +274,16 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
   advanceAnacondas(room,now,ids,latest,random);
   for(const w of room.worms||[])if(w.brief&&w.warningTurns==null){const actions=clearBriefCells(room,w.route||[]).map(c=>({...c,kind:'worm'}));if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};}
   room.worms=room.worms.filter(w=>!w.brief||w.warningTurns!=null);
-  for(const e of [...room.faunaEvents||[]])if(e.turnsRemaining===0){if(['ants','ants-plague'].includes(e.kind))resolveAnts(room,e,now,latest);else resolveBriefFauna(room,e,now);}
+  for(const e of [...room.faunaEvents||[]])if(e.turnsRemaining===0){if(['ants','ants-plague'].includes(e.kind))resolveAnts(room,e,now,latest);else resolveBriefFauna(room,e,now,random);}
  }
  for(const e of room.inventoryEffects?.immunities||[])if(e.turnsRemaining!=null)e.turnsRemaining=Math.max(0,e.turnsRemaining-1);
  for(const e of room.inventoryEffects?.shields||[])if(e.turnsRemaining!=null){e.turnsRemaining=Math.max(0,e.turnsRemaining-1);e.remaining=e.turnsRemaining;}
  if(room.inventoryEffects){room.inventoryEffects.immunities=(room.inventoryEffects.immunities||[]).filter(e=>e.turnsRemaining==null||e.turnsRemaining>0);room.inventoryEffects.shields=(room.inventoryEffects.shields||[]).filter(e=>e.remaining>0);}
- room.frontiers=(room.frontiers||[]).filter(f=>{if(f.type!=='beaver'||f.bornTurn===room.ecologyTurns)return true;f.turnsRemaining--;return f.turnsRemaining>0;});
+ room.frontiers=(room.frontiers||[]).filter(f=>{
+  if(f.type!=='beaver'||f.bornTurn===room.ecologyTurns)return true;
+  f.cells=f.cells.map(c=>({...c,turnsRemaining:(c.turnsRemaining??f.turnsRemaining)-1})).filter(c=>c.turnsRemaining>0);
+  f.turnsRemaining=f.cells.length?Math.min(...f.cells.map(c=>c.turnsRemaining)):0;return f.cells.length>0;
+ });
 }
 function positionRodents(room,raid,point,random){
  const area=areaAt(room,raid),known=new Set(area.map(c=>key(c.x,c.y))),seen=new Set((raid.visited||[]).map(c=>key(c.x,c.y))),safe=raid.brief?faunaProtection(room):new Set();
@@ -400,7 +404,7 @@ export function advanceHabitats(room,now=Date.now(),random=Math.random,{suppress
    else{room.works=room.works.filter(w=>w.id!==e.id);changed=true;}
   }else if(e.blast){
    const protectedKeys=protectedTerritoryKeys(room);for(const c of e.blast)if(!isDeadCell(room,c.x,c.y)&&!protectedKeys.has(key(c.x,c.y))){clearHabitatCell(room,c);actions.push({...c,kind:'bomb'});}
-   const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by)||!frontierHit(f,hit));
+   const hit=new Set(e.blast.map(c=>key(c.x,c.y)));room.frontiers=(room.frontiers||[]).filter(f=>f.type==='border'||isImmune(room,f.by)||!frontierHit(f,hit));
    room.bombs=room.bombs.filter(b=>b.id!==e.id);changed=true;
   }else{
    if(e.kind==='worm'&&e.eaten>=3){room.worms=room.worms.filter(w=>w.id!==e.id);changed=true;continue;}
