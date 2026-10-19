@@ -1,0 +1,50 @@
+name: Verify public R89
+on:
+  push:
+    branches: [verify/public-shared-animations-r89]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify published version and public assets over HTTP
+        shell: python
+        run: |
+          import json, re, time, urllib.request
+          origin = 'https://xtronzio.github.io'
+          base = origin + '/hash3/'
+          def get(url):
+              request = urllib.request.Request(url, headers={'Cache-Control': 'no-cache', 'User-Agent': 'hash3-public-qa'})
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  assert response.status == 200
+                  return response.read().decode('utf-8')
+          for attempt in range(60):
+              try:
+                  version = json.loads(get(base + 'version.json?qa=r89-' + str(time.time_ns())))
+                  if version == {'version':'R0.21.89', 'build':'20261019-r300'}:
+                      break
+              except Exception:
+                  pass
+              time.sleep(5)
+          else:
+              raise AssertionError('R89/r300 not yet publicly served')
+          html = get(base + '?qa=r89-' + str(time.time_ns()))
+          assets = re.findall(r'(?:src|href)="(/hash3/assets/[^"]+\.(?:js|css))"', html)
+          assert any(a.endswith('.js') for a in assets) and any(a.endswith('.css') for a in assets)
+          contents = {a:get(origin + a) for a in assets}
+          css = ''.join(body for a,body in contents.items() if a.endswith('.css'))
+          js = ''.join(body for a,body in contents.items() if a.endswith('.js'))
+          assert 'cell-effect-envelope' in css and 'cell-warning-march' in css and '.cell-effect-place' in css
+          assert 'data-cell-effect' in js and 'R0.21.89' in js and '20261019-r300' in js
+          sw = get(base + 'sw.js?qa=r89')
+          assert all(a in sw for a in assets)
+          listed = json.loads(re.search(r'const FILES=(\[.*?\]);', sw).group(1))
+          for asset in listed:
+              if asset.endswith(('.js', '.css')) and asset not in contents:
+                  contents[asset] = get(origin + asset)
+          print('PASS PUBLIC HTTP', version)
+          for asset, body in contents.items():
+              print('PASS HTTP 200', asset, len(body), 'characters')
+          print('PASS shared animations, backed warnings, placement colors and service-worker asset coverage')
