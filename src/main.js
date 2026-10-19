@@ -1,5 +1,7 @@
 import {inverseFocusGroups,inverseNavigationKeys} from './inverse-focus.js';
-import {inverseCellChanges,inverseWarningMarkup,inverseEffectMarkup} from './inverse-cell-effects.js';
+import {inverseWarningMarkup} from './inverse-cell-effects.js';
+import {cellChanges,mergeCellEffects} from './cell-effects.js';
+import {CELL_EFFECT_MS,ACTION_EFFECT_MS,cellEffectMarkup,cellWarningMarkup} from './cell-effect-markup.js';
 import {inverseContourNotice,attachPlayerNotice} from './inverse-contour-ui.js';
 import {phenomenaPickerMarkup,bindPhenomenaPicker,readPhenomenaPicker,faunaPickerMarkup,bindFaunaPicker,readFaunaPicker} from './phenomena-ui.js';
 import {manualInverse,canClaimInverse,inverseClaimsAt} from './inverse-claims.js';
@@ -57,6 +59,7 @@ import {canRequestFreeExpansion} from './free-expansion.js';
 import './style.css';
 import './hall.css';
 import './board.css';
+import './cell-effects.css';
 import {bindMap} from './map.js';
 import {bindGestures} from './gestures.js';
 import {maxLabel} from './max.js';
@@ -145,32 +148,33 @@ let selectedExpansion=null, finishOpen=false, leaveOpen=false, roomSetup=null, l
 let figureEffect=null,figureTimer,scoreFloatTimer,landingEffect=null,landingGlowTimer,landingFloatTimer;
 let rodentEffect=null,rodentTimer;
 function startRodentEffect(feedback){
- clearTimeout(rodentTimer);rodentEffect=feedback?{...feedback,until:performance.now()+900,index:cellIndex(feedback.visits),keys:new Set(feedback.visits.map(c=>key(c.x,c.y)))}:null;
- if(feedback)rodentTimer=setTimeout(()=>{rodentEffect=null;scheduleBoard(true);},900);
+ clearTimeout(rodentTimer);rodentEffect=feedback?{...feedback,until:performance.now()+ACTION_EFFECT_MS,index:cellIndex(feedback.visits),keys:new Set(feedback.visits.map(c=>key(c.x,c.y)))}:null;
+ if(feedback)rodentTimer=setTimeout(()=>{rodentEffect=null;scheduleBoard(true);},ACTION_EFFECT_MS);
 }
 let tornadoEffect=null,tornadoTimer;
 function clearTornadoEffect(){clearTimeout(tornadoTimer);tornadoEffect=null;}
 function startTornadoEffect(feedback){
  clearTornadoEffect();if(!feedback)return;
- tornadoEffect={...feedback,until:performance.now()+900,positions:new Set(feedback.affected.map(p=>key(p.x,p.y))),moving:new Set(feedback.moves.map(m=>m.id))};
- tornadoTimer=setTimeout(()=>{tornadoEffect=null;scheduleBoard(true);},900);
+ tornadoEffect={...feedback,until:performance.now()+ACTION_EFFECT_MS,positions:new Set(feedback.affected.map(p=>key(p.x,p.y))),moving:new Set(feedback.moves.map(m=>m.id))};
+ tornadoTimer=setTimeout(()=>{tornadoEffect=null;scheduleBoard(true);},ACTION_EFFECT_MS);
 }
 let inverseBeeEffect=null,inverseBeeTimer,inverseClaimTapGuard=null;
 function updateInverseBeeEffect(previous,next){
  if(previous?.id!==next.id||next.status!=='playing'){clearTimeout(inverseBeeTimer);inverseBeeEffect=null;return;}
  const event=next.inverseBeeEvent;
  if(!event?.moved||event.id===previous.inverseBeeEvent?.id)return;
- clearTimeout(inverseBeeTimer);inverseBeeEffect={symbol:event.symbol,until:performance.now()+1800};
- inverseBeeTimer=setTimeout(()=>{inverseBeeEffect=null;document.querySelector('.inverse-bee-swarm')?.remove();scheduleBoard(true);},1800);
+ clearTimeout(inverseBeeTimer);inverseBeeEffect={symbol:event.symbol,until:performance.now()+CELL_EFFECT_MS};
+ inverseBeeTimer=setTimeout(()=>{inverseBeeEffect=null;document.querySelector('.inverse-bee-swarm')?.remove();scheduleBoard(true);},CELL_EFFECT_MS);
 }
 let inverseClaimSelection=null,inverseFocus=null;
 const inverseNavigationSteps={};
-let inverseCellEffect=null,inverseCellTimer;
-function updateInverseCellEffect(previous,next){
- if(previous?.id!==next.id||next.status==='paused'){clearTimeout(inverseCellTimer);inverseCellEffect=null;return;}
- const changes=inverseCellChanges(previous,next);if(!changes.length)return;
- clearTimeout(inverseCellTimer);inverseCellEffect={until:performance.now()+1800,index:cellIndex(changes)};
- inverseCellTimer=setTimeout(()=>{inverseCellEffect=null;scheduleBoard(true);},1800);
+let cellEffect=null,cellEffectTimer;
+function updateCellEffect(previous,next){
+ if(previous?.id!==next.id||next.status==='paused'){clearTimeout(cellEffectTimer);cellEffect=null;return;}
+ const changes=cellChanges(previous,next);if(!changes.length)return;
+ const now=performance.now(),points=mergeCellEffects(cellEffect?.points,changes,now,CELL_EFFECT_MS);
+ clearTimeout(cellEffectTimer);cellEffect={points,until:Math.max(...points.map(p=>p.until)),index:cellIndex(points)};
+ cellEffectTimer=setTimeout(()=>{cellEffect=null;scheduleBoard(true);},cellEffect.until-now);
 }
 let hallHistory=[],localReturnDialog=null,pendingDelete=null,gameSelection=null,inventoryOpen=false,eventsOpen=false,inventorySelection=null;
 const inventoryDescriptionsOpen=new Set(),hallDescriptionsOpen=new Set();
@@ -267,11 +271,11 @@ function accept(next) {
   if(next.mode)next=reconcileLocalBoard(next);
   if(next.mode)next=stampCellPresentation(room,next);if(next.mode)next=stampTurnCards(room,next);
   if(room?.id===next.id&&next.version<room.version)return;
-  const rodentVisit=boardActionFeedback(room,next),tornado=tornadoFeedback(room,next);clearTornadoEffect();
+  const rawVisit=boardActionFeedback(room,next),rodentVisit=rawVisit&&{...rawVisit,visits:rawVisit.visits.filter(v=>v.kind!=='neutral')},tornado=tornadoFeedback(room,next);clearTornadoEffect();
   const previousRoom=room,landing=landingFeedback(room,next),feedback=scoreFeedback(room,next),comboNotice=feedback?immunityComboNotice(room,next,feedback.player):null;
   const changed = room?.id!==next.id;
   updateInverseBeeEffect(previousRoom,next);
-  updateInverseCellEffect(previousRoom,next);
+  updateCellEffect(previousRoom,next);
   if(changed){for(const k of Object.keys(ecologyFocus))delete ecologyFocus[k];resetInventoryFeedback();startRodentEffect(null);}
   if(changed){clearTimeout(impactFocusTimer);impactFocus=null;inventorySection='player';inventoryEditorOpen=false;inventoryEditorActor=null;disposeInventoryEditor?.();disposeInventoryEditor=null;refillPlayer=null;targetMarking=false;eventsOpen=false;pauseMapOpen=false;pauseMapState={};rankOpen=false;zoom=1;inventoryOpen=false;worldMapOpen=false;worldMapState={};previousTarget=null;activeKey=null;figureEffect=null;landingEffect=null;clearTimeout(landingGlowTimer);clearTimeout(landingFloatTimer);clearTimeout(figureTimer);clearTimeout(scoreFloatTimer);}
   if(next.mode)next=persistLocal(next);
@@ -486,7 +490,7 @@ function drawBoard(canExpand,ready,target) {
     const beeMoved=c&&c.symbol===inverseBeeEffect?.symbol&&inverseBeeEffect.until>performance.now();
     const swirling=tornadoEffect&&tornadoEffect.until>performance.now()&&tornadoEffect.positions.has(key(x,y));
     const moving=swirling&&c&&tornadoEffect.moving.has(c.id);
-    const swirlStyle=swirling?`--tornado-delay:${Math.min(0,tornadoEffect.until-performance.now()-900)}ms;`:'';
+    const swirlStyle=swirling?`--tornado-delay:${Math.min(0,tornadoEffect.until-performance.now()-ACTION_EFFECT_MS)}ms;`:'';
     const landingSymbol=landingEffect?.until>performance.now()?landingEffect.cells.get(key(x,y)):null;
     const glowing=!obscured&&(landingSymbol||figureEffect&&figureEffect.until>performance.now()&&figureEffect.cells.has(key(x,y)));
     const glowStyle=glowing?`--figure-color:${(landingSymbol||figureEffect.symbol)==='X'?'var(--red)':'var(--green)'};--figure-duration:${Math.max(1,(landingSymbol?landingEffect.until:figureEffect.until)-performance.now())}ms;`:'';
@@ -504,10 +508,13 @@ function drawBoard(canExpand,ready,target) {
    return markup;
   };
   const visibleCells=cachedCellWindow(index,cellMarkup);
-  const inverseEffectEntries=(window,compact=false)=>inverseCellEffect?.until>performance.now()?inverseCellEffect.index.query(window).slice(0,compact?33:500).map(p=>({id:`inverse-effect:${p.kind}:${key(p.x,p.y)}`,markup:`<span class="cell inverse-cell-effect inverse-effect-${p.kind}" data-inverse-effect="${p.kind}" style="${style(p)}${compact?';width:26px;height:26px':''};--inverse-delay:${Math.min(0,inverseCellEffect.until-performance.now()-1800)}ms" aria-hidden="true">${inverseEffectMarkup(p.kind)}</span>`})):[];
+  const cellEffectEntries=(window,compact=false)=>cellEffect?.until>performance.now()?cellEffect.index.query(window).filter(p=>p.until>performance.now()&&!(hidden.has(key(p.x,p.y))&&['wild','place'].includes(p.kind))).slice(0,compact?33:500).map(p=>{
+   const id=`cell-effect:${p.started}:${p.kind}:${key(p.x,p.y)}`;
+   return {id,markup:nodes.get(id)?.markup||`<span class="cell cell-effect cell-effect-${p.kind} ${p.symbol?p.symbol.toLowerCase():''} ${p.tone==='territory'?'cell-effect-territory':''} ${isInverse(room)?`inverse-cell-effect inverse-effect-${p.kind}`:''}" data-cell-effect="${p.kind}" ${isInverse(room)?`data-inverse-effect="${p.kind}"`:''} data-effect-x="${p.x}" data-effect-y="${p.y}" style="${style(p)}${compact?';width:26px;height:26px':''};--cell-effect-duration:${CELL_EFFECT_MS}ms;--cell-effect-delay:${Math.min(0,p.started-performance.now())}ms" aria-hidden="true">${cellEffectMarkup(p.kind)}</span>`};
+  }):[];
   const glyphEntries=(window,compact=false)=>glyphIndex.query(window).filter(e=>!(tornadoEffect?.until>performance.now()&&tornadoEffect.positions.has(key(e.x,e.y)))&&!(rodentEffect?.until>performance.now()&&rodentEffect.keys.has(key(e.x,e.y)))&&!(['shift','sapper'].includes(selection?.tool)&&bombIndex.query(window).some(b=>b.x===e.x&&b.y===e.y))).map(e=>({id:'glyph:'+key(e.x,e.y),markup:`<span class="cell static-cell-card ${e.type==='event'?'phenomenon-marker':''}" data-cell-glyph="${e.kind}" data-glyph-x="${e.x}" data-glyph-y="${e.y}" style="${style(e)}${compact?';width:32px;height:32px':''}" role="img" aria-label="${glyphLabel(e)}">${glyphMarkup(e)}</span>`}));
   const density=size<24?snapshotMemo(room,'board-density:'+uid+':'+target?.id,()=>{const model=overviewModel(room,own,target,{includeFrontiers:false});return {model,index:prepareMapRendering(model)};}):null;
-  const animationEntries=(window,compact=false)=>rodentEffect?.until>performance.now()?rodentEffect.index.query(window).slice(0,compact?33:Infinity).map(visit=>{const id='board-action:'+key(visit.x,visit.y);return {id,markup:nodes.get(id)?.markup||`<span class="cell board-action ${visit.inventory?'inventory-action':''} board-action-${visit.kind}" data-animation-kind="${visit.kind}" data-animation-x="${visit.x}" data-animation-y="${visit.y}" style="${style(visit)}${compact?';width:32px;height:32px':''};--visit-delay:${Math.min(0,rodentEffect.until-performance.now()-900)+Math.min(600,(visit.group||0)*60)}ms" aria-hidden="true">${visit.inventory?toolIcon(visit.kind):ecologyIcon(visit.kind)}</span>`};}):[];
+  const animationEntries=(window,compact=false)=>rodentEffect?.until>performance.now()?rodentEffect.index.query(window).filter(v=>v.kind!=='neutral').slice(0,compact?33:Infinity).map(visit=>{const id='board-action:'+key(visit.x,visit.y);return {id,markup:nodes.get(id)?.markup||`<span class="cell board-action ${visit.inventory?'inventory-action':''} board-action-${visit.kind}" data-animation-kind="${visit.kind}" data-animation-x="${visit.x}" data-animation-y="${visit.y}" style="${style(visit)}${compact?';width:32px;height:32px':''};--visit-delay:${Math.min(0,rodentEffect.until-performance.now()-ACTION_EFFECT_MS)+Math.min(600,(visit.group||0)*60)}ms" aria-hidden="true">${visit.inventory?toolIcon(visit.kind):ecologyIcon(visit.kind)}</span>`};}):[];
   let lastEntries=null,lastExtras=null;
   refreshBoard=()=>{
    if(!board.isConnected)return;
@@ -517,15 +524,15 @@ function drawBoard(canExpand,ready,target) {
     const entries=[{id:'board-map',markup:`<svg class="board-overview-map ${size>=MAP_SYMBOL_SCALE?'show-symbols':''}" data-action="board-overview" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" role="img" aria-label="Vista general del tablero; toca para acercarte">${mapWindowMarkup(density.model,density.index,window,size)}</svg>`}];
     entries.push(...glyphEntries(window,true).slice(0,33));
     entries.push(...animationEntries(window,true));entries.push(...impactFocusEntries(impactFocus,window,style,true));
-    entries.push(...inverseEffectEntries(window,true));
+    entries.push(...cellEffectEntries(window,true));
     nodes=reconcileCells(board,entries,nodes);return;
    }
    const visible=visibleCells.query(window,`${!!figureEffect&&figureEffect.until>now||!!landingEffect&&landingEffect.until>now}:${swirling}:${visiting}`);
-   const extras=`${visiting}:${swirling}:${!!inverseCellEffect&&inverseCellEffect.until>now}:${!!impactFocus&&impactFocus.until>performance.now()}:${!!figureEffect&&figureEffect.floatUntil>now||!!landingEffect&&landingEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
+   const extras=`${visiting}:${swirling}:${!!cellEffect&&cellEffect.until>now}:${!!impactFocus&&impactFocus.until>performance.now()}:${!!figureEffect&&figureEffect.floatUntil>now||!!landingEffect&&landingEffect.floatUntil>now}:${selectedExpansion?.x},${selectedExpansion?.y}`;
    if(visible===lastEntries&&extras===lastExtras)return;
    lastEntries=visible;lastExtras=extras;
    const entries=[...visible];
-   entries.push(...inverseEffectEntries(window));
+   entries.push(...cellEffectEntries(window));
    entries.push({id:'worm-trail',markup:`<svg class="worm-trail-layer" style="left:${(window.x-minX)*size+padding}px;top:${(window.y-minY)*size+padding}px;width:${window.width*size}px;height:${window.height*size}px" viewBox="${window.x} ${window.y} ${window.width} ${window.height}" aria-hidden="true">${wormTrailMarkup(wormTrailIndex.query(window),{})}</svg>`});
    entries.push(...choiceIndex.query(window).map(c=>({id:'choice:'+key(c.x,c.y),markup:`<button class="placement-anchor new-anchor" data-action="select-expansion" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Situar ampliación en ${c.x}, ${c.y}">+</button>`})));
   if(ready&&activationTargets.length)entries.push(...activationIndex.query(window).map(c=>({id:'activate:'+key(c.x,c.y),markup:`<button class="cell activation-hole tool-target" data-action="inventory-target" data-x="${c.x}" data-y="${c.y}" style="${style(c)}" aria-label="Construir celda ${c.x}, ${c.y}">${navIcon('activate')}</button>`})));
@@ -559,14 +566,14 @@ function drawBoard(canExpand,ready,target) {
     entries.push({id:'bomb-source:'+bomb.id,markup:`<${tag} class="cell pending-invasion-bomb ${chosen?'tool-source':'tool-target'}" ${selectable?'data-action="inventory-target"':''} data-bomb-id="${bomb.id}" data-x="${bomb.x}" data-y="${bomb.y}" style="${style(bomb)}" aria-label="${selection.tool==='sapper'?'Desactivar':'Desplazar'} bomba pendiente en ${bomb.x}, ${bomb.y}"><svg viewBox="0 0 64 64" ${selection.tool==='sapper'?'style="color:var(--red)"':''} aria-hidden="true">${invasionBombIcon}${selection.tool==='sapper'?bombDisarmCross:''}</svg><b>${bomb.turnsRemaining}↷</b></${tag}>`});
   }
   entries.push(...glyphEntries(window));
-  for(const c of territoryIndex.query(window))entries.push({id:'territory-warning:'+c.eventId+key(c.x,c.y),markup:`<span class="cell territory-warning territory-${c.kind}" style="${style(c)}" aria-hidden="true"></span>`});
+  for(const c of territoryIndex.query(window))entries.push({id:'territory-warning:'+c.eventId+key(c.x,c.y),markup:`<span class="cell territory-warning territory-${c.kind}" style="${style(c)}" aria-hidden="true">${cellWarningMarkup()}</span>`});
   entries.push(...animationEntries(window));entries.push(...impactFocusEntries(impactFocus,window,style));
   if(swirling)for(const [i,m] of tornadoEffect.moves.entries()){
    const left=Math.min(m.from.x,m.to.x),top=Math.min(m.from.y,m.to.y);
    if(left>window.x+window.width||top>window.y+window.height||Math.max(m.from.x,m.to.x)+1<window.x||Math.max(m.from.y,m.to.y)+1<window.y)continue;
    if(hidden.has(key(m.from.x,m.from.y))||hidden.has(key(m.to.x,m.to.y)))continue;
    const color=m.symbol==='#'?'neutral'+(m.wildcardSymbol?' wildcard-'+m.wildcardSymbol.toLowerCase():''):myPairIds.has(m.owner)?m.symbol.toLowerCase():'foreign';
-   entries.push({id:'tornado:'+m.id,markup:nodes.get('tornado:'+m.id)?.markup||`<span class="cell tornado-piece ${color}" style="${style(m.from)};--tornado-dx:${(m.to.x-m.from.x)*size}px;--tornado-dy:${(m.to.y-m.from.y)*size}px;--tornado-spin:${i%2?-1:1};--tornado-delay:${Math.min(0,tornadoEffect.until-now-900)}ms" aria-hidden="true">${mark(m.symbol)}</span>`});
+   entries.push({id:'tornado:'+m.id,markup:nodes.get('tornado:'+m.id)?.markup||`<span class="cell tornado-piece ${color}" style="${style(m.from)};--tornado-dx:${(m.to.x-m.from.x)*size}px;--tornado-dy:${(m.to.y-m.from.y)*size}px;--tornado-spin:${i%2?-1:1};--tornado-delay:${Math.min(0,tornadoEffect.until-now-ACTION_EFFECT_MS)}ms" aria-hidden="true">${mark(m.symbol)}</span>`});
   }
   nodes=reconcileCells(board,entries,nodes);
   };
@@ -735,7 +742,7 @@ function localGames(){try{return loadLocalGames(localStorage);}catch{return [];}
 function persistLocal(next){
  try{return saveLocalGame(localStorage,next);}catch{notify('No se ha podido guardar la partida: revisa el espacio disponible de este navegador.');throw new Error('La partida sigue abierta para que puedas recuperarla.');}
 }
-function clearGameView(){clearTimeout(inverseCellTimer);inverseCellEffect=null;for(const k of Object.keys(inverseNavigationSteps))delete inverseNavigationSteps[k];clearTimeout(inverseBeeTimer);inverseBeeEffect=null;inverseClaimSelection=null;inverseFocus=null;clearTimeout(impactFocusTimer);impactFocus=null;refillPlayer=null;targetMarking=false;clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;eventsOpen=false;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
+function clearGameView(){clearTimeout(cellEffectTimer);cellEffect=null;for(const k of Object.keys(inverseNavigationSteps))delete inverseNavigationSteps[k];clearTimeout(inverseBeeTimer);inverseBeeEffect=null;inverseClaimSelection=null;inverseFocus=null;clearTimeout(impactFocusTimer);impactFocus=null;refillPlayer=null;targetMarking=false;clearTornadoEffect();disposeMap?.();disposeMap=null;cancelAnimationFrame(boardFrame);boardFrame=0;refreshBoard=()=>{};disposeInspection?.();disposeInspection=null;pauseMapOpen=false;pauseMapState={};stopMachine();resetInventoryFeedback();superHelpPlan=null;room=null;eventsOpen=false;inventoryOpen=false;inventorySelection=null;rankOpen=false;worldMapOpen=false;finishOpen=false;leaveOpen=false;selectedExpansion=null;activeKey=null;mapInteracting=false;mapDeferred=false;history.replaceState(null,'',location.pathname);}
 function goToHall(){
  if(room?.status!=='paused')throw new Error('Pausa la partida antes de volver al hall.');
  if(isLocal())persistLocal(room);

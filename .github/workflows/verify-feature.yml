@@ -61,6 +61,7 @@ on:
       - release/local-bulk-delete-r86
       - release/local-inverse-contour-r87
       - release/local-inverse-renewal-r88
+      - release/local-shared-animations-r89
   workflow_dispatch:
 permissions:
   contents: write
@@ -85,6 +86,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-shared-animations-r89.mjs
       - run: node scripts/verify-inverse-renewal-r88.mjs
       - run: node scripts/verify-inverse-contour-r87.mjs
       - run: node scripts/verify-bulk-delete-r86.mjs

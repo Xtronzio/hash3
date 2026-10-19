@@ -1,5 +1,22 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.89 · Animaciones compartidas de Original e Inverso
+
+Jorge19/10 autoriza unificación desde R88. Contrato design/shared-animations-r89.md;
+respaldo R88 backup/pre-shared-animations-r88-20261019 (c410bde). Compositor común
+para colocación, #, creación/vaciado/erosión y marcos discontinuos de contraste
+doble; mismos ritmos1800/900/650ms. Conservar Tornado/OVNI/fauna y sus movimientos
+propios. Territorio amarillo, jugador cian, X/O rojo/verde, reposición verde agua.
+Mapas activos/pausados comparten marcos y objetivos reales de restas/sumas.
+Deltas solo de snapshots aceptados, efectos simultáneos con comienzo propio;
+cargar/retomar/navegar no reproduce ni reinicia. Pausa/salida limpia transitorios;
+movimiento reducido estático y niebla sin revelar signos. Árbitro, reglas24,
+frecuencias, puntos, stock, relleno, guardados/traslados/resultados intactos.
+Índices por snapshot y ventana+margen2; máximo500 efectos detallados/33compactos,
+sin recorrer fuentes desde cámara/relojes. Solo local, online/SQL intactos.
+Pipeline completo y QA tres motores/seis tamaños antes de publicar; comprobar
+R89/r300 HTTP y assets. No afirmar dispositivos físicos.
+
 ## R0.21.88 · Sumas internas y dianas de Inverso
 
 Contrato `design/inverse-renewal-r88.md`; respaldo R87 `backup/pre-inverse-renewal-r87-20261018` (6c507bc). Sumas recuperan relleno en celdas originales vaciadas/libres, nunca geometría ni fichas. Presupuesto3×ceil(N inicial/3333), tope33; intervalo doble del ciclo de restas, aviso3 y reserva vitalicia3×floor(N inicial/27), máximo N/9. No reponer con nueve pendientes o menos ni impedir final. Destinos públicos no reemplazados si se ocupan; enjambre efectivo pospone1. Mantener restas/#/puntos cobrados. Guardar reserva/objetivos/impacto versionados y migrar solo a futuro; separar resultados por inverseRenewalVersion. Dianas recorren #/relleno/restas/sumas en tablero/mapa/pausa, sin gastar turno ni inventario. Avisos SVG discontinuos de contraste doble y efectos de creación/eliminación/#, sin bloquear ni repetirse al navegar/cargar; respetar movimiento reducido, ventana+2 e índices por snapshot. Validar pipeline completo, tres motores/seis tamaños y HTTP R88/r299 antes de avisar publicación. No alterar Original/online/SQL ni prometer pruebas físicas.

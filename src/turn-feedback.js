@@ -1,5 +1,6 @@
+import {FEEDBACK_PULSE_MS} from './cell-effect-markup.js';
 let currentRoom=null,currentText=null,started=null;
-const duration=650;
+const duration=FEEDBACK_PULSE_MS;
 // Presentation state only: a rerender resumes the same pulse rather than replaying it.
 export function resumeTurnFeedback(root,game){
  const node=root.querySelector('.turn-state');

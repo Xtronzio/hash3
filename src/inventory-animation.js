@@ -1,4 +1,5 @@
-const actions=new Map(),DURATION=650,ITERATIONS=3;
+import {FEEDBACK_PULSE_MS} from './cell-effect-markup.js';
+const actions=new Map(),DURATION=FEEDBACK_PULSE_MS,ITERATIONS=3;
 let actionRoom=null;
 const frames=[{filter:'brightness(1)',boxShadow:'0 0 0 transparent'},{filter:'brightness(1.65)',boxShadow:'0 0 12px #00e5ff88, inset 0 0 8px #00e5ff55',offset:.5},{filter:'brightness(1)',boxShadow:'0 0 0 transparent'}];
 export function resumeInventoryAnimations(root,game){
