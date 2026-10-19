@@ -1,5 +1,27 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.90 · Ampliación independiente, Frontera propia y castores escalonados
+
+Jorge19/10 autoriza: ampliar solo amplía; quitar oferta y permiso de Muro/Frontera
+durante ampliación obligatoria o estratégica. Muro sigue exterior de una celda.
+Frontera (border) bloquea una sola celda construida libre con punto para ambos,
+indefinida y protegida de bombas/fenómenos. Colocar consume carta/cupo normales,
+dejando otra colocación disponible. Solo su dueño retira por pulsación y
+confirmación, gratis, sin turno/carta/cupo ni avance de ecología, incluso fuera
+de turno. Conservar geometría/dueño de fronteras antiguas, sin reembolso.
+Cada castor construye tres celdas con plazos3/6/9 repartidos al azar sin repetir;
+caducan por celda tras turnos completos de cualquiera, Doble una vez. Cartas,
+ampliación, pausa y tiempo cero. Guardar contadores por celda, mapas y guía
+coherentes. Barreras antiguas vivas escalonan solo el plazo restante sin alargarlo;
+finales intactos. Reglas25 para Original activa/nueva; Inverso no cambia sus reglas.
+Solo local/VS máquina. Validar motor/traslado y tres motores/seis tamaños, pipeline
+antes de publicar R90/r301. Respaldo backup/pre-borders-beavers-r89-20261019.
+
+Supabase19/10: hash3-world-clock (job1, cada2s) confirmado active=false a18:23
+y19:52 Madrid; autorización de Jorge para pausa reversible. Mantener apagado.
+No reactivar Duelo/Mundo sin reparar advance_worlds→advance_state→habitat_reserved.
+Limpieza del historial sigue activa. Recuperación SQL observada, no afirmar
+recuperación completa de E/S sin métricas.
 ## R0.21.89 · Animaciones compartidas de Original e Inverso
 
 Jorge19/10 autoriza unificación desde R88. Contrato design/shared-animations-r89.md;

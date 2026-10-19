@@ -62,6 +62,7 @@ on:
       - release/local-inverse-contour-r87
       - release/local-inverse-renewal-r88
       - release/local-shared-animations-r89
+      - release/local-borders-beavers-r90
   workflow_dispatch:
 permissions:
   contents: write
@@ -88,6 +89,7 @@ jobs:
         timeout-minutes: 4
       - run: npm run verify:browser
       - run: node scripts/verify-brief-ecology-r62.mjs
+      - run: node scripts/verify-borders-beavers-r90.mjs
       - run: node scripts/verify-shared-animations-r89.mjs
       - run: node scripts/verify-inverse-renewal-r88.mjs
       - run: node scripts/verify-inverse-contour-r87.mjs

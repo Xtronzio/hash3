@@ -46,7 +46,7 @@ export function ecologyTargets(room,kind,playerId){
   const live=snapshotMemo(room,'invasion-heads',()=>{const heads=new Map();for(const c of room.cells||[])if(c.symbol==='*'&&c.invasionId&&!heads.has(c.invasionId))heads.set(c.invasionId,c);return heads;});
   return [...phenomenonTargets(room,kind),...(briefEcology(room)&&kind==='invader-colony'?(room.cells||[]).filter(c=>c.symbol==='*'&&!fogKeys(room).has(key(c.x,c.y))).map(c=>({...c,kind,id:c.id,sourceId:c.id,invasion:true})):[]),...(briefEcology(room)?[]:(room.invasions||[])).filter(c=>c.kind===kind).flatMap(c=>{const head=live.get(c.id);return head?[{...c,x:head.x,y:head.y,kind,sourceId:c.id,invasion:true}]:[];})];
  }
- if(kind==='beaver-barrier')return (room.frontiers||[]).filter(f=>f.type==='beaver').map(f=>({...f,...center(f.cells),kind}));
+ if(kind==='beaver-barrier')return (room.frontiers||[]).filter(f=>f.type==='beaver'&&f.cells?.length).map(f=>({...f,...center(f.cells),turnsRemaining:Math.min(...f.cells.map(c=>c.turnsRemaining??f.turnsRemaining)),kind}));
  if(['ants','ants-plague'].includes(kind))return habitatTargets(room,kind,playerId);
  if(['rhino','rhino-plague','beaver','beaver-plague'].includes(kind))return (room.faunaEvents||[]).filter(e=>e.kind===kind).map(e=>({...e,sourceId:e.id}));
  if(kind==='neutral')return (room.cells||[]).filter(c=>c.symbol==='#'&&!fogKeys(room).has(key(c.x,c.y))).map(c=>({...c,kind}));
@@ -74,7 +74,7 @@ export function ecologyCardStatus(room,kind,playerId,{events=ecologyClockEvents(
  if([...SELECTABLE_FAUNA,'beaver-barrier'].includes(kind)&&!faunaKindEnabled(room,kind)&&!events.length&&!targets.length)return {badge:'—',text:'Desactivado en la configuración de esta partida.',state:'disabled'};
  if((isTimedTerritoryKind(kind)||kind==='neutral')&&!phenomenonEnabled(room,kind)&&!events.length&&!targets.length)return {badge:'—',text:'Desactivado en la configuración de esta partida.',state:'disabled'};
  if(kind==='barriers')return {badge:'×'+targets.length,text:targets.length+' muros y fronteras colocados. Permanecen hasta que se destruyen.',state:'quantity'};
- if(kind==='beaver-barrier')return targets.length?{badge:'−'+Math.min(...targets.map(e=>e.turnsRemaining)),text:'Turnos completos hasta que desaparezca la primera barrera de castor.',state:'duration'}:{badge:'—',text:'No hay barreras de castor colocadas.',state:'absent'};
+ if(kind==='beaver-barrier')return targets.length?{badge:'−'+Math.min(...targets.map(e=>e.turnsRemaining)),text:'Turnos completos hasta que desaparezca la próxima celda de castor.',state:'duration'}:{badge:'—',text:'No hay barreras de castor colocadas.',state:'absent'};
  if(['clouds','fog'].includes(kind)&&room.fogEffects?.some(e=>e.kind===kind)){const turns=Math.min(...room.fogEffects.filter(e=>e.kind===kind).map(e=>e.turnsRemaining));return {badge:'−'+turns,turns,text:turns+' turnos hasta disiparse.',state:'duration'};}
  if(kind==='anaconda'&&targets.some(e=>e.warningTurns==null))return {badge:'3↷',text:'Avanza tres celdas por turno hasta quedarse sin continuación.',state:'active'};
  if(announced.length){const turns=Math.min(...announced.map(e=>e.warningTurns??e.turnsRemaining));return {badge:'−'+turns,turns,text:turns+' turnos hasta la intervención anunciada.',state:'announced'};}

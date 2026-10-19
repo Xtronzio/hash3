@@ -105,12 +105,12 @@ test('A timed match can announce turn-driven warnings while it is still running'
  const r=board();r.territoryEnabled=true;r.players[0].figures=33;r.territoryNextInvasion=0;r.endsAt=new Date(33000).toISOString();
  assert.equal(recordTerritoryPlacement(r,1001,()=>0),true);assert.equal(r.territoryEvents[0].turnsRemaining,3);
 });
-test('Three-cell borders spend once, block their chosen cells and may form an L',()=>{
- let r=board(99);r.players[0].inventory.cards.border=1;const cells=[{x:1,y:0},{x:2,y:0},{x:2,y:1}],before=structuredClone(r);
+test('A border spends once and blocks one existing white dot for both players',()=>{
+ let r=board(99);r.players[0].inventory.cards.border=1;const cells=[{x:1,y:0}],before=structuredClone(r);
  assert.ok(borderOptions(r).length);assert.deepEqual(r,before);
  r=localCommand(r,'inventory',{tool:'border',playerId:'local-x',cells},1000);
  assert.equal(r.players[0].inventory.cards.border,0);assert.deepEqual(r.frontiers[0].cells,cells);assert.equal(r.frontiers[0].type,'border');
- assert.equal(availableCells(r,r.pairs[0]).length,96);assert.equal(r.pairs[0].turn,'X');assert.match(frontierMarkup(r),/Frontera/);
+ assert.equal(availableCells(r,r.pairs[0]).length,98);assert.equal(r.pairs[0].turn,'X');assert.match(frontierMarkup(r),/Frontera/);
  delete r.wallMigrationVersion;migrateLegacyWalls(r);assert.equal(r.frontiers.length,1);
 });
 for(const side of ['north','east','south','west'])test('Saved edge borders still intercept a seed from '+side,()=>{
@@ -133,22 +133,22 @@ test('The machine can spend its own border card to contain a warned attack',()=>
  const choice=chooseMachineCard(r,1000);assert.equal(choice?.payload.tool,'border');
  const next=localCommand(r,choice.action,choice.payload,1000);assert.ok(defendedInvasionCells(next,next.territoryEvents[0]).size>=1);
 });
-test('Bomba breaks an entire border, while owner immunity keeps all its segments',()=>{
+test('Saved edge borders remain protected from Bomba regardless of owner immunity',()=>{
  for(const immune of [false,true]){
   let r=board(99);r.frontiers=[{id:'f',type:'border',by:'local-o',edges:frontierEdges({x:3,y:0,side:'north'})}];
   r.players[0].inventory.cards.bomb=1;
   r.cells=[{id:'a',x:3,y:0,symbol:'O',owner:'local-o'},{id:'b',x:4,y:0,symbol:'X',owner:'local-x'},{id:'c',x:5,y:0,symbol:'X',owner:'local-x'}];
   if(immune){r.inventoryEffects.immunities=[{player:'local-o',expiresAt:34000}];r.cells[0].owner='local-x';}
-  r=localCommand(r,'inventory',{tool:'bomb',playerId:'local-x',x:3,y:0},1000,()=>0);
-  assert.equal(r.frontiers.length,immune?1:0);assert.equal(r.terrain.length,99);
+  const before=structuredClone(r);assert.throws(()=>localCommand(r,'inventory',{tool:'bomb',playerId:'local-x',x:3,y:0},1000,()=>0));
+  assert.deepEqual(r,before);assert.equal(r.frontiers.length,1);assert.equal(r.terrain.length,99);
  }
 });
-test('One border can be placed in a pending expansion without consuming the expansion or resetting its clock',()=>{
+test('Frontera cannot be placed during a pending expansion and spends nothing',()=>{
  let r=board(99);r.cells=r.terrain.map((c,i)=>({...c,id:String(i),symbol:'X',owner:'local-x'}));
  r.pairs[0].pending=1;r.pairs[0].expander='local-x';r.pairs[0].credits=1;r.players[0].inventory.cards.border=2;
- r=localCommand(r,'inventory',{tool:'border',playerId:'local-x',cells:borderChains(r,1)[0]},1000);
+ const before=structuredClone(r);assert.throws(()=>localCommand(r,'inventory',{tool:'border',playerId:'local-x',cells:[{x:3,y:0}]},1000));assert.deepEqual(r,before);
  assert.equal(r.pairs[0].pending,1);assert.equal(r.pairs[0].credits,1);assert.equal(r.pairs[0].deadline,null);
- assert.equal(r.players[0].inventory.cards.border,1);assert.equal(canUsePracticeTool(r,'local-x','border',1000),false);
+ assert.equal(r.players[0].inventory.cards.border,2);assert.equal(canUsePracticeTool(r,'local-x','border',1000),false);
 });
 test('Separated black-hole cores have bounded individual halos rather than one enormous intervening rectangle',()=>{
  const r=board(3333);r.cells=r.terrain.map((c,i)=>({...c,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));

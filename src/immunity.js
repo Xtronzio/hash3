@@ -52,7 +52,7 @@ export function protectedTerritoryKeys(game,now=game.clockNow??Date.now()){
  const occupied=new Map((game.cells||[]).map(c=>[`${c.x},${c.y}`,c]));
  const keys=new Set([...occupied].filter(([,c])=>immune.has(c.owner)).map(([k])=>k));
  for(const c of game.terrain||[])if(!occupied.has(`${c.x},${c.y}`)&&immune.has(c.owner))keys.add(`${c.x},${c.y}`);
- for(const f of game.frontiers||[])if(immune.has(f.by))for(const c of f.cells||[])keys.add(`${c.x},${c.y}`);
+ for(const f of game.frontiers||[])if(f.type==='border'||immune.has(f.by))for(const c of f.cells||(f.edges||[]).flatMap(e=>[e.a,e.b]))keys.add(`${c.x},${c.y}`);
  return keys;
 }
 export function immunityProgress(game,playerId){

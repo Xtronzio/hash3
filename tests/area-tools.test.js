@@ -14,7 +14,8 @@ import {advanceHabitats} from '../src/inhabitants.js';
 const now=1700000000000;
 const start=()=>{const r=createLocal('local','A','B',now,'normal','untimed');for(const t of ['tornado','bomb','frontier'])r.players[0].inventory.cards[t]=1;return r;};
 const card=(r,tool,point,random=()=>.4)=>localCommand(r,'inventory',{tool,playerId:'local-x',...point},now,random);
-const expanding=(r=start())=>{r.cells=r.terrain.map((p,i)=>({...p,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));Object.assign(r.pairs[0],{pending:1,expander:'local-x',credits:1});return r;};
+const expanding=(r=start())=>{r.cells=r.terrain.slice(0,6).map((p,i)=>({...p,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));return r;};
+const saturate=r=>{r.cells=r.terrain.map((p,i)=>({...p,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));return r;};
 const fill=r=>{r.cells=r.terrain.filter(p=>p.x!==2||p.y!==2).map((p,i)=>({...p,id:String(i),symbol:i%2?'O':'X',owner:i%2?'local-o':'local-x'}));return r;};
 test('Tornado mixes a selected 3×3 and its empty slots preserving terrain and symbols while awarding new landing figures without completing a turn',()=>{
  const r=fill(start());r.players[0].score=123;r.players[1].lastMove={...r.cells[1]};const before=structuredClone(r);
@@ -51,7 +52,7 @@ test('Wall occupies one unbuilt cell, survives pause and other tools, blocks exp
  assert.ok(!expansionOptions(next.terrain,next.pairs[0].active,next).some(p=>p.x===3&&p.y===0));
  assert.ok(expansionOptions(next.terrain,next.pairs[0].active,next).some(p=>p.y<0));
  let saved=localCommand(JSON.parse(JSON.stringify(localCommand(next,'pause',{},now))),'resume',{},now+1000);assert.deepEqual(saved.frontiers,next.frontiers);
- saved=localCommand(saved,'expand',{x:0,y:-1},now);delete saved.practiceTurn;saved.players[0].inventory.cards.destroy=1;
+ saved=localCommand(saturate(saved),'expand',{x:0,y:-1},now);delete saved.practiceTurn;saved.players[0].inventory.cards.destroy=1;
  saved=card(saved,'destroy',{x:1,y:-1});assert.equal(saved.frontiers.length,1);delete saved.practiceTurn;
  const bombed=card(saved,'bomb',{x:3,y:0});assert.equal(bombed.frontiers.length,0);assert.equal(bombed.terrain.length,saved.terrain.length);
  assert.match(inspectionCells(savedMapModel(next,r.players[0])),/map-frontiers/);assert.match(thumbnailMarkup(next),/Muro/);
@@ -92,7 +93,7 @@ test('A wall is one purple wall cell, adds no terrain, survives save and is remo
  assert.deepEqual(frontierCells(next),frontierTiles({x:3,y:0,side:'south'}));assert.deepEqual(next.terrain,r.terrain);assert.deepEqual(next.cells,r.cells);
  assert.equal(frontierCells(next).length,1);assert.ok(frontierCells(next).every(c=>!r.terrain.some(t=>t.x===c.x&&t.y===c.y)));
  const markup=frontierMarkup(next);assert.equal((markup.match(/<rect /g)||[]).length,1);assert.equal((markup.match(/<path /g)||[]).length,1);assert.doesNotMatch(markup,/<line|var\(--yellow\)/);assert.match(markup,/--frontier/);
- const restored=localCommand(JSON.parse(JSON.stringify(next)),'expand',{x:0,y:-1},now);delete restored.practiceTurn;
+ const restored=localCommand(saturate(JSON.parse(JSON.stringify(next))),'expand',{x:0,y:-1},now);delete restored.practiceTurn;
  const bombed=card(restored,'bomb',{x:3,y:0},()=>0);assert.equal(bombed.frontiers.length,0);assert.deepEqual(bombed.terrain,restored.terrain);
  assert.ok(expansionOptions(bombed.terrain,bombed.pairs[0].active,bombed).some(p=>p.x===3&&p.y===0));
 });
@@ -115,23 +116,21 @@ test('An automatic bomb breaks the unbuilt wall cell without building or deletin
  r.bombs=[{id:'auto',player:'local-x',x:3,y:0,blast:frontierCells(r),nextAt:now+1000}];
  completeEventTurns(r,now+1000);assert.equal(r.frontiers.length,0);assert.equal(r.bombs.length,0);assert.deepEqual(r.terrain,terrain);
 });
-test('Only the expander can place Frontier before the 3×3; it preserves the phase, deadline and next-turn allowance',()=>{
+test('Expansion never permits Muro or Frontera; denied cards preserve the phase, clock and stocks',()=>{
  for(const timeMode of ['timed','untimed']){
   let r=createLocal('local','A','B',now,'normal',timeMode);r.players[0].inventory.cards.frontier=2;r.players[1].inventory.cards.frontier=1;
   assert.equal(canUsePracticeTool(r,'local-x','frontier',now),true);
   for(const cell of [...r.terrain])r=localCommand(r,'move',cell,now);
   assert.equal(r.pairs[0].pending,1);assert.equal(r.pairs[0].expander,'local-x');assert.equal(r.pairs[0].turn,'O');
-  assert.equal(canUsePracticeTool(r,'local-x','frontier',now),true);assert.equal(canUsePracticeTool(r,'local-o','frontier',now),false);
-  const before=structuredClone(r),wall=localCommand(r,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0,side:'south'},now+1000);
-  assert.equal(wall.pairs[0].pending,1);assert.equal(wall.pairs[0].expander,'local-x');assert.equal(wall.pairs[0].turn,'O');assert.equal(wall.pairs[0].deadline,before.pairs[0].deadline);
-  assert.deepEqual(wall.cells,before.cells);assert.deepEqual(wall.terrain,before.terrain);assert.deepEqual(wall.practiceTurn,before.practiceTurn);
-  assert.deepEqual(wall.players.map(p=>[p.score,p.placements,p.inventory.turns]),before.players.map(p=>[p.score,p.placements,p.inventory.turns]));
-  assert.equal(wall.players[0].inventory.cards.frontier,before.players[0].inventory.cards.frontier-1);assert.equal(canUsePracticeTool(wall,'local-x','frontier',now+1000),false);
-  assert.throws(()=>localCommand(wall,'inventory',{tool:'frontier',playerId:'local-x',x:-1,y:0,side:'south'},now+1000));
-  const paused=localCommand(wall,'pause',{},now+1000),resumed=localCommand(JSON.parse(JSON.stringify(paused)),'resume',{},now+2000);
-  assert.equal(resumed.pairs[0].frontierUsed,true);
+  const before=structuredClone(r);
+  for(const tool of ['frontier','border'])for(const playerId of ['local-x','local-o']){
+   assert.equal(canUsePracticeTool(r,playerId,tool,now),false);
+   assert.throws(()=>localCommand(r,'inventory',{tool,playerId,x:3,y:0},now+1000));
+  }
+  assert.deepEqual(r,before);
+  const paused=localCommand(r,'pause',{},now+1000),resumed=localCommand(JSON.parse(JSON.stringify(paused)),'resume',{},now+2000);
   const enlarged=localCommand(resumed,'expand',{x:0,y:-1},now+2000);
-  assert.equal(enlarged.pairs[0].pending,0);assert.equal(enlarged.pairs[0].frontierUsed,undefined);assert.equal(enlarged.pairs[0].turn,'O');assert.equal(enlarged.frontiers.length,1);
+  assert.equal(enlarged.pairs[0].pending,0);assert.equal(enlarged.pairs[0].frontierUsed,undefined);assert.equal(enlarged.pairs[0].turn,'O');assert.equal(enlarged.frontiers.length,0);
   assert.equal(canUsePracticeTool(enlarged,'local-o','double',now+2000),true);assert.equal(canUsePracticeTool(enlarged,'local-x','frontier',now+2000),false);
   if(timeMode==='timed'){assert.equal(canUsePracticeTool(before,'local-x','frontier',now+33000),false);assert.throws(()=>localCommand(before,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0,side:'south'},now+33000));}
  }

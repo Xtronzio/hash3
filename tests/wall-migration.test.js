@@ -28,12 +28,11 @@ test('Refunds above per-card caps are preserved without duplicate migration or d
  const stored=JSON.parse(JSON.stringify(g));initializeInventory(stored);assert.equal(stored.players[0].inventory.cards.frontier,10);
  for(let i=0;i<6;i++)completeInventoryTurn(stored,'local-x');assert.equal(stored.players[0].inventory.draws,undefined);assert.equal(stored.players[0].inventory.cards.frontier,10);
 });
-test('A refunded expander can use one new wall in the same pending phase; no unknown-owner barrier is destroyed',()=>{
+test('Refunds preserve unknown-owner walls, but do not permit placing a wall during expansion',()=>{
  const g=legacy();g.players[0].figures=333;g.players[0].inventory.cards['hint-expand']=1;Object.assign(g.pairs[0],{pending:1,optionalExpansion:true,strategicExpansion:true,expander:'local-x',frontierUsed:true});
  g.frontiers.push({id:'orphan',by:'missing',cells:[{x:8,y:0},{x:8,y:1},{x:8,y:2}]});
- const next=localCommand(g,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0},now);
- assert.equal(g.frontiers.length,4);assert.deepEqual(next.frontiers.map(f=>f.id).slice(0,2),['single','orphan']);
- assert.equal(next.frontiers.at(-1).cells.length,1);assert.equal(next.players[0].inventory.cards.frontier,0);assert.equal(next.pairs[0].frontierUsed,true);
+ const before=structuredClone(g);assert.throws(()=>localCommand(g,'inventory',{tool:'frontier',playerId:'local-x',x:3,y:0},now));assert.deepEqual(g,before);
+ const next=structuredClone(g);initializeInventory(next);assert.deepEqual(next.frontiers.map(f=>f.id),['single','orphan']);assert.equal(next.players[0].inventory.cards.frontier,1);
 });
 test('Loading paused, active and finished local saves persists conversion and refunds once while retaining pins, clocks, scores and unknown entries',()=>{
  const storage=memory(),games=[];

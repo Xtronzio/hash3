@@ -41,7 +41,7 @@ export function applyNuclearTool(room,point){
  const hit=new Set(affected.map(c=>key(c.x,c.y))),old=room.cells;
  room.terrain=terrainOf(room).filter(c=>!hit.has(key(c.x,c.y)));
  room.cells=old.filter(c=>!hit.has(key(c.x,c.y)));
- room.frontiers=(room.frontiers||[]).filter(f=>isImmune(room,f.by)||!frontierHit(f,hit));
+ room.frontiers=(room.frontiers||[]).filter(f=>f.type==='border'||isImmune(room,f.by)||!frontierHit(f,hit));
  room.inventoryEffects.blocks=room.inventoryEffects.blocks.filter(e=>!hit.has(key(e.x,e.y)));
  const live=new Set(room.cells.map(c=>c.id));
  room.inventoryEffects.shields=room.inventoryEffects.shields.filter(e=>live.has(e.cell));

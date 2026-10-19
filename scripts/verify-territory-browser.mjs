@@ -292,27 +292,25 @@ try{
  await selectBorder();
  const anchor=borderPage.locator('.board [data-action="inventory-target"][data-x="0"][data-y="0"]').first();
  await anchor.evaluate(el=>{const viewport=document.querySelector('.viewport'),r=el.getBoundingClientRect(),v=viewport.getBoundingClientRect();viewport.scrollLeft+=r.x+r.width/2-v.x-v.width/2;viewport.scrollTop+=r.y+r.height/2-v.y-v.height/2;});await frame(borderPage);
- await anchor.tap();assert.equal(await borderPage.locator('.board-frontier-cell.is-preview').count(),1);
  const tapBorder=async(x,y)=>{const cell=borderPage.locator(`.board [data-action="inventory-target"][data-x="${x}"][data-y="${y}"]`).first();await cell.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));await frame(borderPage);await cell.tap();};
- await tapBorder(1,0);assert.equal(await borderPage.locator('.board-frontier-cell.is-preview').count(),2);
  assert.equal(await borderPage.locator('[data-action="rotate-border"]').count(),0);
  await borderPage.locator('[data-action="cancel-tool-selection"]').tap();
  assert.equal(await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0].players[0].inventory.cards.border),1);
- await selectBorder();await tapBorder(0,0);await tapBorder(1,0);await tapBorder(1,1);
+ await selectBorder();await tapBorder(0,0);
  const placedBorder=await borderPage.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
- assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.deepEqual(placedBorder.frontiers[0].cells,[{x:0,y:0},{x:1,y:0},{x:1,y:1}]);
- assert.equal(await borderPage.locator('.board-frontier-cell').count(),3);// The newly placed frontier wins at the invasion's centre; its warning survives.
+ assert.equal(placedBorder.players[0].inventory.cards.border,0);assert.equal(placedBorder.frontiers[0].type,'border');assert.deepEqual(placedBorder.frontiers[0].cells,[{x:0,y:0}]);
+ assert.equal(await borderPage.locator('.board-frontier-cell').count(),1);// The newly placed frontier wins at the invasion's centre; its warning survives.
  assert.equal(placedBorder.territoryEvents[0].id,'border-warning');
  assert.deepEqual(placedBorder.territoryEvents[0].region,borderRoom.territoryEvents[0].region);
- await borderPage.waitForFunction(()=>document.querySelectorAll('.board .board-frontier-cell:not(.glyph-covered)').length===3);
+ await borderPage.waitForFunction(()=>document.querySelectorAll('.board .board-frontier-cell:not(.glyph-covered)').length===1);
  // This announced cell is now protected by the frontier: no threat frame.
  assert.equal(await borderPage.locator('.board .territory-warning.territory-invader-colony').count(),0);
  assert.equal(await borderPage.locator('.board [data-cell-glyph="invader-colony"][data-glyph-x="0"][data-glyph-y="0"]').count(),0);
  await borderPage.screenshot({path:path.join(output,'border-warning.png')});
- await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=3);
+ await borderPage.locator('[data-action="map"]').tap();assert.ok(await borderPage.locator('.map-frontiers path').count()>=1);
  await borderPage.locator('[data-action="close-map"]').tap();await borderPage.locator('[data-action="pause"]').tap();
- assert.ok(await borderPage.locator('.inspection-canvas .map-frontiers path').count()>=3);
- assert.deepEqual(borderErrors,[]);results.push({borderThreeTapsLAndCancel:true,borderSpendOnce:true,borderSharedMaps:true,passed:true});await borderPage.close();
+ assert.ok(await borderPage.locator('.inspection-canvas .map-frontiers path').count()>=1);
+ assert.deepEqual(borderErrors,[]);results.push({borderSingleDotAndCancel:true,borderSpendOnce:true,borderSharedMaps:true,passed:true});await borderPage.close();
  // The head uses the creature icon; body links use the same map geometry.
  const trailRoom=createLocal('local','X','O',Date.now(),'normal','untimed');
  trailRoom.worms=[{id:'trail',kind:'worm',x:2,y:1,body:[{x:0,y:0},{x:1,y:0},{x:2,y:1}],eaten:2,turnsRemaining:3}];
