@@ -22,6 +22,9 @@ test('Inverso Tornado reports the same exact area and real-piece trajectories as
 test('Manual inverse combo removal, including its finished state, follows paid geometry once',()=>{
  const a=fresh('inverse');a.cells=[0,1,2].map(x=>({x,y:0,id:'x'+x,symbol:'X',owner:'local-x'}));a.inverseFill=['0,0'];const f=inverseClaimsAt(a,'local-x',{x:0,y:0})[0],b=localCommand(a,'claim',{x:0,y:0,figureId:f.id},now,()=>.99);assert.equal(b.status,'finished');assert.equal(b.players[0].score,3);assert.deepEqual(cellChanges(a,b).map(p=>p.kind),['clear','clear','clear']);assert.deepEqual(cellChanges(b,b),[]);
 });
+test('A replacement identity in Ficha contraria is a new sign, not a vacated cell',()=>{
+ for(const variant of ['original','inverse']){const a=fresh(variant);a.cells=[{x:1,y:1,id:'o',symbol:'O',owner:'local-o'}];a.players[0].inventory.cards.opposite=1;const b=localCommand(a,'inventory',{playerId:'local-x',tool:'opposite',x:1,y:1},now,()=>.99);assert.deepEqual(cellChanges(a,b),[{x:1,y:1,kind:'place',symbol:'X'}]);}
+});
 test('Loads, resumes, pauses, stale versions and other games never replay old actions',()=>{
  const a=fresh('original'),b=localCommand(a,'move',{x:0,y:0},now,()=>.99);for(const [old,next]of [[null,b],[a,a],[b,a],[{...a,id:'other'},b],[{...a,status:'paused'},b],[a,{...b,status:'paused'}]])assert.deepEqual(cellChanges(old,next),[]);
 });

@@ -7,13 +7,14 @@ export function cellChanges(previous,next){
  if(!previous||previous.id!==next.id||previous.status!=='playing'||!['playing','finished'].includes(next.status)||previous.version>=next.version)return [];
  const changes=new Map(),put=p=>changes.set(key(p.x,p.y),p);
  const before=new Map(previous.cells.map(c=>[c.id,c])),after=new Map(next.cells.map(c=>[c.id,c]));
+ const occupiedAfter=new Set(next.cells.map(c=>key(c.x,c.y)));
  const filled=next.variant==='inverse'&&[2,3].includes(next.inverseVersion);
  if(next.variant!=='inverse'){
   const oldTerrain=new Map(terrainOf(previous).map(c=>[key(c.x,c.y),c])),newTerrain=new Map(terrainOf(next).map(c=>[key(c.x,c.y),c]));
   for(const [k,c]of oldTerrain)if(!newTerrain.has(k))put({x:c.x,y:c.y,kind:'erode'});
   for(const [k,c]of newTerrain)if(!oldTerrain.has(k))put({x:c.x,y:c.y,kind:'create'});
  }
- for(const c of before.values())if(!after.has(c.id)&&!changes.has(key(c.x,c.y)))put({x:c.x,y:c.y,kind:'clear'});
+ for(const c of before.values())if(!after.has(c.id)&&!occupiedAfter.has(key(c.x,c.y))&&!changes.has(key(c.x,c.y)))put({x:c.x,y:c.y,kind:'clear'});
  for(const c of after.values())if(!before.has(c.id)&&['X','O'].includes(c.symbol)&&!changes.has(key(c.x,c.y)))put({x:c.x,y:c.y,kind:'place',symbol:c.symbol});
  if(filled)for(const p of inverseCellChanges(previous,next))if(p.kind!=='wild')put(p);
  // A converted or relocated # is not a spontaneous arrival. The event must
