@@ -7,7 +7,7 @@ import {createLocal} from '../src/local.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const engines={chromium,firefox,webkit};
-function fixture(variant,w=9,h=9){const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant,board:{id:'qa-r89',name:'QA',terrain:Array.from({length:w*h},(_,i)=>({x:i%w,y:Math.floor(i/w)}))},faunaEnabled:false,territoryEnabled:false,random:()=>.99});g.terrain=Array.from({length:w*h},(_,i)=>({x:i%w,y:Math.floor(i/w)}));g.pairs[0].active={x:0,y:0};return g;}
+function fixture(variant,w=9,h=9){const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',true,{variant,board:{id:'qa-r89',name:'QA',terrain:Array.from({length:w*h},(_,i)=>({x:i%w-(w>166?Math.floor(w/2):0),y:Math.floor(i/w)-(h>166?Math.floor(h/2):0)}))},faunaEnabled:false,territoryEnabled:false,random:()=>.99});g.terrain=Array.from({length:w*h},(_,i)=>({x:i%w-(w>166?Math.floor(w/2):0),y:Math.floor(i/w)-(h>166?Math.floor(h/2):0)}));g.pairs[0].active={x:0,y:0};return g;}
 try{for(const [name,engine]of Object.entries(engines)){
  if(process.env.HASH3_QA_ENGINES&&!process.env.HASH3_QA_ENGINES.split(',').includes(name))continue;
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
