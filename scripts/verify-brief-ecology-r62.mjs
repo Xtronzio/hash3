@@ -32,7 +32,7 @@ try{
    await tap(page.locator('.board-territory-status [data-ecology-kind="death"]'));
    assert.equal(await page.locator('.board .dead-cell').count(),1);assert.equal(await page.locator('.board .dead-cell').getAttribute('data-action'),null);
    assert.ok(await page.locator('.board .territory-warning.territory-rhino').count()>0);
-   assert.equal(await page.locator('.board .territory-warning.territory-rhino').first().evaluate(e=>getComputedStyle(e).borderStyle),'dashed');
+   assert.notEqual(await page.locator('.board .territory-warning.territory-rhino .warning-dashes').first().evaluate(e=>getComputedStyle(e).strokeDasharray),'none');
    // The Death jump scrolls the viewport. A hold deliberately cancels on any
    // scroll event: let WebKit deliver that navigation before pressing Recharge.
    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.waitForTimeout(150);
