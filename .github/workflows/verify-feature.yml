@@ -63,6 +63,7 @@ on:
       - release/local-inverse-renewal-r88
       - release/local-shared-animations-r89
       - release/local-borders-beavers-r90
+      - release/local-border-diamond-r91
   workflow_dispatch:
 permissions:
   contents: write

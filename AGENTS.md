@@ -1,5 +1,15 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.91 · Rombo para Frontera
+
+Jorge19/10 pide rombo para Frontera y conservar / para Muro. Maestro vectorial
+compartido en cartas, localizadores, tablero y mapas/pausa/miniaturas. Morado
+en las celdas, colores vigentes en controles. Castor conserva // amarillo.
+Conservar geometría de segmentos antiguos y su rombo identificador, prioridad
+del último glifo, retirada exclusiva del dueño y todos los datos/reglas R90.
+Solo presentación. Verificar pipeline y QA tres motores/seis tamaños antes
+de publicar R91/r302 y comprobar HTTP. Respaldo pre-border-diamond-r90-20261019.
+
 ## R0.21.90 · Ampliación independiente, Frontera propia y castores escalonados
 
 Jorge19/10 autoriza: ampliar solo amplía; quitar oferta y permiso de Muro/Frontera
