@@ -61,6 +61,7 @@ on:
       - release/local-bulk-delete-r86
       - release/local-inverse-contour-r87
       - release/local-inverse-renewal-r88
+      - release/local-shared-animations-r89
   workflow_dispatch:
 permissions:
   contents: write
@@ -85,6 +86,9 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: npm run verify:browser
+      - run: node scripts/verify-brief-ecology-r62.mjs
+      - run: node scripts/verify-shared-animations-r89.mjs
       - run: node scripts/verify-inverse-renewal-r88.mjs
       - run: node scripts/verify-inverse-contour-r87.mjs
       - run: node scripts/verify-bulk-delete-r86.mjs
@@ -96,7 +100,6 @@ jobs:
       - run: node scripts/verify-inverse-claims-r79.mjs
       - run: node scripts/verify-inverse-fill-r78.mjs
       - run: node scripts/verify-inverse-r77.mjs
-      - run: npm run verify:browser
       - run: npm run verify:transfer
       - run: node scripts/verify-fauna-fog-r76.mjs
       - run: node scripts/verify-drawers-r69.mjs
@@ -108,7 +111,6 @@ jobs:
       - run: node scripts/verify-zones-impact-r66.mjs
       - run: node scripts/verify-custom-inventory-r57.mjs
       - run: node scripts/verify-bombs-r56.mjs
-      - run: node scripts/verify-brief-ecology-r62.mjs
       - run: node scripts/verify-paused-machine-r64.mjs
       - run: node scripts/verify-territory-presentation-r65.mjs
       - run: npm run verify:brand-trade

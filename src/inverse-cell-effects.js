@@ -9,5 +9,6 @@ export function inverseCellChanges(previous,next){
  if(next.inverseWildEvent?.id!==previous.inverseWildEvent?.id&&next.inverseWildEvent){const {x,y}=next.inverseWildEvent;result.push({x,y,kind:'wild'});}
  return result;
 }
-export const inverseWarningMarkup=kind=>`<svg class="inverse-cell-warning inverse-warning-${kind}" viewBox="0 0 48 48" aria-hidden="true"><rect class="warning-underlay" x="5" y="5" width="38" height="38" rx="4"/><rect class="warning-dashes" x="5" y="5" width="38" height="38" rx="4"/><path d="${kind==='restore'?'M19 10h10m-5-5v10':'M19 10h10'}"/></svg>`;
-export const inverseEffectMarkup=kind=>`<svg viewBox="0 0 48 48" aria-hidden="true"><rect class="effect-ring" x="5" y="5" width="38" height="38" rx="6"/><g class="effect-shards"><path d="M8 15V8h7M33 8h7v7M40 33v7h-7M15 40H8v-7"/></g>${kind==='wild'?'<text x="24" y="32" text-anchor="middle">#</text>':`<path class="effect-sign" d="M17 24h14${kind==='create'?'m-7-7v14':''}"/>`}</svg>`;
+import {cellWarningMarkup,cellEffectMarkup} from './cell-effect-markup.js';
+export const inverseWarningMarkup=kind=>cellWarningMarkup(kind,`inverse-cell-warning inverse-warning-${kind}`);
+export const inverseEffectMarkup=cellEffectMarkup;

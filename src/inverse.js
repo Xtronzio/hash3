@@ -87,16 +87,17 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  if(action==='inventory'){
   const {tool,playerId}=payload;
   if(!inverseToolAllowed(room,tool)||!canUsePracticeTool(room,playerId,tool,now))throw new Error('Esta carta no está disponible en Inverso.');
-  const before=structuredClone(room.cells);let landing=[],cleared=[],changed=[];
+  const before=structuredClone(room.cells);let landing=[],cleared=[],changed=[],affected=[];
   if(['double','rival','combo'].includes(tool)){
    spendCard(room,playerId,tool);
    if(tool==='double')room.practiceTurn.remaining=2;
    if(tool==='rival')room.inventoryEffects.forced.push({player:pair[pair.turn==='X'?'o':'x'],symbol:actor.symbol,by:playerId});
   }else if(['bomb','tornado'].includes(tool)){
-   const result=applyAreaTool(room,playerId,tool,payload,random);landing=result.landing||[];spendCard(room,playerId,tool);
+   const result=applyAreaTool(room,playerId,tool,payload,random);landing=result.landing||[];affected=result.affected||[];spendCard(room,playerId,tool);
    cleared=clearPaid(room,landing.flatMap(s=>s.resolvedFigures||s.paidFigures));
   }else{
    const cell=toolCells(room,playerId,tool).find(c=>c.x===payload.x&&c.y===payload.y);if(!cell)throw new Error('Elige una ficha válida del dibujo.');
+   affected=[{x:cell.x,y:cell.y}];
    if(tool==='erase'){room.cells=room.cells.filter(c=>c.id!==cell.id);for(const p of room.players)if(p.lastMove?.id===cell.id)delete p.lastMove;}
    else if(tool==='opposite'){cell.symbol=actor.symbol;cell.owner=actor.id;cell.id=id();changed=[cell];}
    else if(tool==='shift'){
@@ -105,11 +106,12 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
     const other=toolCells(room,playerId,tool).find(c=>c.x===payload.toX&&c.y===payload.toY&&c.id!==cell.id);if(!other)throw new Error('Elige otra ficha del dibujo.');
     const a={x:cell.x,y:cell.y};changed=[a,{x:other.x,y:other.y}];Object.assign(cell,{x:other.x,y:other.y});Object.assign(other,a);
    }else throw new Error('Carta no disponible.');
+   if(['shift','swap'].includes(tool))affected=changed;
    if(changed.length){landing=scoreLandings(room,before,changed,{kind:tool,actor:playerId});for(const p of room.players){const c=room.cells.find(c=>c.id===p.lastMove?.id);if(c)p.lastMove={...c};}}
    cleared=clearPaid(room,landing.flatMap(s=>s.resolvedFigures||s.paidFigures));spendCard(room,playerId,tool);
   }
   if(landing.length)room.landingEvent={id:id(),kind:tool,actor:playerId,scores:landing};
-  room.lastEvent={id:id(),kind:'inventory',tool,player:playerId,landing,cleared};delete room.practiceHint;return done();
+  room.lastEvent={id:id(),kind:'inventory',tool,player:playerId,landing,cleared,affected:affected.map(({x,y})=>({x,y}))};delete room.practiceHint;return done();
  }
  if(action==='pass'){
   if(availableCells(room,pair).length)throw new Error('Todavía puedes colocar una ficha.');

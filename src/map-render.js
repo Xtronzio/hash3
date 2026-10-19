@@ -41,8 +41,12 @@ export function invasionGrowthMarkup(points){
 }
 
 export function threatMarkup(points,{compact=false}={}){
- if(compact)return `<g class="map-territory-threat" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08"><path d="${points.map(c=>`M${c.x+.04} ${c.y+.04}h.92v.92h-.92Z`).join('')}"/><title>Celdas amenazadas</title></g>`;
- return `<g class="map-territory-threat" fill="none" stroke="var(--yellow)" stroke-width=".065" stroke-dasharray=".12 .08">${points.map(c=>`<rect x="${c.x+.04}" y="${c.y+.04}" width=".92" height=".92"><title>Celda amenazada</title></rect>`).join('')}</g>`;
+ // Same backed dashed warning in every variant and map, static when paused.
+ return [false,true].map(restore=>{
+  const group=points.filter(p=>(p.kind==='restore')===restore);if(!group.length)return '';
+  const shapes=compact?`<path d="${group.map(c=>`M${c.x+.04} ${c.y+.04}h.92v.92h-.92Z`).join('')}"/>`:group.map(c=>`<rect x="${c.x+.04}" y="${c.y+.04}" width=".92" height=".92"/>`).join('');
+  return `<g class="map-territory-threat ${restore?'map-warning-restore':''}" fill="none"><g stroke="#061015" stroke-width=".125">${shapes}</g><g stroke="${restore?'#65efce':'var(--yellow)'}" stroke-width=".065" stroke-dasharray=".12 .08">${shapes}</g><title>${restore?'Reposición anunciada':'Celdas amenazadas'}</title></g>`;
+ }).join('');
 }
 
 export function deadMarkup(points){return `<g class="map-dead-cells" fill="none" stroke="#aab0ba" stroke-width="1.8">${points.map(c=>`<g transform="translate(${c.x} ${c.y}) scale(.03125)"><rect x="1.5" y="1.5" width="29" height="29" fill="#111214"/>${briefIcons.death}<title>Celda muerta · inalterable</title></g>`).join('')}</g>`;}
