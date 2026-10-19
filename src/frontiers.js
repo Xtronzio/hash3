@@ -70,12 +70,15 @@ export function frontierLine({a,b}){
  return a.x===b.x?{x1:a.x,y1:Math.max(a.y,b.y),x2:a.x+1,y2:Math.max(a.y,b.y)}:{x1:Math.max(a.x,b.x),y1:a.y,x2:Math.max(a.x,b.x),y2:a.y+1};
 }
 export function frontierMarkup(room){
- return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>c.borderSide?`<path d="${borderPath(c)}" fill="none" vector-effect="non-scaling-stroke"><title>Frontera · contiene invasiones</title></path>`:`<g ${c.beaver?'class="beaver-barrier" stroke="var(--yellow)"':''}><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/>${c.suppressSign?'':`<path d="M${c.x+.2} ${c.y+.8}l.6-.6${c.beaver?`M${c.x+.4} ${c.y+.8}l.5-.6`:''}" fill="none" stroke-width=".14" stroke-linecap="round"/>`}<title>${c.beaver?'Barrera de castor // · '+c.turnsRemaining+' turnos':c.borderCell?'Frontera · solo su propietario puede retirarla':'Muro · solo se rompe con Bomba'}</title></g>`).join('')}</g>`;
+ return `<g class="map-frontiers" fill="#171020" stroke="var(--frontier,#c18aff)" stroke-width="1.5">${frontierCells(room).map(c=>c.borderSide?`<g><path d="${borderPath(c)}" fill="none" vector-effect="non-scaling-stroke"/>${c.suppressSign?'':borderCellSign(c)}<title>Frontera · solo su propietario puede retirarla</title></g>`:`<g ${c.beaver?'class="beaver-barrier" stroke="var(--yellow)"':''}><rect x="${c.x+.05}" y="${c.y+.05}" width=".9" height=".9" vector-effect="non-scaling-stroke"/>${c.suppressSign?'':c.borderCell?borderCellSign(c):`<path d="M${c.x+.2} ${c.y+.8}l.6-.6${c.beaver?`M${c.x+.4} ${c.y+.8}l.5-.6`:''}" fill="none" stroke-width=".14" stroke-linecap="round"/>`}<title>${c.beaver?'Barrera de castor // · '+c.turnsRemaining+' turnos':c.borderCell?'Frontera · solo su propietario puede retirarla':'Muro · solo se rompe con Bomba'}</title></g>`).join('')}</g>`;
 }
 export function borderPath(c){const horizontal=['north','south'].includes(c.borderSide),x=c.x+(c.borderSide==='east'?1:0),y=c.y+(c.borderSide==='south'?1:0);return `M${x} ${y}${horizontal?'h1':'v1'}`;}
-export const borderIcon='<path d="M3 16 11 8M12 16 20 8M21 16 29 8" stroke-width="3.5" stroke-linecap="round"/>';
+export const borderIcon='<path d="M16 5 27 16 16 27 5 16Z" fill="none" stroke-width="4.5" stroke-linejoin="round"/>';
 export const wallIcon='<path d="M7 25 25 7" stroke-width="4.5" stroke-linecap="round"/>';
 export const frontierSlash=`<svg viewBox="0 0 32 32" aria-hidden="true">${wallIcon}</svg>`;
+export const borderDiamond=`<svg viewBox="0 0 32 32" aria-hidden="true">${borderIcon}</svg>`;
+function borderCellSign(c){return `<g transform="translate(${c.x+.06} ${c.y+.06}) scale(.0275)">${borderIcon}</g>`;}
+export function borderCellMarkup(c){return c.borderSide?`<svg viewBox="${c.x} ${c.y} 1 1" aria-hidden="true"><path d="${borderPath(c)}"/>${borderCellSign(c)}</svg>`:borderDiamond;}
 
 // A second tap on the chosen expansion anchor places the chosen single cell.
 export function selectFrontier(selection,point,anchors){
