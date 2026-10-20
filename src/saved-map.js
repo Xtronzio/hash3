@@ -3,7 +3,7 @@ import {inverseNavigationKeys,inverseFocusGroups} from './inverse-focus.js';
 import {ecologyPinTargets,ecologyTargets,nextEcologyTarget,ecologyMapPins} from './ecology-navigation.js';
 import {cellIndex} from './board-window.js';
 import {frontierCells} from './frontiers.js';
-import {overviewCells,mapCellSymbols,mapFrameMarkup,prepareMapRendering,mapWindowMarkup,MAP_SYMBOL_SCALE} from './map-render.js';
+import {overviewCells,mapCellSymbols,mapFrameMarkup,prepareMapRendering,mapWindowMarkup,prisonMarkup,MAP_SYMBOL_SCALE} from './map-render.js';
 import {overviewModel,overviewPoint} from './map-overview.js';
 import {fitOverview,clampCamera,zoomCamera,panCamera} from './map-camera.js';
 import {immediateAbove} from './game.js';
@@ -28,7 +28,7 @@ export function thumbnailMarkup(room){
 }
 
 export function inspectionCells(model){
- return overviewCells(model.terrain)+mapCellSymbols(model.terrain)+mapFrameMarkup(model)+(model.frontiers||'');
+ return overviewCells(model.terrain)+mapCellSymbols(model.terrain)+prisonMarkup(model.terrain.filter(p=>p.prison))+mapFrameMarkup(model)+(model.frontiers||'');
 }
 
 export function bindInspection(panel,model,state={},interacting=()=>{}){

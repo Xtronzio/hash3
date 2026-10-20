@@ -16,7 +16,7 @@ export function overviewCells(terrain){
 }
 export function mapCellSymbols(terrain){
  const fog=terrain.filter(p=>p.fog);terrain=terrain.filter(p=>!p.cardCovered&&!p.fog);
- return `<g class="map-prison-bars" fill="none" stroke="#e6be62" stroke-width=".055">${terrain.filter(p=>p.prison).map(p=>`<path d="M${p.x+.15} ${p.y+.08}v.84m.23-.84v.84m.24-.84v.84m.23-.84v.84"/>`).join('')}</g><g class="map-fog" fill="none" stroke="#d1d5da" stroke-width=".065">${fog.filter(p=>!p.cardCovered).map(p=>`<path d="M${p.x+.13} ${p.y+.28}h.72m-.8 .23h.72m-.6 .22h.72"/>${p.occupied?'':`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".12" fill="#fff" stroke="#101216"/>`}`).join('')}</g><g class="map-cell-symbols inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${terrain.map(p=>p.symbol==='X'?`<path data-symbol="X" d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle data-symbol="O" cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:p.symbol==='*'?`<g data-symbol="*" ${p.invasionBomb?'data-invasion-bomb="active"':''}><rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" fill="#161109" stroke="none"/><g transform="translate(${p.x} ${p.y}) scale(.015625)" stroke="var(--yellow)" color="var(--yellow)">${p.invasionBomb?invasionBombIcon:invaderIcon}</g></g>`:p.symbol==='#'?`<path data-symbol="#" d="M${p.x+.4} ${p.y+.2}l-.1 .6m.4-.6-.1 .6M${p.x+.2} ${p.y+.4}h.6m-.6 .2h.6"/>`:'').join('')}</g>`;
+ return `<g class="map-fog" fill="none" stroke="#d1d5da" stroke-width=".065">${fog.filter(p=>!p.cardCovered).map(p=>`<path d="M${p.x+.13} ${p.y+.28}h.72m-.8 .23h.72m-.6 .22h.72"/>${p.occupied?'':`<circle cx="${p.x+.5}" cy="${p.y+.5}" r=".12" fill="#fff" stroke="#101216"/>`}`).join('')}</g><g class="map-cell-symbols inspection-symbols" fill="none" stroke="#08090b" stroke-width=".1" stroke-linecap="round">${terrain.map(p=>p.symbol==='X'?`<path data-symbol="X" d="M${p.x+.25} ${p.y+.25}l.5 .5m0-.5-.5 .5"/>`:p.symbol==='O'?`<circle data-symbol="O" cx="${p.x+.5}" cy="${p.y+.5}" r=".27"/>`:p.symbol==='*'?`<g data-symbol="*" ${p.invasionBomb?'data-invasion-bomb="active"':''}><rect x="${p.x+.05}" y="${p.y+.05}" width=".9" height=".9" fill="#161109" stroke="none"/><g transform="translate(${p.x} ${p.y}) scale(.015625)" stroke="var(--yellow)" color="var(--yellow)">${p.invasionBomb?invasionBombIcon:invaderIcon}</g></g>`:p.symbol==='#'?`<path data-symbol="#" d="M${p.x+.4} ${p.y+.2}l-.1 .6m.4-.6-.1 .6M${p.x+.2} ${p.y+.4}h.6m-.6 .2h.6"/>`:'').join('')}</g>`;
 }
 export function mapFrameMarkup(model){
  return (model.active?`<rect x="${model.active.x}" y="${model.active.y}" width="3" height="3" fill="none" stroke="#e3e5e9" stroke-width="2" vector-effect="non-scaling-stroke"/>`:'')+
@@ -24,7 +24,7 @@ export function mapFrameMarkup(model){
  (model.target?`<rect class="inspection-rival" x="${Math.floor(model.target.x)}" y="${Math.floor(model.target.y)}" width="1" height="1" fill="none" stroke="var(--blue)" stroke-width="3" vector-effect="non-scaling-stroke"><title>Referencia del rival superior</title></rect>`:'');
 }
 export function prepareMapRendering(model,barriers=model.frontierCells||[]){
- return {inverseBoundary:cellIndex(model.inverseBoundary||[]),inverseCoarse:overviewGrid((model.inverseBoundary||[]).map(c=>({...c,fill:'#b6bfcc'})),model.bounds),detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[]),dead:cellIndex(model.deadCells||[])};
+ return {inverseBoundary:cellIndex(model.inverseBoundary||[]),inverseCoarse:overviewGrid((model.inverseBoundary||[]).map(c=>({...c,fill:'#b6bfcc'})),model.bounds),detail:cellIndex(model.terrain),coarse:overviewGrid(model.terrain,model.bounds),prisoners:cellIndex(model.terrain.filter(p=>p.prison)),coarsePrisoners:frontierOverviewGrid(model.terrain.filter(p=>p.prison),model.bounds),barriers:cellIndex(barriers),coarseBarriers:frontierOverviewGrid(barriers,model.bounds),worms:cellIndex(model.wormTrails||[]),growth:cellIndex(model.invasionGrowth||[]),threats:cellIndex(model.threatCells||[]),dead:cellIndex(model.deadCells||[])};
 }
 export function mapWindowMarkup(model,index,box,scale){
  const outline=!model.inverseBoundary?.length?'':box.width*box.height<=MAP_DETAIL_LIMIT?`<path class="inverse-map-outline" fill="none" stroke="#f1f3f6" stroke-width="1.5" vector-effect="non-scaling-stroke" d="${inverseBoundaryPath(index.inverseBoundary.query(box))}"/>`:`<g class="inverse-map-outline">${overviewCells(index.inverseCoarse.query(box))}</g>`;
@@ -33,7 +33,7 @@ export function mapWindowMarkup(model,index,box,scale){
  const worms=detail?`<g class="worm-map-trail" fill="none" stroke="var(--yellow)" stroke-width=".07" stroke-linecap="round">${wormTrailMarkup(index.worms.query(box))}</g>`:'';
  const growth=detail?invasionGrowthMarkup(index.growth.query(box)):'';
  const threats=threatMarkup(index.threats?.query(box)||[],{compact:!detail});
- return overviewCells(cells)+outline+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+threats+deadMarkup(index.dead?.query(box)||[])+mapFrameMarkup(model);
+ return overviewCells(cells)+outline+(detail&&scale>=MAP_SYMBOL_SCALE?mapCellSymbols(cells):'')+growth+worms+walls+prisonMarkup((detail?index.prisoners:index.coarsePrisoners)?.query(box)||[])+threats+deadMarkup(index.dead?.query(box)||[])+mapFrameMarkup(model);
 }
 
 export function invasionGrowthMarkup(points){
@@ -50,3 +50,5 @@ export function threatMarkup(points,{compact=false}={}){
 }
 
 export function deadMarkup(points){return `<g class="map-dead-cells" fill="none" stroke="#aab0ba" stroke-width="1.8">${points.map(c=>`<g transform="translate(${c.x} ${c.y}) scale(.03125)"><rect x="1.5" y="1.5" width="29" height="29" fill="#111214"/>${briefIcons.death}<title>Celda muerta · inalterable</title></g>`).join('')}</g>`;}
+
+export function prisonMarkup(points){return `<g class="map-prison-bars" fill="none" stroke="#e6be62" stroke-width=".055">${points.map(p=>`<path d="M${p.x+.15} ${p.y+.08}v.84m.23-.84v.84m.24-.84v.84m.23-.84v.84"/>`).join('')}</g>`;}
