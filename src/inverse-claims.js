@@ -1,12 +1,17 @@
 import {comboInverse,inverseComboAt,inverseCombos} from './inverse-combos.js';
 import {key,figureWindows,prepareFigureIndex,availableCells} from './game.js';
 import {practiceTurn} from './practice-tools.js';
+import {isPrisoner} from './inverse-prison.js';
 export const manualInverse=room=>room?.variant==='inverse'&&room.inverseVersion===3;
 export const INVERSE_WILD_INTERVAL=9;
 export const INVERSE_WILD_CAP=3;
+export function canPassPrisonTurn(room,playerId){
+ const p=room?.pairs?.[0];
+ return manualInverse(room)&&room.status==='playing'&&!isPrisoner(room,playerId)&&p[p.turn.toLowerCase()]===playerId&&room.players.some(o=>o.id!==playerId&&isPrisoner(room,o.id))&&!availableCells(room,p).length&&!inverseClaims(room,playerId).length;
+}
 export function canClaimInverse(room,playerId){
  const p=room?.pairs?.[0],state=practiceTurn(room,playerId);
- return manualInverse(room)&&room.status==='playing'&&p[p.turn.toLowerCase()]===playerId&&state.remaining===1&&!state.used.includes('double');
+ return manualInverse(room)&&room.status==='playing'&&!isPrisoner(room,playerId)&&p[p.turn.toLowerCase()]===playerId&&state.remaining===1&&!state.used.includes('double');
 }
 export function inverseClaimsAt(room,playerId,point,index=null){
  if(comboInverse(room)){const combo=inverseComboAt(room,playerId,point);return combo?[combo]:[];}

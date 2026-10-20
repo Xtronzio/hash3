@@ -29,9 +29,9 @@ test('Floating Cobrar respects turn, pause and Doble, independent of inventory s
 });
 test('Customization preserves the entire referee state and travels with a paused save per player',()=>{
  const s=memory(),g=localCommand(fresh(),'pause',{},NOW),before=structuredClone(g),n=storeInventoryPreferences(g,'local-x',prefs(),s),copy=structuredClone(n);delete copy.inventoryPreferences;assert.deepEqual(copy,before);assert.deepEqual(g,before);assert.deepEqual(inventoryPreferences(n,'local-x',s),prefs());assert.equal(inventoryPreferences(n,'local-o',s).floating.length,1);
- s.setItem('hash3_locals',JSON.stringify([n]));s.setItem('hash3_local',JSON.stringify({id:n.id}));s.setItem('hash3_name','A');const data=captureTransfer(s,{now:NOW,id:'claim-layout'});assert.deepEqual(data.games[0].inventoryPreferences['local-x'],prefs());assert.deepEqual(data.games[0].inverseBees,before.inverseBees);assert.deepEqual(data.games[0].players,before.players);
+ s.setItem('hash3_locals',JSON.stringify([n]));s.setItem('hash3_local',JSON.stringify({id:n.id}));s.setItem('hash3_name','A');const data=captureTransfer(s,{now:NOW,id:'claim-layout'});assert.deepEqual(data.games[0].inventoryPreferences['local-x'],prefs());assert.deepEqual(data.games[0].inversePrison,before.inversePrison);assert.deepEqual(data.games[0].players,before.players);
 });
 test('Bee count exposes a distinct large-count element and reveals the full saved deadline',()=>{
  const g=fresh(),raw=JSON.stringify(g);assert.match(inverseBeeBadge(g,'local-x'),/quedan 3 turnos propios/);assert.match(inverseBeeBadge(g,'local-x'),/data-inverse-bee-count>3/);assert.equal(JSON.stringify(g),raw);
- Object.assign(g.inverseBees.players.X,{since:6,turns:6,limit:9});const before=JSON.stringify(g),html=inverseBeeBadge(g,'local-x');assert.match(html,/data-inverse-bee-count>3<\/strong>/);assert.match(html,/quedan 3 turnos propios/);assert.equal(JSON.stringify(g),before);
+ Object.assign(g.inversePrison.players.X,{since:6,turns:6,limit:9});const before=JSON.stringify(g),html=inverseBeeBadge(g,'local-x');assert.match(html,/data-inverse-bee-count>3<\/strong>/);assert.match(html,/quedan 3 turnos propios/);assert.equal(JSON.stringify(g),before);
 });

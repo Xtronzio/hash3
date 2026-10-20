@@ -1,4 +1,5 @@
 import {inverseRenewalLimit,advanceInverseRenewal} from './inverse-renewal.js';
+import {imprisonedCell,prisonKeys} from './inverse-prison.js';
 // Shared, public pressure: turns, never wall-clock time or hidden player information.
 export const INVERSE_CONTOUR_INTERVAL=33,INVERSE_CONTOUR_WARNING=3;
 const enabled=r=>r?.variant==='inverse'&&r.inverseVersion===3;
@@ -27,7 +28,7 @@ export function inverseContourBudget(room){
 }
 export function inverseContourInterval(room){return 33*Math.max(1,Math.ceil(inverseContourBudget(room)/11));}
 export function planInverseContour(room){
- const pending=new Set(room.inverseFill),occupied=new Set(room.cells.filter(c=>['X','O'].includes(c.symbol)).map(c=>key(c.x,c.y))),count=inverseContourBudget(room);
+ const locked=prisonKeys(room),pending=new Set(room.inverseFill.filter(k=>!locked.has(k))),occupied=new Set(room.cells.filter(c=>['X','O'].includes(c.symbol)).map(c=>key(c.x,c.y))),count=inverseContourBudget(room);
  if(!count)return [];
  const rank=p=>Number(occupied.has(key(p.x,p.y)))*6+near.reduce((n,[dx,dy])=>n+Number(occupied.has(key(p.x+dx,p.y+dy)))*2,0);
  const tie=p=>((p.x*73856093)^(p.y*19349663)^((room.inverseContour?.cycles||0)*83492791))>>>0;
@@ -49,7 +50,8 @@ export function advanceInverseContour(room,{beeImpact=false}={}){
  if(c.turns===c.next-3)c.targets=planInverseContour(room);
  if(c.turns<c.next)return;
  if(beeImpact&&c.targets.length){c.next=c.turns+1;return;}
- const fill=new Set(room.inverseFill),limit=Math.max(0,fill.size-3),cleared=c.targets.filter(k=>fill.has(k)).slice(0,limit),hits=new Set(cleared);
+ const locked=new Set(room.cells.filter(p=>imprisonedCell(room,p)).map(p=>key(p.x,p.y)));
+ const fill=new Set(room.inverseFill),limit=Math.max(0,fill.size-3),cleared=c.targets.filter(k=>fill.has(k)&&!locked.has(k)).slice(0,limit),hits=new Set(cleared);
  room.inverseFill=room.inverseFill.filter(k=>!hits.has(k));room.inverseCleared=room.terrain.length-room.inverseFill.length;
  c.lost+=cleared.length;c.cycles++;c.targets=[];c.next=c.turns+inverseContourInterval(room);
  if(cleared.length){room.inverseContourEvent={id:crypto.randomUUID(),turn:c.turns,cleared};delete room.practiceHint;}

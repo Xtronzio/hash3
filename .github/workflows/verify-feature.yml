@@ -64,6 +64,7 @@ on:
       - release/local-shared-animations-r89
       - release/local-borders-beavers-r90
       - release/local-border-diamond-r91
+      - release/local-inverse-prison-r92
   workflow_dispatch:
 permissions:
   contents: write
@@ -88,6 +89,8 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-inverse-prison-r92.mjs
+      - run: node scripts/verify-inverse-bees-r81.mjs
       - run: npm run verify:browser
       - run: node scripts/verify-brief-ecology-r62.mjs
       - run: node scripts/verify-borders-beavers-r90.mjs
@@ -99,7 +102,6 @@ jobs:
       - run: node scripts/verify-ants-phenomena-r84.mjs
       - run: node scripts/verify-inverse-visible-r83.mjs
       - run: node scripts/verify-inverse-controls-r82.mjs
-      - run: node scripts/verify-inverse-bees-r81.mjs
       - run: node scripts/verify-inverse-claims-r79.mjs
       - run: node scripts/verify-inverse-fill-r78.mjs
       - run: node scripts/verify-inverse-r77.mjs

@@ -75,3 +75,9 @@
 .inverse-game .inverse-contour-notice>span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .inverse-game .player-feedback-notices>.inverse-contour-notice>button{width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:2px;padding:2px;border:0;background:transparent}
 .inverse-game .inverse-contour-notice button svg{width:18px;height:18px}.inverse-game .inverse-contour-notice button b{font-size:16px}
+.inverse-imprisoned{position:relative}.cell .inverse-prison-bars{position:absolute!important;inset:4%;width:92%!important;height:92%!important;color:#e6be62;pointer-events:none;filter:drop-shadow(0 0 1px #08090b)}
+.glyph-covered>.inverse-prison-bars{visibility:visible}
+.inverse-bee-badge.is-prisoner{border:1px solid #e6be62;border-radius:3px;padding:0 3px;background:#3b2d12}
+.inverse-game .inverse-bee-clocks{gap:5px;flex-wrap:wrap}.inverse-game .inverse-bee-clocks>.inverse-prison-bars{width:24px;height:24px;flex:none}.inverse-disorder-clock{color:#ffd65c}
+.inverse-prison-description{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:380px){.inverse-game .inverse-bee-clocks{gap:3px}.inverse-game .inverse-contour-clock>svg{display:none}}
