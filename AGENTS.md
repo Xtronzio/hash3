@@ -11,6 +11,9 @@ pausa/tiempo0. Turnos omitidos no generan ecología, recargas ni colocaciones.
 Jorge confirma compensación si ambos presos: descontar mínimo común y liberar
 al que quede en0, sin avances ficticios ni tiempo. El turno real que provoca
 la segunda condena sí cuenta normalmente antes de compensar.
+Con rival preso y tablero lleno sin colocación ni cobro, permitir Pasar turno
+al jugador libre, también en IA/reloj automático; turno real sin colocación,
+puntos ni recarga. Evita atascar condenas con todo el tablero protegido.
 Desorden compartido del contorno: ajuste inicial66turnos, aviso3, región compacta
 de hasta33celdas dentro de la silueta, mezcla fichas y huecos sin pagos automáticos;
 respeta presos incluso posteriores al anuncio. Identidades, cantidades, relleno,

@@ -20,6 +20,11 @@ no representa jugadas: no mueve fichas ni contorno, concede premios o adelanta
 relojes. El turno pendiente lo recibe un jugador libre. Nunca persistir dos
 condenas positivas después de resolver el comando.
 
+Con rival preso, tablero lleno y ningún cobro propio posible, el jugador libre
+puede pasar explícitamente. Es un turno real sin ficha/puntos/recarga, también
+para IA y reloj automático. Permite cumplir la condena aunque no se pueda tocar
+ninguna ficha protegida; no habilita pases libres en otras situaciones.
+
 Desorden independiente: cada66turnos compartidos reales, tres de aviso,
 seleccionar una región por lados de hasta33celdas con una ficha como semilla.
 Solo terreno original; excluye celdas con presos. Publicar claves concretas;

@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createLocal,localCommand,machineChoice} from '../src/local.js';
-import {inverseClaimsAt,canClaimInverse} from '../src/inverse-claims.js';
+import {inverseClaimsAt,canClaimInverse,canPassPrisonTurn} from '../src/inverse-claims.js';
 import {prisonState,prisonRemaining,isPrisoner,completePrisonTurn,initializeInversePrison,validInversePrison} from '../src/inverse-prison.js';
 import {advanceInverseDisorder,validInverseDisorder} from '../src/inverse-disorder.js';
 import {availableCells} from '../src/game.js';import {toolCells,canUsePracticeTool} from '../src/practice-tools.js';
@@ -34,6 +34,11 @@ test('A sentence freezes pieces without relocation and lets the rival complete t
  const g=due(line(fresh())),before=structuredClone(g),n=command(g,'move',{x:8,y:8});assert.equal(state(n).remaining,3);assert.equal(n.pairs[0].turn,'O');for(const c of g.cells)assert.deepEqual(n.cells.find(p=>p.id===c.id),c);assert.deepEqual(n.inverseFill,g.inverseFill);assert.deepEqual(g,before);
  let h=n;for(const count of [2,1,0]){const turns=h.inverseContour.turns;h=move(h);assert.equal(h.inverseContour.turns,turns+1);assert.equal(state(h).remaining,count);assert.equal(h.pairs[0].turn,count?'O':'X');}
  assert.equal(state(h).since,0);assert.equal(state(h).opportunity,false);assert.equal(state(h).turns,9);assert.equal(h.players[0].inventory.completedTurns,n.players[0].inventory.completedTurns);
+});
+test('A full imprisoned drawing cannot deadlock: the free player can pass three actual turns, also automatically',()=>{
+ const g=line(fresh({playerInventory:false}));g.terrain=g.terrain.slice(0,3);g.inverseFill=['0,0','1,0','2,0'];g.inverseInitialCount=3;state(g).remaining=3;g.pairs[0].turn='O';assert.equal(canPassPrisonTurn(g,'local-o'),true);assert.equal(machineChoice(g,()=>.4,{cards:false,maxTimeMs:30}).action,'pass');
+ let n=g;for(let i=0;i<3;i++){n=command(n,'pass');assert.equal(state(n).remaining,2-i);assert.equal(n.inverseContour.turns,i+1);assert.deepEqual(n.cells,g.cells);assert.ok(n.players.every(p=>p.score===0));assert.equal(n.inverseMoves,0);}assert.equal(n.pairs[0].turn,'X');assert.equal(claim(n).status,'finished');
+ const timed=structuredClone(g);timed.timeMode='timed';timed.pairs[0].deadline=new Date(NOW-1).toISOString();assert.equal(command(timed,'tick').lastEvent.kind,'pass');assert.equal(canPassPrisonTurn(fresh(),'local-x'),false);assert.throws(()=>command(fresh(),'pass'));
 });
 test('Mutual sentences compensate their common remainder without synthetic contour turns or board edits',()=>{
  for(const left of [1,2,3]){const g=due(fresh());state(g).opportunity=true;state(g,'O').remaining=left;const before=structuredClone(g),turns=g.inverseContour.turns;completePrisonTurn(g,'local-x',0,()=>.5);

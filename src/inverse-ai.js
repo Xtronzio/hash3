@@ -2,7 +2,7 @@ import {contourThreatensClaim} from './inverse-contour.js';
 import {comboInverse} from './inverse-combos.js';
 import {prisonRemaining as inverseBeeWarning,isPrisoner} from './inverse-prison.js';
 import {inverseCommand} from './inverse.js';
-import {inverseClaims,canClaimInverse} from './inverse-claims.js';
+import {inverseClaims,canClaimInverse,canPassPrisonTurn} from './inverse-claims.js';
 import {availableCells,key,figureWindows,prepareFigureIndex} from './game.js';
 import {placementSymbol,canUsePracticeTool,toolCells,practiceTurn} from './practice-tools.js';
 import {tradeAvailability,buyCard} from './inventory-economy.js';
@@ -110,6 +110,7 @@ export function chooseInverseAction(room,random=Math.random,options={}){
  const root=candidates(room,rootInfo,{cards:!options.automatic&&options.cards!==false&&level!=='basic',maximum:pro?12:8});
  if(!root.length){
   const actor=signed(room,room.pairs[0].turn);
+  if(canPassPrisonTurn(room,actor.id))return {action:'pass',payload:{}};
   for(const tool of ['erase','bomb'])if(canUsePracticeTool(room,actor.id,tool,room.clockNow))for(const point of toolCells(room,actor.id,tool).slice(0,12)){const choice={action:'inventory',payload:{tool,playerId:actor.id,x:point.x,y:point.y}};try{inverseCommand(room,choice.action,choice.payload,room.clockNow,()=>.41);return choice;}catch{}}
   if(tradeAvailability(room,actor.id,'erase',room.clockNow).allowed)return {action:'trade',payload:{playerId:actor.id,tool:'erase'}};
   return null;

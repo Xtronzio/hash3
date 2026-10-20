@@ -3,7 +3,7 @@ import {comboInverse} from './inverse-combos.js';
 import {initializeInversePrison,completePrisonTurn,isPrisoner,prisonState} from './inverse-prison.js';
 import {initializeInverseDisorder,advanceInverseDisorder} from './inverse-disorder.js';
 import {earnFreeExpansion} from './free-expansion.js';
-import {manualInverse,canClaimInverse,inverseClaims,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
+import {manualInverse,canClaimInverse,canPassPrisonTurn,inverseClaims,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
 import {chooseInverseAction} from './inverse-ai.js';
 import {filledInverse,clearInverseFill,payingInverseFigures,inverseFillSet} from './inverse-progress.js';
 import {toggleWatchTarget,removeWatchTarget} from './watch-targets.js';
@@ -118,6 +118,12 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
   room.lastEvent={id:id(),kind:'inventory',tool,player:playerId,landing,cleared,affected:affected.map(({x,y})=>({x,y}))};delete room.practiceHint;return done();
  }
  if(action==='pass'){
+  if(canPassPrisonTurn(room,actor.id)){
+   completeInventoryTurn(room,actor.id,{automatic,placed:false,random});delete room.practiceTurn;
+   pair.turn=pair.turn==='X'?'O':'X';pair.deadline=room.timeMode==='untimed'?null:new Date(now+33000).toISOString();
+   room.lastEvent={id:id(),kind:'pass',player:actor.id,actor:actor.id,points:0,automatic};
+   completeInverseTurn(room,actor.id,0,random);delete room.practiceHint;return done();
+  }
   if(availableCells(room,pair).length)throw new Error('Todavía puedes colocar una ficha.');
   // A full drawing waits for inventory. Never invent an expansion or a pass.
   throw new Error('Dibujo lleno: utiliza Borrar, Bomba o una carta que forme un combo.');
