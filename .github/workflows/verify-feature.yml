@@ -89,10 +89,10 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-inverse-prison-r92.mjs
       - run: npm run verify:browser
       - run: node scripts/verify-brief-ecology-r62.mjs
       - run: node scripts/verify-borders-beavers-r90.mjs
-      - run: node scripts/verify-inverse-prison-r92.mjs
       - run: node scripts/verify-shared-animations-r89.mjs
       - run: node scripts/verify-inverse-renewal-r88.mjs
       - run: node scripts/verify-inverse-contour-r87.mjs
