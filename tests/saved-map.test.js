@@ -48,7 +48,7 @@ test('Pin metadata survives game updates without changing board, clock or save o
 });
 test('A pinned closed or paused game appears once above ongoing games with its board miniature',()=>{
  const g=createLocal('local','A','B'),closed={...g,id:'closed',status:'finished'},playing={...g,id:'open'};
- const html=gamesMarkup({local:[playing,closed],pins:['local:closed']});assert.ok(html.indexOf('Ancladas')<html.indexOf('Activas'));assert.equal((html.match(/class="saved-game is-pinned"/g)||[]).length,1);
+ const html=gamesMarkup({local:[playing,closed],pins:['local:closed']});assert.ok(html.indexOf('Ancladas')<html.indexOf('Pausadas'));assert.doesNotMatch(html,/saved-group-label">Activas</);assert.equal((html.match(/class="saved-game is-pinned"/g)||[]).length,1);
  assert.match(html,/Miniatura del tablero, 9 casillas/);assert.match(html,/data-action="pin-game"[^>]*>.*Desanclar/);assert.match(html,/saved-group-label">Cerradas/);assert.match(html,/saved-group-count">0/);
 });
 test('Inspection preserves the saved state, distinguishes both teams and empties, and supports irregular negative terrain',()=>{
