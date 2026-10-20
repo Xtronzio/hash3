@@ -20,7 +20,7 @@ jobs:
           const origin='https://xtronzio.github.io',base='/hash3/',checks=[];
           async function get(path){const r=await fetch(origin+path+(path.includes('?')?'&':'?')+'verify='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(20000)});assert.equal(r.status,200,path);const body=await r.text();assert.ok(body.length>20,path);checks.push({path,status:r.status,bytes:body.length});return body;}
           const version=JSON.parse(await get(base+'version.json'));assert.deepEqual(version,{version:'R0.21.92',build:'20261020-r303'});
-          const html=await get(base),sw=await get(base+'sw.js'),manifest=JSON.parse(await get(base+'manifest.webmanifest'));assert.equal(manifest.scope,base);
+          const html=await get(base),sw=await get(base+'sw.js'),manifest=JSON.parse(await get(base+'manifest.webmanifest'));assert.equal(new URL(manifest.scope,origin+base+'manifest.webmanifest').pathname,base);
           const assets=[...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map(m=>new URL(m[1],origin+base).pathname);assert.ok(assets.some(p=>p.endsWith('.js')));assert.ok(assets.some(p=>p.endsWith('.css')));
           let js='';for(const p of assets){assert.ok(sw.includes(p),'Precache '+p);const s=await get(p);if(p.endsWith('.js'))js+=s;}
           assert.ok(js.includes('inversePrison'));assert.ok(js.includes('inverseDisorder'));assert.ok(js.includes('R0.21.92'));
