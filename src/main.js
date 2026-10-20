@@ -445,7 +445,7 @@ function drawBoard(canExpand,ready,target) {
   const viewport=document.querySelector('.viewport');
   const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,viewport.clientWidth/2,viewport.clientHeight/2);Object.assign(layout,{minX,minY,size,padding,previewScale:1,minZoom:room.commonWorld?.55:.3});
   const board=document.querySelector('.board');board.replaceChildren();
-  const focusKeys=new Set(inverseFocus?.game===room.id?inverseFocus.points.map(c=>key(c.x,c.y)):[]),contourKeys=new Set(room.inverseContour?.targets||[]);
+  const focusKeys=new Set(inverseFocus?.game===room.id?inverseFocus.points.map(c=>key(c.x,c.y)):[]),contourKeys=new Set((room.inverseContour?.targets||[]).filter(k=>!imprisonedCell(room,cells.get(k))));
   const inversePaint=snapshotMemo(room,'inverse-paint',()=>({fill:inverseFillSet(room),edges:new Map(filledInverse(room)?inverseBoundary(terrain).map(c=>[key(c.x,c.y),c.sides]):[])}));
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
@@ -507,7 +507,7 @@ function drawBoard(canExpand,ready,target) {
    const k=key(pos.x,pos.y),kind=restoreKeys.has(k)&&!inversePaint.fill.has(k)?'restore':contourKeys.has(k)&&inversePaint.fill.has(k)?'erode':null;
    let markup=cellMarkupBase(pos);
    if(imprisonedCell(room,cells.get(k)))markup=markup.replace('cell terrain-cell','cell terrain-cell inverse-imprisoned').replace('aria-label="','aria-label="Entre rejas · ').replace('</button>',prisonBars+'</button>');
-   if(room.inverseDisorder?.targets.includes(k))markup=markup.replace('</button>',inverseWarningMarkup('disorder')+'</button>');
+   if(room.inverseDisorder?.targets.includes(k)&&!imprisonedCell(room,cells.get(k)))markup=markup.replace('</button>',inverseWarningMarkup('disorder')+'</button>');
    if(focusKeys.has(k)&&inverseFocus?.kind==='wild')markup=markup.replace('cell terrain-cell','cell terrain-cell inverse-wild-focus');
    if(kind)markup=markup.replace('cell terrain-cell',`cell terrain-cell inverse-warning-cell inverse-warning-${kind}`).replace('</button>',inverseWarningMarkup(kind)+'</button>');
    return markup;

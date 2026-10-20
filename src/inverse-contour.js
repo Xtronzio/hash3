@@ -1,5 +1,5 @@
 import {inverseRenewalLimit,advanceInverseRenewal} from './inverse-renewal.js';
-import {imprisonedCell} from './inverse-prison.js';
+import {imprisonedCell,prisonKeys} from './inverse-prison.js';
 // Shared, public pressure: turns, never wall-clock time or hidden player information.
 export const INVERSE_CONTOUR_INTERVAL=33,INVERSE_CONTOUR_WARNING=3;
 const enabled=r=>r?.variant==='inverse'&&r.inverseVersion===3;
@@ -28,7 +28,7 @@ export function inverseContourBudget(room){
 }
 export function inverseContourInterval(room){return 33*Math.max(1,Math.ceil(inverseContourBudget(room)/11));}
 export function planInverseContour(room){
- const pending=new Set(room.inverseFill),occupied=new Set(room.cells.filter(c=>['X','O'].includes(c.symbol)).map(c=>key(c.x,c.y))),count=inverseContourBudget(room);
+ const locked=prisonKeys(room),pending=new Set(room.inverseFill.filter(k=>!locked.has(k))),occupied=new Set(room.cells.filter(c=>['X','O'].includes(c.symbol)).map(c=>key(c.x,c.y))),count=inverseContourBudget(room);
  if(!count)return [];
  const rank=p=>Number(occupied.has(key(p.x,p.y)))*6+near.reduce((n,[dx,dy])=>n+Number(occupied.has(key(p.x+dx,p.y+dy)))*2,0);
  const tie=p=>((p.x*73856093)^(p.y*19349663)^((room.inverseContour?.cycles||0)*83492791))>>>0;

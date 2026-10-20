@@ -10,6 +10,13 @@ export function prisonState(room,player){
 }
 export const isPrisoner=(room,player)=>(prisonState(room,player)?.remaining||0)>0;
 export const imprisonedCell=(room,cell)=>!!cell&&isPrisoner(room,cell.symbol);
+const lockCache=new WeakMap();
+export function prisonKeys(room){
+ const stamp=`${room.version}:${prisonState(room,'X')?.remaining||0}:${prisonState(room,'O')?.remaining||0}`,old=lockCache.get(room);
+ if(old?.stamp===stamp&&old.cells===room.cells)return old.keys;
+ const keys=new Set((room.cells||[]).filter(c=>imprisonedCell(room,c)).map(c=>`${c.x},${c.y}`));
+ lockCache.set(room,{stamp,cells:room.cells,keys});return keys;
+}
 export function prisonRemaining(room,player){const p=prisonState(room,player);return p?Math.max(0,p.limit-p.since):null;}
 export function validInversePrison(room){
  const state=room?.inversePrison;if(state==null)return room?.inversePrisonEvent==null;

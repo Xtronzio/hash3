@@ -1,4 +1,4 @@
-import {imprisonedCell} from './inverse-prison.js';
+import {imprisonedCell,prisonKeys} from './inverse-prison.js';
 import {filledInverse,inverseFillSet,inverseBoundary} from './inverse-progress.js';
 import {fogKeys} from './fog.js';
 import {territoryThreatCells} from './territory-threats.js';
@@ -16,8 +16,8 @@ import {cellGlyphs} from './cell-presentation.js';
 export function overviewModel(room,own,target,{includeFrontiers=true}={}){
   const remaining=inverseFillSet(room),hidden=fogKeys(room),glyphs=cellGlyphs(room,own?.id);
   const threatCells=[...territoryThreatCells(room)],actual=terrainOf(room),known=new Set(actual.map(c=>key(c.x,c.y))),terrain=[...actual,...habitatReservations(room).filter(c=>!known.has(key(c.x,c.y)))],myPair=room.pairs.find(p=>p.id===own?.pair),targetPair=room.pairs.find(p=>p.id===target?.pair);
-  if(filledInverse(room))for(const [kind,keys]of [['erode',room.inverseContour?.targets||[]],['restore',room.inverseContour?.renewal?.targets||[]]])for(const k of keys){if(!known.has(k)||remaining.has(k)!==(kind==='erode'))continue;const [x,y]=k.split(',').map(Number);threatCells.push({x,y,kind});}
-  for(const k of room.inverseDisorder?.targets||[]){const [x,y]=k.split(',').map(Number);threatCells.push({x,y,kind:'disorder'});}
+  if(filledInverse(room))for(const [kind,keys]of [['erode',room.inverseContour?.targets||[]],['restore',room.inverseContour?.renewal?.targets||[]]])for(const k of keys){if(!known.has(k)||kind==='erode'&&prisonKeys(room).has(k)||remaining.has(k)!==(kind==='erode'))continue;const [x,y]=k.split(',').map(Number);threatCells.push({x,y,kind});}
+  for(const k of (room.inverseDisorder?.targets||[]).filter(k=>!prisonKeys(room).has(k))){const [x,y]=k.split(',').map(Number);threatCells.push({x,y,kind:'disorder'});}
   if(!terrain.length)return null;
   let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
   for(const cell of [...terrain,...threatCells,...frontierCells(room),...(room.watchTargets||[]),...(lastNavigationMove(own)?[lastNavigationMove(own)]:[])]){left=Math.min(left,cell.x);top=Math.min(top,cell.y);right=Math.max(right,cell.x+1);bottom=Math.max(bottom,cell.y+1);}

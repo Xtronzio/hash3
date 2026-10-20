@@ -4,7 +4,7 @@ import {inverseClaimsAt,canClaimInverse} from '../src/inverse-claims.js';
 import {prisonState,prisonRemaining,isPrisoner,completePrisonTurn,initializeInversePrison,validInversePrison} from '../src/inverse-prison.js';
 import {advanceInverseDisorder,validInverseDisorder} from '../src/inverse-disorder.js';
 import {availableCells} from '../src/game.js';import {toolCells,canUsePracticeTool} from '../src/practice-tools.js';
-import {tornadoSlots,bombBlast} from '../src/area-tools.js';import {advanceInverseContour} from '../src/inverse-contour.js';
+import {tornadoSlots,bombBlast} from '../src/area-tools.js';import {advanceInverseContour,planInverseContour} from '../src/inverse-contour.js';
 import {inverseBeeClocks,inverseBeeNotices} from '../src/inverse-bee-ui.js';
 import {captureTransfer,encodeTransfer,decodeTransfer,validateTransfer} from '../src/local-transfer.js';
 import {territoryComparisonKey} from '../src/achievements.js';import {savedMapModel,inspectionCells} from '../src/saved-map.js';
@@ -42,7 +42,7 @@ test('Mutual sentences compensate their common remainder without synthetic conto
 test('Jailed signs are ineligible for every positional tool, forced symbol, claim and destructive area',()=>{
  const g=line(fresh());state(g).remaining=3;g.pairs[0].turn='O';g.cells.push(tile(3,0,'O'),tile(4,0,'O'));for(const t of ['erase','opposite','shift','swap'])assert.ok(toolCells(g,'local-o',t).every(c=>c.symbol!=='X'));
  assert.ok(tornadoSlots(g,{x:0,y:0}).every(c=>!g.cells.some(p=>p.symbol==='X'&&p.x===c.x&&p.y===c.y)));assert.deepEqual(bombBlast(g,{x:0,y:0},()=>0),[]);assert.equal(canClaimInverse(g,'local-x'),false);assert.equal(canUsePracticeTool(g,'local-x','double'),false);assert.equal(canUsePracticeTool(g,'local-o','rival'),false);
- Object.assign(g.inverseContour,{turns:32,next:33,targets:['0,0','1,0','2,0']});advanceInverseContour(g);assert.equal(g.inverseContour.lost,0);assert.equal(inspectionCells(savedMapModel(g,g.players[0])).includes('map-prison-bars'),true);
+ Object.assign(g.inverseContour,{turns:32,next:33,targets:['0,0','1,0','2,0']});assert.ok(planInverseContour(g).every(k=>!['0,0','1,0','2,0'].includes(k)));advanceInverseContour(g);assert.equal(g.inverseContour.lost,0);assert.equal(inspectionCells(savedMapModel(g,g.players[0])).includes('map-prison-bars'),true);
 });
 test('Doble counts once, while inventory, pause, reads and elapsed time do not age clocks',()=>{
  const g=due(line(fresh()));g.players[0].inventory.cards.double=1;let n=command(g,'inventory',{tool:'double',playerId:'local-x'});assert.equal(state(n).since,8);n=move(n);assert.equal(state(n).since,8);n=move(n);assert.equal(state(n).remaining,3);assert.equal(n.inverseContour.turns,1);
