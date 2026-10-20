@@ -17,5 +17,7 @@ export function inverseBeeNotices(room,{paused=false}={}){
  if(room.variant!=='inverse'||room.inverseVersion!==3)return '';
  const messages=room.players.flatMap(player=>{const p=prisonState(room,player.id),n=prisonRemaining(room,player.id);return p?.remaining?[`${player.symbol} en la cárcel · ${p.remaining} turnos del rival`]:n!==null&&n<=3?[`${player.symbol}: ${n} turnos propios para cobrar${n===0?' · esperando una oportunidad real':''}`]:[];});
  if(!messages.length)return '';
- return `<div class="practice-banner inverse-bee-notice is-warning" role="status" data-bee-warning="true">${prisonBars}<span>Cárcel · ${messages.join(' / ')}${paused?' · Pausa: cuenta detenida':''}</span></div>`;
+ const brief=room.players.flatMap(player=>{const p=prisonState(room,player.id),n=prisonRemaining(room,player.id);return p?.remaining?[`${player.symbol} · ${p.remaining}`]:n!==null&&n<=3?[`${player.symbol}: ${n}`]:[];}).join(' / ');
+ const label=`Cárcel · ${messages.join(' / ')}${paused?' · Pausa: cuenta detenida':''}`;
+ return `<div class="practice-banner inverse-bee-notice is-warning" role="status" data-bee-warning="true" aria-label="${label}" title="${label}">${prisonBars}<span>Cárcel · ${brief}</span><span class="inverse-prison-description">${label}</span></div>`;
 }
