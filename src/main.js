@@ -445,7 +445,7 @@ function drawBoard(canExpand,ready,target) {
   const viewport=document.querySelector('.viewport');
   const size=(innerWidth<=760?48:56)*zoom,padding=Math.max(90,viewport.clientWidth/2,viewport.clientHeight/2);Object.assign(layout,{minX,minY,size,padding,previewScale:1,minZoom:room.commonWorld?.55:.3});
   const board=document.querySelector('.board');board.replaceChildren();
-  const focusKeys=new Set(inverseFocus?.game===room.id?inverseFocus.points.map(c=>key(c.x,c.y)):[]),contourKeys=new Set((room.inverseContour?.targets||[]).filter(k=>!imprisonedCell(room,cells.get(k))));
+  const focusKeys=new Set(inverseFocus?.game===room.id?inverseFocus.points.map(c=>key(c.x,c.y)):[]);
   const inversePaint=snapshotMemo(room,'inverse-paint',()=>({fill:inverseFillSet(room),edges:new Map(filledInverse(room)?inverseBoundary(terrain).map(c=>[key(c.x,c.y),c.sides]):[])}));
   board.style.width=`${(maxX-minX+1)*size+2*padding}px`;board.style.height=`${(maxY-minY+1)*size+2*padding}px`;
   const space=board.parentElement;space.style.width=board.style.width;space.style.height=board.style.height;
@@ -456,6 +456,7 @@ function drawBoard(canExpand,ready,target) {
     const growthCells=invasionGrowthCells(room);
     return {deadKeys:new Set((room.deadCells||[]).map(c=>key(c.x,c.y))),cells,linked,known,myPairIds,habitatPoints,wormBody,projects,roders,eaten,growthKeys:new Set(growthCells.map(c=>key(c.x,c.y))),bombKeys:new Set(activeInvasionBombs(room,growthCells).map(c=>key(c.x,c.y)))};
   });
+  const contourKeys=new Set((room.inverseContour?.targets||[]).filter(k=>!imprisonedCell(room,cells.get(k))));
   const nuclearPreview=selection?.tool==='nuclear'&&selection.point?nuclearBlast(room,selection.point,nuclearContext(room)):[],nuclearKeys=new Set(nuclearPreview.map(c=>key(c.x,c.y)));
   const selectionReady=selection&&(ready||(microLength(selection.tool)||selection.tool==='nuclear')&&canUsePracticeTool(room,uid,selection.tool));
   const targets=selection?new Set((areaSelection&&selection.tool!=='frontier'?areaOptions:toolCells(room,uid,selection.tool,{side:selection.side||'north',selected:selection.cells||[]})).map(c=>key(c.x,c.y))):null;
