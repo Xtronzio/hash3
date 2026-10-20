@@ -1,8 +1,9 @@
 import {initializeInverseContour,advanceInverseContour} from './inverse-contour.js';
 import {comboInverse} from './inverse-combos.js';
-import {initializeInverseBees,completeInverseBeeTurn} from './inverse-bees.js';
+import {initializeInversePrison,completePrisonTurn,isPrisoner,prisonState} from './inverse-prison.js';
+import {initializeInverseDisorder,advanceInverseDisorder} from './inverse-disorder.js';
 import {earnFreeExpansion} from './free-expansion.js';
-import {manualInverse,canClaimInverse,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
+import {manualInverse,canClaimInverse,inverseClaims,inverseClaimsAt,advanceInverseWild,INVERSE_WILD_INTERVAL} from './inverse-claims.js';
 import {chooseInverseAction} from './inverse-ai.js';
 import {filledInverse,clearInverseFill,payingInverseFigures,inverseFillSet} from './inverse-progress.js';
 import {toggleWatchTarget,removeWatchTarget} from './watch-targets.js';
@@ -24,7 +25,7 @@ export function configureInverse(room,options={},random=Math.random){
  room.pairs[0].active={...board.terrain[0]};room.pairs[0].terrainAnchor={...board.terrain[0]};
  room.inverseFill=room.terrain.map(c=>key(c.x,c.y));room.inverseInitialCount=room.terrain.length;room.inverseCleared=0;
  for(const p of room.players)for(const tool of Object.keys(p.inventory.cards))if(!inverseToolAllowed(room,tool))p.inventory.cards[tool]=0;
- initializeInverseBees(room,random);initializeInverseContour(room);return room;
+ initializeInversePrison(room,random);initializeInverseContour(room);initializeInverseDisorder(room);return room;
 }
 function clearPaid(room,figures){
  const cleared=new Set(figures.flatMap(f=>f.points.map(([x,y])=>key(x,y))));
@@ -41,28 +42,31 @@ function finishIfEmpty(room,now){
  room.status='finished';room.finishReason='inverse-empty';room.finishedAt=new Date(now).toISOString();
  for(const p of room.pairs){p.pending=0;p.expander=null;p.deadline=null;}
  delete room.practiceTurn;delete room.practiceHint;
- room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1,...(room.inverseContour?{inverseContourVersion:room.inverseContour.version,inverseContourLost:room.inverseContour.lost,...(room.inverseContour.renewal?{inverseRenewalVersion:room.inverseContour.renewal.version,inverseRestored:room.inverseContour.renewal.restored}:{})}:{}),...(room.inverseBees?{inverseBeeVersion:room.inverseBees.version}:{})}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
+ room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1,...(room.inverseContour?{inverseContourVersion:room.inverseContour.version,inverseContourLost:room.inverseContour.lost,...(room.inverseContour.renewal?{inverseRenewalVersion:room.inverseContour.renewal.version,inverseRestored:room.inverseContour.renewal.restored}:{})}:{}),...(room.inversePrison?{inversePrisonVersion:room.inversePrison.version,inverseDisorderVersion:room.inverseDisorder?.version}:{})}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
 }
 function completeInverseTurn(room,player,points,random){
- const previous=room.inverseBeeEvent?.id;
- completeInverseBeeTurn(room,player,points,random);
- advanceInverseContour(room,{beeImpact:room.inverseBeeEvent?.id!==previous&&room.inverseBeeEvent?.moved>0});
+ completePrisonTurn(room,player,points,random);
+ advanceInverseContour(room);
+ advanceInverseDisorder(room,random);
 }
 export function inverseCommand(original,action,payload={},now=Date.now(),random=Math.random){
  if(!isInverse(original)||![1,2,3].includes(original.inverseVersion))throw new Error('Versión de Inverso no compatible. Se conserva el guardado.');
  const room=structuredClone(original),pair=room.pairs[0];room.clockNow=now;
  if(comboInverse(room))room.inverseClaimVersion=2;
- const done=()=>{initializeInverseBees(room,random);initializeInverseContour(room);finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
+ const done=()=>{initializeInversePrison(room,random);initializeInverseContour(room);initializeInverseDisorder(room);finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
  if(action==='finish'){room.status='finished';room.finishReason='manual';room.finishedAt=new Date(now).toISOString();pair.deadline=null;return done();}
  if(action==='pause'){if(room.status==='paused')return original;if(room.status!=='playing')throw new Error('La partida no está en curso.');room.pauseRemainingMs=room.timeMode==='untimed'?null:Math.max(0,Date.parse(pair.deadline)-now);room.pausedAt=new Date(now).toISOString();room.status='paused';pair.deadline=null;return done();}
  if(action==='resume'){if(room.status!=='paused')throw new Error('La partida no está pausada.');room.status='playing';pair.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??33000)).toISOString();delete room.pauseRemainingMs;delete room.pausedAt;return done();}
  if(action==='watch-target'||action==='remove-target'){if(!['playing','paused'].includes(room.status))throw new Error('Partida no disponible.');if(action==='watch-target')toggleWatchTarget(room,payload);else removeWatchTarget(room,payload.id);return done();}
  if(action==='tick'&&(room.status!=='playing'||room.timeMode==='untimed'||Date.parse(pair.deadline)>now))return original;
  if(room.status!=='playing')throw new Error('La partida no está activa.');
- initializeInverseBees(room,random);initializeInverseContour(room);
+ initializeInversePrison(room,random);initializeInverseContour(room);initializeInverseDisorder(room);
  const automatic=action==='tick';
  if(automatic){const choice=inverseMachineChoice(room,random,{automatic:true});if(!choice)return original;action=choice.action;payload=choice.payload;}
  const actor=room.players.find(p=>p.symbol===pair.turn);
+ if(isPrisoner(room,actor.id))throw Error('El jugador está en la cárcel. Conserva la partida y retoma el turno del rival.');
+ const custody=prisonState(room,actor.id);
+ if(custody&&!custody.opportunity&&!custody.offered&&canClaimInverse(room,actor.id))custody.offered=inverseClaims(room,actor.id).some(f=>f.pointsValue>0);
  if(!automatic&&room.timeMode!=='untimed'&&Date.parse(pair.deadline)<=now)throw new Error('Tiempo agotado: se jugará automáticamente.');
  if(action==='claim'){
   if(!canClaimInverse(room,actor.id))throw new Error('Elige colocar o cobrar; termina Doble antes de cobrar.');
@@ -122,7 +126,7 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  if(!availableCells(room,pair).some(c=>c.x===payload.x&&c.y===payload.y))throw new Error('Elige una celda vacía dentro del dibujo.');
  const state=practiceTurn(room,actor.id),symbol=placementSymbol(room,actor.id),scorer=room.players.find(p=>p.symbol===symbol);
  const cell={id:id(),requestId:payload.requestId||id(),x:payload.x,y:payload.y,symbol,owner:actor.id};room.cells.push(cell);
- room.inventoryEffects.forced=room.inventoryEffects.forced.filter(e=>e.player!==actor.id);
+ room.inventoryEffects.forced=room.inventoryEffects.forced.filter(e=>e.player!==actor.id||isPrisoner(room,e.symbol));
  const found=manualInverse(room)?[]:figureWindows(room.cells,cell.x,cell.y,symbol,room.level).filter(f=>!room.forms.includes(f.id)),result=awardFigures(room,scorer,found);
  const cleared=clearPaid(room,found);actor.lastMove=room.cells.some(c=>c.id===cell.id)?cell:null;actor.navigationLastMove={x:cell.x,y:cell.y,id:cell.id};
  recordCombo(scorer,{...result,automatic,moveId:cell.id});recordMax(actor,scorer===actor?result.points-result.bonus:0,scorer===actor?result.figures:0,automatic);recordInventoryCombo(room,actor.id,result.points,{automatic,scorer:scorer.id,random});

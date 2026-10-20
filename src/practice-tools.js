@@ -1,4 +1,5 @@
 import {isInverse,inverseToolAllowed} from './inverse-rules.js';
+import {isPrisoner,imprisonedCell} from './inverse-prison.js';
 import {fogKeys} from './fog.js';
 import {initializeWildcardUsage} from './wildcard-usage.js';
 import {nuclearOptions} from './nuclear-tool.js';
@@ -96,7 +97,8 @@ export function toolAllowance(game,playerId){
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
 export function toolCells(game,playerId,tool,options={}){
- const hidden=fogKeys(game);return rawToolCells(game,playerId,tool,options).filter(c=>!hidden.has(key(c.x,c.y))||['bomb','tornado','nuclear','destroy','activate','block','border','frontier','expand-2','expand-3','antidote','sapper'].includes(tool));
+ if(isPrisoner(game,playerId))return [];
+ const hidden=fogKeys(game);return rawToolCells(game,playerId,tool,options).filter(c=>!imprisonedCell(game,c)&&(!hidden.has(key(c.x,c.y))||['bomb','tornado','nuclear','destroy','activate','block','border','frontier','expand-2','expand-3','antidote','sapper'].includes(tool)));
 }
 function rawToolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}={}){
   const p=game?.pairs?.[0];if(!p||!inverseToolAllowed(game,tool))return [];
@@ -131,6 +133,7 @@ function rawToolCells(game,playerId,tool,{side='north',pivot=false,selected=[]}=
   return [...game.cells.filter(c=>linked.has(key(c.x,c.y))&&!habitatBlocked(game,c.x,c.y)&&canErasePracticeCell(game,playerId,c)&&(c.symbol!=='#'||tool==='erase')), ...(tool==='shift'?pendingInvasionBombs(game).map(b=>({...b,bombId:b.id,symbol:'bomb',owner:null})):[])];
 }
 export function canUsePracticeTool(game,playerId,tool,now=Date.now()){
+  if(isPrisoner(game,playerId)||tool==='rival'&&game.players?.some(p=>p.id!==playerId&&isPrisoner(game,p.id)))return false;
   const p=game?.pairs?.[0];
   if(!inverseToolAllowed(game,tool))return false;
   if(!game||!['solo','local'].includes(game.mode)||game.status!=='playing'||!p)return false;
@@ -211,4 +214,4 @@ export function moveDestination(game,playerId,cell){
   return linked.some(c=>c.x===cell.x&&c.y===cell.y)&&!game.cells.some(c=>c.x===cell.x&&c.y===cell.y)&&!isBlockedCell(game,playerId,cell.x,cell.y);
 }
 
-export function placementSymbol(game,playerId){return game.inventoryEffects?.forced?.find(e=>e.player===playerId)?.symbol||game.players.find(p=>p.id===playerId)?.symbol;}
+export function placementSymbol(game,playerId){return game.inventoryEffects?.forced?.find(e=>e.player===playerId&&!isPrisoner(game,e.symbol))?.symbol||game.players.find(p=>p.id===playerId)?.symbol;}

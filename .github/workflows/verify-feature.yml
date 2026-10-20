@@ -1,3 +1,5 @@
+
+      - release/local-inverse-prison-r92
 name: 'HASH3 Verify feature'
 on:
   push:
@@ -91,6 +93,7 @@ jobs:
       - run: npm run verify:browser
       - run: node scripts/verify-brief-ecology-r62.mjs
       - run: node scripts/verify-borders-beavers-r90.mjs
+      - run: node scripts/verify-inverse-prison-r92.mjs
       - run: node scripts/verify-shared-animations-r89.mjs
       - run: node scripts/verify-inverse-renewal-r88.mjs
       - run: node scripts/verify-inverse-contour-r87.mjs

@@ -1,5 +1,26 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.92 · Cárcel y desorden de Inverso
+
+Jorge20/10 aprueba sustituir abejas por cárcel de3turnos del rival. Conservar
+plazos públicos3..33 propios; solo condenar tras dejar pasar un cobro con puntos
+realmente disponible antes de actuar. Sin oportunidad, cuenta agotada espera.
+Cobrar puntos o salir reinicia. Fichas del signo preso entre rejas, protegidas
+de cartas, desplazamientos, desorden y erosión. Doble1turno; cartas/trueques/vistas/
+pausa/tiempo0. Turnos omitidos no generan ecología, recargas ni colocaciones.
+Jorge confirma compensación si ambos presos: descontar mínimo común y liberar
+al que quede en0, sin avances ficticios ni tiempo. El turno real que provoca
+la segunda condena sí cuenta normalmente antes de compensar.
+Desorden compartido del contorno: ajuste inicial66turnos, aviso3, región compacta
+de hasta33celdas dentro de la silueta, mezcla fichas y huecos sin pagos automáticos;
+respeta presos incluso posteriores al anuncio. Identidades, cantidades, relleno,
+stock y puntos conservados. Indicador/localización, mapas y animación existente.
+Migrar activas/pausadas en próxima acción sin faltas históricas; conservar plazo
+antiguo. Versiones automáticas1/2 y finales intactos. Nuevos resultados separados
+por inversePrisonVersion1 e inverseDisorderVersion1. Original/online/SQL intactos.
+Respaldo backup/pre-inverse-prison-r91-20261020. Pipeline y tres motores/seis
+tamaños,33333 y traslado antes de publicar R92/r303 y verificar HTTP.
+
 ## R0.21.91 · Rombo para Frontera
 
 Jorge19/10 pide rombo para Frontera y conservar / para Muro. Maestro vectorial

@@ -4,6 +4,7 @@ export function inverseNavigationKeys(room,kind){
  if(kind==='wild')return room.cells.filter(p=>p.symbol==='#').map(p=>`${p.x},${p.y}`);
  if(kind==='fill')return room.inverseFill||[];
  if(kind==='restore')return room.inverseContour?.renewal?.targets.length?room.inverseContour.renewal.targets:room.inverseRenewalEvent?.restored||[];
+ if(kind==='disorder')return room.inverseDisorder?.targets.length?room.inverseDisorder.targets:room.inverseDisorderEvent?.affected||[];
  const fill=new Set(room.inverseFill);
  return room.inverseContour?.targets.length?room.inverseContour.targets.filter(k=>fill.has(k)):room.inverseContourEvent?.cleared||[];
 }

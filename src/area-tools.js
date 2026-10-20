@@ -1,4 +1,5 @@
 import {isDeadCell} from './dead-cells.js';
+import {imprisonedCell} from './inverse-prison.js';
 import {habitatBlocked} from './habitat-tools.js';
 import {terrainOf,playableTerrain,availableCells,key,expansionOptions} from './game.js';
 import {isImmune,protectedTerritoryKeys} from './immunity.js';
@@ -7,7 +8,7 @@ import {frontierTiles,frontierEdges,frontierSegments,edgeKey,frontierDirections,
 
 const directions=Array.from({length:9},(_,i)=>[i%3-1,Math.floor(i/3)-1]).filter(([x,y])=>x||y);
 const shielded=(r,c)=>r.inventoryEffects?.shields?.some(e=>e.cell===c?.id&&e.remaining>0);
-const protectedCell=(r,c)=>c&&(shielded(r,c)||isImmune(r,c.owner));
+const protectedCell=(r,c)=>c&&(imprisonedCell(r,c)||shielded(r,c)||isImmune(r,c.owner));
 const area=(r)=>playableTerrain(r);
 export function tornadoSlots(room,point){
  const cells=new Map(room.cells.map(c=>[key(c.x,c.y),c]));

@@ -1,4 +1,5 @@
 import {inverseRenewalLimit,advanceInverseRenewal} from './inverse-renewal.js';
+import {imprisonedCell} from './inverse-prison.js';
 // Shared, public pressure: turns, never wall-clock time or hidden player information.
 export const INVERSE_CONTOUR_INTERVAL=33,INVERSE_CONTOUR_WARNING=3;
 const enabled=r=>r?.variant==='inverse'&&r.inverseVersion===3;
@@ -49,7 +50,8 @@ export function advanceInverseContour(room,{beeImpact=false}={}){
  if(c.turns===c.next-3)c.targets=planInverseContour(room);
  if(c.turns<c.next)return;
  if(beeImpact&&c.targets.length){c.next=c.turns+1;return;}
- const fill=new Set(room.inverseFill),limit=Math.max(0,fill.size-3),cleared=c.targets.filter(k=>fill.has(k)).slice(0,limit),hits=new Set(cleared);
+ const locked=new Set(room.cells.filter(p=>imprisonedCell(room,p)).map(p=>key(p.x,p.y)));
+ const fill=new Set(room.inverseFill),limit=Math.max(0,fill.size-3),cleared=c.targets.filter(k=>fill.has(k)&&!locked.has(k)).slice(0,limit),hits=new Set(cleared);
  room.inverseFill=room.inverseFill.filter(k=>!hits.has(k));room.inverseCleared=room.terrain.length-room.inverseFill.length;
  c.lost+=cleared.length;c.cycles++;c.targets=[];c.next=c.turns+inverseContourInterval(room);
  if(cleared.length){room.inverseContourEvent={id:crypto.randomUUID(),turn:c.turns,cleared};delete room.practiceHint;}

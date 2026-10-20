@@ -10,7 +10,9 @@ import {captureTransfer,validateTransfer} from '../src/local-transfer.js';import
 import {inverseClaimsAt} from '../src/inverse-claims.js';
 const now=1800000000000;
 const fresh=(w=9,h=9)=>createLocal('local','A','B',now,'normal','untimed','pro','X',false,{variant:'inverse',board:{id:'test',name:'Test',terrain:Array.from({length:w*h},(_,i)=>({x:i%w-Math.floor(w/2),y:Math.floor(i/w)-Math.floor(h/2)}))},random:()=>.99});
-const partial=()=>{const g=fresh();g.inverseFill=g.inverseFill.filter(k=>!['0,0','1,0','2,0'].includes(k));g.inverseCleared=3;return g;};
+// R88 fixture advances the contour directly; the later independent disorder
+// channel starts on its next accepted command, as on an actual R88 save.
+const partial=()=>{const g=fresh();delete g.inverseDisorder;g.inverseFill=g.inverseFill.filter(k=>!['0,0','1,0','2,0'].includes(k));g.inverseCleared=3;return g;};
 test('Inventory feedback stays visible outside the screen-reader-only contour description',()=>{
  const g=partial();g.inverseContour.targets=['-4,-4'];const notices=inverseContourNotice(g),extra='<small class="player-notice-extra">Carta no disponible</small>',combined=attachPlayerNotice(notices,extra);
  assert.ok(combined.startsWith('<div class="practice-banner inventory-user-notice"'));assert.ok(combined.indexOf(extra)<combined.indexOf('inverse-contour-notice'));assert.equal(combined.split(extra).length,2);

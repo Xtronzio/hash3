@@ -11,7 +11,7 @@ import {savedMapModel} from '../src/saved-map.js';
 import {mapWindowMarkup,prepareMapRendering} from '../src/map-render.js';
 const NOW=1800000000000;
 const cell=(x,y,symbol='X')=>({id:`${symbol}:${x},${y}`,x,y,symbol,owner:symbol==='X'?'local-x':'local-o'});
-const fixture=()=>{const g=createLocal('local','Jorge','Rival',NOW,'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],initialCards:['erase','shift','opposite'],secondInitialCards:['erase','shift','opposite']});g.inverseVersion=2;delete g.inverseBees;delete g.inverseContour;return g;};
+const fixture=()=>{const g=createLocal('local','Jorge','Rival',NOW,'normal','untimed','medium','X',true,{variant:'inverse',board:INVERSE_PRESETS[3],initialCards:['erase','shift','opposite'],secondInitialCards:['erase','shift','opposite']});g.inverseVersion=2;delete g.inversePrison;delete g.inverseDisorder;delete g.inverseContour;return g;};
 const memory=()=>{const map=new Map();return {getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)};};
 test('New Inverse starts with all cells filled and zero X/O or initial points',()=>{const g=fixture();assert.equal(g.inverseVersion,2);assert.equal(g.cells.length,0);assert.equal(g.inverseFill.length,g.terrain.length);assert.equal(g.players[0].score,0);assert.equal(localCommand(g,'tick',{},NOW),g);});
 test('Scoring removes fill and tokens simultaneously, while every original coordinate stays playable',()=>{const g=fixture();g.cells=[cell(0,0),cell(1,0)];const n=localCommand(g,'move',{x:2,y:0},NOW);assert.equal(n.players[0].score,3);assert.equal(n.inverseFill.length,33);assert.equal(n.cells.length,0);assert.equal(n.status,'playing');assert.deepEqual(n.terrain,g.terrain);assert.ok(availableCells(n,n.pairs[0]).some(c=>c.x===0&&c.y===0));});
