@@ -1,0 +1,38 @@
+name: 'HASH3 Verify saved groups R93'
+on:
+  push:
+    branches:
+      - release/local-saved-groups-r93
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:github
+      - run: npx playwright install --with-deps chromium firefox webkit
+        timeout-minutes: 5
+      - run: node scripts/verify-bulk-delete-r86.mjs
+      - run: node scripts/verify-paused-machine-r64.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: saved-groups-r93-qa
+          path: browser-results/
+      - name: Package verified revision
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Pages for saved groups R93"
+            git push origin HEAD:release/local-saved-groups-r93
+          fi

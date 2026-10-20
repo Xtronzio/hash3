@@ -29,9 +29,9 @@ export function voteMarkup(vote,uid){
  return `<section class="vote-panel" aria-label="Votación de sala"><div><strong>${vote.kind==='pause'?'¿Pausamos el duelo?':'¿Reanudamos el duelo?'}</strong><small>Solicita ${esc(vote.requestedBy)} · ${c.yes}/${c.required} votos a favor · ${c.total} jugadores</small></div>${eligible?`<div class="vote-buttons"><button data-action="vote-yes" aria-pressed="${mine===true}">Sí</button><button data-action="vote-no" aria-pressed="${mine===false}">No</button></div>`:''}<small>${vote.kind==='pause'?'La partida continúa mientras se vota.':'La partida sigue pausada mientras se vota.'} Mayoría absoluta · votación de 60 segundos.</small></section>`;
 }
 export function gamesMarkup({local=[],online=[],loading=false,error='',pins=[],uid='',selection=null}={}){
- const all=[...online.map(g=>({...g,local:false})),...local.map(g=>({...g,local:true,active:true}))];
+ const all=[...online.map(g=>({...g,local:false})),...local.map(g=>({...g,local:true,active:true,status:g.status==='playing'?'paused':g.status}))];
  const pinned=all.filter(g=>pins.includes(gamePinKey(g,uid))),remaining=all.filter(g=>!pins.includes(gamePinKey(g,uid)));
- const closed=remaining.filter(g=>g.status==='finished'),paused=remaining.filter(g=>g.status==='paused'),open=remaining.filter(g=>!['finished','paused'].includes(g.status));
+ const closed=remaining.filter(g=>g.status==='finished'),paused=remaining.filter(g=>g.status!=='finished');
  const cards=games=>games.map(g=>{
  const title=g.local?((g.variant==='inverse'?(g.inverseVersion<3?'Inverso anterior · ':'Inverso · '):'')+(g.mode==='solo'?'VS máquina':'Sin conexión')):g.commonWorld?'Mundo':g.kind==='duel'?'Duelo':'Sala libre';
  const names=g.local?g.players.map(p=>p.name).join(' · '):(g.players||[]).slice(0,3).join(' · ');
@@ -44,7 +44,7 @@ export function gamesMarkup({local=[],online=[],loading=false,error='',pins=[],u
  const groupIcon=kind=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${{pin:'<path d="m8 3 8 0-1 7 4 4H5l4-4-1-7ZM12 14v7"/>',play:'<path d="m7 4 14 8-14 8Z"/>',pause:'<path d="M8 4v16M16 4v16"/>',closed:'<path d="m5 5 14 14M19 5 5 19"/>'}[kind]}</svg>`;
  const groupHeading=(label,kind,count)=>`${groupIcon(kind)}<span class="saved-group-label">${label}</span><span class="saved-group-count">${count}</span>`;
  const group=(label,kind,games,extra='')=>`<section class="saved-game-group ${extra}" aria-label="${label}"><h3 class="saved-group-heading" title="${label}">${groupHeading(label,kind,games.length)}</h3>${cards(games)}</section>`;
- return `${loading?'<p role="status">Consultando tus salas…</p>':''}${error?`<p class="muted">${esc(error)}</p>`:''}${pinned.length?group('Ancladas','pin',pinned,'pinned-games'):''}${group('Activas','play',open)}${group('Pausadas','pause',paused)}<details class="closed-games"><summary class="saved-group-heading" title="Cerradas">${groupHeading('Cerradas','closed',closed.length)}</summary>${cards(closed)}</details>`;
+ return `${loading?'<p role="status">Consultando tus salas…</p>':''}${error?`<p class="muted">${esc(error)}</p>`:''}${pinned.length?group('Ancladas','pin',pinned,'pinned-games'):''}${group('Pausadas','pause',paused)}<details class="closed-games"><summary class="saved-group-heading" title="Cerradas">${groupHeading('Cerradas','closed',closed.length)}</summary>${cards(closed)}</details>`;
 }
 function rankRows(players,uid){return `<ol class="world-rank-list">${players.map(p=>`<li class="${p.id===uid?'rank-you':''}"><span class="rank-position ${p.rank===1?'gold':p.rank===2?'silver':p.rank===3?'bronze':''}">${p.rank}</span><span>${esc(p.name)}${p.id===uid?' · tú':''}<small>${p.score||0} puntos · Combo máx. ${comboLabel(p)} · ${p.max?.actions||0}/100 acciones${p.max?.provisional?' · provisional':''}</small></span><strong class="mono">${maxLabel(p)}</strong></li>`).join('')}</ol>`;}
 export function worldRankMarkup(state,uid){
