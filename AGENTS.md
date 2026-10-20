@@ -1,5 +1,16 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.93 · Mis partidas sin Activas
+
+Jorge20/10 pide suprimir la sección Activas. Mostrar Ancladas con prioridad,
+Pausadas para las no finalizadas y Cerradas plegada. Guardados locales antiguos
+con status playing se presentan como pausados sin escribir ni cambiar su estado,
+turno, puntos o relojes al dibujar la lista. No ocultar ni duplicar partidas;
+conservar anclajes, selección, borrado y reanudación. Solo presentación de la lista.
+Verificar motor, compilación y QA de Mis partidas en tres motores/seis tamaños,
+con un guardado playing antiguo, conservación, anclajes y borrado múltiple antes
+de publicar R93/r304 y comprobar HTTP. Respaldo pre-saved-groups-r92-20261020.
+
 ## R0.21.92 · Cárcel y desorden de Inverso
 
 Jorge20/10 aprueba sustituir abejas por cárcel de3turnos del rival. Conservar
