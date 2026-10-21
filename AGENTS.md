@@ -1,5 +1,21 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.96 · Ritmo y descanso del territorio
+
+Jorge21/10 autoriza término medio tras medir R95 con actividad continua. El
+territorio puede esperar: carga por anuncio e impacto real, recuperación por
+respuesta completa dependiente de ocupación, sin intervalos fijos de aparición.
+Una pareja compatible como máximo por episodio; no reponer uno mientras siga
+el otro. Coincidencia ocasional, sin grandes simultáneos; conservar avisos3 y
+regiones. Cartas/Doble parcial/ampliar/pausa/reloj no recuperan carga. Migrar
+solo a futuro, sin cargar informes antiguos ni cancelar avisos pendientes.
+Mantener solución R95 para nueve huecos y ampliación antes de limpieza. Reglas27
+separan nuevos resultados; finales intactos. Contrato design/territory-rhythm-r96.md.
+Medir actividad, calma y coincidencia, no solo máximos: simulación sembrada en
+9/99/450densas/999/33333, motor/traslado y tres motores/seis tamaños antes de
+publicar R96/r307 y verificar HTTP. Solo Original local/máquina, online/SQL e
+Inverso intactos; cron apagado. Respaldo backup/pre-territory-rhythm-r95-20261021.
+
 ## R0.21.95 · Territorio tras ampliar en tableros densos
 
 Jorge21/10 autoriza corregir el silencio reproducido en R94: el margen libre
