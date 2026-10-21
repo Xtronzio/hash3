@@ -19,7 +19,7 @@ jobs:
       - run: npm run verify:sql
       - run: npm run simulate:turns -- --quick > /dev/null
       - run: npm run simulate:ecology -- --quick > /dev/null
-      - run: node scripts/simulate-territory-r95.mjs > territory-simulation-r94.json
+      - run: node scripts/simulate-territory-r94.mjs > territory-simulation-r94.json
       - run: npm run build:github
       - uses: actions/upload-artifact@v4
         if: always()
