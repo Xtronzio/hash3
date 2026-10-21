@@ -5,17 +5,15 @@ import {localCommand} from '../src/local.js';
 import {eventOutlook,eventOutlookMarkup,ecologyWarningsMarkup} from '../src/event-outlook.js';
 const now=1700000000000;
 const fresh=()=>createLocal('local','A','B',now,'normal','untimed');
-test('El control descuenta colocaciones reales y respeta los siguientes umbrales recalculados',()=>{
+test('Current territory decisions have no numeric future deadline; neutral keeps its own turn cadence',()=>{
  let game=fresh();game=localCommand(game,'move',{x:0,y:0},now);
- let rows=eventOutlook(game,'local-x').rows;
- assert.equal(rows.find(e=>e.kind==='rodent').remaining,65);
- assert.equal(rows.find(e=>e.kind==='worm').remaining,32);
+ const rows=eventOutlook(game,'local-x').rows;
+ for(const kind of ['rodent','worm','territory','invaders'])assert.equal(rows.find(e=>e.kind===kind).remaining,null);
  assert.equal(rows.find(e=>e.kind==='neutral').remaining,8);
  game.habitatZones[0].next.worm=333;game.habitatZones[0].placements=305;
- assert.equal(eventOutlook(game,'local-x').rows.find(e=>e.kind==='worm').remaining,28);
- const territory=rows.find(e=>e.kind==='territory');assert.equal(territory.remaining,32);assert.equal(territory.warning,3);
- assert.equal(rows.find(e=>e.kind==='invaders').remaining,65);
+ assert.equal(eventOutlook(game,'local-x').rows.find(e=>e.kind==='worm').remaining,null);
 });
+
 test('Fenómenos y recuperación suspenden los intentos; fauna apagada y roedores no inventan reloj',()=>{
  const game=fresh();game.territoryEvents=[{id:'u',kind:'ufo',turnsRemaining:3}];
  let view=eventOutlook(game,'local-x',now);assert.equal(view.timed[0].turns,3);assert.equal(view.rows.find(e=>e.kind==='rodent').suspended,true);assert.equal(view.rows.find(e=>e.kind==='rodent').warning,3);

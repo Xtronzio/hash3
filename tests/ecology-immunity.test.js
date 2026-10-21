@@ -16,7 +16,7 @@ test('OVNI sigue su cuenta atrás y solo abduce fichas sin protección; el rival
  let r=start();r.cells=[cell('x',0),cell('o',1,'local-o')];r.territoryEvents=[{id:'u',kind:'ufo',region:r.cells.map(({x,y})=>({x,y})),turnsRemaining:3}];
  r=activate(r,'local-x',now+10000);assert.equal(r.territoryEvents[0].turnsRemaining,3);assert.equal(r.pairs[0].turn,'X');assert.equal(toolAllowance(r,'local-x').remaining,1);
  let impacted=completeEventTurns(structuredClone(r),now+33000);assert.deepEqual(impacted.cells.map(c=>c.id),['x']);assert.equal(impacted.terrain.length,9);assert.equal(impacted.territoryEvents.length,0);
- r=activate(r,'local-o',now+20000);impacted=completeEventTurns(structuredClone(r),now+33000);assert.equal(impacted.cells.length,2);assert.equal(impacted.territoryEvents.length,0);assert.equal(impacted.ecologyRecovery.moves,3);
+ r=activate(r,'local-o',now+20000);impacted=completeEventTurns(structuredClone(r),now+33000);assert.equal(impacted.cells.length,2);assert.equal(impacted.territoryEvents.length,0);assert.equal(impacted.ecologyRecovery,undefined);
  assert.equal(canUsePracticeTool(r,'local-x','immunity',now+42999),false);assert.equal(canUsePracticeTool(r,'local-x','immunity',now+43000),false); // Stock exhausted, independent of turn.
 });
 test('Lluvia respeta fichas y sus celdas, celdas propias vacías y fronteras protegidas',()=>{

@@ -1,4 +1,5 @@
 import {validInverseContour} from './inverse-contour.js';
+import {validTerritoryDirector} from './territory-director.js';
 import {validInversePrison} from './inverse-prison.js';
 import {validInverseDisorder} from './inverse-disorder.js';
 import {SELECTABLE_FAUNA} from './fauna-selection.js';
@@ -29,7 +30,7 @@ export function validateTransfer(data){
  if(!data||data.format!=='hash33-local-transfer'||data.version!==1||!text(data.id,100)||!text(data.createdAt,40)||!Number.isFinite(Date.parse(data.createdAt))||!array(data.games,333)||!array(data.results,33333)||!array(data.pins,333)||typeof data.name!=='string'||data.name.length>18)fail();
  safeTree(data);const ids=new Set();
  for(const g of data.games){
-  if(!validInverseBees(g)||!validInverseContour(g)||!validInversePrison(g)||!validInverseDisorder(g))fail();
+  if(!validInverseBees(g)||!validInverseContour(g)||!validInversePrison(g)||!validInverseDisorder(g)||!validTerritoryDirector(g))fail();
   if(g.fauna!=null&&(!array(g.fauna,SELECTABLE_FAUNA.length)||new Set(g.fauna).size!==g.fauna.length||g.fauna.some(k=>!SELECTABLE_FAUNA.includes(k))))fail();
   if(g.phenomena!=null&&(!array(g.phenomena,SELECTABLE_PHENOMENA.length)||new Set(g.phenomena).size!==g.phenomena.length||g.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();
   if(g.antVersion!=null&&g.antVersion!==1)fail();

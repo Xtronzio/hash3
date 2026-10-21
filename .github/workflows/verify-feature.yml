@@ -65,6 +65,7 @@ on:
       - release/local-borders-beavers-r90
       - release/local-border-diamond-r91
       - release/local-inverse-prison-r92
+      - release/local-territory-director-r94
   workflow_dispatch:
 permissions:
   contents: write
@@ -82,6 +83,7 @@ jobs:
       - run: npm run verify:sql
       - run: npm run simulate:turns -- --quick > /dev/null
       - run: npm run simulate:ecology -- --quick > /dev/null
+      - run: node scripts/simulate-territory-r94.mjs > browser-territory-simulation-r94.json
       - run: npm run build:github
       - run: npx playwright install --with-deps chromium
         timeout-minutes: 3
@@ -89,6 +91,7 @@ jobs:
         timeout-minutes: 3
       - run: npx playwright install --with-deps webkit
         timeout-minutes: 4
+      - run: node scripts/verify-territory-director-r94.mjs
       - run: node scripts/verify-inverse-prison-r92.mjs
       - run: node scripts/verify-inverse-bees-r81.mjs
       - run: npm run verify:browser

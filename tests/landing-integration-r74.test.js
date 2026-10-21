@@ -18,7 +18,7 @@ function noRepayment(r,before,affected){
  assert.deepEqual(scoreLandings(r,before,affected),[]);assert.deepEqual(r.players.map(p=>p.score),scores);assert.deepEqual(r.players.map(p=>p.inventory),stocks);
 }
 test('Black hole clears its core and pays new X/O halo figures once without passive inventory recharge',()=>{
- const r=room(),core=Array.from({length:9},(_,i)=>({x:3+i%3,y:3+Math.floor(i/3)}));
+ const r=room();delete r.territoryDirector;const core=Array.from({length:9},(_,i)=>({x:3+i%3,y:3+Math.floor(i/3)}));
  const event={id:'blackhole-r74',kind:'blackhole',region:core,groups:[core],turnsRemaining:0,announcedTurn:0};
  // Label pieces to build a fixed input whose final halo has exactly two trios.
  r.cells=r.terrain.map(c=>piece(c.x,c.y,'*'));const probe=structuredClone(r);applyPlannedEvent(probe,event,now);

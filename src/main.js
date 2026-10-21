@@ -1274,6 +1274,7 @@ app.addEventListener('click',async e=>{
     document.querySelector('#original-goals').hidden=setupVariant==='inverse';document.querySelector('#inverse-options').hidden=setupVariant!=='inverse';
     document.querySelectorAll('.ecology-choice[for="fauna-enabled"],.ecology-choice[for="territory-enabled"],.phenomena-picker,.fauna-picker').forEach(el=>el.hidden=setupVariant==='inverse');
     document.querySelector('#starter-options').innerHTML=startingInventoryMarkup(localSetup,toolIcon,startingSelections,id=>inverseToolAllowed({variant:setupVariant},id));
+    document.querySelector('#local-time-mode').dispatchEvent(new Event('change',{bubbles:true}));
     return;
   }
   if(action==='inverse-drawing-choice'||action==='inverse-scale'){if(action==='inverse-scale')setupScale=b.dataset.scale;else setupDrawing=b.dataset.drawing;refreshInverseDrawing();return;}
@@ -1506,8 +1507,9 @@ function renderLocalSetup() {
   refreshInverseDrawing();
   document.querySelector('#inverse-drawing').addEventListener('change',e=>{setupDrawing=e.target.value;refreshInverseDrawing();});
   document.querySelectorAll('[name="machine-difficulty"]').forEach(input=>input.addEventListener('change',()=>{document.querySelector('#machine-level-hint').textContent=machineLevelHints[input.value];}));
-  document.querySelector('#local-goal-type').addEventListener('change',e=>{const temporary=document.createElement('div');temporary.innerHTML=matchGoalsMarkup(e.target.value);document.querySelector('#local-goal-target-row').replaceWith(temporary.querySelector('#local-goal-target-row'));});
-  const localClock=document.querySelector('#local-time-mode'),refreshClock=()=>{document.querySelector('#local-time-hint').textContent=localClock.value==='untimed'?'Sin límite por turno ni jugadas automáticas. Cada jugador espera a que juegue su rival.':'33 segundos por turno. Al agotarse se coloca una ficha automática; la pausa conserva el tiempo restante.';};
+  document.querySelector('#local-goal-type').addEventListener('change',e=>{const temporary=document.createElement('div');temporary.innerHTML=matchGoalsMarkup(e.target.value);document.querySelector('#local-goal-target-row').replaceWith(temporary.querySelector('#local-goal-target-row'));refreshClock();});
+  document.querySelector('#original-goals').addEventListener('change',()=>refreshClock());
+  const localClock=document.querySelector('#local-time-mode'),refreshClock=()=>{const rapid=setupVariant!=='inverse'&&document.querySelector('#local-goal-type').value==='time'&&Number(document.querySelector('#local-goal-target').value)===33;localClock.disabled=rapid;localClock.dataset.turnSeconds=rapid?'3':'33';if(rapid)localClock.value='timed';localClock.querySelector('[value="timed"]').textContent=rapid?'⚡ 3 segundos por turno · obligatorio':'◷ Con reloj · 33 segundos por turno';document.querySelector('#local-time-hint').textContent=rapid?'Partida rápida de 33 segundos: cada turno dura como máximo 3 segundos, también al ampliar.':localClock.value==='untimed'?'Sin límite por turno ni jugadas automáticas. Cada jugador espera a que juegue su rival.':'33 segundos por turno. Al agotarse se coloca una ficha automática; la pausa conserva el tiempo restante.';};
   localClock.addEventListener('change',refreshClock);refreshClock();
   enhanceSetupChoices(document.querySelector('.local-dialog'));
   (document.querySelector('#local-name:not([type="hidden"])')||document.querySelector('#second-name')||document.querySelector('[name="machine-difficulty"]:checked')||document.querySelector('#local-level')).focus();

@@ -97,10 +97,10 @@ test('Al vencer el doble se coloca solo una ficha automática y se entrega el tu
 test('Tras borrados repetidos, la máquina coincide con el árbitro para figuras nuevas, ya cobradas y grupos complejos',()=>{
  let seed=91;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  for(const level of ['normal','advanced']){
-   let room=game(level);
+   let room=game(level);room.faunaEnabled=false;room.territoryEnabled=false;
    for(let n=0;n<32;n++){
      const p=room.pairs[0],actor=p[p.turn.toLowerCase()];
-     if(p.pending){const options=expansionOptions(terrainOf(room),p.active);room=localCommand(room,'expand',options[Math.floor(random()*options.length)],now);}
+     if(p.pending){const options=expansionOptions(terrainOf(room),p.active,room);room=localCommand(room,'expand',options[Math.floor(random()*options.length)],now);}
      else if(canUsePracticeTool(room,actor,'erase',now)&&random()<0.65){
        const candidates=room.cells.filter(c=>canErasePracticeCell(room,actor,c)),c=candidates[Math.floor(random()*candidates.length)];
        room=tool(room,'erase',actor,c);

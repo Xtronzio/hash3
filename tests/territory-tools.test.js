@@ -84,7 +84,7 @@ test('Expansion that announces a territory event cannot also execute a due worm 
  const r=board(332);r.territoryNextPlacement=0;r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
  r.pairs[0].pending=1;r.pairs[0].credits=1;r.pairs[0].expander='local-x';
  const next=localCommand(r,'expand',{x:32,y:9},34000,()=>0);
- assert.equal(next.territoryEvents.length,1);assert.equal(next.worms[0].eaten,0);assert.equal(next.habitatEvent,undefined);
+ assert.equal(next.territoryEvents.length,0);assert.equal(next.worms[0].eaten,0);assert.equal(next.habitatEvent,undefined);
 });
 
 test('Shorter worm/work cadence scales at 333 and 999 cells and survives territory recovery without replay',()=>{
@@ -96,16 +96,14 @@ test('Shorter worm/work cadence scales at 333 and 999 cells and survives territo
  const zone=r.habitatZones[0];assert.equal(zone.next.worm-zone.placements,33);assert.equal(zone.next.work-zone.placements,66);assert.equal(r.ecologyRecovery.moves,3);
 });
 
- test('A stationary large board announces through accepted placements, freezes fauna and restarts a single cycle',()=>{
- let r=board(999);r.cells=r.cells.slice(0,500);r.territoryMilestone=3;r.territoryNextPlacement=1;
- r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
+ test('A large board adopts calculated territory decisions; weather no longer imposes a fixed fauna recovery',()=>{
+ let r=board(999);r.cells=r.cells.slice(0,500);r.faunaEnabled=false;r.phenomena=['ufo'];r.territoryNextPlacement=999999;
  r=localCommand(r,'move',{x:8,y:30},34000,()=>0);
- assert.equal(r.terrain.length,999);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].trigger,'turns');assert.equal(r.territoryEvents[0].region.length,27);assert.equal(r.worms[0].eaten,0);assert.equal(r.habitatEvent,undefined);assert.equal(r.territoryNextPlacement,34);
- r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.equal(r.territoryEvents[0].turnsRemaining,3);
- r=completeEventTurns(r,1023000);assert.equal(r.territoryEvents.length,0);assert.equal(r.ecologyRecovery.moves,3);assert.equal(r.terrain.length,972);
- r.territoryNextPlacement=1;assert.equal(recordTerritoryPlacement(r,1023001,()=>0),false);assert.equal(r.territoryEvents.length,0);
- r.ecologyRecovery.moves=0;assert.ok(recordTerritoryPlacement(r,1056000,()=>0));assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,'earthquake');assert.equal(r.territoryEvents[0].region.length,impactCount(r,'earthquake'));
- });
+ assert.equal(r.territoryEvents.length,1);const event=structuredClone(r.territoryEvents[0]);assert.equal(event.trigger,'territory');assert.equal(event.turnsRemaining,3);
+ r=localCommand(r,'pause',{},44000);r=localCommand(JSON.parse(JSON.stringify(r)),'resume',{},1000000);assert.deepEqual(r.territoryEvents[0],event);
+ r=completeEventTurns(r,1023000);assert.equal(r.territoryEvents.some(e=>e.id===event.id),false);assert.equal(r.ecologyRecovery,undefined);assert.equal(r.terrain.length,999);
+});
+
  test('Old large saves receive future local attempts, without historical events or lost residents',()=>{
  const r=board(3333);r.players[0].ecologyPlacements=r.players[0].placements=3000;r.players[1].placements=2900;delete r.territoryActivityVersion;delete r.livingTerritoryVersion;delete r.territoryPlanVersion;
  initializeTerritory(r);assert.equal(r.territoryNextPlacement,33);assert.equal(r.territoryEvents.length,0);const saved=structuredClone(r);
@@ -125,11 +123,8 @@ test('Invasions do not stop fauna, change natural deadlines or reset birth budge
  completeEventTurns(r,34000);assert.equal(r.ecologyRecovery,undefined);assert.deepEqual(r.habitatZones[0].next,nexts);
  r.territoryNextInvasion=0;recordTerritoryPlacement(r,35000,()=>.3);assert.equal(r.territoryEvents[0].kind,'invader-colony');
 });
-test('The placement that reaches 99 figures announces without executing a due worm meal',()=>{
+test('Figure totals and expired legacy counters cannot force a territory appearance in an empty board',()=>{
  const r=board(99);r.players[0].figures=98;r.players[0].ecologyPlacements=r.players[0].placements=32;r.ecologyTurns=32;r.territoryNextPlacement=33;
  r.cells=[{id:'a',x:0,y:0,symbol:'X',owner:'local-x'},{id:'b',x:1,y:0,symbol:'X',owner:'local-x'},{id:'food',x:10,y:2,symbol:'O',owner:'local-o'}];
- r.worms=[{id:'due',kind:'worm',x:10,y:2,player:'local-x',body:[{x:10,y:2}],eaten:0,nextAt:34000}];
- const next=localCommand(r,'move',{x:2,y:0},34000,()=>0);
- assert.equal(next.players[0].figures,99);assert.equal(next.territoryEvents.length,1);assert.equal(next.worms[0].eaten,0);
- assert.equal(next.territoryNextPlacement,66);
+ const next=localCommand(r,'move',{x:2,y:0},34000,()=>0);assert.equal(next.players[0].figures,99);assert.equal(next.territoryEvents.length,0);assert.equal(next.territoryDirector.choices,0);
 });

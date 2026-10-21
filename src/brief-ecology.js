@@ -136,7 +136,7 @@ export function resolveBriefFauna(room,event,now,random=Math.random){
    if(legal.length!==3)continue;
    const lifetimes=[...BEAVER_LIFETIMES];
    for(let i=lifetimes.length-1;i>0;i--){const j=Math.min(i,Math.floor(Math.max(0,random())*(i+1)));[lifetimes[i],lifetimes[j]]=[lifetimes[j],lifetimes[i]];}
-   const barrier={id:crypto.randomUUID(),type:'beaver',cells:legal.map((c,i)=>({...c,turnsRemaining:lifetimes[i]})),turnsRemaining:3,bornTurn:room.ecologyTurns||0},probe={...room,frontiers:[...(room.frontiers||[]),barrier]};
+   const barrier={id:crypto.randomUUID(),type:'beaver',cells:legal.map((c,i)=>({...c,turnsRemaining:lifetimes[i]})),turnsRemaining:3,bornTurn:room.ecologyTurns||0,...(event.directorBatch?{directorBatch:event.directorBatch,directorTier:event.directorTier}:{})},probe={...room,frontiers:[...(room.frontiers||[]),barrier]};
    if(!availableCells(probe,room.pairs[0]).length||!expansionOptions(terrainOf(room),room.pairs[0].terrainAnchor||room.pairs[0].active,probe).length)continue;
    room.frontiers=probe.frontiers;actions.push(...legal.map(c=>({...c,kind:'beaver'})));
   }

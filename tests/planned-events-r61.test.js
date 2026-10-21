@@ -13,27 +13,28 @@ const now=1000,random=()=>.4;
 const fresh=()=>createLocal('local','X','O',now,'normal','untimed','medium','X',false,{random,faunaEnabled:true});
 const move=r=>localCommand(r,'move',availableCells(r,r.pairs[0])[0],now,random);
 const badge=(r,kind)=>ecologyNavigationMarkup(r,'local-x').match(new RegExp('<button[^>]*data-ecology-kind="'+kind+'"[^>]*>[^]*?<\\/button>'))[0];
-test('A reserved tornado counts to impact continuously through Doble, pause and its announcement',()=>{
- let r=fresh();r.terrain=Array.from({length:333},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.players[0].figures=33;r.territoryPlans.natural='tornado';r.territoryNextPlacement=21;r.territoryNextInvasion=999;
- assert.match(badge(r,'tornado'),/>−24</);assert.doesNotMatch(badge(r,'tornado'),/is-announced/);
- r=localCommand(r,'pause',{},now);r=localCommand(r,'resume',{},now+999999);assert.match(badge(r,'tornado'),/>−24</);
+test('A committed tornado counts continuously through Doble and pause; future types have no fixed date',()=>{
+ let r=fresh();r.terrain=Array.from({length:333},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
+ r.territoryPlans.natural='tornado';r.territoryNextPlacement=21;assert.match(badge(r,'tornado'),/>…</);
+ r.territoryEvents=[{id:'committed',kind:'tornado',region:[{x:2,y:2}],turnsRemaining:3}];
+ r=localCommand(r,'pause',{},now);r=localCommand(r,'resume',{},now+999999);assert.match(badge(r,'tornado'),/>−3</);
  r.players[0].inventory.cards.double=1;r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now,random);
- r=move(r);assert.match(badge(r,'tornado'),/>−24</);assert.equal(r.ecologyTurns,0);r=move(r);assert.match(badge(r,'tornado'),/>−23</);assert.equal(r.ecologyTurns,1);
- while(r.ecologyTurns<20)r=move(r);assert.match(badge(r,'tornado'),/>−4</);r=move(r);
- assert.equal(r.territoryEvents[0].kind,'tornado');assert.equal(r.territoryEvents[0].turnsRemaining,3);assert.match(badge(r,'tornado'),/is-announced/);assert.match(badge(r,'tornado'),/>−3</);
- r=move(r);assert.match(badge(r,'tornado'),/>−2</);r=move(r);assert.match(badge(r,'tornado'),/>−1</);r=move(r);assert.equal(r.territoryEvents.length,0);
+ r=move(r);assert.equal(r.ecologyTurns,0);assert.match(badge(r,'tornado'),/>−3</);
+ r=move(r);assert.equal(r.ecologyTurns,1);assert.match(badge(r,'tornado'),/>−2</);
+ r=move(r);assert.match(badge(r,'tornado'),/>−1</);r=move(r);assert.equal(r.territoryEvents.some(e=>e.id==='committed'),false);
 });
+
 test('Loading an R60 save reserves future types once without replay or changing warning, score and stock',()=>{
  const r=fresh();r.ruleVersion=20;delete r.territoryPlanVersion;delete r.territoryPlans;r.ecologyTurns=100;r.players[0].placements=200;r.players[0].score=25912;r.territoryNextPlacement=290;r.territoryNextInvasion=220;
  r.territoryEvents=[{id:'c',kind:'contagion',region:[{x:1,y:1}],turnsRemaining:2}];
  const finished=structuredClone(r);finished.id='finished';finished.status='finished';const data=new Map([['hash3_locals',JSON.stringify([r,finished])]]),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
- const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,25);assert.equal(loaded.territoryNextPlacement,133);assert.equal(loaded.territoryNextInvasion,120);assert.equal(loaded.territoryEvents[0].turnsRemaining,2);assert.equal(loaded.players[0].score,25912);assert.deepEqual(loaded.players[0].inventory,r.players[0].inventory);
+ const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,26);assert.equal(loaded.territoryNextPlacement,133);assert.equal(loaded.territoryNextInvasion,120);assert.equal(loaded.territoryEvents[0].turnsRemaining,2);assert.equal(loaded.players[0].score,25912);assert.deepEqual(loaded.players[0].inventory,r.players[0].inventory);
  const saved=data.get('hash3_locals');loadLocalGames(storage,now+999999);assert.equal(data.get('hash3_locals'),saved);assert.deepEqual(JSON.parse(saved).find(g=>g.id==='finished'),finished);
 });
 test('Fauna and neutral forecasts advance only when Doble finishes, never on wall-clock ticks',()=>{
  let r=fresh();r.players[0].inventory.cards.double=1;r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now,random);r=move(r);
- assert.equal(r.habitatZones[0].placements,0);assert.equal(r.players[0].ecologyPlacements,0);assert.match(badge(r,'worm'),/>−36</);
- r=localCommand(r,'tick',{},now+999999,random);assert.match(badge(r,'worm'),/>−36</);r=move(r);assert.equal(r.habitatZones[0].placements,1);assert.equal(r.players[0].ecologyPlacements,1);assert.match(badge(r,'worm'),/>−35</);assert.match(badge(r,'neutral'),/>−8</);
+ assert.equal(r.habitatZones[0].placements,0);assert.equal(r.players[0].ecologyPlacements,0);assert.match(badge(r,'worm'),/>…</);
+ r=localCommand(r,'tick',{},now+999999,random);assert.match(badge(r,'worm'),/>…</);r=move(r);assert.equal(r.habitatZones[0].placements,1);assert.equal(r.players[0].ecologyPlacements,1);assert.match(badge(r,'worm'),/>…</);assert.match(badge(r,'neutral'),/>−8</);
 });
 test('Every natural kind participates in the more frequent cycle with both invasion types still present',()=>{
  const result=simulateTurns({seed:61,size:999,moves:420});assert.equal(result.completed,true);

@@ -242,7 +242,7 @@ try{
   assert.equal(await page.locator('.ecology-choice-icons svg').count(),20);
   assert.equal(await page.locator('.ecology-choice-icons [data-icon="ant"]').count(),1);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
-  assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/◷/);
+  assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/3 segundos por turno/);
   for(const target of ['33','180','360','540'])await page.locator(`[data-setup-select="local-goal-target"][data-value="${target}"]`).click();
   await page.locator(`[data-setup-select="local-goal-target"][data-value="${mode==='solo'?'33':'540'}"]`).click();
   assert.equal(await page.locator('#player-inventory').isChecked(),true);
