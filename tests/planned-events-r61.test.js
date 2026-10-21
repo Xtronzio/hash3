@@ -8,7 +8,9 @@ import {territoryThreatCells} from '../src/territory-threats.js';
 import {overviewModel} from '../src/map-overview.js';
 import {prepareMapRendering,mapWindowMarkup} from '../src/map-render.js';
 import {loadLocalGames} from '../src/sessions.js';
-import {simulateTurns} from '../scripts/simulate-ecology-turns.mjs';
+import {considerTerritory} from '../src/inhabitants.js';
+import {markTerritoryGrowth} from '../src/territory-director.js';
+import {SELECTABLE_PHENOMENA} from '../src/phenomena-selection.js';
 const now=1000,random=()=>.4;
 const fresh=()=>createLocal('local','X','O',now,'normal','untimed','medium','X',false,{random,faunaEnabled:true});
 const move=r=>localCommand(r,'move',availableCells(r,r.pairs[0])[0],now,random);
@@ -28,7 +30,7 @@ test('Loading an R60 save reserves future types once without replay or changing 
  const r=fresh();r.ruleVersion=20;delete r.territoryPlanVersion;delete r.territoryPlans;r.ecologyTurns=100;r.players[0].placements=200;r.players[0].score=25912;r.territoryNextPlacement=290;r.territoryNextInvasion=220;
  r.territoryEvents=[{id:'c',kind:'contagion',region:[{x:1,y:1}],turnsRemaining:2}];
  const finished=structuredClone(r);finished.id='finished';finished.status='finished';const data=new Map([['hash3_locals',JSON.stringify([r,finished])]]),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
- const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,26);assert.equal(loaded.territoryNextPlacement,133);assert.equal(loaded.territoryNextInvasion,120);assert.equal(loaded.territoryEvents[0].turnsRemaining,2);assert.equal(loaded.players[0].score,25912);assert.deepEqual(loaded.players[0].inventory,r.players[0].inventory);
+ const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,27);assert.equal(loaded.territoryNextPlacement,133);assert.equal(loaded.territoryNextInvasion,120);assert.equal(loaded.territoryEvents[0].turnsRemaining,2);assert.equal(loaded.players[0].score,25912);assert.deepEqual(loaded.players[0].inventory,r.players[0].inventory);
  const saved=data.get('hash3_locals');loadLocalGames(storage,now+999999);assert.equal(data.get('hash3_locals'),saved);assert.deepEqual(JSON.parse(saved).find(g=>g.id==='finished'),finished);
 });
 test('Fauna and neutral forecasts advance only when Doble finishes, never on wall-clock ticks',()=>{
@@ -36,10 +38,11 @@ test('Fauna and neutral forecasts advance only when Doble finishes, never on wal
  assert.equal(r.habitatZones[0].placements,0);assert.equal(r.players[0].ecologyPlacements,0);assert.match(badge(r,'worm'),/>…</);
  r=localCommand(r,'tick',{},now+999999,random);assert.match(badge(r,'worm'),/>…</);r=move(r);assert.equal(r.habitatZones[0].placements,1);assert.equal(r.players[0].ecologyPlacements,1);assert.match(badge(r,'worm'),/>…</);assert.match(badge(r,'neutral'),/>−8</);
 });
-test('Every natural kind participates in the more frequent cycle with both invasion types still present',()=>{
- const result=simulateTurns({seed:61,size:999,moves:420});assert.equal(result.completed,true);
- for(const kind of ['meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo','invader-rain','invader-colony'])assert.ok(result.announcements[kind]>0,kind);
- const natural=Object.entries(result.announcements).filter(([kind])=>!kind.startsWith('invader-')).reduce((n,[,v])=>n+v,0);assert.ok(natural>=10);assert.ok(result.rodentMeals>0&&result.wormMeals>0);
+test('Every selectable phenomenon remains viable under the calculated rhythm and keeps its full warning',()=>{
+ for(const kind of SELECTABLE_PHENOMENA.filter(k=>k!=='neutral')){
+  const r=fresh();r.faunaEnabled=false;r.phenomena=[kind];r.terrain=Array.from({length:999},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.cells=r.terrain.slice(0,650).map((c,i)=>({...c,id:'food:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));markTerritoryGrowth(r);
+  assert.ok(considerTerritory(r,now,()=>0),kind);assert.equal(r.territoryEvents.length,1);assert.equal(r.territoryEvents[0].kind,kind);assert.equal(r.territoryEvents[0].turnsRemaining,3);
+ }
 });
 test('All announced threat regions, bombs off terrain and soldiers use the same overlay without adding terrain',()=>{
  const r=fresh();r.territoryEvents=[...['contagion','pandemic','tornado','hurricane','meteorites','earthquake','ufo','invader-colony'].map((kind,i)=>({id:kind,kind,region:[{x:i+10,y:0}],turnsRemaining:3})),{id:'bomb',kind:'invader-rain',region:[{x:-1,y:1}],turnsRemaining:2}];r.bombs=[{id:'legacy',blast:[{x:20,y:0}]}];r.works=[{id:'soldier',destroy:[{x:1,y:1}],build:[{x:3,y:1}],done:0,turnsRemaining:3}];

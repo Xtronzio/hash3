@@ -1,5 +1,5 @@
 import {faunaKindEnabled,skipFaunaBirth} from './fauna-selection.js';
-import {directedTerritory,territoryAwaitingExpansion,territoryCandidates,recordTerritoryChoice} from './territory-director.js';
+import {directedTerritory,territoryAwaitingExpansion,territoryCandidates,recordTerritoryChoice,advanceTerritoryRhythm} from './territory-director.js';
 import {announceAnts,resolveAnts,antIcon} from './ants.js';
 import {phenomenonEnabled} from './phenomena-selection.js';
 import {announceAnaconda,advanceAnacondas,anacondaIcon} from './anaconda.js';
@@ -289,7 +289,9 @@ export function considerTerritory(room,now=Date.now(),random=Math.random,options
   const batch=uuid();
   for(const e of [...room.faunaEvents,...room.rodentRaids,...room.worms,...room.anacondas,...room.works,...room.territoryEvents])if(!before.has(e.id)){e.directorBatch=batch;e.directorTier||=candidate.tier;}
   const actual=candidate.family==='weather'?room.territoryEvents.find(e=>e.directorBatch===batch)?.directorTier:candidate.tier;
-  recordTerritoryChoice(room,{...candidate,tier:actual||candidate.tier});return true;
+  const bornEvents=[...room.faunaEvents,...room.rodentRaids,...room.worms,...room.anacondas,...room.works,...room.territoryEvents].filter(e=>!before.has(e.id));
+  const affected=new Set(bornEvents.flatMap(e=>e.region||e.route||e.members||[...e.build||[],...e.destroy||[]]).map(c=>key(c.x,c.y))).size;
+  recordTerritoryChoice(room,{...candidate,tier:actual||candidate.tier,affected});return true;
  }
  return false;
 }
@@ -330,6 +332,7 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
   f.cells=f.cells.map(c=>({...c,turnsRemaining:(c.turnsRemaining??f.turnsRemaining)-1})).filter(c=>c.turnsRemaining>0);
   f.turnsRemaining=f.cells.length?Math.min(...f.cells.map(c=>c.turnsRemaining)):0;return f.cells.length>0;
  });
+ advanceTerritoryRhythm(room);
 }
 function positionRodents(room,raid,point,random){
  const area=areaAt(room,raid),known=new Set(area.map(c=>key(c.x,c.y))),seen=new Set((raid.visited||[]).map(c=>key(c.x,c.y))),safe=raid.brief?faunaProtection(room):new Set();

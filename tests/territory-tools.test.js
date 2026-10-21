@@ -80,11 +80,11 @@ test('Warning, impact and recovery suppress fauna; populations and future interv
  countHabitatPlacement(impacted,'local-x',{x:0,y:0},34001,()=>0);assert.equal(impacted.ecologyRecovery.moves,2);
 });
 
-test('Expansion that announces a territory event cannot also execute a due worm meal in the same command',()=>{
+test('Expansion preserves a due legacy worm without adding pressure or eating in the same command',()=>{
  const r=board(332);r.territoryNextPlacement=0;r.worms=[{id:'due',kind:'worm',x:0,y:0,player:'local-x',body:[{x:0,y:0}],eaten:0,nextAt:34000}];
  r.pairs[0].pending=1;r.pairs[0].credits=1;r.pairs[0].expander='local-x';
  const next=localCommand(r,'expand',{x:32,y:9},34000,()=>0);
- assert.equal(next.territoryEvents.length,1);assert.equal(next.territoryEvents[0].turnsRemaining,3);
+ assert.equal(next.territoryEvents.length,0);
  assert.deepEqual(next.cells,r.cells);assert.equal(next.worms[0].eaten,0);assert.equal(next.habitatEvent,undefined);
 });
 
