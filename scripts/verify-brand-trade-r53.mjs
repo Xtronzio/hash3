@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,webkit,firefox} from 'playwright';
 import {preview} from 'vite';
-import {createLocal} from '../src/local.js';
+import {createLocal,LOCAL_RULE_VERSION} from '../src/local.js';
 import {practiceTools} from '../src/practice-tools.js';
 import {CARD_PRICES} from '../src/inventory-economy.js';
 
@@ -56,7 +56,7 @@ try{
    assert.equal(after.players[0].score,12730-33-3-33);assert.equal(Object.values(after.players[0].inventory.cards).reduce((a,b)=>a+b),18);
    assert.equal(await page.locator('.refill-selector').count(),0);
    assert.equal(after.players[0].inventory.comboPending,1);assert.equal(after.players[0].freeExpansions,33);assert.equal(after.players[0].inventory.immunity.cards['immunity-1'],333);
-   assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.pairs,before.pairs);assert.equal(after.ruleVersion,25);
+   assert.deepEqual(after.players[1],before.players[1]);assert.deepEqual(after.pairs,before.pairs);assert.equal(after.ruleVersion,LOCAL_RULE_VERSION);
    await page.screenshot({path:path.join(output,`trueque-completado-r53-${name}.png`)});
    const identity=await page.evaluate(async()=>{
     const links=[...document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"],link[rel="apple-touch-icon-precomposed"]')];
