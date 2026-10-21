@@ -1,5 +1,17 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.95 · Territorio tras ampliar en tableros densos
+
+Jorge21/10 autoriza corregir el silencio reproducido en R94: el margen libre
+del6% superaba las nueve celdas de una ampliación en tableros grandes. Esperar
+solo la ampliación obligatoria real, permitir decisión después aunque queden
+nueve o menos huecos. Conservar aviso3, regiones y límites de coexistencia R94.
+Guardados silenciosos continúan en próxima acción, sin reinicio ni actividad
+histórica. Solo Original local/máquina; Inverso/online/SQL intactos y cron apagado.
+Probar450/999/33333 con nueve libres, ampliación→aviso→impacto, pausa/guardado y
+QA tres motores/seis tamaños, pipeline y HTTP antes de publicar R95/r306.
+Respaldo backup/pre-territory-growth-r94-20261021.
+
 ## R0.21.94 · El territorio decide y partidas rápidas
 
 Jorge21/10 aprueba turnos obligatorios de3s para partidas de33s, incluidas

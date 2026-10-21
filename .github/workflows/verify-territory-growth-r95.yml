@@ -1,0 +1,107 @@
+name: HASH3 Verify territory director R95
+on:
+  push:
+    branches:
+      - release/local-territory-growth-r95
+permissions:
+  contents: read
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run verify:sql
+      - run: npm run simulate:turns -- --quick > /dev/null
+      - run: npm run simulate:ecology -- --quick > /dev/null
+      - run: node scripts/simulate-territory-r94.mjs > territory-simulation-r94.json
+      - run: npm run build:github
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: territory-r95-engine
+          path: territory-simulation-r94.json
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: territory
+            scripts: >-
+              verify-territory-director-r94.mjs verify-inverse-prison-r92.mjs
+              verify-inverse-bees-r81.mjs verify-territory-browser.mjs
+              verify-brief-ecology-r62.mjs verify-borders-beavers-r90.mjs
+              verify-shared-animations-r89.mjs
+          - group: contours
+            scripts: >-
+              verify-inverse-renewal-r88.mjs verify-inverse-contour-r87.mjs
+              verify-bulk-delete-r86.mjs verify-fauna-selection-r85.mjs
+              verify-ants-phenomena-r84.mjs verify-inverse-visible-r83.mjs
+          - group: controls
+            scripts: >-
+              verify-inverse-controls-r82.mjs verify-inverse-claims-r79.mjs
+              verify-inverse-fill-r78.mjs verify-inverse-r77.mjs
+              verify-local-transfer-r52.mjs verify-fauna-fog-r76.mjs
+              verify-drawers-r69.mjs verify-feedback-r71.mjs
+              verify-frames-settings-r72.mjs
+          - group: presentation
+            scripts: >-
+              verify-player-layout-r74.mjs verify-tornado-catalog-r68.mjs
+              verify-alignment-r67.mjs verify-zones-impact-r66.mjs
+              verify-custom-inventory-r57.mjs verify-bombs-r56.mjs
+              verify-paused-machine-r64.mjs verify-territory-presentation-r65.mjs
+              verify-brand-trade-r53.mjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:github
+      - run: npx playwright install --with-deps chromium firefox webkit
+        timeout-minutes: 5
+      - name: Run every regression in this group
+        env:
+          HASH3_QA_SCRIPTS: ${{ matrix.scripts }}
+        run: |
+          qa_result=0
+          for qa_script in $HASH3_QA_SCRIPTS; do
+            echo "::group::$qa_script"
+            node "scripts/$qa_script" || qa_result=1
+            echo "::endgroup::"
+          done
+          exit "$qa_result"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: territory-r95-${{ matrix.group }}
+          path: browser-results/
+  package:
+    needs: [engine, browser]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:github
+      - name: Package the fully verified revision
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Pages for territory director R95"
+            git push origin HEAD:release/local-territory-growth-r95
+          fi

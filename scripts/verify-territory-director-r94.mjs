@@ -20,6 +20,11 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
   const load=async g=>{await page.goto(origin);await page.evaluate(g=>{localStorage.clear();sessionStorage.clear();localStorage.setItem('hash3_locals',JSON.stringify([g]));localStorage.setItem('hash3_local',JSON.stringify({id:g.id}));sessionStorage.setItem('hash3_restore_local','1');},g);await page.reload();await page.locator('.game .viewport').waitFor();await frame();};
   for(const [width,height]of [[320,780],[390,844],[428,926],[740,390],[1280,800],[1920,1080]]){
+   // Regression R95: a dense saved board must announce after a real move,
+   // even though the nine remaining cells are below the former 6% reserve.
+   const dense=fresh({fauna:['rodent'],phenomena:[]});dense.terrain=Array.from({length:450},(_,i)=>({x:i%30,y:Math.floor(i/30)}));dense.cells=dense.terrain.slice(9).map((c,i)=>({...c,id:'dense:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));markTerritoryGrowth(dense);
+   await page.setViewportSize({width,height});await load(dense);const silent=await stored();assert.equal(silent.territoryDirector.choices,0);
+   await page.locator('.board .available').first().click();await frame();const awakened=await stored();assert.equal(awakened.rodentRaids[0].warningTurns,3);assert.equal(awakened.cells.length,silent.cells.length+1);assert.match(await page.locator('.board-territory-status [data-ecology-kind="rodent"]').innerText(),/−3/);
    console.log(name,width,height);await page.setViewportSize({width,height});await load(fixture());const before=await stored();
    for(const kind of ['rodent','tornado'])assert.match(await page.locator(`.board-territory-status [data-ecology-kind="${kind}"]`).innerText(),/−3/);
    await page.locator('.board .available').first().click();await frame();const after=await stored();assert.equal(after.rodentRaids[0].warningTurns,2);assert.equal(after.territoryEvents[0].turnsRemaining,2);assert.deepEqual(after.territoryEvents[0].region,before.territoryEvents[0].region);

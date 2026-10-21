@@ -30,3 +30,9 @@ acotados y validarlos al trasladar. No calcular política desde pan/relojes.
 No inventar cuentas de aparición futura: mostrar sin fecha hasta anuncio.
 Inverso, online y SQL aislados. Avisos nuevos/menú contextual de celda se harán
 en la siguiente fase solicitada por Jorge.
+
+Corrección R95: no reservar un porcentaje de huecos para decidir apariciones.
+En450celdas el6% exigía27huecos y una ampliación solo añadía9; el territorio
+podía quedar permanentemente silencioso. La espera de crecimiento se aplica
+solo al tablero sin colocaciones o con ampliación obligatoria pendiente. Tras
+ampliar puede anunciar con sus3turnos de reacción, sin limpieza inmediata.
