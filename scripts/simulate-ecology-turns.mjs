@@ -6,6 +6,7 @@ import {createLocal,localCommand} from '../src/local.js';
 import {availableCells,expansionOptions,key} from '../src/game.js';
 import {canUsePracticeTool,toolCells,MAX_CARDS,MAX_CARD_TYPES,MAX_PER_CARD} from '../src/practice-tools.js';
 import {initializeTerritory} from '../src/territory-tools.js';
+import {markTerritoryGrowth} from '../src/territory-director.js';
 
 const rng=seed=>()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
 const choose=(items,random)=>items[Math.floor(random()*items.length)];
@@ -15,6 +16,7 @@ function runTurns({size=333,moves=1500,seed=33,secondsPerMove=6,density=.35,terr
  room.territoryEnabled=territoryEnabled;
  room.terrain=Array.from({length:size},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
  room.cells=room.terrain.filter(()=>random()<density).map((p,i)=>({...p,id:'initial:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));
+ markTerritoryGrowth(room);
  // Start after the opening gate; report separately from a fresh 3×3 game.
  room.players[0].figures=openingFigures;room.territoryMilestone=Math.floor(size/333);
  delete room.territoryActivityVersion;delete room.livingTerritoryVersion;initializeTerritory(room);
