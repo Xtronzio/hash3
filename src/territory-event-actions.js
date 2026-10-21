@@ -54,9 +54,9 @@ const wholeSquare=(room,side,random,now)=>{
  }
  return squares.length?choose(squares,random):[];
 };
-export function plannedEventRegion(room,kind,random=Math.random,now=Date.now()){
+export function plannedEventRegion(room,kind,random=Math.random,now=Date.now(),options={}){
  const r=eventRule(kind);if(!r)return [];
- const count=impactCount(room,kind);
+ const count=options.count??impactCount(room,kind);
  if(!count)return [];
  if(kind==='fog')return localCluster(room,33,random,now);
  if(kind==='clouds'){

@@ -1,4 +1,6 @@
 import {normalizeFauna} from './fauna-selection.js';
+import {initializeTurnClock,turnSecondsFor} from './turn-clock.js';
+import {initializeTerritoryDirector,markTerritoryGrowth} from './territory-director.js';
 import {normalizePhenomena} from './phenomena-selection.js';
 import {isInverse} from './inverse-rules.js';
 import {configureInverse,inverseCommand} from './inverse.js';
@@ -15,7 +17,7 @@ import {MATCH_TIME_TARGETS} from './match-durations.js';
 import {initializeFreeExpansions,earnFreeExpansion,canRequestFreeExpansion} from './free-expansion.js';
 import {territoryEnabled} from './ecology.js';
 import {recordTerritoryGrowth,territoryPlacementDue,territoryReady} from './territory-tools.js';
-import {advanceHabitats,freezeHabitats,resumeHabitats} from './inhabitants.js';
+import {advanceHabitats,freezeHabitats,resumeHabitats,considerTerritory} from './inhabitants.js';
 import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWindows,isBlockedCell} from './game.js';
 import {recordMax} from './max.js';
 import {recordCombo} from './records.js';
@@ -26,7 +28,7 @@ import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,r
 import {applyAreaTool} from './area-tools.js';
 import {awardFigures,scoreLandings} from './landing-score.js';
 export const TURN_SECONDS=33;
-export const LOCAL_RULE_VERSION=25;
+export const LOCAL_RULE_VERSION=26;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
 export const localMachineId=room=>{const p=room.pairs[0];return localHumanId(room)===p.x?p.o:p.x;};
@@ -47,7 +49,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
   if(ecology.variant==='inverse'){room.ruleVersion=24;room.variant='inverse';room.faunaEnabled=false;room.territoryEnabled=false;ecology={...ecology,initialCards:ecology.initialCards||['erase','shift','opposite'],secondInitialCards:ecology.secondInitialCards||['erase','shift','opposite']};}
-  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});if(isInverse(room))return configureInverse(room,ecology,ecology.random||Math.random);initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
+  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});if(isInverse(room))return configureInverse(room,ecology,ecology.random||Math.random);initializeTerritoryDirector(room);initializeTurnClock(room,now);initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {
   if(finishAtMatchGoal(room,now))return;
@@ -55,16 +57,17 @@ function normalize(room,now) {
     const free=availableCells(room,p,{ignoreBlocks:true});
     if(!free.length&&Number.isFinite(boardCellLimit(room))&&!expansionOptions(terrainOf(room),p.terrainAnchor||p.active,room).length){room.status='finished';room.finishReason='board-limit';room.finishedAt=new Date(now).toISOString();p.pending=0;p.expander=null;delete p.optionalExpansion;return;}
     if(free.length&&p.optionalExpansion&&p.strategicExpansion&&(room.players.find(v=>v.id===p.expander)?.inventory?.cards['hint-expand']||0)>0)continue;
-    if(free.length){delete p.strategicExpansion;delete p.optionalExpansion;delete p.strategicExpansion;delete room.practiceHint;p.pending=0;p.expander=null;delete p.frontierUsed;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
-    else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;if(room.timeMode!=='untimed')p.deadline||=new Date(now+TURN_SECONDS*1000).toISOString();}
+    if(free.length){delete p.strategicExpansion;delete p.optionalExpansion;delete p.strategicExpansion;delete room.practiceHint;p.pending=0;p.expander=null;delete p.frontierUsed;if(room.timeMode!=='untimed')p.deadline||=new Date(now+turnSecondsFor(room)*1000).toISOString();}
+    else{p.pending=1;p.credits=Math.max(1,p.credits||0);p.expander||=p.turn==='X'?p.x:p.o;if(room.timeMode!=='untimed')p.deadline||=new Date(now+turnSecondsFor(room)*1000).toISOString();}
   }
 }
 // Recover older saves that entered expansion while another built island had holes.
 export function reconcileLocalBoard(original,now=Date.now()) {
   if(isInverse(original)||!['solo','local'].includes(original.mode)||original.status!=='playing')return original;
   const room={...original,pairs:original.pairs.map(p=>({...p}))};
+  initializeTurnClock(room,now);
   normalize(room,now);
-  if(room.status===original.status&&JSON.stringify(room.pairs)===JSON.stringify(original.pairs))return original;
+  if(room.status===original.status&&room.turnSeconds===original.turnSeconds&&room.timeMode===original.timeMode&&JSON.stringify(room.pairs)===JSON.stringify(original.pairs))return original;
   return {...room,version:room.version+1,updatedAt:new Date(now).toISOString()};
 }
 export function localCommand(original,action,payload={},now=Date.now(),random=Math.random) {
@@ -72,7 +75,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=LOCAL_RULE_VERSION;initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now,random);initializeFreeExpansions(room);room.turnSeconds=room.timeMode==='untimed'?null:TURN_SECONDS;
+  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=LOCAL_RULE_VERSION;initializeTerritoryDirector(room);initializeTurnClock(room,now);initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now,random);initializeFreeExpansions(room);
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -85,7 +88,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='resume'){
     if(room.status==='playing')return original;
     if(room.status!=='paused')throw new Error('La partida no está pausada.');
-    resumeHabitats(room,now);resumeImmunities(room,now);if(room.matchGoal?.type==='time'){room.endsAt=new Date(now+(room.matchRemainingMs??room.matchGoal.target*1000)).toISOString();delete room.matchRemainingMs;}room.status='playing';normalize(room,now);p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??TURN_SECONDS*1000)).toISOString();
+    resumeHabitats(room,now);resumeImmunities(room,now);if(room.matchGoal?.type==='time'){room.endsAt=new Date(now+(room.matchRemainingMs??room.matchGoal.target*1000)).toISOString();delete room.matchRemainingMs;}room.status='playing';normalize(room,now);p.deadline=room.timeMode==='untimed'?null:new Date(now+(room.pauseRemainingMs??turnSecondsFor(room)*1000)).toISOString();
     delete room.pauseRemainingMs;delete room.pausedAt;room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   if(action==='watch-target'){if(!['playing','paused'].includes(room.status))throw new Error('La partida no está disponible.');toggleWatchTarget(room,payload);room.updatedAt=new Date(now).toISOString();room.version++;return room;}
@@ -217,7 +220,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       }
       spendCard(room,playerId,tool);
     }
-    if(tool!=='immunity')delete room.practiceHint;if(tool==='destroy'||microLength(tool))normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
+    if(tool!=='immunity')delete room.practiceHint;if(tool==='destroy'||microLength(tool))normalize(room,now);markTerritoryGrowth(room);if(!['double','rival','combo'].includes(tool))considerTerritory(room,now,random);room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
   let automatic=false;
   if(action==='tick') {
@@ -229,7 +232,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   if(action==='pass'){
     if(p.pending||availableCells(room,p).length||!availableCells(room,p,{ignoreBlocks:true}).length)throw new Error('Solo se puede pasar cuando todas las celdas vacías están bloqueadas.');
     const actor=p[p.turn.toLowerCase()];stepRodent(room,actor,{placed:false,now,random});completeInventoryTurn(room,actor,{automatic,placed:false,random});delete room.practiceTurn;
-    p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
+    p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+turnSecondsFor(room)*1000).toISOString();
     room.lastEvent={id:id(),kind:'pass',player:actor,automatic};
     normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
   }
@@ -253,7 +256,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     stepRodent(room,player.id,{placed:true,completed,exclude:cell.id,now,random});
     full=!availableCells(room,p,{ignoreBlocks:true}).length;
     if(!completed&&state.remaining>1&&!full&&availableCells(room,p).length){room.practiceTurn={...state,remaining:state.remaining-1};delete room.practiceTurn.nextSymbol;}
-    else{completeInventoryTurn(room,player.id,{automatic,random});delete room.practiceTurn;p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();}
+    else{completeInventoryTurn(room,player.id,{automatic,random});delete room.practiceTurn;p.turn=p.turn==='X'?'O':'X';p.deadline=room.timeMode==='untimed'?null:new Date(now+turnSecondsFor(room)*1000).toISOString();}
     if(full)p.expander=player.id;
     room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:player.id,figures,points,bonus,paidFigures,automatic,continuation:full};
   }else if(action==='expand') {
@@ -266,8 +269,9 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
     recordTerritoryGrowth(room,room.terrain.length-known.size,now,random);
     const strategic=p.optionalExpansion;
     if(strategic){if(!p.strategicExpansion)throw new Error('Usa Ampliación inteligente.');spendCard(room,p.expander,'hint-expand');room.practiceTurn={...practiceTurn(room,p.expander),freeExpanded:true};delete p.optionalExpansion;delete p.strategicExpansion;}else p.credits--;
-    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.pending=0;p.expander=null;if(!strategic)p.deadline=room.timeMode==='untimed'?null:new Date(now+TURN_SECONDS*1000).toISOString();
+    room.blocks.push({x,y});p.active={x,y};delete p.terrainAnchor;delete p.frontierUsed;p.pending=0;p.expander=null;if(!strategic)p.deadline=room.timeMode==='untimed'?null:new Date(now+turnSecondsFor(room)*1000).toISOString();
     room.lastEvent={id:id(),kind:'expand',player:original.pairs[0].expander,automatic};
+    markTerritoryGrowth(room);considerTerritory(room,now,random,{point:{x,y}});
   }else throw new Error('Acción desconocida.');
   delete room.practiceHint;normalize(room,now);room.updatedAt=new Date(now).toISOString();room.version++;return room;
 }

@@ -1,5 +1,22 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.94 · El territorio decide y partidas rápidas
+
+Jorge21/10 aprueba turnos obligatorios de3s para partidas de33s, incluidas
+automáticas y ampliación. Otros objetivos conservan reloj33s o sin límite.
+El territorio calcula apariciones tras acciones aceptadas según ocupación,
+presión y variedad, sin intervalos fijos ni API de IA. Una fauna y un fenómeno
+como máximo: pequeña puede acompañar grande; nunca grande con grande. Aviso3
+con efecto y zona comprometidos; conservar duraciones y respuestas existentes.
+Tablero lleno: primero ampliación obligatoria, después liberar celdas; no
+avanzar avisos ni limpiar en la ampliación. No elegir desde cámara/reloj/render.
+Contrato design/territory-director-r94.md. Guardados activos adoptan a futuro;
+conservar anuncios y finales. Reglas26 separan resultados. Solo Original local/
+máquina: Inverso, online y SQL intactos, cron mundial apagado. Rediseño de avisos
+y acciones al tocar una celda quedan para después. Probar motor, simulación,
+traslado,33333 y tres motores/seis tamaños antes de publicar R94/r305 y HTTP.
+Respaldo backup/pre-territory-director-r93-20261021.
+
 ## R0.21.93 · Mis partidas sin Activas
 
 Jorge20/10 pide suprimir la sección Activas. Mostrar Ancladas con prioridad,

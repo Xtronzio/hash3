@@ -5,9 +5,10 @@ import {chromium,firefox,webkit} from 'playwright';
 import {preview} from 'vite';
 import {createLocal} from '../src/local.js';
 import {countHabitatPlacement} from '../src/inhabitants.js';
+import {markTerritoryGrowth} from '../src/territory-director.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
-const fixture=()=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',true,{fauna:['ants'],territoryEnabled:false});g.terrain=Array.from({length:100},(_,i)=>({x:i%10,y:Math.floor(i/10)}));g.cells=g.terrain.slice(0,90).map((c,i)=>({...c,id:'piece-'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));countHabitatPlacement(g,'local-x',{x:9,y:9},Date.now(),()=>.3);for(const k of Object.keys(g.habitatZones[0].next))g.habitatZones[0].next[k]=g.habitatZones[0].placements+1;return g;};
+const fixture=()=>{const g=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',true,{fauna:['ants'],territoryEnabled:false});g.terrain=Array.from({length:100},(_,i)=>({x:i%10,y:Math.floor(i/10)}));g.cells=g.terrain.slice(0,90).map((c,i)=>({...c,id:'piece-'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));countHabitatPlacement(g,'local-x',{x:9,y:9},Date.now(),()=>.3);for(const k of Object.keys(g.habitatZones[0].next))g.habitatZones[0].next[k]=999999;markTerritoryGrowth(g);return g;};
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
  try{const context=await browser.newContext({serviceWorkers:'block'});page=await context.newPage();const errors=[],online=[];page.on('pageerror',e=>errors.push(e.message));context.on('request',r=>{if(new URL(r.url()).hostname.endsWith('.supabase.co'))online.push(r.url());});await context.route('**/*.supabase.co/**',r=>r.abort());await context.route('**/version.json*',r=>r.fulfill({status:404,body:''}));await context.route('https://fonts.googleapis.com/**',r=>r.abort());await context.route('https://fonts.gstatic.com/**',r=>r.abort());

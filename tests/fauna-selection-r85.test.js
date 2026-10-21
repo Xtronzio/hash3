@@ -16,7 +16,7 @@ import {captureTransfer,validateTransfer} from '../src/local-transfer.js';
 const NOW=1800000000000;
 const fresh=fauna=>createLocal('local','Jorge','Rival',NOW,'normal','untimed','pro','X',true,{territoryEnabled:false,...(fauna?{fauna}:{})});
 const board=fauna=>{const g=fresh(fauna);g.terrain=Array.from({length:100},(_,i)=>({x:i%10,y:Math.floor(i/10)}));g.cells=g.terrain.slice(0,90).map((c,i)=>({...c,id:'piece-'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));return g;};
-const due=(g,kind)=>{countHabitatPlacement(g,'local-x',{x:9,y:9},NOW,()=>.3);const z=g.habitatZones[0];for(const k of Object.keys(z.next))z.next[k]=99999;z.next[kind]=z.placements+1;return z;};
+const due=(g,kind)=>{delete g.territoryDirector;countHabitatPlacement(g,'local-x',{x:9,y:9},NOW,()=>.3);const z=g.habitatZones[0];for(const k of Object.keys(z.next))z.next[k]=99999;z.next[kind]=z.placements+1;return z;};
 const attempt=g=>countHabitatPlacement(g,'local-o',{x:8,y:9},NOW,()=>.3);
 test('Fauna catalogue supports thirteen independent choices, legacy all, canonical ordering and none',()=>{
  assert.equal(SELECTABLE_FAUNA.length,13);assert.deepEqual(normalizeFauna(),SELECTABLE_FAUNA);assert.deepEqual(normalizeFauna(['ants','rodent','ants']),['rodent','ants']);assert.throws(()=>normalizeFauna(['fog']));assert.throws(()=>normalizeFauna('ants'));

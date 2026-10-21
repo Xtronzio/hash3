@@ -29,7 +29,7 @@ export function applyBombWave(room,event,now){
  const region=event.region.filter(c=>known.has(key(c.x,c.y))&&!isDeadCell(room,c.x,c.y)&&!safe.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
  if(event.bombPhase==='bomb'){
   clearBriefCells(room,region);
-  if(region.length)room.territoryEvents.push({id:event.id+':entry',kind:'invader-colony',bombPhase:'invasion',region,groups:event.groups?.map(g=>g.filter(c=>region.some(p=>p.x===c.x&&p.y===c.y))).filter(g=>g.length),x:region[0].x,y:region[0].y,turnsRemaining:1,announcedTurn:room.ecologyTurns||0});
+  if(region.length)room.territoryEvents.push({id:event.id+':entry',kind:'invader-colony',bombPhase:'invasion',region,groups:event.groups?.map(g=>g.filter(c=>region.some(p=>p.x===c.x&&p.y===c.y))).filter(g=>g.length),x:region[0].x,y:region[0].y,turnsRemaining:1,announcedTurn:room.ecologyTurns||0,...(event.directorBatch?{directorBatch:event.directorBatch,directorTier:event.directorTier}:{})});
   return {hit:new Set(region.map(c=>key(c.x,c.y))),actions:region.map(c=>({...c,kind:'invader-rain'})),demolish:false};
  }
  clearBriefCells(room,region);

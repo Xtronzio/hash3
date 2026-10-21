@@ -99,14 +99,13 @@ test('Announcement panel distinguishes workers and historical worm meals while n
 });
 
 
-test('A due appearance waits for Doble to finish and then retains all three warning turns',()=>{
- for(const fauna of [false,true]){
-  let r=fresh();r.faunaEnabled=fauna;r.territoryEnabled=!fauna;r.players[0].figures=33;r.players[0].ecologyPlacements=r.players[0].placements=fauna?65:0;r.territoryNextInvasion=1;
-  r=localCommand(r,'inventory',{playerId:'local-x',tool:'double'},now);r=move(r);
-  const pending=game=>fauna?game.rodentRaids[0]:game.territoryEvents[0];assert.equal(pending(r),undefined);
-  r=move(r);assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,3);assert.equal(r.ecologyTurns,1);
-  r=move(r);assert.equal(pending(r).warningTurns??pending(r).turnsRemaining,2);
- }
+test('A calculated appearance waits for Doble to finish and retains all three warning turns',()=>{
+ let r=fresh();r.faunaEnabled=true;r.territoryEnabled=false;r.fauna=['rodent'];
+ r.terrain=Array.from({length:99},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
+ r.cells=r.terrain.slice(10,40).map((c,i)=>({...c,id:'food:'+i,symbol:'O',owner:'local-o'}));
+ r=localCommand(r,'inventory',{playerId:'local-x',tool:'double'},now);r=move(r);assert.equal(r.rodentRaids.length,0);
+ r=move(r);assert.equal(r.rodentRaids[0].warningTurns,3);assert.equal(r.ecologyTurns,1);
+ r=move(r);assert.equal(r.rodentRaids[0].warningTurns,2);
 });
 
 test('Territory arrival badges use the pending task of each kind, freeze on pause and never promise an unannounced family draw',()=>{

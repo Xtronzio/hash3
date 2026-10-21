@@ -18,7 +18,7 @@ test('Shared hall/board territory catalogue explains every current card and is r
 });
 test('Only chosen/announced events promise a numeric countdown; permanent and absent items are explicit',()=>{
  const r=fresh();r.players[0].figures=33;r.territoryPlans.natural='ufo';r.territoryNextPlacement=24;
- assert.equal(ecologyCardStatus(r,'ufo','local-x').badge,'−27');assert.equal(ecologyCardStatus(r,'pandemic','local-x').badge,'…');assert.equal(ecologyCardStatus(r,'invader-colony','local-x').badge,'—');
+ assert.equal(ecologyCardStatus(r,'ufo','local-x').badge,'…');assert.equal(ecologyCardStatus(r,'pandemic','local-x').badge,'…');assert.equal(ecologyCardStatus(r,'invader-colony','local-x').badge,'—');
  r.cells.push({x:0,y:0,id:'star',symbol:'*'});assert.equal(ecologyCardStatus(r,'invader-colony','local-x').badge,'∞');
  r.territoryEvents=[{id:'entry',kind:'invader-colony',region:[{x:1,y:1}],turnsRemaining:1}];assert.equal(ecologyCardStatus(r,'invader-colony','local-x').badge,'−1');
  r.frontiers=[{id:'dam',type:'beaver',cells:[{x:2,y:0},{x:3,y:0},{x:4,y:0}],turnsRemaining:7}];assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−7');assert.equal(ecologyCardStatus(r,'barriers','local-x').badge,'×1');
@@ -26,7 +26,7 @@ test('Only chosen/announced events promise a numeric countdown; permanent and ab
 });
 test('Forecast respects the next small/plague variant in each zone and completed workers are ignored',()=>{
  const r=fresh();r.habitatZones=[{placements:10,next:{rodent:40},birthScale:{rodent:1}},{placements:5,next:{rodent:66},birthScale:{rodent:0}}];
- assert.equal(ecologyCardStatus(r,'rodent-plague','local-x').badge,'−33');assert.equal(ecologyCardStatus(r,'rodent','local-x').badge,'−64');
+ assert.equal(ecologyCardStatus(r,'rodent-plague','local-x').badge,'…');assert.equal(ecologyCardStatus(r,'rodent','local-x').badge,'…');
  r.works=[{id:'done',build:[{x:1,y:0}],destroy:[],done:1,turnsRemaining:1}];assert.notEqual(ecologyCardStatus(r,'build','local-x').badge,'−1');
 });
 test('Last marker wins across cell, map and save without removing older effects or target references',()=>{

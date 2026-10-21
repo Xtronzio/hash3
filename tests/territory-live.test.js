@@ -100,11 +100,10 @@ test('A stale tornado group cannot move pieces onto removed terrain',()=>{
  r.territoryEvents=[{id:'stale-tornado',kind:'tornado-rain',...plan,nextAt:2000}];advanceTerritory(r,2000);
  assert.ok(r.cells.every(c=>present(r).has(key(c.x,c.y))));
 });
-test('Proportional event intervals leave fauna time to appear before a territorial warning',()=>{
+test('Current commands adopt calculated decisions instead of historical proportional intervals',()=>{
  for(const [size,interval] of [[333,333],[990,495],[999,501],[3333,1668]])assert.equal(territoryAttemptInterval(size),interval);
- let r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:333},(_,i)=>({x:i%33,y:Math.floor(i/33)}));r.players[0].figures=99;
+ let r=createLocal('local','A','B',1000,'normal','untimed');r.terrain=Array.from({length:333},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
  r.cells=r.terrain.slice(100,200).map((c,i)=>({...c,id:'food:'+i,symbol:'O',owner:'local-o'}));
- delete r.territoryActivityVersion;
- for(let i=0;i<33;i++)r=localCommand(r,'move',{x:i%33,y:Math.floor(i/33)},1000+i,()=>.3);
- assert.equal(r.territoryEvents.length,0);assert.equal(r.rodentRaids.length,0);assert.ok(r.worms.length);
+ r.territoryNextPlacement=999999;r=localCommand(r,'move',{x:0,y:0},1001,()=>.3);
+ assert.equal(r.territoryDirector.version,1);assert.equal(r.territoryDirector.choices,1);
 });

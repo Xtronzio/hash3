@@ -1,4 +1,5 @@
 import {SELECTABLE_FAUNA,faunaKindEnabled} from './fauna-selection.js';
+import {directedTerritory} from './territory-director.js';
 import {phenomenonEnabled} from './phenomena-selection.js';
 import {fogKeys} from './fog.js';
 import {briefEcology,BRIEF_FREQUENCIES} from './brief-ecology.js';
@@ -79,6 +80,7 @@ export function ecologyCardStatus(room,kind,playerId,{events=ecologyClockEvents(
  if(kind==='anaconda'&&targets.some(e=>e.warningTurns==null))return {badge:'3↷',text:'Avanza tres celdas por turno hasta quedarse sin continuación.',state:'active'};
  if(announced.length){const turns=Math.min(...announced.map(e=>e.warningTurns??e.turnsRemaining));return {badge:'−'+turns,turns,text:turns+' turnos hasta la intervención anunciada.',state:'announced'};}
  if(kind==='invader-colony'&&briefEcology(room))return {badge:targets.length?'∞':'—',text:targets.length?'Invasores estáticos: no caducan. Su icono permite localizarlos.':'No hay una entrada invasora anunciada ni invasores que localizar.',state:targets.length?'permanent':'absent'};
+ if(directedTerritory(room)&&kind!=='neutral')return targets.length?{badge:'×'+targets.length,text:'Actividad en curso. El territorio evalúa las próximas combinaciones después de una reacción.',state:'active'}:{badge:'…',text:room.pairs.some(p=>p.pending&&!p.optionalExpansion)?'El territorio espera a completar la ampliación. Los avisos conservan sus zonas.':'El territorio decide la aparición según ocupación, presión y variedad. Todavía no hay una intervención anunciada.',state:'unplanned'};
  let turns=null;
  if(kind==='death'&&briefEcology(room))turns=Math.max(0,(room.territoryNextDeathTurn??(room.ecologyTurns||0)+333)-(room.ecologyTurns||0))+3;
  else if(kind==='neutral'){
@@ -104,14 +106,14 @@ export function ecologyNavigationMarkup(room,playerId,{inspection=false,now=Date
  const forecasts=new Map([['invaders','territoryNextInvasion'],['natural','territoryNextPlacement']].map(([family,field])=>{
   const remaining=Math.max(0,(room[field]??territoryProgress(room)+(livingAttempt(room,family)??territoryAttemptInterval(room.terrain?.length||0,family)))-territoryProgress(room));
   const figures=Math.max(0,livingMinimum(room)-territoryFigures(room));
-  return [family,` · próximo intento de la familia en ${remaining} ${plannedEcology(room)?'turnos completos':'colocaciones entre ambos'}${figures?' · faltan '+figures+' figuras para habilitarlo':''}${room.territoryEvents?.length?' · espera al aviso actual':''}`];
+  return [family,directedTerritory(room)?'':` · próximo intento de la familia en ${remaining} ${plannedEcology(room)?'turnos completos':'colocaciones entre ambos'}${figures?' · faltan '+figures+' figuras para habilitarlo':''}${room.territoryEvents?.length?' · espera al aviso actual':''}`];
  }));
  const ordered=room.turnEcologyVersion===1?['rodent','rodent-plague','worm','worm-plague',...(briefEcology(room)?['rhino','rhino-plague','beaver','beaver-plague','anaconda','ants','ants-plague']:[]),'build','destroy','meteorites','earthquake','tornado','hurricane','contagion','pandemic','blackhole','ufo','clouds','fog','invader-colony','invader-rain',...(briefEcology(room)?['death','beaver-barrier']:[]),'barriers','neutral',...kinds.filter(k=>!['rodent','worm','build','destroy',...NATURAL_EVENT_ROTATION,...INVADER_EVENT_ROTATION,'neutral'].includes(k))]:kinds;
  const columns=room.turnEcologyVersion===1;
  const visible=ordered.filter((kind,i,a)=>a.indexOf(kind)===i).filter(kind=>![...SELECTABLE_FAUNA,'beaver-barrier'].includes(kind)||faunaKindEnabled(room,kind)||ecologyTargets(room,kind,playerId).length>0).filter(kind=>(!isTimedTerritoryKind(kind)&&kind!=='neutral'||phenomenonEnabled(room,kind))||ecologyTargets(room,kind,playerId).length>0);
  const renderButton=kind=>{
   const targets=ecologyTargets(room,kind,playerId),events=ecologyClockEvents(room,kind).filter(e=>!columns||!['build','destroy'].includes(kind)||(e[kind]?.slice(e.done||0).length||0)>0),color=ecologyColors[kind]||'var(--yellow)',frozen=room.status==='paused'||events.some(e=>e.remainingMs!=null);
-  const birthKind=['build','destroy'].includes(kind)?'work':kind==='rodent-plague'?'rodent':kind==='worm-plague'?'worm':kind.replace('-plague',''),frequency=['rodent','worm','work','rhino','beaver','anaconda','ants'].includes(birthKind)?(localLiving(room)?{...LIVING_FREQUENCIES,...BRIEF_FREQUENCIES}:HABITAT_FREQUENCIES)[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
+  const birthKind=['build','destroy'].includes(kind)?'work':kind==='rodent-plague'?'rodent':kind==='worm-plague'?'worm':kind.replace('-plague',''),frequency=['rodent','worm','work','rhino','beaver','anaconda','ants'].includes(birthKind)?(localLiving(room)?{...LIVING_FREQUENCIES,...BRIEF_FREQUENCIES}:HABITAT_FREQUENCIES)[birthKind]:null,births=(room.habitatZones||[]).map(z=>Math.max(0,(z.next?.[birthKind]??frequency)-z.placements)),birth=!directedTerritory(room)&&frequency&&room.faunaEnabled!==false?births.length?Math.min(...births):frequency:null;
   let forecasting=false;
   const colonies=targets.filter(e=>e.invasion);
   const turnEvents=events.filter(e=>e.warningTurns!=null||e.turnsRemaining!=null);

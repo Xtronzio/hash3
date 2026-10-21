@@ -14,9 +14,9 @@ function exactContinuation(room){
 }
 test('El cálculo del rival coincide con el árbitro: figuras, solapamientos, grupos y bonus',()=>{
   for(const level of ['normal','advanced'])for(let seed=1;seed<=5;seed++){
-    const random=seedRandom(seed);let room=createLocal('solo','A','',0,level,'untimed','pro');
+    const random=seedRandom(seed);let room=createLocal('solo','A','',0,level,'untimed','pro','X',false,{faunaEnabled:false,territoryEnabled:false});
     for(let turn=0;turn<24;turn++){
-      if(room.pairs[0].pending){const choices=expansionOptions(terrainOf(room),room.pairs[0].active);room=localCommand(room,'expand',choices[Math.floor(random()*choices.length)],0);}
+      if(room.pairs[0].pending){const choices=expansionOptions(terrainOf(room),room.pairs[0].active,room);room=localCommand(room,'expand',choices[Math.floor(random()*choices.length)],0);}
       const free=availableCells(room,room.pairs[0]);
       for(const c of free){const predicted=machineMoveScore(room,c),actual=localCommand(room,'move',c,0);assert.equal(predicted.points,actual.lastEvent.points);assert.equal(predicted.figures,actual.lastEvent.figures);}
       room=localCommand(room,'move',free[Math.floor(random()*free.length)],0);
@@ -41,7 +41,7 @@ test('Los cuatro niveles amplían legalmente y Pro respeta el presupuesto aun en
   for(const c of [...room.terrain])room=localCommand(room,'move',c,0);
   for(const difficulty of ['basic','medium','high','pro']){
     const snapshot=structuredClone(room),chosen=machineChoice({...room,difficulty},seedRandom(4),{maxTimeMs:100,maxNodes:200});
-    assert.equal(chosen.action,'expand');assert(expansionOptions(terrainOf(room),room.pairs[0].active).some(c=>c.x===chosen.payload.x&&c.y===chosen.payload.y));
+    assert.equal(chosen.action,'expand');assert(expansionOptions(terrainOf(room),room.pairs[0].active,room).some(c=>c.x===chosen.payload.x&&c.y===chosen.payload.y));
     assert(localCommand(room,chosen.action,chosen.payload,0).terrain.length>room.terrain.length);assert.deepEqual(room,snapshot);
   }
   const terrain=Array.from({length:500},(_,i)=>({x:i%25,y:Math.floor(i/25)}));
