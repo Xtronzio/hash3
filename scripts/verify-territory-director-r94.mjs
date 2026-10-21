@@ -14,7 +14,7 @@ const fixture=()=>{const g=fresh({fauna:['rodent'],phenomena:['tornado']});g.ter
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
  try{
-  const context=await browser.newContext({serviceWorkers:'block',hasTouch:true});page=await context.newPage();const errors=[],online=[];
+  const context=await browser.newContext({serviceWorkers:'block',hasTouch:true});await context.addInitScript(()=>{Math.random=()=>.1;});page=await context.newPage();const errors=[],online=[];
   page.on('pageerror',e=>errors.push(e.message));context.on('request',r=>{if(new URL(r.url()).hostname.endsWith('.supabase.co'))online.push(r.url());});await context.route('**/*.supabase.co/**',r=>r.abort());await context.route('**/version.json*',r=>r.fulfill({status:404,body:''}));
   const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('hash3_locals'))[0]);
@@ -25,6 +25,10 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
    const dense=fresh({fauna:['rodent'],phenomena:[]});dense.terrain=Array.from({length:450},(_,i)=>({x:i%30,y:Math.floor(i/30)}));dense.cells=dense.terrain.slice(9).map((c,i)=>({...c,id:'dense:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));markTerritoryGrowth(dense);
    await page.setViewportSize({width,height});await load(dense);const silent=await stored();assert.equal(silent.territoryDirector.choices,0);
    await page.locator('.board .available').first().click();await frame();const awakened=await stored();assert.equal(awakened.rodentRaids[0].warningTurns,3);assert.equal(awakened.cells.length,silent.cells.length+1);assert.match(await page.locator('.board-territory-status [data-ecology-kind="rodent"]').innerText(),/−3/);
+   // R96 recovery is visible as a playable quiet board, persisted over pause.
+   dense.territoryDirector.rhythm.load=5;await load(dense);const recovering=await stored();
+   for(let i=0;i<3;i++){await page.locator('.board .available').first().click();await frame();const response=await stored();assert.equal(response.territoryDirector.choices,0);assert.equal(response.rodentRaids.length,0);assert.equal(response.territoryEvents.length,0);}
+   const recovered=await stored();assert.ok(recovered.territoryDirector.rhythm.load<recovering.territoryDirector.rhythm.load);await page.locator('[data-action="pause"]').click();const quietPaused=await stored();await page.locator('[data-action="resume"]').click();await frame();assert.deepEqual((await stored()).territoryDirector,quietPaused.territoryDirector);
    console.log(name,width,height);await page.setViewportSize({width,height});await load(fixture());const before=await stored();
    for(const kind of ['rodent','tornado'])assert.match(await page.locator(`.board-territory-status [data-ecology-kind="${kind}"]`).innerText(),/−3/);
    await page.locator('.board .available').first().click();await frame();const after=await stored();assert.equal(after.rodentRaids[0].warningTurns,2);assert.equal(after.territoryEvents[0].turnsRemaining,2);assert.deepEqual(after.territoryEvents[0].region,before.territoryEvents[0].region);
