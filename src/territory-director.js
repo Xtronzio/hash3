@@ -7,14 +7,38 @@ import {SELECTABLE_PHENOMENA,phenomenonEnabled} from './phenomena-selection.js';
 export const directedTerritory=room=>['solo','local'].includes(room?.mode)&&room.variant!=='inverse'&&room.territoryDirector?.version===1;
 const integer=n=>Number.isSafeInteger(n)&&n>=0;
 const kinds=new Set([...SELECTABLE_FAUNA,...SELECTABLE_PHENOMENA,'work']);
+const reports=room=>[room.rodentVisit,room.habitatEvent,...room.territoryImpacts||[]].filter(Boolean);
+const reportIds=room=>reports(room).map(e=>e.id).filter(id=>typeof id==='string').slice(-12);
+function validRhythm(r,turn){
+ return r==null||r.version===1&&Number.isFinite(r.load)&&r.load>=0&&r.load<=33&&integer(r.lastTurn)&&r.lastTurn<=turn&&Number.isSafeInteger(r.decisionTurn)&&r.decisionTurn>=-1&&r.decisionTurn<=turn&&integer(r.episode)&&r.episode<=2&&Array.isArray(r.seen)&&r.seen.length<=12&&r.seen.every(id=>typeof id==='string'&&id.length<=160);
+}
 export function validTerritoryDirector(room){
  const d=room?.territoryDirector;if(d==null)return true;
- return directedTerritory(room)&&integer(d.choices)&&integer(d.lastSize)&&typeof d.grown==='boolean'&&(d.fingerprint===null||typeof d.fingerprint==='string'&&d.fingerprint.length<=160)&&Array.isArray(d.recent)&&d.recent.length<=12&&d.recent.every(k=>kinds.has(k))&&(!d.last||kinds.has(d.last.kind)&&['fauna','weather'].includes(d.last.family)&&['small','large'].includes(d.last.tier)&&integer(d.last.turn));
+ return directedTerritory(room)&&integer(d.choices)&&integer(d.lastSize)&&typeof d.grown==='boolean'&&(d.fingerprint===null||typeof d.fingerprint==='string'&&d.fingerprint.length<=160)&&Array.isArray(d.recent)&&d.recent.length<=12&&d.recent.every(k=>kinds.has(k))&&validRhythm(d.rhythm,room.ecologyTurns||0)&&(!d.last||kinds.has(d.last.kind)&&['fauna','weather'].includes(d.last.family)&&['small','large'].includes(d.last.tier)&&integer(d.last.turn));
 }
 export function initializeTerritoryDirector(room){
  if(room.variant==='inverse'||!['solo','local'].includes(room.mode)||!['playing','paused'].includes(room.status))return;
  if(!validTerritoryDirector(room))throw Error('El estado del territorio no es compatible. Se conserva la partida.');
  room.territoryDirector??={version:1,choices:0,lastSize:terrainOf(room).length,grown:terrainOf(room).length>9,fingerprint:null,recent:[]};
+ initializeTerritoryRhythm(room);
+}
+export function initializeTerritoryRhythm(room){
+ if(!directedTerritory(room))return;
+ const p=territoryPressure(room),active=[...p.fauna,...p.weather];
+ // Old reports are already paid history; existing announcements finish intact.
+ room.territoryDirector.rhythm??={version:1,load:Math.min(12,active.reduce((n,t)=>n+(t==='large'?4:2),0)),lastTurn:room.ecologyTurns||0,decisionTurn:-1,episode:active.length?2:0,seen:reportIds(room)};
+}
+export function advanceTerritoryRhythm(room){
+ if(!directedTerritory(room))return;
+ initializeTerritoryRhythm(room);const r=room.territoryDirector.rhythm,turn=room.ecologyTurns||0;
+ if(turn<=r.lastTurn)return;
+ const density=room.cells.length/Math.max(1,terrainOf(room).length),seen=new Set(r.seen),affected=new Set();
+ for(const e of reports(room))if(!seen.has(e.id))for(const c of e.affected||e.visits||e.actions||[])if(Number.isFinite(c.x)&&Number.isFinite(c.y))affected.add(`${c.x},${c.y}`);
+ // A completed response pays down attention; a real impact adds it back.
+ // No catch-up for time spent closed, nor for cards, expansion or rendering.
+ r.load=Math.min(33,Math.max(0,r.load-(.9+.6*(1-Math.min(1,density))))+Math.min(4,Math.sqrt(affected.size/3)));
+ r.lastTurn=turn;r.seen=reportIds(room);
+ const p=territoryPressure(room);if(!p.fauna.length&&!p.weather.length&&r.load===0)r.episode=0;
 }
 export function territoryAwaitingExpansion(room){
  if(!directedTerritory(room)||room.status!=='playing')return false;
@@ -52,12 +76,22 @@ export function territoryAssessment(room){
  return {size,occupied,free,density,fingerprint,ready:!!d?.grown&&occupied>=3&&density>=.12&&free>0&&!territoryAwaitingExpansion(room),pressure:territoryPressure(room)};
 }
 export function territoryCandidates(room,random=Math.random){
+ initializeTerritoryRhythm(room);
  const d=room.territoryDirector,c=territoryAssessment(room);
  // Compulsory growth is guarded by ready. A percentage-based free-space
  // reserve can exceed an entire 3x3 expansion and silence large boards forever.
  if(!c.ready||d.fingerprint===c.fingerprint)return [];
  // A reaction is a changed board/protection, not elapsed time or a camera move.
  d.fingerprint=c.fingerprint;
+ const rhythm=d.rhythm,active=c.pressure.fauna.length+c.pressure.weather.length,turn=room.ecologyTurns||0;
+ if(rhythm.decisionTurn===turn)return [];
+ rhythm.decisionTurn=turn;
+ // The two slots are a ceiling, not a target. An episode can gain one partner,
+ // but never replace either member until both finish and its load is recovered.
+ if(active?(rhythm.episode>=2||rhythm.load>1):rhythm.load>0)return [];
+ if(!active)rhythm.episode=0;
+ const willingness=active ? .12+.18*c.density : .25+.45*c.density;
+ if(Math.max(0,Math.min(.999999,Number(random())||0))>=willingness)return [];
  const candidates=[],recent=d.recent,score=(kind,family,tier)=>{
   const repeat=recent.filter(k=>k===kind).length,change=d.last?.family===family?0:2;
   const pressure=tier==='large'?c.density*3-1:2-c.density;
@@ -85,4 +119,5 @@ export function territoryCandidates(room,random=Math.random){
 export function recordTerritoryChoice(room,candidate){
  const d=room.territoryDirector;d.choices++;d.recent=[...d.recent,candidate.kind].slice(-12);
  d.last={kind:candidate.kind,family:candidate.family,tier:candidate.tier,turn:room.ecologyTurns||0};
+ const r=d.rhythm;r.episode=Math.min(2,r.episode+1);r.load=Math.min(33,r.load+(candidate.tier==='large'?4:2)+Math.min(2,Math.sqrt((candidate.affected||0)/Math.max(3,terrainOf(room).length*.03))));
 }
