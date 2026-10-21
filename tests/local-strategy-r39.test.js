@@ -103,8 +103,8 @@ test('A calculated appearance waits for Doble to finish and retains all three wa
  let r=fresh();r.faunaEnabled=true;r.territoryEnabled=false;r.fauna=['rodent'];
  r.terrain=Array.from({length:99},(_,i)=>({x:i%33,y:Math.floor(i/33)}));
  r.cells=r.terrain.slice(10,40).map((c,i)=>({...c,id:'food:'+i,symbol:'O',owner:'local-o'}));
- r=localCommand(r,'inventory',{playerId:'local-x',tool:'double'},now);r=move(r);assert.equal(r.rodentRaids.length,0);
- r=move(r);assert.equal(r.rodentRaids[0].warningTurns,3);assert.equal(r.ecologyTurns,1);
+ r=localCommand(r,'inventory',{playerId:'local-x',tool:'double'},now,()=>0);r=localCommand(r,'move',availableCells(r,r.pairs[0])[0],now,()=>0);assert.equal(r.rodentRaids.length,0);
+ r=localCommand(r,'move',availableCells(r,r.pairs[0])[0],now,()=>0);assert.equal(r.rodentRaids[0].warningTurns,3);assert.equal(r.ecologyTurns,1);
  r=move(r);assert.equal(r.rodentRaids[0].warningTurns,2);
 });
 
