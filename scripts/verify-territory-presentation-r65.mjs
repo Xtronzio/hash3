@@ -10,7 +10,9 @@ const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://1
 function fixture(){
  const r=createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',false,{faunaEnabled:true,territoryEnabled:true});
  r.inventoryPreferences=Object.fromEntries(r.players.map(p=>[p.id,{inventoryDrawerCollapsed:false,territoryDrawerCollapsed:false}]));r.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));r.pairs[0].active={x:3,y:3};
- r.cells=r.terrain.filter(p=>p.x!==8||p.y!==8).map((p,i)=>({...p,id:'piece-'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players.forEach(p=>{p.score=3333;p.figures=33;});r.territoryNextPlacement=r.territoryNextInvasion=99999;return r;
+ // Keep a spare legal cell after the test move: a full board now correctly
+ // waits for compulsory expansion before any territorial animation resolves.
+ r.cells=r.terrain.filter(p=>p.x!==8||![7,8].includes(p.y)).map((p,i)=>({...p,id:'piece-'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));r.players.forEach(p=>{p.score=3333;p.figures=33;});r.territoryNextPlacement=r.territoryNextInvasion=99999;return r;
 }
 try{
  for(const [name,engine]of Object.entries({chromium,webkit,firefox})){
