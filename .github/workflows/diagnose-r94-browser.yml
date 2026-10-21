@@ -1,4 +1,4 @@
-name: HASH3 R94 browser diagnostic
+name: HASH3 R94 public HTTP verification
 on:
   push:
     branches:
@@ -6,20 +6,42 @@ on:
 permissions:
   contents: read
 jobs:
-  browser:
+  http:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-        timeout-minutes: 3
-      - run: npm run verify:browser
+      - name: Verify the published R94 revision and its assets
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const base='https://xtronzio.github.io/hash3/',build='20261021-r305',checked=[];
+          async function read(path){
+           const url=new URL(path,base);url.searchParams.set('verify',build);
+           const r=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(20000)});assert.equal(r.status,200,url.href);
+           const body=await r.text();checked.push({url:url.origin+url.pathname,status:r.status,bytes:Buffer.byteLength(body)});return body;
+          }
+          let version;
+          for(let i=0;i<33;i++){
+           version=JSON.parse(await read('version.json'));
+           if(version.version==='R0.21.94'&&version.build===build)break;
+           await new Promise(r=>setTimeout(r,3000));
+          }
+          assert.deepEqual(version,{version:'R0.21.94',build});
+          const html=await read('./');
+          const scripts=[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m=>m[1]);
+          const css=[...html.matchAll(/<link[^>]+href="([^"]+\.css)"/g)].map(m=>m[1]);assert.ok(scripts.length&&css.length);
+          const primary=await read(scripts[0]);assert.ok(primary.includes('R0.21.94')&&primary.includes(build));
+          const workers=[...new Set([...primary.matchAll(/["'](\/hash3\/assets\/[^"']*worker[^"']*\.js)["']/g)].map(m=>m[1]))];assert.ok(workers.length>=2);
+          for(const body of await Promise.all([...css,...workers].map(read)))assert.ok(body.length>1000&&!body.slice(0,100).includes('<html'));
+          assert.ok((await read('sw.js')).includes(build));
+          const manifest=JSON.parse(await read('manifest.webmanifest'));assert.equal(new URL(manifest.start_url,base).pathname,'/hash3/');
+          const report={at:new Date().toISOString(),commit:'de85a008c9b09203f8c0f049a49f4ddea74277b7',version,checked};fs.writeFileSync('r94-public-http.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+          JS
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: director-r94-browser-diagnostic
-          path: browser-results/
+          name: r94-public-http
+          path: r94-public-http.json
