@@ -49,11 +49,13 @@ const hashBoard=room=>{
 export function territoryAssessment(room){
  const size=terrainOf(room).length,occupied=room.cells.length,free=availableCells(room,room.pairs[0],{ignoreBlocks:true}).length,density=occupied/Math.max(1,size),d=room.territoryDirector;
  const fingerprint=[size,occupied,hashBoard(room),room.forms?.length||0,(room.inventoryEffects?.shields||[]).length,(room.inventoryEffects?.immunities||[]).length].join(':');
- return {size,occupied,free,density,fingerprint,ready:!!d?.grown&&occupied>=3&&density>=.12&&free>0&&!territoryAwaitingExpansion(room),growthWindow:free<=Math.max(1,Math.ceil(size*.06)),pressure:territoryPressure(room)};
+ return {size,occupied,free,density,fingerprint,ready:!!d?.grown&&occupied>=3&&density>=.12&&free>0&&!territoryAwaitingExpansion(room),pressure:territoryPressure(room)};
 }
 export function territoryCandidates(room,random=Math.random){
  const d=room.territoryDirector,c=territoryAssessment(room);
- if(!c.ready||c.growthWindow||d.fingerprint===c.fingerprint)return [];
+ // Compulsory growth is guarded by ready. A percentage-based free-space
+ // reserve can exceed an entire 3x3 expansion and silence large boards forever.
+ if(!c.ready||d.fingerprint===c.fingerprint)return [];
  // A reaction is a changed board/protection, not elapsed time or a camera move.
  d.fingerprint=c.fingerprint;
  const candidates=[],recent=d.recent,score=(kind,family,tier)=>{
