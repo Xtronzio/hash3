@@ -193,7 +193,7 @@ export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=
  if(localLiving(room)&&!(turnEcology(room)?zone.livingInitialized:zone.clockNext)){zone.next=Object.fromEntries(Object.entries(frequencies).map(([kind,n])=>[kind,(Math.floor(zone.placements/livingInterval(n,area.length))+1)*livingInterval(n,area.length)]));zone.clockNext=Object.fromEntries(['rodent','worm','work'].map(kind=>[kind,now+livingClock(kind,area.length)]));}
  if(turnEcology(room)){zone.livingInitialized=true;delete zone.clockNext;delete zone.clockRemaining;}
  if(briefEcology(room))for(const [kind,n]of Object.entries(BRIEF_FREQUENCIES))zone.next[kind]??=zone.placements+livingInterval(n,area.length);
- const previouslySuspended=faunaSuspended(room,now);if(room.ecologyRecovery?.moves>0&&(!turnEcology(room)||completed))room.ecologyRecovery.moves--;
+ const previouslySuspended=faunaSuspended(room,now)||territoryAwaitingExpansion(room);if(room.ecologyRecovery?.moves>0&&(!turnEcology(room)||completed))room.ecologyRecovery.moves--;
  p.placements++;
  if(!plannedEcology(room)||completed)zone.placements++;
  if(plannedEcology(room)){if(completed){p.ecologyPlacements=(p.ecologyPlacements||0)+1;recordTerritoryPlacement(room,now,random,{increment:1});}}
@@ -298,7 +298,7 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
  const previousTurn=room.ecologyTurns||0;room.ecologyTurns=previousTurn+1;
  const growthHold=territoryAwaitingExpansion(room);
  const eligible=e=>ids.has(e.id)&&e.holdWarningTurn!==previousTurn;
- const suspended=faunaSuspended(room,now);
+ const suspended=growthHold||faunaSuspended(room,now);
  for(const e of room.territoryEvents||[])if(!growthHold&&eligible(e))e.turnsRemaining=Math.max(0,(e.turnsRemaining??3)-1);
  if(!suspended){
   for(const e of [...room.works||[],...room.bombs||[]])if(eligible(e))e.turnsRemaining=Math.max(0,(e.turnsRemaining??3)-1);
@@ -316,7 +316,7 @@ export function advanceEcologyTurn(room,now=Date.now(),random=Math.random,ids=ec
  for(const e of [...room.territoryEvents||[],...room.faunaEvents||[],...room.works||[],...room.bombs||[],...room.rodentRaids||[],...room.worms||[],...room.anacondas||[]])if(e.holdWarningTurn===previousTurn)delete e.holdWarningTurn;
  if(!growthHold)advanceFog(room);
  advanceHabitats(room,now,random,{completedTurn:true});
- if(!faunaSuspended(room,now)){
+ if(!growthHold&&!faunaSuspended(room,now)){
   advanceAnacondas(room,now,ids,latest,random);
   for(const w of room.worms||[])if(w.brief&&w.warningTurns==null){const actions=clearBriefCells(room,w.route||[]).map(c=>({...c,kind:'worm'}));if(actions.length)room.habitatEvent={id:uuid(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions]};}
   room.worms=room.worms.filter(w=>!w.brief||w.warningTurns!=null);
@@ -345,7 +345,7 @@ function positionRodents(room,raid,point,random){
  }
 }
 export function visitRodents(room,point,now=Date.now(),random=Math.random){
- if(!faunaEnabled(room)||faunaSuspended(room,now)||!room.rodentRaids.length)return;
+ if(!faunaEnabled(room)||faunaSuspended(room,now)||!room.rodentRaids.length||territoryAwaitingExpansion(room))return;
  const area=new Set(areaAt(room,point).map(c=>key(c.x,c.y))),visits=[];
  for(const raid of room.rodentRaids){
   if(raid.warningTurns!=null)continue;
@@ -376,7 +376,7 @@ export function visitRodents(room,point,now=Date.now(),random=Math.random){
  if(visits.length){clearHabitatCells(room,visits);room.rodentVisit={id:uuid(),kind:'rodent',at:now,visits};}
 }
 export function visitWorms(room,point,now=Date.now(),random=Math.random){
- if(room.status!=='playing'||!faunaEnabled(room)||faunaSuspended(room,now))return;
+ if(room.status!=='playing'||!faunaEnabled(room)||faunaSuspended(room,now)||territoryAwaitingExpansion(room))return;
  room.clockNow=now;
  const exclude=point?room.cells.find(c=>same(c,point))?.id:null,actions=[];
  for(const w of room.worms.filter(w=>isTurnWorm(w)&&!w.brief&&w.warningTurns==null)){

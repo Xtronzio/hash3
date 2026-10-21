@@ -7,6 +7,7 @@ import {considerTerritory,advanceEcologyTurn} from '../src/inhabitants.js';
 import {directedTerritory,territoryPressure,territoryCandidates,canTerritoryCombine,territoryAwaitingExpansion,markTerritoryGrowth,validTerritoryDirector} from '../src/territory-director.js';
 import {announceDirectedTerritory,recordTerritoryPlacement} from '../src/territory-tools.js';
 import {ecologyCardStatus} from '../src/ecology-navigation.js';
+import {turnOutlookMarkup} from '../src/turn-event-ui.js';
 import {captureTransfer,validateTransfer} from '../src/local-transfer.js';
 const NOW=1800000000000,random=()=>.4;
 const fresh=(options={})=>createLocal('local','Jorge','Rival',NOW,'normal','untimed','medium','X',true,{random,...options});
@@ -82,4 +83,5 @@ test('Territory status rendering uses snapshot fields without scanning board geo
  const g=board();for(const field of ['terrain','cells','frontiers'])Object.defineProperty(g,field,{get(){throw Error('Rendered policy scanned '+field);}});
  // The renderer receives its cached targets and events from the snapshot.
  assert.equal(ecologyCardStatus(g,'ufo','local-x',{targets:[],events:[]}).badge,'…');
+ assert.match(turnOutlookMarkup(g,'local-x'),/sin fecha prefijada/);
 });
