@@ -12,7 +12,7 @@ import {boardActionFeedback} from '../src/rodent-feedback.js';
 import {resolveBriefFauna} from '../src/brief-ecology.js';
 const fresh=()=>createLocal('local','Jorge','Rival',1000,'normal','untimed','medium','X',false,{faunaEnabled:true,territoryEnabled:true});
 test('Shared hall/board territory catalogue explains every current card and is read only',()=>{
- const r=fresh(),before=structuredClone(r);assert.equal(TERRITORY_GUIDE.length,29);
+ const r=fresh(),before=structuredClone(r);assert.equal(TERRITORY_GUIDE.length,26);
  for(const game of [null,r]){const html=territoryGuideMarkup(game,'local-x');for(const t of TERRITORY_GUIDE){assert.ok(t.description.length>80);assert.match(html,new RegExp('data-tool="territory:'+t.id+'"[^>]*aria-expanded="false"'));assert.ok(html.includes(t.description));}assert.match(html,/todavía sin turno asignado/);assert.match(html,/tres turnos/);}
  assert.deepEqual(r,before);const open=territoryGuideMarkup(r,'local-x',{openTools:new Set(['territory:rhino'])});assert.doesNotMatch(open.match(/<section[^>]*id="territory-description-rhino"[^>]*>/)[0],/hidden/);
 });
