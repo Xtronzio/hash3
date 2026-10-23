@@ -10,7 +10,7 @@ import {markTerritoryGrowth} from '../src/territory-director.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const fresh=options=>createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','medium','X',false,options);
-const fixture=()=>{const g=fresh({fauna:['rodent'],phenomena:['tornado']});g.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));g.cells=g.terrain.slice(0,50).map((c,i)=>({...c,id:'piece:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));markTerritoryGrowth(g);assert.ok(considerTerritory(g,Date.now(),()=>.4));assert.ok(announceDirectedTerritory(g,{kind:'tornado',tier:'large'},Date.now(),()=>.4));return g;};
+const fixture=()=>{const g=fresh({fauna:['rodent'],phenomena:['tornado']});g.terrain=Array.from({length:99},(_,i)=>({x:i%11,y:Math.floor(i/11)}));g.cells=g.terrain.slice(0,50).map((c,i)=>({...c,id:'piece:'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));markTerritoryGrowth(g);assert.ok(considerTerritory(g,Date.now(),()=>.1));assert.ok(announceDirectedTerritory(g,{kind:'tornado',tier:'large'},Date.now(),()=>.4));return g;};
 try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
  const browser=await engine.launch({args:name==='chromium'?['--no-sandbox']:[]});let page;
  try{
