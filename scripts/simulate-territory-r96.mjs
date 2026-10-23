@@ -14,6 +14,7 @@ for(const [size,density]of [[9,0],[99,.4],[450,.98],[999,.4],[33333,.65]])for(co
   if(p.pending){const opts=expansionOptions(g.terrain,p.terrainAnchor||p.active,g);assert.ok(opts.length);const cells=g.cells;g=localCommand(g,'expand',opts[Math.floor(random()*opts.length)],now,random);assert.deepEqual(g.cells,cells);expansions++;}
   else{const free=availableCells(g,p);assert.ok(free.length);g=localCommand(g,'move',free[Math.floor(random()*free.length)],now,random);}
   actions++;if(g.territoryDirector.choices>choices){if(announcements.length)gaps.push(step+1-announcements.at(-1));announcements.push(step+1);}
+  assert.ok(!g.faunaEvents.some(e=>e.kind.startsWith('beaver'))&&!g.frontiers.some(f=>f.type==='beaver'),'Retired fauna cannot return');
   const p2=territoryPressure(g);assert.ok(p2.fauna.length<=1&&p2.weather.length<=1);assert.ok(!(p2.fauna.includes('large')&&p2.weather.includes('large')));
   if(p2.fauna.length||p2.weather.length){active++;quiet=0;}else{quiet++;maxQuiet=Math.max(maxQuiet,quiet);}if(p2.fauna.length&&p2.weather.length)overlap++;
   g.players.forEach((p,i)=>assert.ok(p.score>=scores[i]));assert.ok(JSON.stringify(g.territoryDirector).length<4000);
