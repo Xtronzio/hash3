@@ -43,13 +43,13 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
     await load(g);assert.equal(await page.locator('.expansion-controls').count(),1);assert.equal(await page.locator('.expansion-frontier').count(),0);
     for(const id of ['frontier','border'])assert.equal(await page.locator(`.board-inventory-status [data-tool="${id}"]`).first().getAttribute('disabled'),'');
    }
-   const g=fixture();resolveBriefFauna(g,{id:'beaver',kind:'beaver',paths:[[{x:3,y:3},{x:4,y:3},{x:5,y:3}]]},Date.now(),()=>0);await load(g);
-   const clocks=()=>page.locator('.board .beaver-barrier-turns').allTextContents();assert.deepEqual((await clocks()).map(Number).sort((a,b)=>a-b),[3,6,9]);assert.equal(await page.locator('.board-territory-status [data-ecology-kind="beaver-barrier"]').textContent(),'−3');
-   await page.locator('[data-action="pause"]').click();const paused=await stored();assert.deepEqual(paused.frontiers,g.frontiers);assert.equal(await page.locator('.inspection-canvas .beaver-barrier').count(),3);await page.locator('[data-action="resume"]').click();
+   const g=fixture();g.ruleVersion=27;resolveBriefFauna(g,{id:'beaver',kind:'beaver',paths:[[{x:3,y:3},{x:4,y:3},{x:5,y:3}]]},Date.now(),()=>0);assert.equal(g.frontiers.length,1);await load(g);
+   assert.equal(await page.locator('.board .beaver-barrier-turns').count(),0);assert.equal(await page.locator('.board-territory-status [data-ecology-kind^="beaver"]').count(),0);assert.deepEqual((await stored()).frontiers,[]);assert.deepEqual((await stored()).players,g.players);
+   await page.locator('[data-action="pause"]').click();const paused=await stored();assert.deepEqual(paused.frontiers,[]);assert.equal(await page.locator('.inspection-canvas .beaver-barrier').count(),0);await page.locator('[data-action="resume"]').click();
    const moves=[[0,1],[1,2],[2,1],[6,1],[7,2],[8,1],[0,6],[1,7],[2,6]];
-   for(let i=0;i<moves.length;i++){const [x,y]=moves[i];await move(x,y);if([2,5,8].includes(i))assert.equal((await stored()).frontiers.flatMap(f=>f.cells).length,2-Math.floor(i/3));}
+   for(let i=0;i<moves.length;i++){const [x,y]=moves[i];await move(x,y);assert.equal((await stored()).frontiers.length,0);}
    if(width===390)await page.screenshot({path:path.join(output,`borders-beavers-r90-${name}.png`)});
-   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));results.push({name,width,height,singleBorder:true,ownerRemovalAndCancel:true,expansionWithoutBarriers:true,beaverPerCell369:true,pauseConservation:true});
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));results.push({name,width,height,singleBorder:true,ownerRemovalAndCancel:true,expansionWithoutBarriers:true,legacyBeaversRetired:true,pauseConservation:true});
   }
   const large=fixture();large.territoryEnabled=true;large.terrain=Array.from({length:33333},(_,i)=>({x:i%183-91,y:Math.floor(i/183)-91}));await page.setViewportSize({width:390,height:844});await load(large);await tool('border');assert.ok(await page.locator('.terrain-cell').count()<2000);const before=await stored();await page.locator('.viewport').evaluate(v=>{v.scrollLeft+=2000;v.scrollTop+=1000;v.dispatchEvent(new Event('scroll'));});await frame();assert.ok(await page.locator('.terrain-cell').count()<2000);assert.deepEqual(await stored(),before);
   assert.deepEqual(errors,[]);assert.deepEqual(online,[]);await context.close();
