@@ -1,5 +1,20 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.97 · Territorio sin castores
+
+Jorge23/10 pide suprimir castores y recalcular el territorio sin ellos. Catálogo
+actual once opciones, sin Castor/plaga/barreras en selector, guía o previsiones.
+Reglas28 en Original local/máquina activa/nueva: retirar avisos y barreras de
+castor al migrar, liberar sus celdas sin cambiar terreno, fichas, puntos, bolsas,
+turnos ni barreras del jugador. Lectura histórica/traslado acepta las trece
+claves antiguas y memoria del director; finales intactos. No reiniciar la carga
+R96 ni sustituir al castor por ataques adicionales; medir el catálogo restante,
+calma/coincidencia y ampliación antes de limpieza. Contrato design/no-beavers-r97.md.
+Mantener Inverso/online/SQL y cron apagado. Respaldo remoto
+backup/pre-remove-beavers-r96-20261023 en bc3300e. Motor/traslado, simulaciones y
+pipeline completo tres motores/seis tamaños antes de publicar R97/r308; verificar
+HTTP y assets públicos. Emulación no equivale a dispositivos físicos.
+
 ## R0.21.96 · Ritmo y descanso del territorio
 
 Jorge21/10 autoriza término medio tras medir R95 con actividad continua. El
