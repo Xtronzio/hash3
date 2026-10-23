@@ -1,0 +1,50 @@
+name: HASH3 R99 public HTTP verification
+on:
+  push:
+    branches:
+      - qa/header-text-probe-r99
+permissions:
+  contents: read
+jobs:
+  http:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3e7d4e4a8838000d46f98987f155e67bf257f70b
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify the published R99 revision and its assets
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const base='https://xtronzio.github.io/hash3/',build='20261023-r310',checked=[];
+          async function read(path){
+           const url=new URL(path,base);url.searchParams.set('verify',build);
+           const r=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(20000)});assert.equal(r.status,200,url.href);
+           const body=await r.text();checked.push({url:url.origin+url.pathname,status:r.status,bytes:Buffer.byteLength(body)});if(url.pathname.includes('/assets/'))assert.equal(body,fs.readFileSync('docs/'+url.pathname.slice('/hash3/'.length),'utf8'),'Exact approved asset: '+url.pathname);return body;
+          }
+          let version;
+          for(let i=0;i<33;i++){
+           version=JSON.parse(await read('version.json'));
+           if(version.version==='R0.21.99'&&version.build===build)break;
+           await new Promise(r=>setTimeout(r,3000));
+          }
+          assert.deepEqual(version,{version:'R0.21.99',build});
+          const html=await read('./');assert.equal(html,fs.readFileSync('docs/index.html','utf8'));
+          const scripts=[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m=>m[1]);
+          const css=[...html.matchAll(/<link[^>]+href="([^"]+\.css)"/g)].map(m=>m[1]);assert.ok(scripts.length&&css.length);
+          const primary=await read(scripts[0]);assert.ok(primary.includes('R0.21.99')&&primary.includes(build)&&primary.includes('text-probe-r99'));
+          const workers=[...new Set([...primary.matchAll(/["'](\/hash3\/assets\/[^"']*worker[^"']*\.js)["']/g)].map(m=>m[1]))];assert.ok(workers.length>=2);
+          for(const body of await Promise.all([...css,...workers].map(read)))assert.ok(body.length>1000&&!body.slice(0,100).includes('<html'));
+          assert.equal((await read('sw.js')).trimEnd(),fs.readFileSync('docs/sw.js','utf8').trimEnd());
+          const manifest=JSON.parse(await read('manifest.webmanifest'));assert.equal(new URL(manifest.start_url,base).pathname,'/hash3/');
+          const report={at:new Date().toISOString(),commit:'3e7d4e4a8838000d46f98987f155e67bf257f70b',version,checked};fs.writeFileSync('r99-public-http.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r99-public-http
+          path: r99-public-http.json
