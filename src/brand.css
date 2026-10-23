@@ -4,9 +4,3 @@
 .game .compact-turnbar .brand-mark{height:32px}
 @media(max-width:600px){.game .compact-turnbar .brand-mark{height:28px}}
 @media(max-height:450px) and (orientation:landscape){.game .compact-turnbar .brand-mark{height:22px}}
-/* Diagnostic text occupies the SVG's 252×112 box, without graphic effects. */
-.brand-text-probe{--brand-probe-height:28px;display:flex;align-items:center;justify-content:center;flex:none;width:calc(var(--brand-probe-height) * 2.25);height:var(--brand-probe-height);font-family:Arial,sans-serif;font-size:var(--brand-probe-height);font-weight:800;line-height:1;letter-spacing:0;color:#f2f4f5;white-space:nowrap}
-.hall .hall-brand .brand-text-probe{--brand-probe-height:42px;width:calc(var(--brand-probe-height) * 2.25)}
-.game .compact-turnbar .brand-text-probe{--brand-probe-height:32px}
-@media(max-width:600px){.hall .hall-brand .brand-text-probe{--brand-probe-height:38px}.game .compact-turnbar .brand-text-probe{--brand-probe-height:28px}}
-@media(max-height:450px) and (orientation:landscape){.game .compact-turnbar .brand-text-probe{--brand-probe-height:22px}}
