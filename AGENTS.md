@@ -1,5 +1,24 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.100 · Franja opaca frente al desenfoque iOS
+
+Jorge24/10 confirma con captura que R99 sigue borrosa y pide banda negra con
+el contenido encima. Recuperar el maestro SVG C en hall/pausa/tablero y retirar
+el texto temporal. Añadir un elemento real fijo de6px, ancho100%, top0, opaco
+del color del fondo, sin eventos de puntero y fuera de #app. Capa0 antes de la
+app posicionada; no desplazar cabeceras ni cambiar safe areas ni viewport.
+La propuesta responde a una prueba publicada para iOS27; no afirmar solución
+física hasta que Jorge la confirme en su iPhone. Contrato design/status-bar-shield-r100.md.
+Respaldo backup/pre-status-bar-shield-r99-20261024 en3e7d4e4a. Verificar franja
+persistente, geometría idéntica con/sin ella, hit-testing, navegación y guardados
+en Original/Inverso, seis tamaños/tres motores y pipeline antes de R100/r311.
+Además, Jorge24/10 exige dispersar nuevas calaveras: sorteo global seguro sin
+adyacencia lateral/diagonal a muertas o avisos de muerte. Mantener antiguas y
+avisos ya fijados. Sin sitio seguro separado se omite; máximo33 pruebas legales.
+Conservar ritmo R98, preaviso3, puntos y terreno. Original activa/nueva reglas30;
+Inverso24/finales intactos. Motor, integración, guardados/traslado,33333 y navegador
+antes de publicar. Datos, manifest, iconos y cron apagado se conservan.
+
 ## R0.21.99 · Prueba del logo ante desenfoque iOS
 
 Jorge23/10 autoriza sustituir temporalmente el SVG por texto #33 únicamente en
