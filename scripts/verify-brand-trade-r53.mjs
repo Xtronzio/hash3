@@ -74,7 +74,7 @@ try{
     for(let i=0;i<svg.length;i+=4)if(Math.max(Math.abs(svg[i]-png[i]),Math.abs(svg[i+1]-png[i+1]),Math.abs(svg[i+2]-png[i+2]))>40)different++;
     return {differentRatio:different/(512*512),brand:document.querySelector('.brand-mark').dataset.brand};
    });
-   assert.equal(vectorRaster.brand,'text-probe-r99');assert.ok(vectorRaster.differentRatio<.025,`${name}: SVG/PNG differ beyond antialiasing: ${vectorRaster.differentRatio}`);
+   assert.equal(vectorRaster.brand,'c-unframed');assert.ok(vectorRaster.differentRatio<.025,`${name}: SVG/PNG differ beyond antialiasing: ${vectorRaster.differentRatio}`);
    // These bounds describe the compact header after the temporary top-row trade notice expires.
    await page.locator('.turn-feedback-bar .player-feedback-row').waitFor({state:'detached',timeout:6000});
    assert.deepEqual(await read(),after,'Notice expiry must not change the trade result');
