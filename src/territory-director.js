@@ -1,12 +1,12 @@
 import {availableCells,terrainOf} from './game.js';
-import {SELECTABLE_FAUNA,faunaKindEnabled} from './fauna-selection.js';
+import {SELECTABLE_FAUNA,STORED_FAUNA,faunaKindEnabled,beaversRetired,retireBeavers} from './fauna-selection.js';
 import {SELECTABLE_PHENOMENA,phenomenonEnabled} from './phenomena-selection.js';
 
 // This is the territory's decision policy, not another timed inhabitant.
 // Only accepted board actions call it; paint, navigation and clock ticks do not.
 export const directedTerritory=room=>['solo','local'].includes(room?.mode)&&room.variant!=='inverse'&&room.territoryDirector?.version===1;
 const integer=n=>Number.isSafeInteger(n)&&n>=0;
-const kinds=new Set([...SELECTABLE_FAUNA,...SELECTABLE_PHENOMENA,'work']);
+const kinds=new Set([...STORED_FAUNA,...SELECTABLE_PHENOMENA,'work']);
 const reports=room=>[room.rodentVisit,room.habitatEvent,...room.territoryImpacts||[]].filter(Boolean);
 const reportIds=room=>reports(room).map(e=>e.id).filter(id=>typeof id==='string').slice(-12);
 function validRhythm(r,turn){
@@ -19,6 +19,7 @@ export function validTerritoryDirector(room){
 export function initializeTerritoryDirector(room){
  if(room.variant==='inverse'||!['solo','local'].includes(room.mode)||!['playing','paused'].includes(room.status))return;
  if(!validTerritoryDirector(room))throw Error('El estado del territorio no es compatible. Se conserva la partida.');
+ retireBeavers(room);
  room.territoryDirector??={version:1,choices:0,lastSize:terrainOf(room).length,grown:terrainOf(room).length>9,fingerprint:null,recent:[]};
  initializeTerritoryRhythm(room);
 }
@@ -57,8 +58,8 @@ export function weatherTier(kind,count){
 export function territoryPressure(room){
  const fauna=new Map(),weather=new Map();
  const offer=(map,id,tier)=>map.set(id,map.get(id)==='large'||tier==='large'?'large':'small');
- for(const e of [...room.faunaEvents||[],...room.rodentRaids||[],...room.worms||[],...room.anacondas||[],...room.works||[]])offer(fauna,e.directorBatch||e.birthBatch||e.kind==='work'&&('work:'+e.announcedTurn)||e.id,faunaTier(e));
- for(const f of room.frontiers||[])if(f.type==='beaver')offer(fauna,f.directorBatch||'beaver:'+f.bornTurn,f.directorTier||(f.cells.length>3?'large':'small'));
+ for(const e of [...room.faunaEvents||[],...room.rodentRaids||[],...room.worms||[],...room.anacondas||[],...room.works||[]])if(!beaversRetired(room)||!['beaver','beaver-plague'].includes(e.kind))offer(fauna,e.directorBatch||e.birthBatch||e.kind==='work'&&('work:'+e.announcedTurn)||e.id,faunaTier(e));
+ for(const f of room.frontiers||[])if(f.type==='beaver'&&!beaversRetired(room))offer(fauna,f.directorBatch||'beaver:'+f.bornTurn,f.directorTier||(f.cells.length>3?'large':'small'));
  for(const e of [...room.territoryEvents||[],...room.fogEffects||[]])offer(weather,e.id,e.directorTier||weatherTier(e.kind,e.region?.length||0));
  return {fauna:[...fauna.values()],weather:[...weather.values()]};
 }
