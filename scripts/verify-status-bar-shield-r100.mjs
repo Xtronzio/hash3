@@ -37,7 +37,9 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
     assert.equal(await page.locator('.status-bar-shield').count(),1);
     assert.equal(await page.locator(`${selector} svg.brand-mark[data-brand="c-unframed"]`).count(),1);assert.equal(await page.locator('.brand-text-probe').count(),0);
     const shield=await page.locator('.status-bar-shield').evaluate(el=>{const s=getComputedStyle(el),b=el.getBoundingClientRect();return {same:el===window.qaShield,outside:!document.querySelector('#app').contains(el),before:!!(el.compareDocumentPosition(document.querySelector('#app'))&Node.DOCUMENT_POSITION_FOLLOWING),position:s.position,x:b.x,y:b.y,width:b.width,height:b.height,background:s.backgroundColor,opacity:s.opacity,pointers:s.pointerEvents,zIndex:s.zIndex,filter:s.filter};});
-    assert.deepEqual(shield,{same:true,outside:true,before:true,position:'fixed',x:0,y:0,width,height:6,background:'rgb(8, 9, 11)',opacity:'1',pointers:'none',zIndex:'0',filter:'none'});
+    const {width:bandWidth,...properties}=shield;
+    assert.ok(bandWidth>=width*.8&&bandWidth<=width+1,'Opaque band covers the viewport, allowing a desktop scrollbar');
+    assert.deepEqual(properties,{same:true,outside:true,before:true,position:'fixed',x:0,y:0,height:6,background:'rgb(8, 9, 11)',opacity:'1',pointers:'none',zIndex:'0',filter:'none'});
     const comparison=await page.locator(selector).evaluate(header=>{
      const read=()=>({header:header.getBoundingClientRect().toJSON(),brand:header.querySelector('.brand-mark').getBoundingClientRect().toJSON(),controls:[...header.children].map(n=>n.getBoundingClientRect().toJSON())});
      const visible=read(),shield=document.querySelector('.status-bar-shield');shield.style.display='none';const hidden=read();shield.style.removeProperty('display');return {visible,hidden};
