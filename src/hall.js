@@ -1,5 +1,5 @@
 import {backpackIcon} from './backpack-icon.js';
-import {headerBrandMark as brandMark} from './brand.js';
+import {brandMark} from './brand.js';
 import {profileAccessMarkup} from './profile-access-ui.js';
 import {ONLINE_ENABLED,modeAvailable} from './online-availability.js';
 import {VERSION_LABEL} from './version.js';

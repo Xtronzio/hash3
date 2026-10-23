@@ -136,7 +136,7 @@ function announceTerritory(room,now,random,trigger,family,increment=0,director=n
  for(const kind of choice.order){
   if(!phenomenonEnabled(room,kind))continue;
   const count=director?.tier==='small'?Math.min(impactCount(room,kind),['hurricane','pandemic','contagion','clouds'].includes(kind)?9:3):impactCount(room,kind);
-  const planned=kind==='death'?deathRegion(room):briefEcology(room)&&kind==='invader-rain'?planBombWave(room,count,random):kind==='ufo'?territoryRegion(room,'ufo',random,count):
+  const planned=kind==='death'?deathRegion(room,random):briefEcology(room)&&kind==='invader-rain'?planBombWave(room,count,random):kind==='ufo'?territoryRegion(room,'ufo',random,count):
    kind==='earthquake'?territoryRegion(room,'cataclysm',random,count):
    plannedEventRegion(room,kind,random,now,{count});
   const region=Array.isArray(planned)?planned:planned.region;
@@ -178,7 +178,7 @@ export function recordTerritoryPlacement(room,now=Date.now(),random=Math.random,
  initializeTerritory(room,random);
  if(directedTerritory(room))return false;
  if(briefEcology(room)&&room.territoryEnabled!==false&&!room.territoryEvents.length&&!faunaSuspended(room,now)&&territoryProgress(room)+increment>=room.territoryNextDeathTurn){
-  room.territoryNextDeathTurn=territoryProgress(room)+increment+DEATH_INTERVAL;const region=phenomenonEnabled(room,'death')?deathRegion(room):[];
+  room.territoryNextDeathTurn=territoryProgress(room)+increment+DEATH_INTERVAL;const region=phenomenonEnabled(room,'death')?deathRegion(room,random):[];
   if(region.length){room.territoryEvents.push({id:crypto.randomUUID(),kind:'death',region,x:region[0].x,y:region[0].y,turnsRemaining:3,announcedTurn:room.ecologyTurns||0});return true;}
  }
  if(!territoryPlacementDue(room,now,increment))return false;

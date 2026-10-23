@@ -147,11 +147,19 @@ export function resolveBriefFauna(room,event,now,random=Math.random){
  room.faunaEvents=room.faunaEvents.filter(e=>e.id!==event.id);
  if(actions.length||visualRoutes.length)room.habitatEvent={id:crypto.randomUUID(),kind:'habitat',at:now,actions:[...(room.habitatEvent?.at===now?room.habitatEvent.actions:[]),...actions],visualRoutes:[...(room.habitatEvent?.at===now?room.habitatEvent.visualRoutes||[]:[]),...visualRoutes]};
 }
-export function deathRegion(room){
- const safe=faunaProtection(room),anchor=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y))),terrain=terrainOf(room),known=new Set(terrain.map(c=>key(c.x,c.y)));
- const candidates=terrain.filter(c=>!safe.has(key(c.x,c.y))&&!anchor.has(key(c.x,c.y))&&!habitatBlocked(room,c.x,c.y));
- candidates.sort((a,b)=>[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>known.has(key(b.x+dx,b.y+dy))).length-[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>known.has(key(a.x+dx,a.y+dy))).length);
- for(const c of candidates.slice(0,9)){
+export function deathRegion(room,random=Math.random){
+ const safe=faunaProtection(room),anchor=new Set(room.pairs.map(p=>key((p.terrainAnchor||p.active).x,(p.terrainAnchor||p.active).y))),terrain=terrainOf(room),excluded=new Set();
+ // Reserve a one-cell gap, including diagonals, around permanent skulls and
+ // committed death warnings. Never move a historical skull or retarget a warning.
+ for(const c of [...room.deadCells||[],...(room.territoryEvents||[]).filter(e=>e.kind==='death').flatMap(e=>e.region||[])])
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)excluded.add(key(c.x+dx,c.y+dy));
+ const habitat=new Set([...(room.frontiers||[]).flatMap(f=>f.cells||[]),...[...room.worms||[],...room.anacondas||[]].flatMap(w=>w.body||[]),...habitatReservations(room)].map(c=>key(c.x,c.y)));
+ const candidates=terrain.filter(c=>{const k=key(c.x,c.y);return !safe.has(k)&&!anchor.has(k)&&!excluded.has(k)&&!habitat.has(k);});
+ // Sample across the whole territory rather than sorting a stable interior
+ // prefix. Bound expensive legality probes, even on fragmented large boards.
+ for(let i=0;i<Math.min(33,candidates.length);i++){
+  const j=i+Math.floor(Math.max(0,Math.min(.999999,Number(random())||0))*(candidates.length-i));
+  [candidates[i],candidates[j]]=[candidates[j],candidates[i]];const c=candidates[i];
   const probe={...room,deadCells:[...(room.deadCells||[]),{x:c.x,y:c.y}]};
   if(availableCells(probe,probe.pairs[0]).length&&expansionOptions(terrain,probe.pairs[0].terrainAnchor||probe.pairs[0].active,probe).length)return [{x:c.x,y:c.y}];
  }

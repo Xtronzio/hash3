@@ -49,7 +49,7 @@ test('Historical single-square warnings and finished records survive the rules u
  const r=fresh();r.status='paused';r.ruleVersion=22;r.players[0].score=25912;r.players[0].inventory.cards.frontier=96;r.inventoryPreferences={'local-x':{inventoryCollapsed:true}};
  r.territoryEvents=[{id:'already-announced',kind:'tornado',region:square(0,0),turnsRemaining:2}];const done=structuredClone(r);done.id='done';done.status='finished';
  const data=new Map([['hash3_locals',JSON.stringify([r,done])]]),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},loaded=loadLocalGames(storage,now)[0];
- assert.equal(loaded.ruleVersion,29);assert.deepEqual(loaded.players,r.players);assert.deepEqual(loaded.territoryEvents,r.territoryEvents);assert.deepEqual(loaded.inventoryPreferences,r.inventoryPreferences);
+ assert.equal(loaded.ruleVersion,30);assert.deepEqual(loaded.players,r.players);assert.deepEqual(loaded.territoryEvents,r.territoryEvents);assert.deepEqual(loaded.inventoryPreferences,r.inventoryPreferences);
  assert.deepEqual(JSON.parse(data.get('hash3_locals')).find(g=>g.id==='done'),done);const stored=data.get('hash3_locals');loadLocalGames(storage,now+999999);assert.equal(data.get('hash3_locals'),stored);
  const legacy=fresh();legacy.ruleVersion=22;assert.equal(plannedEventRegion(legacy,'tornado',()=>.5,now).length,9);
 });

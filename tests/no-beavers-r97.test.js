@@ -27,7 +27,7 @@ function legacy(){
 }
 test('New local and machine games offer eleven choices and cannot announce or resolve a castor',()=>{
  assert.equal(SELECTABLE_FAUNA.length,11);assert.deepEqual(normalizeFauna(STORED_FAUNA),SELECTABLE_FAUNA);
- for(const mode of ['local','solo']){const g=board(mode);assert.equal(g.ruleVersion,29);assert.deepEqual(g.fauna,SELECTABLE_FAUNA);assert.equal(briefFrequencies(g).beaver,undefined);
+ for(const mode of ['local','solo']){const g=board(mode);assert.equal(g.ruleVersion,30);assert.deepEqual(g.fauna,SELECTABLE_FAUNA);assert.equal(briefFrequencies(g).beaver,undefined);
  for(const kind of ['beaver','beaver-plague','beaver-barrier'])assert.equal(faunaKindEnabled(g,kind),false);
  for(const scale of [0,1])assert.equal(announceBriefFauna(g,'beaver',{birthScale:{beaver:scale}},NOW,()=>0),false);
  resolveBriefFauna(g,{id:'injected',kind:'beaver',paths:[[{x:0,y:7},{x:1,y:7},{x:2,y:7}]]},NOW,()=>0);assert.equal(g.frontiers.length,0);
@@ -39,7 +39,7 @@ test('New local and machine games offer eleven choices and cannot announce or re
 test('Saved retirement is atomic and idempotent; it preserves unrelated commitments, economy, rhythm and pins',()=>{
  const g=legacy(),before=structuredClone(g),done=structuredClone(g);done.id='done';done.status='finished';
  const values=new Map([['hash3_locals',JSON.stringify([g,done])],['hash3_game_pins',JSON.stringify(['local:'+g.id])]]),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
- const games=loadLocalGames(storage,NOW),next=games.find(x=>x.id===g.id);assert.equal(next.ruleVersion,29);assert.deepEqual(next.fauna,SELECTABLE_FAUNA);assert.deepEqual(next.faunaEvents,[before.faunaEvents[1]]);assert.deepEqual(next.frontiers,before.frontiers.slice(1));
+ const games=loadLocalGames(storage,NOW),next=games.find(x=>x.id===g.id);assert.equal(next.ruleVersion,30);assert.deepEqual(next.fauna,SELECTABLE_FAUNA);assert.deepEqual(next.faunaEvents,[before.faunaEvents[1]]);assert.deepEqual(next.frontiers,before.frontiers.slice(1));
  for(const field of ['terrain','cells','forms','players','pairs','territoryEvents','ecologyTurns','territoryDirector','updatedAt'])assert.deepEqual(next[field],before[field],field);
  assert.equal(next.habitatZones[0].next.beaver,undefined);assert.equal(next.habitatZones[0].next.rodent,40);assert.deepEqual(games.find(x=>x.id==='done'),done);assert.equal(values.get('hash3_game_pins'),JSON.stringify(['local:'+g.id]));
  const saved=values.get('hash3_locals');loadLocalGames(storage,NOW+999999);assert.equal(values.get('hash3_locals'),saved);retireBeavers(next);assert.deepEqual(JSON.parse(saved).find(x=>x.id===g.id),next);
