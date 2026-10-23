@@ -5,7 +5,7 @@ iOS, y autoriza probar texto en lugar del SVG. La causa no está confirmada.
 
 Se usa un span de texto real #33 en esas tres cabeceras. La caja conserva la
 proporción 252/112 del maestro y las alturas anteriores (hall 38/42 px; tablero
-28/32 px o 22 px en horizontal bajo; pausa 36,4 px). Texto Arial blanco, sin
+28/32 px o 22 px en horizontal bajo; pausa 28 px). Texto Arial blanco, sin
 filtro, sombra ni animación propia. Se conservan el resto del diseño, safe areas,
 viewport, maestro SVG, iconos y manifest. Otras cabeceras siguen usando el SVG.
 
