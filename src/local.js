@@ -28,7 +28,7 @@ import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,r
 import {applyAreaTool} from './area-tools.js';
 import {awardFigures,scoreLandings} from './landing-score.js';
 export const TURN_SECONDS=33;
-export const LOCAL_RULE_VERSION=29;
+export const LOCAL_RULE_VERSION=30;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
 export const localMachineId=room=>{const p=room.pairs[0];return localHumanId(room)===p.x?p.o:p.x;};
