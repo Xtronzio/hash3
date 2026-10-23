@@ -2,7 +2,7 @@ import {validInverseContour} from './inverse-contour.js';
 import {validTerritoryDirector} from './territory-director.js';
 import {validInversePrison} from './inverse-prison.js';
 import {validInverseDisorder} from './inverse-disorder.js';
-import {SELECTABLE_FAUNA} from './fauna-selection.js';
+import {STORED_FAUNA} from './fauna-selection.js';
 import {SELECTABLE_PHENOMENA} from './phenomena-selection.js';
 import {gzipSync,Gunzip,strToU8,strFromU8} from 'fflate';
 import {loadLocalGames} from './sessions.js';
@@ -31,7 +31,7 @@ export function validateTransfer(data){
  safeTree(data);const ids=new Set();
  for(const g of data.games){
   if(!validInverseBees(g)||!validInverseContour(g)||!validInversePrison(g)||!validInverseDisorder(g)||!validTerritoryDirector(g))fail();
-  if(g.fauna!=null&&(!array(g.fauna,SELECTABLE_FAUNA.length)||new Set(g.fauna).size!==g.fauna.length||g.fauna.some(k=>!SELECTABLE_FAUNA.includes(k))))fail();
+  if(g.fauna!=null&&(!array(g.fauna,STORED_FAUNA.length)||new Set(g.fauna).size!==g.fauna.length||g.fauna.some(k=>!STORED_FAUNA.includes(k))))fail();
   if(g.phenomena!=null&&(!array(g.phenomena,SELECTABLE_PHENOMENA.length)||new Set(g.phenomena).size!==g.phenomena.length||g.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();
   if(g.antVersion!=null&&g.antVersion!==1)fail();
   if(g.faunaEvents!=null&&!array(g.faunaEvents))fail();
@@ -60,7 +60,7 @@ export function validateTransfer(data){
   for(const e of g.watchTargets||[])if(!point(e)||!text(e.id))fail();
   for(const e of g.rodentRaids||[])if(!text(e.id)||!array(e.members||[])||!points(e.visited||[]))fail();
  }
- for(const r of data.results){if(r.inversePrisonVersion!=null&&r.inversePrisonVersion!==1||r.inverseDisorderVersion!=null&&r.inverseDisorderVersion!==1)fail();if(r.inverseRenewalVersion!=null&&r.inverseRenewalVersion!==1)fail();if(r.inverseRestored!=null&&(!Number.isSafeInteger(r.inverseRestored)||r.inverseRestored<0||r.inverseRestored>3*Math.floor(r.limit/27)))fail();if(r.inverseContourVersion!=null&&r.inverseContourVersion!==1)fail();if(r.inverseContourLost!=null&&(!Number.isSafeInteger(r.inverseContourLost)||r.inverseContourLost<0||r.inverseContourLost>33333+(r.inverseRestored||0)))fail();if(r.fauna!=null&&(!array(r.fauna,SELECTABLE_FAUNA.length)||new Set(r.fauna).size!==r.fauna.length||r.fauna.some(k=>!SELECTABLE_FAUNA.includes(k))))fail();if(r.phenomena!=null&&(!array(r.phenomena,SELECTABLE_PHENOMENA.length)||new Set(r.phenomena).size!==r.phenomena.length||r.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();if(r.antVersion!=null&&r.antVersion!==1)fail();if(!text(r?.game)||!['solo','local'].includes(r.mode)||!['board-limit','time-limit','move-limit','inverse-empty'].includes(r.kind)||!Number.isFinite(r.limit)||!array(r.players,2)||r.players.some(p=>!Number.isFinite(p.score)||p.score<0))fail();}
+ for(const r of data.results){if(r.inversePrisonVersion!=null&&r.inversePrisonVersion!==1||r.inverseDisorderVersion!=null&&r.inverseDisorderVersion!==1)fail();if(r.inverseRenewalVersion!=null&&r.inverseRenewalVersion!==1)fail();if(r.inverseRestored!=null&&(!Number.isSafeInteger(r.inverseRestored)||r.inverseRestored<0||r.inverseRestored>3*Math.floor(r.limit/27)))fail();if(r.inverseContourVersion!=null&&r.inverseContourVersion!==1)fail();if(r.inverseContourLost!=null&&(!Number.isSafeInteger(r.inverseContourLost)||r.inverseContourLost<0||r.inverseContourLost>33333+(r.inverseRestored||0)))fail();if(r.fauna!=null&&(!array(r.fauna,STORED_FAUNA.length)||new Set(r.fauna).size!==r.fauna.length||r.fauna.some(k=>!STORED_FAUNA.includes(k))))fail();if(r.phenomena!=null&&(!array(r.phenomena,SELECTABLE_PHENOMENA.length)||new Set(r.phenomena).size!==r.phenomena.length||r.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();if(r.antVersion!=null&&r.antVersion!==1)fail();if(!text(r?.game)||!['solo','local'].includes(r.mode)||!['board-limit','time-limit','move-limit','inverse-empty'].includes(r.kind)||!Number.isFinite(r.limit)||!array(r.players,2)||r.players.some(p=>!Number.isFinite(p.score)||p.score<0))fail();}
  for(const pin of data.pins)if(!text(pin)||!ids.has(pin))fail();
  return data;
 }

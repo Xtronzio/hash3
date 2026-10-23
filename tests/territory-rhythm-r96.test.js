@@ -34,7 +34,7 @@ test('Doble, cards, pause and expansion cannot spend recovery without a complete
  assert.equal(full.territoryDirector.rhythm.load,before.load);assert.equal(full.territoryDirector.rhythm.lastTurn,before.lastTurn);assert.deepEqual(full.cells,cells);assert.equal(full.territoryDirector.choices,0);
 });
 test('An episode may have a partner but cannot immediately replace an ended member',()=>{
- const g=board();g.faunaEvents=[{id:'survivor',kind:'beaver',directorTier:'small'}];g.territoryDirector.rhythm.episode=2;
+ const g=board();g.faunaEvents=[{id:'survivor',kind:'rodent',directorTier:'small'}];g.territoryDirector.rhythm.episode=2;
  assert.deepEqual(territoryCandidates(g,()=>0),[]);
  g.faunaEvents=[];g.cells.pop();g.ecologyTurns++;advanceTerritoryRhythm(g);assert.equal(g.territoryDirector.rhythm.episode,0);assert.ok(territoryCandidates(g,()=>0).length>0);
 });

@@ -4,7 +4,7 @@ import {announceAnts,resolveAnts,antIcon} from './ants.js';
 import {phenomenonEnabled} from './phenomena-selection.js';
 import {announceAnaconda,advanceAnacondas,anacondaIcon} from './anaconda.js';
 import {advanceFog} from './fog.js';
-import {briefEcology,briefIcons,BRIEF_FREQUENCIES,announceBriefFauna,resolveBriefFauna,wormRoute,clearBriefCells,faunaProtection} from './brief-ecology.js';
+import {briefEcology,briefIcons,briefFrequencies,announceBriefFauna,resolveBriefFauna,wormRoute,clearBriefCells,faunaProtection} from './brief-ecology.js';
 import {isDeadCell} from './dead-cells.js';
 import {turnEcology,initializeTurnEcology,ecologyTurnIds,eventTurns} from './turn-ecology.js';
 import {boardCellLimit} from './board-limits.js';
@@ -188,11 +188,11 @@ function project(room,point,player,random,now){
 }
 export function countHabitatPlacement(room,playerId,point,now=Date.now(),random=Math.random,{completed=true}={}){
  initializeHabitats(room,now,random);const turnIds=ecologyTurnIds(room);const p=room.players.find(p=>p.id===playerId);if(!p)return;
- const frequencies=localLiving(room)?{...LIVING_FREQUENCIES,...(briefEcology(room)?BRIEF_FREQUENCIES:{})}:HABITAT_FREQUENCIES;
+ const frequencies=localLiving(room)?{...LIVING_FREQUENCIES,...(briefEcology(room)?briefFrequencies(room):{})}:HABITAT_FREQUENCIES;
  const area=areaAt(room,point),zone=habitatZone(room,area,frequencies),areaSet=new Set(area.map(c=>key(c.x,c.y)));
  if(localLiving(room)&&!(turnEcology(room)?zone.livingInitialized:zone.clockNext)){zone.next=Object.fromEntries(Object.entries(frequencies).map(([kind,n])=>[kind,(Math.floor(zone.placements/livingInterval(n,area.length))+1)*livingInterval(n,area.length)]));zone.clockNext=Object.fromEntries(['rodent','worm','work'].map(kind=>[kind,now+livingClock(kind,area.length)]));}
  if(turnEcology(room)){zone.livingInitialized=true;delete zone.clockNext;delete zone.clockRemaining;}
- if(briefEcology(room))for(const [kind,n]of Object.entries(BRIEF_FREQUENCIES))zone.next[kind]??=zone.placements+livingInterval(n,area.length);
+ if(briefEcology(room))for(const [kind,n]of Object.entries(briefFrequencies(room)))zone.next[kind]??=zone.placements+livingInterval(n,area.length);
  const previouslySuspended=faunaSuspended(room,now)||territoryAwaitingExpansion(room);if(room.ecologyRecovery?.moves>0&&(!turnEcology(room)||completed))room.ecologyRecovery.moves--;
  p.placements++;
  if(!plannedEcology(room)||completed)zone.placements++;
@@ -281,7 +281,7 @@ function spawnDirectedFauna(room,candidate,point,playerId,zone,area,now,random){
 export function considerTerritory(room,now=Date.now(),random=Math.random,options={}){
  if(!directedTerritory(room)||room.status!=='playing'||territoryAwaitingExpansion(room))return false;
  const playerId=options.playerId||room.pairs[0][room.pairs[0].turn.toLowerCase()],point=options.point||room.players.find(p=>p.id===playerId)?.lastMove||room.pairs[0].active;
- const area=options.area||areaAt(room,point),zone=options.zone||habitatZone(room,area,{...LIVING_FREQUENCIES,...BRIEF_FREQUENCIES});
+ const area=options.area||areaAt(room,point),zone=options.zone||habitatZone(room,area,{...LIVING_FREQUENCIES,...briefFrequencies(room)});
  const candidates=territoryCandidates(room,random);
  for(const candidate of candidates.slice(0,6)){
   const before=ecologyTurnIds(room),born=candidate.family==='weather'?announceDirectedTerritory(room,candidate,now,random):spawnDirectedFauna(room,candidate,point,playerId,zone,area,now,random);

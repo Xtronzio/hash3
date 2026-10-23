@@ -239,7 +239,8 @@ try{
   await page.locator('#local-name').fill('Diagnóstico');await page.locator('[data-setup-select="local-time-mode"][data-value="untimed"]').click();
   await page.locator('[data-setup-select="local-goal-type"][data-value="time"]').click();
   assert.deepEqual(await page.locator('#local-goal-target option').evaluateAll(options=>options.map(o=>Number(o.value))),[33,180,360,540]);
-  assert.equal(await page.locator('.ecology-choice-icons svg').count(),20);
+  assert.equal(await page.locator('.ecology-choice-icons svg').count(),19);
+  assert.equal(await page.locator('.ecology-choice-icons svg').evaluateAll(icons=>icons.some(e=>e.outerHTML.includes('data-icon="beaver"'))),false);
   assert.equal(await page.locator('.ecology-choice-icons [data-icon="ant"]').count(),1);
   assert.match(await page.locator('#local-goal-target option[value="33"]').innerText(),/⚡/);
   assert.match(await page.locator('#local-time-mode option[value="timed"]').innerText(),/33 segundos por turno/);
