@@ -15,7 +15,7 @@ import {ecologyCardStatus} from '../src/ecology-navigation.js';
 const now=1700000000000;
 const fresh=()=>{const r=createLocal('local','A','B',now,'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false});r.terrain=Array.from({length:81},(_,i)=>({x:i%9,y:Math.floor(i/9)}));r.players[0].inventory.cards.border=3;return r;};
 const place=(r,x=4,y=4)=>localCommand(r,'inventory',{tool:'border',playerId:'local-x',x,y},now,()=>0);
-const dam=r=>{const cells=[{x:3,y:3},{x:4,y:3},{x:5,y:3}];resolveBriefFauna(r,{id:'dam-event',kind:'beaver',paths:[cells]},now,()=>0);return r;};
+const dam=r=>{r.ruleVersion=27;const cells=[{x:3,y:3},{x:4,y:3},{x:5,y:3}];resolveBriefFauna(r,{id:'dam-event',kind:'beaver',paths:[cells]},now,()=>0);return r;};
 const turns=(r,n)=>{for(let i=0;i<n;i++)advanceEcologyTurn(r,now+i,()=>0);return r;};
 
 test('Frontera targets one built legal dot, spends once and leaves a normal placement for both signs',()=>{
@@ -51,14 +51,14 @@ test('Mandatory and strategic expansion reject both barriers without consuming t
  }
 });
 test('Each castor shuffles distinct 3/6/9 deadlines and releases exactly one cell at each deadline',()=>{
- const seen=new Set();for(const value of [0,.4,.99]){const r=fresh(),cells=[{x:3,y:3},{x:4,y:3},{x:5,y:3}];resolveBriefFauna(r,{id:'dam',kind:'beaver',paths:[cells]},now,()=>value);seen.add(r.frontiers[0].cells.map(c=>c.turnsRemaining).join(','));assert.deepEqual(r.frontiers[0].cells.map(c=>c.turnsRemaining).sort((a,b)=>a-b),[3,6,9]);}
+ const seen=new Set();for(const value of [0,.4,.99]){const r=fresh();r.ruleVersion=27;const cells=[{x:3,y:3},{x:4,y:3},{x:5,y:3}];resolveBriefFauna(r,{id:'dam',kind:'beaver',paths:[cells]},now,()=>value);seen.add(r.frontiers[0].cells.map(c=>c.turnsRemaining).join(','));assert.deepEqual(r.frontiers[0].cells.map(c=>c.turnsRemaining).sort((a,b)=>a-b),[3,6,9]);}
  assert.ok(seen.size>1);const r=dam(fresh());assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−3');turns(r,2);assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−1');assert.equal(frontierCells(r).length,3);assert.deepEqual(frontierCells(r).map(c=>c.turnsRemaining).sort((a,b)=>a-b),[1,4,7]);turns(r,1);assert.equal(frontierCells(r).length,2);assert.equal(ecologyCardStatus(r,'beaver-barrier','local-x').badge,'−3');turns(r,3);assert.equal(frontierCells(r).length,1);turns(r,3);assert.equal(frontierCells(r).length,0);
 });
-test('Cards, views, pause, save and transfer preserve dam timers; Doble advances them only once',async()=>{
+test('Current commands retire legacy dams before Doble; pause and transfer preserve the retired state',async()=>{
  let r=dam(fresh());r.players[0].inventory.cards.double=1;const original=structuredClone(r.frontiers);
- r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now);assert.deepEqual(r.frontiers,original);
- r=localCommand(r,'move',{x:0,y:1},now);assert.deepEqual(r.frontiers,original);
- r=localCommand(r,'move',{x:1,y:1},now);assert.deepEqual(r.frontiers[0].cells.map(c=>c.turnsRemaining).sort((a,b)=>a-b),[2,5,8]);
+ r=localCommand(r,'inventory',{tool:'double',playerId:'local-x'},now);assert.deepEqual(r.frontiers,[]);
+ r=localCommand(r,'move',{x:0,y:1},now);assert.deepEqual(r.frontiers,[]);
+ r=localCommand(r,'move',{x:1,y:1},now);assert.deepEqual(r.frontiers,[]);assert.equal(r.ecologyTurns,1);
  r=localCommand(r,'pause',{},now);const before=structuredClone(r.frontiers);assert.equal(localCommand(r,'tick',{},now+999999),r);
  const values=new Map([['hash3_locals',JSON.stringify([r])]]),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
  const decoded=await decodeTransfer(await encodeTransfer(captureTransfer(storage,{now})));assert.deepEqual(decoded.data.games[0].frontiers,before);
@@ -66,5 +66,5 @@ test('Cards, views, pause, save and transfer preserve dam timers; Doble advances
 });
 test('Old live dams migrate once without extending remaining life; old borders retain owner and geometry, finished games are untouched',()=>{
  const r=fresh();r.ruleVersion=24;r.frontiers=[{id:'old-dam',type:'beaver',cells:[{x:3,y:3},{x:4,y:3},{x:5,y:3}],turnsRemaining:6,bornTurn:-1},{id:'old-border',type:'border',by:'local-x',cells:[{x:1,y:3},{x:1,y:4},{x:1,y:5}]}];const border=structuredClone(r.frontiers[1]);initializeBriefEcology(r);assert.deepEqual(r.frontiers[0].cells.map(c=>c.turnsRemaining),[2,4,6]);const migrated=structuredClone(r.frontiers);initializeBriefEcology(r);assert.deepEqual(r.frontiers,migrated);assert.deepEqual(r.frontiers[1],border);
- const done=structuredClone(r);done.id='finished';done.status='finished';done.ruleVersion=24;const values=new Map([['hash3_locals',JSON.stringify([r,done])]]),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};const games=loadLocalGames(storage,now);assert.deepEqual(games.find(g=>g.id==='finished'),done);assert.equal(games.find(g=>g.id===r.id).ruleVersion,27);
+ const done=structuredClone(r);done.id='finished';done.status='finished';done.ruleVersion=24;const values=new Map([['hash3_locals',JSON.stringify([r,done])]]),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};const games=loadLocalGames(storage,now);assert.deepEqual(games.find(g=>g.id==='finished'),done);assert.equal(games.find(g=>g.id===r.id).ruleVersion,28);
 });
