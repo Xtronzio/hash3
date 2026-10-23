@@ -1,5 +1,18 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.99 · Prueba del logo ante desenfoque iOS
+
+Jorge23/10 autoriza sustituir temporalmente el SVG por texto #33 únicamente en
+hall, pausa y tablero para comparar en su iPhone tras actualizar iOS. Conservar
+las cajas 252:112 y alturas vigentes, posición/altura de cabeceras, controles y
+safe areas. Maestro C, favicons e identidad instalada intactos. No añadir a la
+vez franja fija, filtros o cambios de viewport: aislar la variable del logo.
+Sin cambios de reglas29/24, territorio R98, datos ni SQL. Respaldo remoto
+backup/pre-header-text-probe-r98-20261023 en dce96235. QA compara geometría con
+SVG en las tres pantallas, ambos modos, seis tamaños y tres motores; verificar
+guardados y pipeline antes de publicar R99/r310 y comprobar HTTP. Resultado
+del desenfoque pendiente del iPhone físico de Jorge: emulación no lo demuestra.
+
 ## R0.21.98 · Aflojar un poco la presión
 
 Jorge23/10 sigue percibiendo intensidad alta y autoriza reducirla. Mantener el
