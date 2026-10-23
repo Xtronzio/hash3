@@ -69,7 +69,7 @@ jobs:
       - run: npm ci
       - run: npm run build:github
       - run: npx playwright install --with-deps chromium firefox webkit
-        timeout-minutes: 5
+        timeout-minutes: 10
       - name: Run every regression in this group
         env:
           HASH3_QA_SCRIPTS: ${{ matrix.scripts }}
