@@ -1,4 +1,4 @@
-import {faunaKindEnabled} from './fauna-selection.js';
+import {faunaKindEnabled,beaversRetired,retireBeavers} from './fauna-selection.js';
 import {initializeRouteHistory,routeHistoryIndex,routeNovelty,rememberRoute,routeOrientation} from './fauna-routes.js';
 import {isDeadCell} from './dead-cells.js';
 import {key,terrainOf,availableCells,expansionOptions} from './game.js';
@@ -8,6 +8,7 @@ import {protectedTerritoryKeys} from './immunity.js';
 
 export const briefEcology=room=>['solo','local'].includes(room?.mode)&&room.status!=='finished'&&(room.ruleVersion||0)>=22;
 export const BRIEF_FREQUENCIES=Object.freeze({rhino:99,beaver:132,anaconda:165,ants:198});
+export const briefFrequencies=room=>beaversRetired(room)?{rhino:99,anaconda:165,ants:198}:BRIEF_FREQUENCIES;
 export const DEATH_INTERVAL=333,BEAVER_LIFE=9;
 export const BEAVER_LIFETIMES=Object.freeze([3,6,9]);
 
@@ -19,6 +20,7 @@ export const briefIcons={
 };
 export function initializeBriefEcology(room){
  if(!briefEcology(room))return;
+ retireBeavers(room);
  if((room.ruleVersion||0)>=24){initializeRouteHistory(room);room.anacondas||=[];room.fogEffects||=[];}
  room.faunaEvents||=[];room.deadCells||=[];room.territoryNextDeathTurn??=(room.ecologyTurns||0)+DEATH_INTERVAL;
  // Split old live dams without extending their remaining lifetime. Persisted
@@ -127,6 +129,7 @@ export function announceBriefFauna(room,kind,zone,now,random=Math.random){
 }
 export function resolveBriefFauna(room,event,now,random=Math.random){
  const base=event.kind.split('-')[0],actions=[],visualRoutes=[];
+ if(base==='beaver'&&beaversRetired(room)){room.faunaEvents=room.faunaEvents.filter(e=>e.id!==event.id);return;}
  if(base==='rhino'){
   const terrain=new Set(terrainOf(room).map(c=>key(c.x,c.y))),edges=new Set(frontierSegments(room).map(edgeKey)),hit=new Map();
   for(const path of event.paths){let prev=null,first=null;for(const c of path){if(!terrain.has(key(c.x,c.y))||isDeadCell(room,c.x,c.y)||(room.frontiers||[]).some(f=>f.cells?.some(p=>p.x===c.x&&p.y===c.y))||prev&&crosses(prev,c,edges))break;hit.set(key(c.x,c.y),c);first||=c;prev=c;}if(first&&prev)visualRoutes.push({from:{x:first.x,y:first.y},to:{x:prev.x,y:prev.y}});}
