@@ -1,5 +1,21 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.98 · Aflojar un poco la presión
+
+Jorge23/10 sigue percibiendo intensidad alta y autoriza reducirla. Mantener el
+catálogo sin castores y la elección contextual. Inicio de episodio .20+.35×
+ocupación; acompañamiento .08+.12×ocupación. Cada anuncio nuevo carga3/5 en vez
+de2/4, conservando la huella prevista y la recuperación/impacto real R96.
+No recalcular carga guardada ni cancelar avisos: ajuste a futuras decisiones.
+Reglas29 en Original local/máquina activa/nueva, finales e Inverso intactos.
+Medir las mismas muestras R97: menos anuncios/actividad/coincidencia sin silencio,
+prioridad de ampliación antes de limpieza y aviso3. Contrato
+design/territory-ease-r98.md; respaldo backup/pre-territory-ease-r97-20261023
+en198ec71. Validar motor/traslado, simulación comparada y pipeline completo de
+tres motores/seis tamaños antes de publicar R98/r309 y verificar HTTP. SQL,
+online y cron apagado se conservan. El desenfoque iOS solo está diagnosticado;
+este ajuste no modifica presentación ni aplica la propuesta de franja superior.
+
 ## R0.21.97 · Territorio sin castores
 
 Jorge23/10 pide suprimir castores y recalcular el territorio sin ellos. Catálogo

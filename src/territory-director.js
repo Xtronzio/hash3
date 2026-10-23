@@ -91,7 +91,7 @@ export function territoryCandidates(room,random=Math.random){
  // but never replace either member until both finish and its load is recovered.
  if(active?(rhythm.episode>=2||rhythm.load>1):rhythm.load>0)return [];
  if(!active)rhythm.episode=0;
- const willingness=active ? .12+.18*c.density : .25+.45*c.density;
+ const willingness=active ? .08+.12*c.density : .20+.35*c.density;
  if(Math.max(0,Math.min(.999999,Number(random())||0))>=willingness)return [];
  const candidates=[],recent=d.recent,score=(kind,family,tier)=>{
   const repeat=recent.filter(k=>k===kind).length,change=d.last?.family===family?0:2;
@@ -120,5 +120,5 @@ export function territoryCandidates(room,random=Math.random){
 export function recordTerritoryChoice(room,candidate){
  const d=room.territoryDirector;d.choices++;d.recent=[...d.recent,candidate.kind].slice(-12);
  d.last={kind:candidate.kind,family:candidate.family,tier:candidate.tier,turn:room.ecologyTurns||0};
- const r=d.rhythm;r.episode=Math.min(2,r.episode+1);r.load=Math.min(33,r.load+(candidate.tier==='large'?4:2)+Math.min(2,Math.sqrt((candidate.affected||0)/Math.max(3,terrainOf(room).length*.03))));
+ const r=d.rhythm;r.episode=Math.min(2,r.episode+1);r.load=Math.min(33,r.load+(candidate.tier==='large'?5:3)+Math.min(2,Math.sqrt((candidate.affected||0)/Math.max(3,terrainOf(room).length*.03))));
 }

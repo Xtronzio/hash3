@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {createLocal,localCommand} from '../src/local.js';
 import {availableCells,expansionOptions} from '../src/game.js';
 import {markTerritoryGrowth,territoryPressure} from '../src/territory-director.js';
@@ -29,4 +30,16 @@ for(const r of results){
  assert.ok(r.announcements>0&&r.announcements<r.actions/3,'No announcement treadmill');
 }
 assert.ok(results.some(r=>r.overlap>0));
-console.log(JSON.stringify({scenario:'Seeded accepted play; attention, quiet and overlap measured, not human/device playtests',results},null,2));
+let comparison;
+if(process.argv.includes('--compare-r97')){
+ const previous=JSON.parse(readFileSync(new URL('../benchmarks/territory-no-beavers-r97.json',import.meta.url),'utf8')).results.filter(r=>r.actions===180),current=results.filter(r=>r.actions===180);
+ assert.deepEqual(current.map(r=>[r.size,r.density,r.seed,r.actions]),previous.map(r=>[r.size,r.density,r.seed,r.actions]),'Compare the same accepted-play scenarios');
+ const totals=rows=>Object.fromEntries(['actions','announcements','active','overlap','expansions'].map(k=>[k,rows.reduce((n,r)=>n+r[k],0)]));
+ const before=totals(previous),after=totals(current);
+ assert.ok(after.announcements<=before.announcements*.9&&after.announcements>=before.announcements*.65,'Modestly fewer announcements without silence');
+ assert.ok(after.active<=before.active*.93&&after.active>=before.active*.65,'More playable quiet, not a dormant territory');
+ assert.ok(after.overlap<before.overlap,'Fewer simultaneous interventions');
+ assert.ok(current.filter(r=>r.size===9).every(r=>r.expansions>0),'New games still grow');
+ comparison={baseline:'R0.21.97',samples:current.length,before,after,announcementReduction:1-after.announcements/before.announcements,activityBefore:before.active/before.actions,activityAfter:after.active/after.actions};
+}
+console.log(JSON.stringify({scenario:'Seeded accepted play; attention, quiet and overlap measured, not human/device playtests',results,...(comparison?{comparison}:{})},null,2));
