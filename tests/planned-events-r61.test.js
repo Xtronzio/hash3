@@ -30,7 +30,7 @@ test('Loading an R60 save reserves future types once without replay or changing 
  const r=fresh();r.ruleVersion=20;delete r.territoryPlanVersion;delete r.territoryPlans;r.ecologyTurns=100;r.players[0].placements=200;r.players[0].score=25912;r.territoryNextPlacement=290;r.territoryNextInvasion=220;
  r.territoryEvents=[{id:'c',kind:'contagion',region:[{x:1,y:1}],turnsRemaining:2}];
  const finished=structuredClone(r);finished.id='finished';finished.status='finished';const data=new Map([['hash3_locals',JSON.stringify([r,finished])]]),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
- const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,29);assert.equal(loaded.territoryNextPlacement,133);assert.equal(loaded.territoryNextInvasion,120);assert.equal(loaded.territoryEvents[0].turnsRemaining,2);assert.equal(loaded.players[0].score,25912);assert.deepEqual(loaded.players[0].inventory,r.players[0].inventory);
+ const loaded=loadLocalGames(storage,now)[0];assert.equal(loaded.ruleVersion,30);assert.equal(loaded.territoryNextPlacement,133);assert.equal(loaded.territoryNextInvasion,120);assert.equal(loaded.territoryEvents[0].turnsRemaining,2);assert.equal(loaded.players[0].score,25912);assert.deepEqual(loaded.players[0].inventory,r.players[0].inventory);
  const saved=data.get('hash3_locals');loadLocalGames(storage,now+999999);assert.equal(data.get('hash3_locals'),saved);assert.deepEqual(JSON.parse(saved).find(g=>g.id==='finished'),finished);
 });
 test('Fauna and neutral forecasts advance only when Doble finishes, never on wall-clock ticks',()=>{
