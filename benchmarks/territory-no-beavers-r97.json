@@ -1,0 +1,161 @@
+{
+  "scenario": "Seeded accepted play; attention, quiet and overlap measured, not human/device playtests",
+  "results": [
+    {
+      "size": 9,
+      "density": 0,
+      "seed": 33,
+      "actions": 180,
+      "announcements": 14,
+      "active": 93,
+      "overlap": 0,
+      "maxQuiet": 14,
+      "expansions": 14,
+      "meanGap": 11.15
+    },
+    {
+      "size": 9,
+      "density": 0,
+      "seed": 94,
+      "actions": 180,
+      "announcements": 18,
+      "active": 92,
+      "overlap": 3,
+      "maxQuiet": 12,
+      "expansions": 11,
+      "meanGap": 9.88
+    },
+    {
+      "size": 9,
+      "density": 0,
+      "seed": 333,
+      "actions": 180,
+      "announcements": 19,
+      "active": 82,
+      "overlap": 3,
+      "maxQuiet": 13,
+      "expansions": 8,
+      "meanGap": 9
+    },
+    {
+      "size": 99,
+      "density": 0.4,
+      "seed": 33,
+      "actions": 180,
+      "announcements": 24,
+      "active": 120,
+      "overlap": 8,
+      "maxQuiet": 9,
+      "expansions": 1,
+      "meanGap": 7.74
+    },
+    {
+      "size": 99,
+      "density": 0.4,
+      "seed": 94,
+      "actions": 180,
+      "announcements": 21,
+      "active": 135,
+      "overlap": 9,
+      "maxQuiet": 12,
+      "expansions": 2,
+      "meanGap": 7.5
+    },
+    {
+      "size": 99,
+      "density": 0.4,
+      "seed": 333,
+      "actions": 180,
+      "announcements": 21,
+      "active": 133,
+      "overlap": 7,
+      "maxQuiet": 8,
+      "expansions": 1,
+      "meanGap": 8.5
+    },
+    {
+      "size": 450,
+      "density": 0.98,
+      "seed": 33,
+      "actions": 180,
+      "announcements": 23,
+      "active": 101,
+      "overlap": 13,
+      "maxQuiet": 11,
+      "expansions": 4,
+      "meanGap": 8
+    },
+    {
+      "size": 450,
+      "density": 0.98,
+      "seed": 94,
+      "actions": 180,
+      "announcements": 22,
+      "active": 106,
+      "overlap": 6,
+      "maxQuiet": 8,
+      "expansions": 0,
+      "meanGap": 8.52
+    },
+    {
+      "size": 450,
+      "density": 0.98,
+      "seed": 333,
+      "actions": 180,
+      "announcements": 26,
+      "active": 98,
+      "overlap": 10,
+      "maxQuiet": 8,
+      "expansions": 1,
+      "meanGap": 6.84
+    },
+    {
+      "size": 999,
+      "density": 0.4,
+      "seed": 33,
+      "actions": 180,
+      "announcements": 28,
+      "active": 110,
+      "overlap": 12,
+      "maxQuiet": 9,
+      "expansions": 0,
+      "meanGap": 5.89
+    },
+    {
+      "size": 999,
+      "density": 0.4,
+      "seed": 94,
+      "actions": 180,
+      "announcements": 28,
+      "active": 107,
+      "overlap": 10,
+      "maxQuiet": 7,
+      "expansions": 0,
+      "meanGap": 6.52
+    },
+    {
+      "size": 999,
+      "density": 0.4,
+      "seed": 333,
+      "actions": 180,
+      "announcements": 23,
+      "active": 107,
+      "overlap": 9,
+      "maxQuiet": 9,
+      "expansions": 0,
+      "meanGap": 7.91
+    },
+    {
+      "size": 33333,
+      "density": 0.65,
+      "seed": 94,
+      "actions": 33,
+      "announcements": 6,
+      "active": 14,
+      "overlap": 1,
+      "maxQuiet": 7,
+      "expansions": 0,
+      "meanGap": 6.2
+    }
+  ]
+}
