@@ -3,7 +3,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,webkit,firefox} from 'playwright';
 import {preview} from 'vite';
-import {createLocal,localCommand} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 import {backpackPath} from '../src/backpack-icon.js';
 const backpackDOM=backpackPath.replace(/<(\w+)([^>]*?)\/>/g,'<$1$2></$1>');
 const output=path.resolve(process.env.HASH3_QA_OUTPUT||'browser-results');await fs.mkdir(output,{recursive:true});

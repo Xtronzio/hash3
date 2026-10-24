@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,firefox,webkit} from 'playwright';
 import {preview} from 'vite';
-import {createLocal} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
 import {resolveBriefFauna} from '../src/brief-ecology.js';
 import {borderIcon,wallIcon} from '../src/frontiers.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});

@@ -1,5 +1,39 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.101 · Mochila, recarga, memoria y rinos
+
+Jorge24/10 autoriza implementar el paquete comentado: mochila9, tres favoritas
+iniciales, próxima carta anunciada; básicas de precio3 cada6turnos propios y
+resto9. Combo manual propio≥33 descuenta1extra una vez por turno completo,
+sin adelantar antes de3propios. Doble1; automáticos avanzan reloj sin descuento.
+Una recarga lista espera hueco, sin cola; nuevo ciclo al recibirla. Conservar
+reservas ordinarias antiguas>9 hasta gastarlas, bloqueando aumentos. Compras y
+trueques normales siguen disponibles; no imponer mercado rotatorio no acordado.
+Inmunidad solo ganada con combo individual33/66/99, después99, una por combo y
+máximo3 guardadas. No compra/trueque/recarga normal ni premio pendiente con3;
+gastar no reinicia requisito. Exceso histórico archivado en legacyCards y3
+utilizables; puntos intactos. Duración vigente3turnos totales al activar.
+Nubes9/Niebla18turnos totales, no19; conservar efectos/avisos anteriores con su
+duración original. Inverso manual3 recibe niebla del contorno: aviso3, región
+≤33,18totales, signos/dueños ocultos y ocupación/puntos vacíos visibles. Sin
+previsualizar figuras escondidas, cobro de memoria permitido con árbitro real;
+IA/ayudas usan percepción recordada. Sin avanzar por pausa/carta/cárcel omitida.
+Carta Trasladar celda: mover un punto vacío construido a hueco sin construir
+adyacente al tablero restante; mismo número de celdas, un cupo/carta y después
+colocación normal. Preservar dueño, anclas, conexiones, protección y reservas;
+análisis iterativo/cache para33333. Solo Original; Inverso conserva silueta.
+Rinos predominantemente rectos/diagonales con pequeño quiebro lateral y tramo
+paralelo si cabe; ruta anunciada3 y animación siguen el quiebro, misma longitud,
+sin repetición ni atravesar barreras. Hormigas y presión contextual R98 intactas.
+Reglas31 en Original; Inverso24 con inventoryBalanceVersion1/inverseFogVersion1
+separa resultados nuevos. Finales/versiones automáticas1/2 intactos. Guardados
+adoptan a futuro sin crédito histórico. Jorge confirma resuelto el desenfoque:
+mantener franja R100 y SVG maestro. Sin SQL/online y cron mundial apagado.
+Contrato design/inventory-balance-r101.md; respaldo remoto
+backup/pre-inventory-balance-r100-20261024 en387b28ac. Probar motor, migraciones,
+traslado, simulaciones, UI real nueva y regresiones históricas en tres motores/
+seis tamaños,33333 y pipeline antes de publicar R101/r312 y verificar HTTP.
+
 ## R0.21.100 · Franja opaca frente al desenfoque iOS
 
 Jorge24/10 confirma con captura que R99 sigue borrosa y pide banda negra con

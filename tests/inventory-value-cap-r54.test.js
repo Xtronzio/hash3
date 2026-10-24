@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 import {practiceTools} from '../src/practice-tools.js';
 import {CARD_PRICES,tradeAvailability} from '../src/inventory-economy.js';
 import {refillSelectorMarkup} from '../src/floating-refill.js';

@@ -50,7 +50,7 @@ test('A real directed warning retains its separated target for three turns and k
 test('Loading adopts rule30 while keeping old clustered skulls, warnings, inventory and finished history',()=>{
  const g=board();g.ruleVersion=29;g.status='paused';g.deadCells=[{x:4,y:4},{x:5,y:4}];g.territoryEvents=[{id:'old-warning',kind:'death',region:[{x:4,y:5}],turnsRemaining:2}];g.cells=g.cells.filter(p=>!g.deadCells.some(c=>c.x===p.x&&c.y===p.y));
  const done=structuredClone(g);done.id='finished';done.status='finished';const before=structuredClone(g),data=new Map([['hash3_locals',JSON.stringify([g,done])]]),storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
- const games=loadLocalGames(storage,NOW),loaded=games.find(x=>x.id===g.id);assert.equal(loaded.ruleVersion,30);assert.deepEqual(loaded.deadCells,before.deadCells);assert.deepEqual(loaded.territoryEvents,before.territoryEvents);assert.deepEqual(loaded.players,before.players);assert.deepEqual(games.find(x=>x.id==='finished'),done);
+ const games=loadLocalGames(storage,NOW),loaded=games.find(x=>x.id===g.id);assert.equal(loaded.ruleVersion,31);assert.deepEqual(loaded.deadCells,before.deadCells);assert.deepEqual(loaded.territoryEvents,before.territoryEvents);assert.deepEqual(loaded.players,before.players);assert.deepEqual(games.find(x=>x.id==='finished'),done);
 });
 test('The large-board draw stays bounded and avoids skulls, anchors, shields, walls and habitat reservations',()=>{
  const g=board(33333);g.deadCells=[{x:1,y:0},{x:2,y:0}];g.frontiers=[{id:'wall',cells:[{x:4,y:0}],by:'local-x'}];g.works=[{done:0,build:[{x:5,y:0}],destroy:[]}];g.worms=[{body:[{x:6,y:0}]}];g.anacondas=[{body:[{x:7,y:0}]}];g.inventoryEffects.shields=[{cell:'piece:8',remaining:3,by:'local-x'}];

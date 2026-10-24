@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {createLocal} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
 const cyan='rgb(0, 229, 255)',yellow='rgb(255, 206, 51)',red='rgb(255, 74, 88)',green='rgb(36, 211, 147)';
 export async function verifyLocalColors({context,load,output,results}){
  for(const viewport of [{width:320,height:740},{width:390,height:844},{width:740,height:320}]){

@@ -1,7 +1,7 @@
 import {inverseToolAllowed} from './inverse-rules.js';
 import {CARD_PRICES,tradeAvailability} from './inventory-economy.js';
 import {inventoryEnabled} from './inventory-enabled.js';
-import {practiceTools,immunityTools,toolStock,MAX_CARDS} from './practice-tools.js';
+import {practiceTools,immunityTools,toolStock,inventoryCapacity,MAX_CARDS} from './practice-tools.js';
 import {toolIcon,inventoryCardTotal} from './inventory.js';
 import {bindHoldGesture} from './hold-gesture.js';
 export const REFILL_HOLD_MS=1000;
@@ -19,7 +19,7 @@ export function floatingRefillMarkup(game,playerId){
 export function bindRefillHold(root,onOpen){return bindHoldGesture(root,{selector:'[data-action="refill-hold"]',duration:REFILL_HOLD_MS,onComplete:button=>onOpen(button.dataset.player)});}
 export function refillSelectorMarkup(game,playerId,{remaining=3,exchange=false,replace=null}={}){
  const player=game.players.find(p=>p.id===playerId);
- const cards=[...practiceTools,...(exchange?[]:immunityTools)].filter(t=>inverseToolAllowed(game,t.id)).sort((a,b)=>CARD_PRICES[a.id]-CARD_PRICES[b.id]).map(t=>{
+ const cards=[...practiceTools,...(exchange||game.inventoryBalanceVersion===1?[]:immunityTools)].filter(t=>inverseToolAllowed(game,t.id)).sort((a,b)=>CARD_PRICES[a.id]-CARD_PRICES[b.id]).map(t=>{
   const price=CARD_PRICES[t.id];
   const stock=toolStock(game,playerId,t.id),choosing=exchange&&!replace,state=choosing?{allowed:stock>0,reason:'No tienes esta carta'}:tradeAvailability(game,playerId,t.id,Date.now(),{replace:exchange?replace:null});
   if(choosing&&!stock)return '';
@@ -27,5 +27,5 @@ export function refillSelectorMarkup(game,playerId,{remaining=3,exchange=false,r
   return `<button class="refill-card" data-action="${choosing?'refill-replace':'refill-buy'}" data-tool="${t.id}" data-player="${playerId}" aria-label="${label}" title="${label}" ${state.allowed?'':'disabled'}><span class="refill-card-icon">${toolIcon(t.id)}</span><b class="refill-card-stock">×${stock}</b>${choosing?'':`<span class="refill-card-price">${price.toLocaleString('es-ES')}</span>`}</button>`;
  }).join('');
  const modes=`<nav class="refill-modes" aria-label="Comprar o cambiar"><button data-action="refill-mode" data-mode="buy" aria-pressed="${!exchange}">Comprar</button><button data-action="refill-mode" data-mode="exchange" aria-pressed="${exchange}">Cambiar</button>${exchange?`<span class="refill-exchange-stage">${replace?toolIcon(replace)+'<small class="refill-value-cap" title="Solo cartas de valor igual o inferior">'+CARD_PRICES[replace]+' pts máx.</small> →':'Entrega una'}</span>${replace?'<button data-action="refill-replace-clear" aria-label="Elegir otra carta para entregar">↶</button>':''}`:''}</nav>`;
- return `<div class="refill-backdrop"><section class="refill-selector" role="dialog" aria-modal="true" aria-labelledby="refill-title"><header><span class="refill-heading-icon">${refillIcon}</span><h2 id="refill-title">Recarga<span class="refill-capacity" aria-label="${inventoryCardTotal(game,playerId)} de ${MAX_CARDS} cartas guardadas">${inventoryCardTotal(game,playerId)}/${MAX_CARDS}${player.inventory.comboPending?'<small title="Recarga por combo pendiente de hueco"> · +1</small>':''}</span></h2><span class="refill-remaining" aria-label="${remaining} compras restantes">${remaining}/3</span><span class="refill-wallet" aria-label="${player.score} puntos disponibles">${player.score.toLocaleString('es-ES')} <small>pts</small></span><button data-action="close-refill" aria-label="Cerrar recarga">×</button></header>${modes}<div class="refill-catalog"><div class="refill-card-grid">${cards}</div></div></section></div>`;
+ return `<div class="refill-backdrop"><section class="refill-selector" role="dialog" aria-modal="true" aria-labelledby="refill-title"><header><span class="refill-heading-icon">${refillIcon}</span><h2 id="refill-title">Recarga<span class="refill-capacity" aria-label="${inventoryCardTotal(game,playerId)} de ${inventoryCapacity(game)} cartas guardadas">${inventoryCardTotal(game,playerId)}/${inventoryCapacity(game)}${player.inventory.comboPending?'<small title="Recarga por combo pendiente de hueco"> · +1</small>':''}</span></h2><span class="refill-remaining" aria-label="${remaining} compras restantes">${remaining}/3</span><span class="refill-wallet" aria-label="${player.score} puntos disponibles">${player.score.toLocaleString('es-ES')} <small>pts</small></span><button data-action="close-refill" aria-label="Cerrar recarga">×</button></header>${modes}<div class="refill-catalog"><div class="refill-card-grid">${cards}</div></div></section></div>`;
 }

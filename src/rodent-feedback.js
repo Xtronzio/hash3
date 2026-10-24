@@ -17,6 +17,7 @@ export function boardActionFeedback(previous,next){
  const habitat=next.habitatEvent,neutral=next.neutralEvent;
  if(habitat&&habitat.id!==previous.habitatEvent?.id)visits.push(...(habitat.actions||[]),...(habitat.visualActions||[]));
  if(habitat&&habitat.id!==previous.habitatEvent?.id)for(const route of habitat.visualRoutes||[]){
+  if(route.waypoints?.length){let group=0;const points=route.waypoints;if(points.length>4)continue;for(let p=1;p<points.length;p++){const a=points[p-1],b=points[p],n=Math.max(Math.abs(b.x-a.x),Math.abs(b.y-a.y));if(n>(next.terrain?.length||0))continue;const dx=Math.sign(b.x-a.x),dy=Math.sign(b.y-a.y);for(let i=0;i<=n;i++)visits.push({x:a.x+i*dx,y:a.y+i*dy,kind:'rhino',group:group++});}continue;}
   const {from,to}=route;if(!from||!to||![from.x,from.y,to.x,to.y].every(Number.isInteger))continue;
   const length=Math.max(Math.abs(to.x-from.x),Math.abs(to.y-from.y))+1;if(length>(next.terrain?.length??(next.blocks?.length||0)*9))continue;
   const dx=Math.sign(to.x-from.x),dy=Math.sign(to.y-from.y);

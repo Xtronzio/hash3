@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {createLocal} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
 export async function verifyLocalPresentation({context,load,output,results}){
  const base=()=>createLocal('local','Jorge','Rival',Date.now(),'advanced','untimed','high','X',false,{faunaEnabled:false,territoryEnabled:true});
  const r=base();r.players[0].score=25912;r.players[1].score=999;r.players[0].freeExpansions=44;r.players[0].navigationLastMove={x:1,y:1};r.cells=[{id:'x',x:1,y:1,symbol:'X',owner:'local-x'}];r.watchTargets=[{id:'diana',x:0,y:0,number:1}];r.terrain=Array.from({length:3333},(_,i)=>({x:i%59,y:Math.floor(i/59)}));

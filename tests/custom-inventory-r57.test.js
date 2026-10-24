@@ -13,7 +13,7 @@ test('Preferences normalize a complete unique catalogue and balance visible rows
  assert.equal(preferences.order.length,INVENTORY_ORDER.length);assert.deepEqual(preferences.order.slice(0,2),['bomb','hint']);assert.equal(new Set(preferences.order).size,INVENTORY_ORDER.length);
  assert.deepEqual(preferences.floating,['bomb','hint']);assert.deepEqual(preferences.positions,{bomb:{x:1,y:0}});
  const html=inventoryRows(id=>`<i data-tool="${id}"></i>`,preferences),rows=[...html.matchAll(/class="inventory-icon-row">([\s\S]*?)<\/div>/g)].map(m=>(m[1].match(/data-tool/g)||[]).length);
- assert.deepEqual(rows,[13,12]);assert.doesNotMatch(html,/data-tool="bomb"|data-tool="hint"/);
+ assert.deepEqual(rows,[13,13]);assert.doesNotMatch(html,/data-tool="bomb"|data-tool="hint"/);
  const reordered=reorderInventory(preferences.order,'sapper','bomb');assert.equal(reordered[0],'sapper');assert.deepEqual(new Set(reordered),new Set(INVENTORY_ORDER));assert.equal(preferences.order[0],'bomb');
 });
 test('Customization and fold state persist per colonist, preserve gameplay exactly and ride with transfers',()=>{

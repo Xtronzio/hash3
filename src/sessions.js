@@ -1,3 +1,4 @@
+import {adoptInventoryBalance} from './inventory-balance.js';
 import {initializeInventory} from './practice-tools.js';
 import {initializeFreeExpansions} from './free-expansion.js';
 import {initializeHabitats} from './inhabitants.js';
@@ -25,9 +26,9 @@ export function loadLocalGames(storage,now=Date.now()){
     games.push(imported);
   }}catch{}
   let migrated=!canonical&&games.length>0;
-  for(const game of games.filter(g=>g.variant!=='inverse'))if(game.status!=='finished'&&(game.ruleVersion!==LOCAL_RULE_VERSION||game.briefEcologyVersion!==1||game.territoryPlanVersion!==1||game.inventoryEconomyVersion!==1||game.players.some(p=>p.inventory?.cards?.antidote==null||p.inventory?.cards?.sapper==null)||game.wildcardUsageVersion!==1||game.players.some(p=>p.inventory?.cards?.swap==null))||game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==3||game.inventoryCadenceVersion!==1||game.territoryActivityVersion!==4||game.rodentLifecycleVersion!==1||game.status!=='finished'&&(game.wormLifecycleVersion!==1||game.invasionVersion!==1||game.inhabitantReclaimVersion!==1||game.turnEcologyVersion!==1)||game.players.some(p=>p.freeExpansionVersion!==5)){
+  for(const game of games.filter(g=>g.variant!=='inverse'))if(game.status!=='finished'&&(game.inventoryBalanceVersion==null||game.ruleVersion!==LOCAL_RULE_VERSION||game.briefEcologyVersion!==1||game.territoryPlanVersion!==1||game.inventoryEconomyVersion!==1||game.players.some(p=>p.inventory?.cards?.antidote==null||p.inventory?.cards?.sapper==null)||game.wildcardUsageVersion!==1||game.players.some(p=>p.inventory?.cards?.swap==null))||game.wallMigrationVersion!==1||game.habitatFrequencyVersion!==3||game.inventoryCadenceVersion!==1||game.territoryActivityVersion!==4||game.rodentLifecycleVersion!==1||game.status!=='finished'&&(game.wormLifecycleVersion!==1||game.invasionVersion!==1||game.inhabitantReclaimVersion!==1||game.turnEcologyVersion!==1)||game.players.some(p=>p.freeExpansionVersion!==5)){
     if(game.status!=='finished')game.ruleVersion=LOCAL_RULE_VERSION;
-    initializeInventory(game);initializeFreeExpansions(game);initializeHabitats(game,now);migrated=true;
+    adoptInventoryBalance(game);initializeInventory(game);initializeFreeExpansions(game);initializeHabitats(game,now);migrated=true;
   }
   // Persist conversion/refunds atomically before returning an upgraded map;
   // failed storage leaves the previous complete collection recoverable.

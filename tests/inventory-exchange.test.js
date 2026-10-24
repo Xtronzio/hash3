@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 import {MAX_CARDS,practiceTools} from '../src/practice-tools.js';
 import {tradeAvailability,CARD_PRICES} from '../src/inventory-economy.js';
 const now=100000;

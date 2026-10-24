@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
 import {inventoryStatusMarkup} from '../src/inventory.js';
 import {INVENTORY_ROWS} from '../src/inventory-layout.js';
 import {practiceTools} from '../src/practice-tools.js';
@@ -22,7 +22,7 @@ test('Single participant counters and the restored sliders remove duplicate play
 });
 
 test('Both card rows stay balanced with the whole catalogue and one Diana',()=>{
- assert.deepEqual(INVENTORY_ROWS.map(row=>row.length),[13,13]);
+ assert.deepEqual(INVENTORY_ROWS.map(row=>row.length),[13,14]);
  assert.equal(new Set(INVENTORY_ROWS.flat()).size,practiceTools.length+1);
  assert.deepEqual(new Set(INVENTORY_ROWS.flat()),new Set([...practiceTools.map(t=>t.id),'target']));
 });

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {simulateTurns} from '../scripts/simulate-ecology-turns.mjs';
 test('Seeded calculated territory simulation repeats invasions and fauna without changing the UUID provider',()=>{
- const original=crypto.randomUUID,options={size:333,moves:180,seed:33};
+ // Longer concealment phases intentionally occupy a weather slot for18 turns.
+ const original=crypto.randomUUID,options={size:333,moves:360,seed:33};
  const first=simulateTurns(options),second=simulateTurns(options);
  assert.deepEqual(first,second);assert.equal(crypto.randomUUID,original);
  assert.equal(first.completed,true);assert.ok(first.constructed>=first.demolished);

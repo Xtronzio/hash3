@@ -3,7 +3,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,firefox,webkit} from 'playwright';
 import {preview} from 'vite';
-import {createLocal,localCommand} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const fixtures=()=>Array.from({length:7},(_,i)=>{let g=createLocal('local','Guardado '+i,'Rival',Date.now()+i,'normal','untimed','medium','X',false,{faunaEnabled:false,territoryEnabled:false,matchGoal:{type:'moves',target:33}});g.id='saved-'+i;if(i>3){g.players[0].placements=32;g=localCommand(g,'move',{x:0,y:0});}else if(i!==2)g=localCommand(g,'pause');return g;});

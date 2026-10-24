@@ -1,6 +1,6 @@
 export const INVENTORY_ROWS=Object.freeze([
  ['double','opposite','rival','swap','shift','erase','bomb','nuclear','tornado','combo','shield','block','ambush'],
- ['reconquest','target','frontier','border','activate','expand-2','expand-3','destroy','hint','hint-expand','super-hint','antidote','sapper']
+ ['reconquest','target','frontier','border','activate','expand-2','expand-3','relocate','destroy','hint','hint-expand','super-hint','antidote','sapper']
 ]);
 export const INVENTORY_ORDER=Object.freeze([...INVENTORY_ROWS.flat(),'immunity']);
 export const INVENTORY_CONTROLS=Object.freeze(['inverse-claim']);

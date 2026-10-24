@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
 import {ecologyNavigationMarkup,ecologyTargets,nextEcologyTarget} from '../src/ecology-navigation.js';
 import {scoreNoticeMarkup} from '../src/score-notice.js';
 import {pausedScoreMarkup} from '../src/paused-ui.js';

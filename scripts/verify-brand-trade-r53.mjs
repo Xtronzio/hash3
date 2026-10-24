@@ -3,7 +3,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,webkit,firefox} from 'playwright';
 import {preview} from 'vite';
-import {createLocal,LOCAL_RULE_VERSION} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
+import {LOCAL_RULE_VERSION} from '../src/local.js';
 import {practiceTools} from '../src/practice-tools.js';
 import {CARD_PRICES} from '../src/inventory-economy.js';
 
@@ -100,7 +102,7 @@ try{
     assert.equal(await ownCounter.locator('.inventory-capacity-value').innerText(),'18/18');assert.equal(await rivalCounter.locator('.inventory-capacity-value').innerText(),'3/18');
     assert.equal(await ownCounter.locator('.inventory-capacity-value').evaluate(el=>getComputedStyle(el).color),'rgb(255, 74, 88)');assert.equal(await rivalCounter.locator('.inventory-capacity-value').evaluate(el=>getComputedStyle(el).color),'rgb(36, 211, 147)');
     const ownBox=await ownCounter.boundingBox(),rivalBox=await rivalCounter.boundingBox();assert.ok(ownBox.x+ownBox.width<rivalBox.x);
-    assert.deepEqual(await page.locator('.paused-minimap .inventory-shortcuts .inventory-icon-row').evaluateAll(rows=>rows.map(row=>row.children.length)),[14,13]);
+    assert.deepEqual(await page.locator('.paused-minimap .inventory-shortcuts .inventory-icon-row').evaluateAll(rows=>rows.map(row=>row.children.length)),[14,14]);
     assert.equal(await page.locator('.paused-minimap .inventory-capacity-strip').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     assert.equal(await page.locator('.paused-score-body .inventory-capacity-value').count(),0);

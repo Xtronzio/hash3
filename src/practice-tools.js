@@ -1,6 +1,8 @@
 import {isInverse,inverseToolAllowed} from './inverse-rules.js';
 import {isPrisoner,imprisonedCell} from './inverse-prison.js';
 import {fogKeys} from './fog.js';
+import {relocationSources} from './relocate-cell.js';
+import {snapshotMemo} from './snapshot-memo.js';
 import {initializeWildcardUsage} from './wildcard-usage.js';
 import {nuclearOptions} from './nuclear-tool.js';
 import {microLength,microSelectionOptions} from './micro-expansion.js';
@@ -16,7 +18,7 @@ import {tornadoOptions,bombOptions,frontierOptions,borderOptions,borderChains} f
 import {expansionFrontierContext,edgeKey,frontierDirections} from './frontiers.js';
 export const REFILL_TURNS=1,MAX_PER_CARD=3; // Legacy export; turns never grant cards.
 export const practiceTools=[
-  {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cada colocación manual propia de ≥33 puntos puede ganar una recarga.',button:'Activar doble'},
+  {id:'double',label:'Doble',description:'Coloca dos fichas con el mismo reloj. Cuenta como un turno propio completo para la recarga.',button:'Activar doble'},
   {id:'opposite',label:'Ficha contraria',description:'Cambia una ficha rival ya puesta a tu símbolo y propiedad. Después coloca tu ficha.',button:'Elegir ficha rival'},
   {id:'rival',label:'Ficha rival',description:'Obliga al rival a poner una ficha de tu color en su próxima colocación. Esa figura puntúa para tu símbolo.',button:'Activar ficha rival'},
   {id:'erase',label:'Borrar',description:'Borra una ficha rival y después juega. Tus propias fichas no se pueden borrar.',button:'Elegir ficha rival'},
@@ -40,12 +42,18 @@ export const practiceTools=[
   {id:'reconquest',label:'Reconquista',description:'Expulsa hasta 33 invasores cercanos a la celda elegida, sin perder terreno ni puntos. No afecta X, O ni comodines. Después coloca tu ficha.',button:'Elegir invasor'},
   {id:'antidote',label:'Antídoto',description:'Protege una celda amenazada por un aviso concreto de Contagio o Pandemia antes del impacto. No cancela las demás conversiones ni cambia su plazo. Cuesta 33 puntos por unidad en el trueque. Después coloca tu ficha.',button:'Elegir celda amenazada'},
   {id:'sapper',label:'Artificieros',description:'Desactiva hasta tres bombas: la seleccionada y las dos más cercanas del mismo aviso o foco activo de Bombardeo. Conserva terreno y puntos; las restantes mantienen su plazo y crecimiento. Las ocupaciones estables se recuperan con Emboscada o Reconquista. Cuesta 33 puntos por unidad. Después coloca tu ficha.',button:'Elegir bomba'},
+  {id:'relocate',label:'Trasladar celda',description:'Mueve una celda vacía con punto a una posición sin terreno adyacente. Conserva el número de celdas y permite colocar después. Respeta anclajes, protecciones y continuidad.',button:'Elegir celda vacía'},
   {id:'combo',label:'Combo',description:'Actívala primero para usar otras dos herramientas distintas este turno, además de colocar tu ficha.',button:'Activar combo'}
 ];
 // Variety has no separate cap: a normal 18-card hand can hold 18 distinct types.
 export const MAX_CARDS=18,MAX_CARD_TYPES=MAX_CARDS;
+export const inventoryCapacity=game=>!game||game.inventoryBalanceVersion===1?9:MAX_CARDS;
+export function refillProgress(game,playerId){
+ const c=inventoryFor(game,playerId).refillCycle;if(!c)return '';
+ return `${practiceTools.find(t=>t.id===c.card)?.label||'Recarga'} · ${Math.max(3-c.elapsed,c.base-c.elapsed-c.bonus,0)} turnos propios${c.pending?' · pendiente de hueco':''}`;
+}
 export const pendingTools=[];
-export const immunityTools=[{id:'immunity',label:'Inmunidad total',description:'Protege tus fichas, sus celdas, tus celdas vacías construidas y tus barreras durante tres turnos completos. Se compra por 333 puntos; los combos no recargan esta protección. Actívala en cualquier momento, sin consumir turno ni herramienta. Pausar conserva la duración y las reservas antiguas.',button:'Activar tres turnos'}];
+export const immunityTools=[{id:'immunity',label:'Inmunidad total',description:'Protege tus fichas, sus celdas, tus celdas vacías construidas y tus barreras durante tres turnos completos. Se gana con combos de 33, 66 y 99 puntos; desde la tercera exige 99. Máximo tres. No se puede comprar ni cambiar. Actívala en cualquier momento, sin consumir turno ni herramienta. Pausar conserva la duración y las reservas antiguas.',button:'Activar tres turnos'}];
 export const inventoryTools=[...practiceTools,...immunityTools];
 // Historical eight-card starter only for legacy saves with no inventory record.
 const startingCards=new Set(['double','opposite','rival','erase','shift','block','shield','hint']);
@@ -55,14 +63,14 @@ export function validateStartingCards(cards){
  return [...cards];
 }
 const initialCards=()=>Object.fromEntries(practiceTools.map(t=>[t.id,startingCards.has(t.id)?1:0])); // Missing legacy inventories retain the original starter.
-export function seedStartingInventory(game,selections={}){
+export function seedStartingInventory(game,selections={},random=Math.random){
  for(const player of game.players){
   const cards=validateStartingCards(selections[player.id]||RECOMMENDED_CARDS);
   player.inventory={cards:Object.fromEntries(practiceTools.map(t=>[t.id,inventoryEnabled(game,player.id)&&cards.includes(t.id)?1:0])),turns:0,received:Object.fromEntries(practiceTools.map(t=>[t.id,inventoryEnabled(game,player.id)&&cards.includes(t.id)?1:0]))};
  }
- initializeInventory(game);
+ initializeInventory(game,random);
 }
-export function initializeInventory(game){
+export function initializeInventory(game,random=Math.random){
   if(!game.inventoryVersion&&game.practiceTurn)delete game.practiceTurn.nextSymbol;
   game.inventoryVersion=2;initializeWildcardUsage(game);
   if(['solo','local'].includes(game.mode)&&game.status!=='finished'&&game.inventoryEconomyVersion!==1){
@@ -85,6 +93,21 @@ export function initializeInventory(game){
   game.inventoryEffects||={blocks:[],shields:[]};
   game.inventoryEffects.blocks||=[];game.inventoryEffects.shields||=[];game.inventoryEffects.forced||=[];
   initializeImmunity(game);
+  if(game.inventoryBalanceVersion===1)for(const p of game.players){
+   p.inventory.comboPending=0;
+   if(inventoryEnabled(game,p.id)&&!p.inventory.refillCycle)startRefill(game,p.id,random);
+   if(p.inventory.legacyPending&&p.inventory.refillCycle){p.inventory.refillCycle.elapsed=p.inventory.refillCycle.base;p.inventory.refillCycle.pending=true;p.inventory.legacyPending=0;}
+  }
+}
+function startRefill(game,playerId,random=Math.random){
+ const inv=inventoryFor(game,playerId),pool=practiceTools.filter(t=>inverseToolAllowed(game,t.id)&&t.id!=='shield').flatMap(t=>Array(inventoryDrawWeight(t.id)).fill(t));
+ const card=pool[Math.min(pool.length-1,Math.floor(Math.max(0,Math.min(.999999,random()))*pool.length))]?.id;
+ inv.refillCycle={card,base:['hint','destroy','activate','frontier'].includes(card)?6:9,elapsed:0,bonus:0,comboTurn:-1,pending:false};
+}
+function deliverRefill(game,playerId,random=Math.random){
+ const inv=inventoryFor(game,playerId),c=inv.refillCycle;if(!c||c.elapsed<3||c.elapsed+c.bonus<c.base)return false;
+ c.pending=true;if(Object.values(inv.cards).reduce((a,b)=>a+b,0)>=inventoryCapacity(game)||(inv.cards[c.card]||0)>=MAX_PER_CARD)return false;
+ inv.cards[c.card]=(inv.cards[c.card]||0)+1;inv.received[c.card]=(inv.received[c.card]||0)+1;inv.draws=(inv.draws||0)+1;inv.lastDraw=c.card;startRefill(game,playerId,random);return true;
 }
 export function inventoryFor(game,playerId){return game?.players?.find(p=>p.id===playerId)?.inventory||{cards:initialCards(),turns:0};}
 export function toolStock(game,playerId,tool){return tool==='immunity'?immunityStock(game,playerId):inventoryFor(game,playerId).cards[tool]||0;}
@@ -97,6 +120,7 @@ export function toolAllowance(game,playerId){
 export function isShielded(game,cell){return !!cell&&!!game.inventoryEffects?.shields?.some(e=>e.cell===cell.id&&e.remaining>0);}
 export function canErasePracticeCell(game,playerId,cell){return !!(game?.players?.some(p=>p.id===playerId)&&cell&&cell.owner!==playerId&&!isShielded(game,cell)&&!isImmune(game,cell.owner));}
 export function toolCells(game,playerId,tool,options={}){
+ if(tool==='relocate')return isInverse(game)?[]:options.source?relocationDestinations(game,playerId,options.source):relocationSources(game);
  if(isPrisoner(game,playerId))return [];
  const hidden=fogKeys(game);return rawToolCells(game,playerId,tool,options).filter(c=>!imprisonedCell(game,c)&&(!hidden.has(key(c.x,c.y))||['bomb','tornado','nuclear','destroy','activate','block','border','frontier','expand-2','expand-3','antidote','sapper'].includes(tool)));
 }
@@ -184,12 +208,14 @@ export function completeInventoryTurn(game,playerId,{automatic=false,placed=true
   const usage=game.players.find(p=>p.id===playerId).inventory;
   if(usage.turnUse?.turn!==(usage.completedTurns||0))usage.turnUse={turn:usage.completedTurns||0,tools:[]};
   usage.completedTurns=(usage.completedTurns||0)+1;
+  if(game.inventoryBalanceVersion===1&&inventoryEnabled(game,playerId)){usage.refillCycle.elapsed=Math.min(usage.refillCycle.base,usage.refillCycle.elapsed+1);deliverRefill(game,playerId,random);}
   for(const list of [game.inventoryEffects.blocks,game.inventoryEffects.shields])for(const effect of list){if(effect.turnsRemaining!=null)continue;else if(effect.by!==playerId)effect.remaining--;else if(effect.fresh)effect.fresh=false;}
   game.inventoryEffects.blocks=game.inventoryEffects.blocks.filter(e=>e.remaining>0&&!game.cells.some(c=>c.x===e.x&&c.y===e.y));
   game.inventoryEffects.shields=game.inventoryEffects.shields.filter(e=>e.remaining>0&&game.cells.some(c=>c.id===e.cell));
   // Completed turns only age effects and record usage. No time/turn refill.
 }
 export function drawComboCard(game,playerId,random=Math.random){
+  if(game.inventoryBalanceVersion===1)return deliverRefill(game,playerId,random);
   if(!inventoryEnabled(game,playerId))return false;
   const inv=game.players.find(p=>p.id===playerId)?.inventory;if(!inv?.comboPending)return false;
   const heldTypes=practiceTools.filter(t=>inv.cards[t.id]>0).length;
@@ -203,6 +229,7 @@ export function recordInventoryCombo(game,playerId,points,{automatic=false,score
  initializeInventory(game);
  if(points<33||!Number.isFinite(points)||automatic||scorer!==playerId||!inventoryEnabled(game,playerId))return false;
  const inv=game.players.find(p=>p.id===playerId).inventory;
+ if(game.inventoryBalanceVersion===1){const c=inv.refillCycle,turn=inv.completedTurns||0;if(c.comboTurn!==turn){c.bonus=Math.min(c.base-3,c.bonus+1);c.comboTurn=turn;inv.qualifyingCombos=(inv.qualifyingCombos||0)+1;}return false;}
  inv.qualifyingCombos=(inv.qualifyingCombos||0)+1;inv.comboPending=1;
  return drawComboCard(game,playerId,random);
 }
@@ -212,6 +239,12 @@ export function moveDestination(game,playerId,cell){
   if(!cell)return false;
   const pair=game.pairs[0],linked=playableTerrain(game,pair);
   return linked.some(c=>c.x===cell.x&&c.y===cell.y)&&!game.cells.some(c=>c.x===cell.x&&c.y===cell.y)&&!isBlockedCell(game,playerId,cell.x,cell.y);
+}
+export function relocationDestinations(game,playerId,source){
+ const memo=snapshotMemo(game,'relocation-destination',()=>({key:null,value:[]})),id=[game.version,playerId,source.x,source.y].join(':');if(memo.key===id)return memo.value;
+ if(!relocationSources(game).some(c=>c.x===source.x&&c.y===source.y))return [];
+ const probe={...game,terrain:terrainOf(game).filter(c=>c.x!==source.x||c.y!==source.y)};
+ memo.key=id;memo.value=rawToolCells(probe,playerId,'activate',{}).filter(c=>c.x!==source.x||c.y!==source.y);return memo.value;
 }
 
 export function placementSymbol(game,playerId){return game.inventoryEffects?.forced?.find(e=>e.player===playerId&&!isPrisoner(game,e.symbol))?.symbol||game.players.find(p=>p.id===playerId)?.symbol;}

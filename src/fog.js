@@ -7,7 +7,7 @@ export function activateFog(room,event,region){
  const hidden=new Set((room.fogEffects||[]).flatMap(e=>e.region.map(key)));
  const regionKeys=new Set(region.map(key));
  const memory=Object.fromEntries(room.cells.filter(c=>regionKeys.has(key(c))&&!hidden.has(key(c))).map(c=>[key(c),{symbol:c.symbol,owner:c.owner,...(c.wildcardSymbol?{wildcardSymbol:c.wildcardSymbol}:{})}]));
- room.fogEffects||=[];room.fogEffects.push({id:event.id,kind:event.kind,region:region.map(({x,y})=>({x,y})),...(event.groups?{groups:event.groups}:{}),turnsRemaining:3,bornTurn:room.ecologyTurns||0,memory});
+ room.fogEffects||=[];room.fogEffects.push({id:event.id,kind:event.kind,region:region.map(({x,y})=>({x,y})),...(event.groups?{groups:event.groups}:{}),turnsRemaining:event.fogDuration??(room.inventoryBalanceVersion===1?(event.kind==='clouds'?9:18):3),bornTurn:room.ecologyTurns||0,memory});
  delete room.practiceHint;
 }
 export function advanceFog(room){

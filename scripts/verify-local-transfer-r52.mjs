@@ -3,7 +3,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,webkit,firefox} from 'playwright';
 import {createServer} from 'vite';
-import {createLocal,localCommand} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 import {transferToken} from '../src/local-transfer.js';
 import {practiceTools,MAX_CARDS} from '../src/practice-tools.js';
 const output=path.resolve(process.env.HASH3_QA_OUTPUT||'browser-results');await fs.mkdir(output,{recursive:true});

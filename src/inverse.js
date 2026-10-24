@@ -1,3 +1,6 @@
+import {advanceInverseFog} from './inverse-fog.js';
+import {fogKeys} from './fog.js';
+import {adoptInventoryBalance} from './inventory-balance.js';
 import {initializeInverseContour,advanceInverseContour} from './inverse-contour.js';
 import {comboInverse} from './inverse-combos.js';
 import {initializeInversePrison,completePrisonTurn,isPrisoner,prisonState} from './inverse-prison.js';
@@ -10,7 +13,7 @@ import {toggleWatchTarget,removeWatchTarget} from './watch-targets.js';
 import {isInverse,inverseToolAllowed} from './inverse-rules.js';
 import {validateInverseBoard,INVERSE_PRESETS} from './inverse-boards.js';
 import {availableCells,figureWindows,key,prepareFigureIndex} from './game.js';
-import {practiceTurn,placementSymbol,canUsePracticeTool,toolCells,moveDestination,spendCard,completeInventoryTurn,recordInventoryCombo} from './practice-tools.js';
+import {initializeInventory,practiceTurn,placementSymbol,canUsePracticeTool,toolCells,moveDestination,spendCard,completeInventoryTurn,recordInventoryCombo} from './practice-tools.js';
 import {awardFigures,scoreLandings,pruneBrokenForms} from './landing-score.js';
 import {buyCard,tradeAvailability} from './inventory-economy.js';
 import {recordCombo} from './records.js';
@@ -42,16 +45,17 @@ function finishIfEmpty(room,now){
  room.status='finished';room.finishReason='inverse-empty';room.finishedAt=new Date(now).toISOString();
  for(const p of room.pairs){p.pending=0;p.expander=null;p.deadline=null;}
  delete room.practiceTurn;delete room.practiceHint;
- room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1,...(room.inverseContour?{inverseContourVersion:room.inverseContour.version,inverseContourLost:room.inverseContour.lost,...(room.inverseContour.renewal?{inverseRenewalVersion:room.inverseContour.renewal.version,inverseRestored:room.inverseContour.renewal.restored}:{})}:{}),...(room.inversePrison?{inversePrisonVersion:room.inversePrison.version,inverseDisorderVersion:room.inverseDisorder?.version}:{})}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
+ room.finalResult={kind:'inverse-empty',variant:'inverse',goalType:'inverse',target:room.terrain.length,limit:room.terrain.length,size:room.terrain.length,completedAt:room.finishedAt,mode:room.mode,level:room.level,timeMode:room.timeMode,difficulty:room.difficulty||null,playerInventory:room.playerInventory!==false,machineInventory:room.machineInventory===true,faunaEnabled:false,territoryEnabled:false,...(room.inventoryBalanceVersion===1?{inventoryBalanceVersion:1,inverseFogVersion:1}:{}),ruleVersion:room.ruleVersion,inverseVersion:room.inverseVersion,...(room.inverseVersion===3?{inverseClaimVersion:room.inverseClaimVersion||1,...(room.inverseContour?{inverseContourVersion:room.inverseContour.version,inverseContourLost:room.inverseContour.lost,...(room.inverseContour.renewal?{inverseRenewalVersion:room.inverseContour.renewal.version,inverseRestored:room.inverseContour.renewal.restored}:{})}:{}),...(room.inversePrison?{inversePrisonVersion:room.inversePrison.version,inverseDisorderVersion:room.inverseDisorder?.version}:{})}:{}),drawing:room.inverseBoard?.name,humanId:room.humanId||room.pairs[0].x,players:room.players.map(p=>({id:p.id,name:p.name,symbol:p.symbol,score:p.score,figures:p.figures,placements:p.placements||0,bestCombo:p.bestCombo?.points??null,tradeSpent:p.tradeSpent||0,max:p.max?.value??null}))};
 }
 function completeInverseTurn(room,player,points,random){
  completePrisonTurn(room,player,points,random);
  advanceInverseContour(room);
  advanceInverseDisorder(room,random);
+ advanceInverseFog(room,random);
 }
 export function inverseCommand(original,action,payload={},now=Date.now(),random=Math.random){
  if(!isInverse(original)||![1,2,3].includes(original.inverseVersion))throw new Error('Versión de Inverso no compatible. Se conserva el guardado.');
- const room=structuredClone(original),pair=room.pairs[0];room.clockNow=now;
+ const room=structuredClone(original),pair=room.pairs[0];adoptInventoryBalance(room);initializeInventory(room);room.clockNow=now;
  if(comboInverse(room))room.inverseClaimVersion=2;
  const done=()=>{initializeInversePrison(room,random);initializeInverseContour(room);initializeInverseDisorder(room);finishIfEmpty(room,now);room.version++;room.updatedAt=new Date(now).toISOString();return room;};
  if(action==='finish'){room.status='finished';room.finishReason='manual';room.finishedAt=new Date(now).toISOString();pair.deadline=null;return done();}
@@ -70,7 +74,7 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  if(!automatic&&room.timeMode!=='untimed'&&Date.parse(pair.deadline)<=now)throw new Error('Tiempo agotado: se jugará automáticamente.');
  if(action==='claim'){
   if(!canClaimInverse(room,actor.id))throw new Error('Elige colocar o cobrar; termina Doble antes de cobrar.');
-  const figure=inverseClaimsAt(room,actor.id,{x:payload.x,y:payload.y}).find(f=>f.id===payload.figureId);
+  const figure=inverseClaimsAt(room,actor.id,{x:payload.x,y:payload.y}).find(f=>f.id===payload.figureId||payload.figureId==null&&fogKeys(room).has(key(payload.x,payload.y)));
   if(!figure)throw new Error('La figura ya no está disponible. Elige una figura propia válida.');
   let result,scoreGroups;
   if(comboInverse(room)){
