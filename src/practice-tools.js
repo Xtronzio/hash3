@@ -94,6 +94,10 @@ export function initializeInventory(game,random=Math.random){
   game.inventoryEffects.blocks||=[];game.inventoryEffects.shields||=[];game.inventoryEffects.forced||=[];
   initializeImmunity(game);
   if(game.inventoryBalanceVersion===1)for(const p of game.players){
+   // Very old duration cards also return the unused rounds of an active
+   // protection during initializeImmunity. Cap only after that conversion.
+   const immunity=p.inventory.immunity;
+   if(immunityStock(game,p.id)>3){immunity.legacyCards??={...immunity.cards};immunity.cards={'immunity-1':3,'immunity-3':0,'immunity-33':0};immunity.earned=Math.max(3,immunity.earned||0);}
    p.inventory.comboPending=0;
    if(inventoryEnabled(game,p.id)&&!p.inventory.refillCycle)startRefill(game,p.id,random);
    if(p.inventory.legacyPending&&p.inventory.refillCycle){p.inventory.refillCycle.elapsed=p.inventory.refillCycle.base;p.inventory.refillCycle.pending=true;p.inventory.legacyPending=0;}

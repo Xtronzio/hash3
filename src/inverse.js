@@ -1,5 +1,5 @@
 import {advanceInverseFog} from './inverse-fog.js';
-import {fogKeys} from './fog.js';
+import {fogKeys,perceivedRoom} from './fog.js';
 import {adoptInventoryBalance} from './inventory-balance.js';
 import {initializeInverseContour,advanceInverseContour} from './inverse-contour.js';
 import {comboInverse} from './inverse-combos.js';
@@ -147,6 +147,7 @@ export function inverseCommand(original,action,payload={},now=Date.now(),random=
  room.lastEvent={id:cell.id,kind:'move',player:scorer.id,actor:actor.id,...result,cleared,automatic,continuation:false};delete room.practiceHint;return done();
 }
 export function inverseMachineChoice(room,random=Math.random,options={}){
+ room=perceivedRoom(room);
  if(manualInverse(room)||room.inverseVersion===2&&['high','pro'].includes(room.difficulty))return chooseInverseAction(room,random,options);
  const {automatic=false}=options;
  const pair=room.pairs[0],actor=room.players.find(p=>p.symbol===pair.turn),symbol=placementSymbol(room,actor.id);

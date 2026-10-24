@@ -10,6 +10,7 @@ import {tradeAvailability} from '../src/inventory-economy.js';
 import {activateFog,advanceFog,fogKeys} from '../src/fog.js';
 import {advanceInverseFog,visibleInverseClaimsAt} from '../src/inverse-fog.js';
 import {inverseClaimsAt} from '../src/inverse-claims.js';
+import {inverseMachineChoice} from '../src/inverse.js';
 import {relocationSources} from '../src/relocate-cell.js';
 import {rhinoRoutes} from '../src/brief-ecology.js';
 import {INVERSE_PRESETS} from '../src/inverse-boards.js';
@@ -86,4 +87,15 @@ test('Rhino feedback follows the bent corridor rather than interpolating a false
 test('The machine can relocate a vacant tile to prepare a figure using the same referee',()=>{
  const g=createLocal('solo','Jorge','Rival',NOW,'normal','untimed','medium','X',true,{faunaEnabled:false,territoryEnabled:false,random:()=>0});g.pairs[0].turn='O';g.terrain=g.terrain.filter(c=>c.x!==1||c.y!==1);g.terrain.push({x:3,y:0});g.cells=[{x:1,y:0,id:'a',symbol:'O',owner:'local-o'},{x:1,y:2,id:'b',symbol:'O',owner:'local-o'}];for(const k in g.players[1].inventory.cards)g.players[1].inventory.cards[k]=0;g.players[1].inventory.cards.relocate=1;
  const choice=chooseMachineCard(g,NOW);assert.equal(choice.payload.tool,'relocate');assert.equal(choice.payload.toX,1);assert.equal(choice.payload.toY,1);const next=localCommand(g,choice.action,choice.payload,NOW);assert.equal(next.terrain.length,g.terrain.length);
+});
+test('Every Inverse machine entry, including the worker and timeout fallback, uses remembered fog signs',()=>{
+ const g=fresh({variant:'inverse',board:INVERSE_PRESETS[3]});g.difficulty='basic';g.cells=[0,1,2].map(x=>({x,y:0,id:'hidden-'+x,symbol:'X',owner:'local-x'}));activateFog(g,{id:'fair',kind:'fog'},g.terrain);
+ const altered=structuredClone(g);for(const c of altered.cells){c.symbol='O';c.owner='local-o';}
+ const choose=r=>inverseMachineChoice(r,()=>0,{automatic:true,maxTimeMs:50,maxNodes:20,cards:false});assert.deepEqual(choose(g),choose(altered));
+});
+test('Inverse fog announcements stay at copied coordinates when a piece moves before impact',()=>{
+ const g=fresh({variant:'inverse',board:INVERSE_PRESETS[3]});g.cells=g.terrain.slice(0,3).map((c,i)=>({...c,id:'p'+i,symbol:'X',owner:'local-x'}));for(let i=0;i<33;i++)advanceInverseFog(g,()=>0);const targets=structuredClone(g.inverseFog.targets);g.cells[0].x+=999;assert.deepEqual(g.inverseFog.targets,targets);
+});
+test('Old active duration protections are converted before applying the three-immunity usable limit',()=>{
+ const g=fresh();delete g.inventoryBalanceVersion;g.immunityVersion=1;g.inventoryEffects.immunities=[{player:'local-x',remaining:33}];adoptInventoryBalance(g);initializeInventory(g);assert.equal(immunityStock(g,'local-x'),3);assert.ok(inv(g).immunity.legacyCards);assert.equal(inv(g).immunity.earned,3);
 });
