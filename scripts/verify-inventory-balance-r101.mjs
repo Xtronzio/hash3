@@ -39,7 +39,7 @@ try{for(const [name,engine]of Object.entries({chromium,firefox,webkit})){
   const fog=fresh('inverse');fog.cells=[0,1,2].map(x=>({x,y:0,id:'hidden-'+x,symbol:'X',owner:'local-x'}));for(let i=0;i<36;i++)advanceInverseFog(fog,()=>0);assert.equal(fog.fogEffects[0].turnsRemaining,18);await load(fog);
   assert.match(await page.locator('.inverse-fog-notice').innerText(),/18 turnos totales/);assert.equal(await page.locator('.board .fog-occupied').count(),3);assert.equal(await page.locator('.board .fog-empty').count(),6);
   for(const label of await page.locator('.board .fog-occupied').evaluateAll(ns=>ns.map(n=>n.getAttribute('aria-label'))))assert.match(label,/signo oculto/);
-  assert.equal(await page.locator('.board-inventory-status [data-tool="relocate"]').count(),0);await page.locator('[data-action="inverse-claim-toggle"]').click();assert.equal(await page.locator('.inverse-claim-highlight').count(),0);
+  assert.equal(await page.locator('.board-inventory-status [data-tool="relocate"]').count(),0);await page.locator('[data-action="inverse-claim-toggle"]:visible').click();assert.equal(await page.locator('.inverse-claim-highlight').count(),0);
   await page.locator('.fog-occupied[data-x="0"][data-y="0"]').click();const claimed=await read();assert.ok(claimed.players[0].score>fog.players[0].score);assert.equal(claimed.fogEffects[0].turnsRemaining,17);
   await page.locator('[data-action="pause"]').click();await page.locator('.paused-game').waitFor();assert.equal((await read()).fogEffects[0].turnsRemaining,17);assert.ok(await page.locator('.inspection-canvas .map-fog').count());
   if(width===390)await page.screenshot({path:path.join(output,`inventory-balance-r101-${name}-fog.png`)});

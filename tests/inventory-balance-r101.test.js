@@ -11,6 +11,7 @@ import {activateFog,advanceFog,fogKeys} from '../src/fog.js';
 import {advanceInverseFog,visibleInverseClaimsAt} from '../src/inverse-fog.js';
 import {inverseClaimsAt} from '../src/inverse-claims.js';
 import {inverseMachineChoice} from '../src/inverse.js';
+import {legalMachineFallback} from '../src/machine-runner.js';
 import {relocationSources} from '../src/relocate-cell.js';
 import {rhinoRoutes} from '../src/brief-ecology.js';
 import {INVERSE_PRESETS} from '../src/inverse-boards.js';
@@ -98,4 +99,11 @@ test('Inverse fog announcements stay at copied coordinates when a piece moves be
 });
 test('Old active duration protections are converted before applying the three-immunity usable limit',()=>{
  const g=fresh();delete g.inventoryBalanceVersion;g.immunityVersion=1;g.inventoryEffects.immunities=[{player:'local-x',remaining:33}];adoptInventoryBalance(g);initializeInventory(g);assert.equal(immunityStock(g,'local-x'),3);assert.ok(inv(g).immunity.legacyCards);assert.equal(inv(g).immunity.earned,3);
+});
+test('A failed remembered claim recovers without repeating it or reading the real hidden signs',()=>{
+ const g=fresh({variant:'inverse',board:INVERSE_PRESETS[3]});g.cells=[0,1,2].map(x=>({x,y:0,id:'p'+x,symbol:'X',owner:'local-x'}));activateFog(g,{id:'memory',kind:'fog'},g.terrain);g.cells[1].symbol='O';g.cells[1].owner='local-o';const choice=legalMachineFallback(g,{action:'claim'});assert.equal(choice.action,'move');assert.doesNotThrow(()=>localCommand(g,choice.action,choice.payload,NOW));
+});
+test('A full foggy drawing lets the machine buy and use a blind area tool through the ordinary referee',()=>{
+ let g=fresh({variant:'inverse',board:INVERSE_PRESETS[3]});g.cells=g.terrain.map((c,i)=>({...c,id:'p'+i,symbol:i%2?'X':'O',owner:i%2?'local-x':'local-o'}));activateFog(g,{id:'full',kind:'fog'},g.terrain);g.fogEffects[0].memory={};for(const k in inv(g).cards)inv(g).cards[k]=0;g.players[0].score=999;
+ const buy=inverseMachineChoice(g,()=>0,{automatic:true,cards:false});assert.equal(buy.action,'trade');assert.equal(buy.payload.tool,'bomb');g=localCommand(g,buy.action,buy.payload,NOW);const use=inverseMachineChoice(g,()=>0,{automatic:true,cards:false});assert.equal(use.action,'inventory');assert.equal(use.payload.tool,'bomb');assert.ok(localCommand(g,use.action,use.payload,NOW).cells.length<g.cells.length);
 });

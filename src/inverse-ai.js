@@ -112,7 +112,10 @@ export function chooseInverseAction(room,random=Math.random,options={}){
   const actor=signed(room,room.pairs[0].turn);
   if(canPassPrisonTurn(room,actor.id))return {action:'pass',payload:{}};
   for(const tool of ['erase','bomb'])if(canUsePracticeTool(room,actor.id,tool,room.clockNow))for(const point of toolCells(room,actor.id,tool).slice(0,12)){const choice={action:'inventory',payload:{tool,playerId:actor.id,x:point.x,y:point.y}};try{inverseCommand(room,choice.action,choice.payload,room.clockNow,()=>.41);return choice;}catch{}}
-  if(tradeAvailability(room,actor.id,'erase',room.clockNow).allowed)return {action:'trade',payload:{playerId:actor.id,tool:'erase'}};
+  for(const tool of ['erase','bomb'])if(toolCells(room,actor.id,tool).length){
+   if(tradeAvailability(room,actor.id,tool,room.clockNow).allowed)return {action:'trade',payload:{playerId:actor.id,tool}};
+   if(room.fogEffects?.length)for(const replace of Object.keys(actor.inventory.cards))if(tradeAvailability(room,actor.id,tool,room.clockNow,{replace}).allowed)return {action:'trade',payload:{playerId:actor.id,tool,replace}};
+  }
   return null;
  }
  const sign=room.pairs[0].turn==='X'?1:-1;

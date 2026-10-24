@@ -55,7 +55,10 @@ siguen siendo decisiones contextuales del territorio R98, no este calendario.
 Ocultar símbolo/dueño, conservar ocupación y punto blanco de las vacías. Sin
 previsualizar combos que toquen niebla; Cobrar permite tocar una ocupada a ciegas
 y el árbitro comprueba la figura real. IA y ayudas solo reciben memoria/percepción
-de signos; no conocen nuevas identidades ocultas. Contadores guardados y exportados.
+de signos; no conocen nuevas identidades ocultas. Tras fallar un cobro recordado,
+la recuperación de máquina descarta esa memoria incierta para no repetirlo. En un
+dibujo lleno puede comprar/cambiar y usar Bomba a ciegas, con las reglas normales,
+cuando no hay un objetivo visible para Borrar. Contadores guardados y exportados.
 Turnos de cárcel omitidos/compensados no envejecen efectos ni producen recargas.
 
 ## Rinos y conservación
