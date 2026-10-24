@@ -1,4 +1,4 @@
-import {activateFog,fogKeys} from './fog.js';
+import {activateFog,fogKeys,fogIcon} from './fog.js';
 const key=c=>`${c.x},${c.y}`;
 export function advanceInverseFog(room,random=Math.random){
  if(room.inventoryBalanceVersion!==1||room.inverseVersion!==3)return;
@@ -18,5 +18,6 @@ export function visibleInverseClaimsAt(room,player,point,claimsAt){
 export function inverseFogNotice(room){
  const f=room.inverseFog,e=room.fogEffects?.[0];if(!f)return '';
  const n=e?e.turnsRemaining:f.targets.length?f.next-f.turns:null;
- return n==null?'':`<div class="practice-banner inverse-contour-notice inverse-fog-notice" role="status">Niebla · ${e?'restan':'en'} ${n} turnos totales</div>`;
+ const label=`Niebla · ${e?'restan':'en'} ${n} turnos totales`;
+ return n==null?'':`<div class="practice-banner inverse-contour-notice inverse-fog-notice" role="status" aria-label="${label}" title="${label}"><span>${label}</span><div class="inverse-fog-chip" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8">${fogIcon}</svg><b>${n}</b></div></div>`;
 }

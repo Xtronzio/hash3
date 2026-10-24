@@ -38,3 +38,4 @@
 .inventory-pending-effect{border-style:dashed}
 .game .world-map .inventory-shortcut>svg{width:23px;height:23px;flex:none;min-height:0}
 .inventory-refill-next{display:inline-flex;align-items:center;gap:2px;flex:none;color:#00e5ff;font-size:12px}.inventory-refill-next svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.inverse-fog-chip{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;min-height:44px;white-space:nowrap}.inverse-fog-chip b{font-size:16px}.inverse-fog-chip svg{width:18px;height:18px}
