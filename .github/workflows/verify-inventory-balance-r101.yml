@@ -1,4 +1,4 @@
-# Current R101 acceptance plus explicit historical economy regressions.
+# R101:20 engine scenarios, production UI and explicit historical regressions.
 name: HASH3 Verify inventory balance R101
 on:
   push:
