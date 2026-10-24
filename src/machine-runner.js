@@ -2,13 +2,19 @@ import {isInverse} from './inverse-rules.js';
 import {inverseMachineChoice} from './inverse.js';
 import {machineTurnKey} from './machine-turn.js';
 import {availableCells,expansionOptions,terrainOf,prepareFigureIndex,figureWindows,key} from './game.js';
-import {perceivedRoom} from './fog.js';
+import {perceivedRoom,fogKeys} from './fog.js';
 import {placementSymbol} from './practice-tools.js';
 
 // An emergency choice uses the referee's current legal cells, not an old
 // speculative board. It never spends a card, invents a pass or skips a turn.
-export function legalMachineFallback(room){
- if(isInverse(room)){const choice=inverseMachineChoice(room,Math.random,{maxTimeMs:80,cards:false});if(choice)return choice;throw new Error('Dibujo lleno: el rival necesita una carta para continuar. Puedes pausar y conservar la partida.');}
+export function legalMachineFallback(room,rejectedChoice=null){
+ if(isInverse(room)){
+  let view=perceivedRoom(room);
+  // A failed remembered claim supplies no hidden identity. Discard uncertain
+  // signs for this retry so recovery cannot repeat the same failed claim.
+  if(rejectedChoice?.action==='claim'&&room.fogEffects?.length){const hidden=fogKeys(room);view={...view,fogPerception:true,cells:view.cells.map(c=>hidden.has(key(c.x,c.y))?{id:c.id,x:c.x,y:c.y,symbol:'?',owner:null}:c)};}
+  const choice=inverseMachineChoice(view,Math.random,{maxTimeMs:80,cards:false});if(choice)return choice;throw new Error('Dibujo lleno: el rival necesita una carta para continuar. Puedes pausar y conservar la partida.');
+ }
  const pair=room.pairs[0];
  if(pair.pending){
   const point=expansionOptions(terrainOf(room),pair.terrainAnchor||pair.active,room)[0];
@@ -58,14 +64,14 @@ export function createMachineRunner({getRoom,isHidden=()=>false,isBusy=()=>false
     // Retry once against the live board, with no speculative cards.
     if(key()!==turnKey)return;
     if(fallback){stop();onError(error);return;}
-    stop();pending=job;recover();
+    stop();pending=job;recover(choice);
    }
   }
-  function recover(){
+  function recover(rejectedChoice=null){
    if(!live())return;
    releaseWorker();
-   if(isBusy()){later(recover);return;}
-   try{commit(legalMachineFallback(getRoom()),true);}catch(error){fail(error);}
+   if(isBusy()){later(()=>recover(rejectedChoice));return;}
+   try{commit(legalMachineFallback(getRoom(),rejectedChoice),true);}catch(error){fail(error);}
   }
   function start(){
    if(!live())return;

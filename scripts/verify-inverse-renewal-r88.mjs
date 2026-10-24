@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import fs from 'node:fs/promises';import path from 'node:path';
-import {chromium,firefox,webkit} from 'playwright';import {preview} from 'vite';import {createLocal} from '../src/local.js';
+import {chromium,firefox,webkit} from 'playwright';import {preview} from 'vite';// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
 const output=path.resolve('browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const create=(w=9,h=9)=>createLocal('local','Jorge','Rival',Date.now(),'normal','untimed','pro','X',false,{variant:'inverse',board:{id:'qa-r88',name:'Prueba',terrain:Array.from({length:w*h},(_,i)=>({x:i%w-(w>166?Math.floor(w/2):0),y:Math.floor(i/w)-(h>166?Math.floor(h/2):0)}))},random:()=>.99});

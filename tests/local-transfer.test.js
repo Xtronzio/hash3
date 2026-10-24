@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
 import {captureTransfer,encodeTransfer,decodeTransfer,transferUrl,transferToken,transferPreview,importTransfer,validateTransfer,MAX_TRANSFER_URL,MAX_TRANSFER_BYTES} from '../src/local-transfer.js';
 import {loadLocalGames,loadGamePins} from '../src/sessions.js';
 import {gzipSync,strToU8} from 'fflate';

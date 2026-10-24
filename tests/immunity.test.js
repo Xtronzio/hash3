@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 import {initializeInventory,canUsePracticeTool,toolAllowance,toolCells,recordInventoryCombo} from '../src/practice-tools.js';
 import {immunityStock,immunityFor,immunityRemaining,immunityCountdown,immunitySeconds,recordImmunityCombo} from '../src/immunity.js';
 import {inventoryMarkup,immunityComboNotice} from '../src/inventory.js';

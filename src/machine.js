@@ -270,7 +270,7 @@ function chooseExpansion(room,level,random,config,budget){
 }
 
 export function chooseMachineMove(room,random=Math.random,options={}){
- if(isInverse(room))return inverseMachineChoice(room,random,options);
+ if(isInverse(room))return inverseMachineChoice(perceivedRoom(room),random,options);
   room=perceivedRoom(room);
   const level=settings[room.difficulty]?room.difficulty:'medium',config=settings[level],start=performance.now();
   const budget={nodes:0,maxNodes:options.maxNodes??config.nodes,deadline:start+(options.maxTimeMs??config.time)};

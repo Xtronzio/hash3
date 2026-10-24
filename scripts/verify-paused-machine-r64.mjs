@@ -4,7 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium,webkit,firefox} from 'playwright';
 import {preview} from 'vite';
-import {createLocal,localCommand} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 const output=path.resolve(process.env.HASH3_QA_OUTPUT||'browser-results');await fs.mkdir(output,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 function fixture(human='X'){

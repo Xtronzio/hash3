@@ -57,11 +57,18 @@ export function protectedTerritoryKeys(game,now=game.clockNow??Date.now()){
 }
 export function immunityProgress(game,playerId){
   const inv=immunityFor(game,playerId);
+  if(game.inventoryBalanceVersion===1){const threshold=[33,66,99][Math.min(2,inv.earned||0)];return [{id:'immunity-1',combos:threshold,protections:1,count:immunityStock(game,playerId),progress:0,missing:threshold}];}
   return immunityGoals.map(goal=>({...goal,count:inv.cards[goal.id]||0,progress:inv.combos%goal.combos,missing:goal.combos-inv.combos%goal.combos}));
 }
 // Count a placement, never a turn or accumulated score. Doble's placements
 // qualify separately; points from a card or the rival's forced symbol do not.
 export function recordImmunityCombo(game,playerId,points,{automatic=false,scorer=playerId}={}){
+  if(game.inventoryBalanceVersion===1){
+   if(automatic||scorer!==playerId||!inventoryEnabled(game,playerId)||game.variant==='inverse')return [];
+   const inv=immunityFor(game,playerId),threshold=[33,66,99][Math.min(2,inv.earned||0)];
+   if(!Number.isFinite(points)||points<threshold||immunityStock(game,playerId)>=3)return [];
+   inv.cards['immunity-1']++;inv.earned=(inv.earned||0)+1;inv.combos++;inv.lastEarned=['immunity-1'];return [{id:'immunity-1',protections:1}];
+  }
   if(briefEcology(game)||!inventoryEnabled(game,playerId))return [];
   if(automatic||scorer!==playerId||!Number.isFinite(points)||points<IMMUNITY_POINTS||!['solo','local'].includes(game.mode))return [];
   const inv=immunityFor(game,playerId);inv.combos++;

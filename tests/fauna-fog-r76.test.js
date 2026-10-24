@@ -1,7 +1,8 @@
 import {nuclearOptions,nuclearBlast} from '../src/nuclear-tool.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal,localCommand,LOCAL_RULE_VERSION} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
+import {localCommand,LOCAL_RULE_VERSION} from '../src/local.js';
 import {advanceEcologyTurn} from '../src/inhabitants.js';
 import {anacondaRoute,announceAnaconda,advanceAnacondas,ANACONDA_BODY} from '../src/anaconda.js';
 import {rhinoRoutes,announceBriefFauna} from '../src/brief-ecology.js';

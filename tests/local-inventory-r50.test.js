@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLocal} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
 import {inventoryStatusMarkup,inventoryDockMarkup,toolIcon} from '../src/inventory.js';
 import {spendCard,recordInventoryCombo} from '../src/practice-tools.js';
 import {ecologyColors} from '../src/ecology-navigation.js';

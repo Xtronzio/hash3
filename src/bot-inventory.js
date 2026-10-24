@@ -5,7 +5,7 @@ import {scoreLandings} from './landing-score.js';
 import {localLiving} from './living-balance.js';
 import {borderChains} from './area-tools.js';
 import {defendedInvasionCells} from './invasion-paths.js';
-import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,placementSymbol} from './practice-tools.js';
+import {canUsePracticeTool,practiceTurn,toolCells,relocationDestinations,moveDestination,placementSymbol} from './practice-tools.js';
 import {availableCells,figureWindows,key,isBlockedCell} from './game.js';
 
 // Card decisions stay in the Worker alongside search. The same referee and
@@ -48,6 +48,12 @@ export function chooseMachineCard(room,now=Date.now()){
       if(gain>points){best=target;points=gain;}
     }
     if(best&&points>=(level==='basic'?4:3))return command('opposite',best);
+  }
+  if(level!=='basic'&&usable('relocate')){
+   for(const source of toolCells(room,actor,'relocate').slice(0,3))for(const to of relocationDestinations(room,actor,source).filter(c=>neighbors(c,player.symbol)>=1).slice(0,12)){
+    const figures=figureWindows([...room.cells,{...to,symbol:player.symbol}],to.x,to.y,player.symbol,room.level,null,localLiving(room));
+    if(figures.some(f=>!room.forms.includes(f.id)))return command('relocate',source,{toX:to.x,toY:to.y});
+   }
   }
   if(level!=='basic'&&usable('swap')){
     const targets=toolCells(room,actor,'swap').sort((a,b)=>neighbors(b,player.symbol)-neighbors(a,player.symbol)).slice(0,12);

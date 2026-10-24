@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';import path from 'node:path';
 import {chromium,firefox,webkit} from 'playwright';import {preview} from 'vite';
-import {createLocal} from '../src/local.js';
+// Historical economy fixture; current R101 defaults have separate acceptance coverage.
+import {createLegacyLocal as createLocal} from '../tests/helpers/legacy-balance.js';
 const out=path.resolve('browser-results');await fs.mkdir(out,{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:0}}),origin=`http://127.0.0.1:${server.httpServer.address().port}`,results=[];
 const tile=(x,y,symbol='X')=>({id:`${symbol}:${x},${y}`,x,y,symbol,owner:symbol==='#'?null:symbol==='X'?'local-x':'local-o'});

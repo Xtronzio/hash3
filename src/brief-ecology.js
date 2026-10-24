@@ -54,6 +54,15 @@ export function clearBriefCells(room,points){
  return removed.map(({x,y})=>({x,y}));
 }
 const dirs=[[1,0],[0,1],[1,1],[1,-1]];
+function rhinoJog(path,known,edges){
+ if(path.length<6)return path;
+ const dx=path[1].x-path[0].x,dy=path[1].y-path[0].y,split=Math.floor(path.length/2);
+ for(const sign of [1,-1]){const ox=-dy*sign,oy=dx*sign;
+  const route=[...path.slice(0,split),...path.slice(split-1,-1).map(c=>({x:c.x+ox,y:c.y+oy}))];
+  if(new Set(route.map(c=>key(c.x,c.y))).size===route.length&&route.every((c,i)=>known.has(key(c.x,c.y))&&(!i||!crosses(route[i-1],c,edges))))return route;
+ }return path;
+}
+function routeCorners(path,last){const route=path.slice(0,path.indexOf(last)+1);return route.filter((c,i)=>!i||i===route.length-1||c.x-route[i-1].x!==route[i+1].x-c.x||c.y-route[i-1].y!==route[i+1].y-c.y).map(({x,y})=>({x,y}));}
 const crosses=(a,b,edges)=>{
  if(a.x===b.x||a.y===b.y)return edges.has(edgeKey({a,b}));
  const mid1={x:b.x,y:a.y},mid2={x:a.x,y:b.y};
@@ -74,7 +83,7 @@ export function rhinoRoutes(room,count=1,random=Math.random){
  if((room.ruleVersion||0)<24)return Array.from({length:count},(_,i)=>routes[i%routes.length]);
  const history=routeHistoryIndex(room,'rhino'),selected=[];
  for(let i=0;i<count;i++){
-  const viable=routes.map(path=>({path,novelty:routeNovelty(path,history)})).filter(e=>e.novelty>=0);
+  const viable=routes.map(p=>(room.ruleVersion||0)>=31?rhinoJog(p,known,edges):p).map(path=>({path,novelty:routeNovelty(path,history)})).filter(e=>e.novelty>=0);
   if(!viable.length)break;
   // Sample among longer careers, with novel terrain and different directions
   // winning over repeatedly traversed corridors. No deterministic prefix.
@@ -132,7 +141,7 @@ export function resolveBriefFauna(room,event,now,random=Math.random){
  if(base==='beaver'&&beaversRetired(room)){room.faunaEvents=room.faunaEvents.filter(e=>e.id!==event.id);return;}
  if(base==='rhino'){
   const terrain=new Set(terrainOf(room).map(c=>key(c.x,c.y))),edges=new Set(frontierSegments(room).map(edgeKey)),hit=new Map();
-  for(const path of event.paths){let prev=null,first=null;for(const c of path){if(!terrain.has(key(c.x,c.y))||isDeadCell(room,c.x,c.y)||(room.frontiers||[]).some(f=>f.cells?.some(p=>p.x===c.x&&p.y===c.y))||prev&&crosses(prev,c,edges))break;hit.set(key(c.x,c.y),c);first||=c;prev=c;}if(first&&prev)visualRoutes.push({from:{x:first.x,y:first.y},to:{x:prev.x,y:prev.y}});}
+  for(const path of event.paths){let prev=null,first=null;for(const c of path){if(!terrain.has(key(c.x,c.y))||isDeadCell(room,c.x,c.y)||(room.frontiers||[]).some(f=>f.cells?.some(p=>p.x===c.x&&p.y===c.y))||prev&&crosses(prev,c,edges))break;hit.set(key(c.x,c.y),c);first||=c;prev=c;}if(first&&prev)visualRoutes.push({from:{x:first.x,y:first.y},to:{x:prev.x,y:prev.y},...((room.ruleVersion||0)>=31?{waypoints:routeCorners(path,prev)}:{})});}
   actions.push(...clearBriefCells(room,[...hit.values()]).map(c=>({...c,kind:'rhino'})));
  }else{
   for(const cells of event.paths){const protectedKeys=faunaProtection(room),legal=cells.filter(c=>!isDeadCell(room,c.x,c.y)&&!protectedKeys.has(key(c.x,c.y))&&!room.cells.some(p=>p.x===c.x&&p.y===c.y)&&!habitatBlocked(room,c.x,c.y));

@@ -30,6 +30,7 @@ export function validateTransfer(data){
  if(!data||data.format!=='hash33-local-transfer'||data.version!==1||!text(data.id,100)||!text(data.createdAt,40)||!Number.isFinite(Date.parse(data.createdAt))||!array(data.games,333)||!array(data.results,33333)||!array(data.pins,333)||typeof data.name!=='string'||data.name.length>18)fail();
  safeTree(data);const ids=new Set();
  for(const g of data.games){
+  if(!validBalanceState(g))fail();
   if(!validInverseBees(g)||!validInverseContour(g)||!validInversePrison(g)||!validInverseDisorder(g)||!validTerritoryDirector(g))fail();
   if(g.fauna!=null&&(!array(g.fauna,STORED_FAUNA.length)||new Set(g.fauna).size!==g.fauna.length||g.fauna.some(k=>!STORED_FAUNA.includes(k))))fail();
   if(g.phenomena!=null&&(!array(g.phenomena,SELECTABLE_PHENOMENA.length)||new Set(g.phenomena).size!==g.phenomena.length||g.phenomena.some(k=>!SELECTABLE_PHENOMENA.includes(k))))fail();
@@ -51,7 +52,7 @@ export function validateTransfer(data){
   for(const field of ['worms','anacondas','faunaRouteHistory','fogEffects','works','bombs','rodentRaids','territoryEvents','frontiers','invasions','watchTargets'])if(g[field]!=null&&!array(g[field]))fail();
   if(g.inventoryEffects){for(const field of ['blocks','shields','forced','immunities'])if(g.inventoryEffects[field]!=null&&!array(g.inventoryEffects[field]))fail();}
   for(const w of g.anacondas||[])if(!point(w)||!text(w.id)||!points(w.body||[])||!points(w.route)||!Number.isSafeInteger(w.cursor)||w.cursor<0||w.cursor>w.route.length)fail();
-  for(const e of g.fogEffects||[])if(!text(e.id)||!['clouds','fog'].includes(e.kind)||!points(e.region)||!Number.isSafeInteger(e.turnsRemaining)||e.turnsRemaining<1||e.turnsRemaining>3)fail();
+  for(const e of g.fogEffects||[])if(!text(e.id)||!['clouds','fog'].includes(e.kind)||!points(e.region)||!Number.isSafeInteger(e.turnsRemaining)||e.turnsRemaining<1||e.turnsRemaining>(g.inventoryBalanceVersion===1?18:3))fail();
   for(const r of g.faunaRouteHistory||[])if(!['rhino','anaconda'].includes(r.kind)||!array(r.runs)||r.runs.some(s=>!point(s.from)||!point(s.to)))fail();
   for(const w of g.worms||[])if(!point(w)||!text(w.id)||!points(w.body||[]))fail();
   for(const w of g.works||[])if(!text(w.id)||!points(w.build||[])||!points(w.destroy||[])||!Number.isFinite(w.done))fail();
@@ -177,3 +178,4 @@ export function importTransfer(storage,decoded,{now=Date.now(),newId=()=>crypto.
  }
  return {added:incoming.length,results:incomingResults.length,already:false};
 }
+import {validBalanceState} from './inventory-balance.js';

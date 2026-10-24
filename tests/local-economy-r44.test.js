@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createLocal,localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
+import {localCommand} from '../src/local.js';
 import {practiceTools,validateStartingCards,recordInventoryCombo,completeInventoryTurn,drawComboCard,canUsePracticeTool} from '../src/practice-tools.js';
 import {CARD_PRICES,tradeAvailability} from '../src/inventory-economy.js';
 import {loadLocalGames,saveLocalGame} from '../src/sessions.js';

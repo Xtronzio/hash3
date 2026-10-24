@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createLocal,localCommand} from '../src/local.js';
+import {localCommand} from '../src/local.js';
+import {createLegacyLocal as createLocal} from './helpers/legacy-balance.js';
 import {disarmPendingBombs,pendingInvasionBombs} from '../src/pending-bombs.js';
 import {canUsePracticeTool,toolCells} from '../src/practice-tools.js';
 import {applyPlannedEvent} from '../src/territory-event-actions.js';

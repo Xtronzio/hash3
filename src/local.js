@@ -1,3 +1,5 @@
+import {relocationSources} from './relocate-cell.js';
+import {adoptInventoryBalance} from './inventory-balance.js';
 import {normalizeFauna} from './fauna-selection.js';
 import {initializeTurnClock,turnSecondsFor} from './turn-clock.js';
 import {initializeTerritoryDirector,markTerritoryGrowth} from './territory-director.js';
@@ -22,13 +24,13 @@ import {key,terrainOf,connectedTerrain,availableCells,expansionOptions,figureWin
 import {recordMax} from './max.js';
 import {recordCombo} from './records.js';
 import {initializeRodents,stepRodent} from './rodents.js';
-import {canUsePracticeTool,practiceTurn,toolCells,moveDestination,initializeInventory,seedStartingInventory,recordInventoryCombo,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
+import {canUsePracticeTool,practiceTurn,toolCells,relocationDestinations,moveDestination,initializeInventory,seedStartingInventory,recordInventoryCombo,spendCard,completeInventoryTurn,placementSymbol} from './practice-tools.js';
 import {chooseMachineMove,machineLevels,machineLevelLabel} from './machine.js';
 import {activateImmunity,recordImmunityCombo,expireImmunities,freezeImmunities,resumeImmunities} from './immunity.js';
 import {applyAreaTool} from './area-tools.js';
 import {awardFigures,scoreLandings} from './landing-score.js';
 export const TURN_SECONDS=33;
-export const LOCAL_RULE_VERSION=30;
+export const LOCAL_RULE_VERSION=31;
 const id=()=>crypto.randomUUID();
 export const localHumanId=room=>room.humanId||room.pairs[0].x;
 export const localMachineId=room=>{const p=room.pairs[0];return localHumanId(room)===p.x?p.o:p.x;};
@@ -49,7 +51,7 @@ export function createLocal(mode,name='Tú',secondName='Jugador 2',now=Date.now(
   if(ecology.matchGoal?.type==='moves'&&CELL_TARGETS.includes(ecology.matchGoal.target))room.matchGoal={type:'moves',target:ecology.matchGoal.target};
   if(ecology.matchGoal?.type==='time'&&MATCH_TIME_TARGETS.includes(ecology.matchGoal.target)){room.matchGoal={type:'time',target:ecology.matchGoal.target};room.endsAt=new Date(now+ecology.matchGoal.target*1000).toISOString();}
   if(ecology.variant==='inverse'){room.ruleVersion=24;room.variant='inverse';room.faunaEnabled=false;room.territoryEnabled=false;ecology={...ecology,initialCards:ecology.initialCards||['erase','shift','opposite'],secondInitialCards:ecology.secondInitialCards||['erase','shift','opposite']};}
-  seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})});if(isInverse(room))return configureInverse(room,ecology,ecology.random||Math.random);initializeTerritoryDirector(room);initializeTurnClock(room,now);initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
+  adoptInventoryBalance(room);seedStartingInventory(room,{[humanId]:ecology.initialCards,...(mode==='local'?{[humanId===x?o:x]:ecology.secondInitialCards}:{})},ecology.random||Math.random);if(isInverse(room))return configureInverse(room,ecology,ecology.random||Math.random);initializeTerritoryDirector(room);initializeTurnClock(room,now);initializeRodents(room,now,ecology.random||Math.random);initializeFreeExpansions(room);return room;
 }
 function normalize(room,now) {
   if(finishAtMatchGoal(room,now))return;
@@ -75,7 +77,7 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
   const wasPlaying=original.status==='playing';original=reconcileLocalBoard(original,now);
   if(wasPlaying&&original.status==='finished')return original;
   const room=structuredClone(original),p=room.pairs[0];
-  room.clockNow=now;if(room.status!=='finished')room.ruleVersion=LOCAL_RULE_VERSION;initializeTerritoryDirector(room);initializeTurnClock(room,now);initializeInventory(room);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now,random);initializeFreeExpansions(room);
+  adoptInventoryBalance(room);room.clockNow=now;if(room.status!=='finished')room.ruleVersion=LOCAL_RULE_VERSION;initializeTerritoryDirector(room);initializeTurnClock(room,now);initializeInventory(room,random);const immunityChanged=expireImmunities(room,now);initializeRodents(room,now,random);initializeFreeExpansions(room);
   if(action==='finish'){delete room.practiceHint;delete room.practiceTurn;room.status='finished';room.finishedAt=new Date(now).toISOString();room.updatedAt=room.finishedAt;room.version++;return room;}
   if(action==='pause'){
     if(room.status==='paused')return original;
@@ -155,6 +157,11 @@ export function localCommand(original,action,payload={},now=Date.now(),random=Ma
       const choice={cells:payload.cells.map(({x,y})=>({x,y}))};
       room.terrain.push(...choice.cells.map(c=>({...c,owner:playerId})));recordTerritoryGrowth(room,choice.cells.length,now,random);spendCard(room,playerId,tool);
       room.lastEvent={id:id(),kind:'inventory',player:playerId,tool,cells:choice.cells};
+    }else if(tool==='relocate'){
+      const source=relocationSources(room).find(c=>c.x===payload.x&&c.y===payload.y),to={x:payload.toX,y:payload.toY};
+      if(!source||!relocationDestinations(room,playerId,source).some(c=>c.x===to.x&&c.y===to.y))throw Error('Elige una celda vacía y un destino vacante unido al tablero.');
+      room.terrain=terrainOf(room).map(c=>c.x===source.x&&c.y===source.y?{...c,...to}:c);spendCard(room,playerId,tool);
+      room.lastEvent={id:id(),kind:'inventory',tool,player:playerId,cells:[{x:source.x,y:source.y},to]};
     }else if(tool==='swap'){
       const eligible=toolCells(room,playerId,tool),first=eligible.find(c=>c.x===payload.x&&c.y===payload.y),second=eligible.find(c=>c.x===payload.toX&&c.y===payload.toY);
       if(!first||!second||first.id===second.id)throw new Error('Elige dos fichas distintas, sin protecciones ni habitantes.');
