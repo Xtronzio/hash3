@@ -25,16 +25,16 @@ export function nuclearContext(room){
 export function nuclearOptions(room,context=nuclearContext(room)){return [...context.terrain.values()];}
 export function nuclearBlast(room,point,context=nuclearContext(room)){
  if(!Number.isInteger(point?.x)||!Number.isInteger(point?.y)||!context.terrain.has(key(point.x,point.y)))return [];
- const selected=[],seen=new Set(),front=new Map();
- const add=c=>{const k=key(c.x,c.y);if(!seen.has(k)&&context.terrain.has(k)){seen.add(k);front.set(k,{x:c.x,y:c.y});}};
- add(point);
- while(front.size&&selected.length<NUCLEAR_MAX){
-  const distance=p=>(p.x-point.x)**2+(p.y-point.y)**2;
-  const next=[...front.values()].sort((a,b)=>distance(a)-distance(b)||a.y-b.y||a.x-b.x)[0];
-  front.delete(key(next.x,next.y));selected.push(next);
-  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])add({x:next.x+dx,y:next.y+dy});
+ // Distance from the chosen centre, regardless of islands or protected gaps.
+ // Keep only the nearest 33 while scanning the snapshot, including for the bot.
+ const selected=[],compare=(a,b)=>a.distance-b.distance||a.y-b.y||a.x-b.x;
+ for(const c of context.terrain.values()){
+  const candidate={x:c.x,y:c.y,distance:(c.x-point.x)**2+(c.y-point.y)**2};
+  if(selected.length===NUCLEAR_MAX&&compare(candidate,selected.at(-1))>=0)continue;
+  let i=selected.length;while(i>0&&compare(candidate,selected[i-1])<0)i--;
+  selected.splice(i,0,candidate);if(selected.length>NUCLEAR_MAX)selected.pop();
  }
- return selected;
+ return selected.map(({x,y})=>({x,y}));
 }
 export function applyNuclearTool(room,point){
  const affected=nuclearBlast(room,point);if(!affected.length)throw Error('Elige una celda construida sin anclaje, protección ni habitantes.');
