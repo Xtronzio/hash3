@@ -1,5 +1,21 @@
 # Criterios de interfaz acordados con Jorge
 
+## R0.21.102 · Bomba atómica entre islas
+
+Jorge27/10 corrige la regla anterior de R57: la bomba atómica debe demoler33
+celdas elegibles aunque no estén unidas. Elegir las más cercanas al centro por
+distancia cuadrática, desempate y/x determinista, sin limitarse al componente.
+Si hay menos de33 elegibles, afectar todas. Vista previa y árbitro comparten
+nuclearBlast; selección acotada a33 candidatos durante recorrido por snapshot,
+nunca desde navegación. Conservar anclajes, calaveras, protección, habitantes,
+reservas, barreras protegidas y convenciones de barreras vigentes. Mismos puntos,
+precio333, una carta/cupo, turno y limpieza de referencias. Original local/máquina
+nueva/activa adopta reglas32; partidas cerradas e Inverso intactos, sin SQL/online.
+Respaldo pre-nuclear-islands-r101-20261027 desde2140b07. Motor con islas, barreras,
+menos de33 y33333 aisladas; QA real de preview/cancelar/pausa/recarga/aplicar en
+seis tamaños y Chromium/Firefox/WebKit, más pipeline completo antes de publicar
+R102/r313 y verificar HTTP. Cron mundial sigue apagado.
+
 ## R0.21.101 · Mochila, recarga, memoria y rinos
 
 Jorge24/10 autoriza implementar el paquete comentado: mochila9, tres favoritas
