@@ -73,7 +73,7 @@ jobs:
       - run: npm ci
       - run: npm run build:github
       - name: Use the Ubuntu archive mirror for browser dependencies
-        run: sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} +
+        run: sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name '*mirrors*.txt' \) -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} +
       - run: npx playwright install --with-deps chromium firefox webkit
         timeout-minutes: 10
       - name: Run every regression in this group
@@ -103,7 +103,7 @@ jobs:
       - run: npm ci
       - run: npm run build:github
       - name: Use the Ubuntu archive mirror for browser dependencies
-        run: sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} +
+        run: sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name '*mirrors*.txt' \) -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} +
       - run: npx playwright install --with-deps chromium firefox webkit
         timeout-minutes: 10
       - run: node scripts/verify-inventory-balance-r101.mjs
